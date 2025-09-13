@@ -7,9 +7,13 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 mui-system = { path = "../mui-system" }
+stylist = { version = "0.13", default-features = false, features = ["macros", "parser", "yew_integration", "ssr"] }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 
 [features]
 default = []
-yew = ["mui-system/yew", "dep:yew", "dep:wasm-bindgen"]
+yew = ["mui-system/yew", "dep:yew", "dep:wasm-bindgen", "stylist/yew_integration"]
+
+[dev-dependencies]
+criterion = "0.5"
