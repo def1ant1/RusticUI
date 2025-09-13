@@ -1,0 +1,15 @@
+[package]
+name = "mui-styled-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Styling engine for Material UI Rust components providing theme primitives."
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+mui-system = { path = "../mui-system" }
+yew = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+
+[features]
+default = []
+yew = ["mui-system/yew", "dep:yew", "dep:wasm-bindgen"]
