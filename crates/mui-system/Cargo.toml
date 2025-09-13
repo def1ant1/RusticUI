@@ -8,7 +8,19 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 # Use shared versions from the workspace. These dependencies are optional
 # and can be enabled when the crate needs to integrate with a specific
-# front-end framework.
-leptos.workspace = true
-yew.workspace = true
-wasm-bindgen.workspace = true
+# front-end framework. Serde is pulled in to allow JSON serialization of
+# theme structures.
+serde.workspace = true
+serde_json.workspace = true
+leptos = { workspace = true, optional = true }
+yew = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+
+[features]
+default = []
+yew = ["dep:yew", "dep:wasm-bindgen"]
+leptos = ["dep:leptos", "dep:wasm-bindgen"]
+
+[[example]]
+name = "basic"
+required-features = ["yew"]
