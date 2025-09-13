@@ -24,6 +24,7 @@ pub fn theme_provider(props: &ThemeProviderProps) -> Html {
 /// instead of dealing with `use_context` directly which keeps the call sites
 /// concise.
 #[cfg(feature = "yew")]
+#[hook]
 pub fn use_theme() -> Theme {
     use_context::<Theme>().unwrap_or_default()
 }

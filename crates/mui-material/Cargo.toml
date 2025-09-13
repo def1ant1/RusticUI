@@ -6,7 +6,17 @@ description = "Material Design components implemented in Rust leveraging mui-sys
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+mui-styled-engine = { path = "../mui-styled-engine" }
 mui-system = { path = "../mui-system" }
-leptos.workspace = true
-yew.workspace = true
-wasm-bindgen.workspace = true
+leptos = { workspace = true, optional = true }
+yew = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+gloo-utils = "0.2"
+
+[features]
+default = []
+yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew", "mui-styled-engine/yew"]
+leptos = ["dep:leptos", "dep:wasm-bindgen", "mui-system/leptos"]
