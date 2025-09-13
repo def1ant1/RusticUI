@@ -1,0 +1,78 @@
+# Root workspace manifest for the experimental Rust port of Material UI.
+# -----------------------------------------------------------------------
+# This file defines a Cargo workspace that hosts multiple crates
+# representing the different layers of the Material UI ecosystem.
+#
+# The workspace is intentionally configured with heavy inline
+# documentation so new contributors can understand the design quickly.
+# Each crate lives under the `crates/` directory and shares dependencies
+# declared in the `[workspace.dependencies]` section below.
+#
+# Crate overview:
+#   * mui-system   - low level styling primitives and utility traits.
+#   * mui-material - high level Material Design components built on
+#                    top of `mui-system`.
+#   * mui-icons    - collection of SVG icon bindings for use with
+#                    various front-end frameworks.
+#
+# Build and tooling philosophy:
+#   * use the new feature resolver to avoid unnecessary dependency
+#     activation across crates.
+#   * consolidate common dependencies and versions so that updating a
+#     framework happens in one place.
+#   * provide baseline build profiles that can be overridden per crate
+#     if necessary but keep sensible defaults for fast local iteration
+#     and optimized release builds.
+#   * define metadata hooks for future automation (CI, code generation,
+#     etc.) so that manual repetitive work can be replaced with managed
+#     tooling.
+
+[workspace]
+# Member crates that are part of this workspace. Paths are relative to
+# this file and point to directories under `crates/`.
+members = [
+    "crates/mui-system",
+    "crates/mui-material",
+    "crates/mui-icons",
+]
+
+# Use Cargo's second feature resolver so optional dependencies don't
+# unnecessarily propagate features between crates.
+resolver = "2"
+
+[workspace.package]
+# Common package metadata applied to all member crates unless overridden.
+edition = "2021"
+# Dual license to mirror the policy of many open source Rust projects.
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+# -----------------------------------------------------------------------
+# Centralized dependency declarations.
+# Crates can opt into these dependencies by referencing them with
+# `*.workspace = true` in their individual `Cargo.toml` files.
+#
+# Dependencies are declared once here and referenced in individual crates.
+# Crates may mark them as optional within their own manifests to keep
+# compile times low and enable only what they need.
+wasm-bindgen = "0.2"
+leptos = { version = "0.6", default-features = false }
+yew = { version = "0.21", features = ["csr"], default-features = false }
+
+[profile.dev]
+# Development builds prioritize compile time over runtime performance.
+# Debug info level 2 is a good balance for IDEs and debuggers.
+debug = 2
+opt-level = 0
+
+[profile.release]
+# Release builds favor smaller, faster binaries. Thin LTO strikes a good
+# balance between compile time and optimization quality.
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[workspace.metadata]
+# Placeholder for future automation hooks. `cargo xtask` or CI pipelines
+# can read data from this table to decide which tasks to run.
+ci-tool = { build = "make build", test = "make test", doc = "make doc" }
