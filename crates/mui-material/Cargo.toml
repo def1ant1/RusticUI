@@ -1,0 +1,12 @@
+[package]
+name = "mui-material"
+version = "0.1.0"
+edition = "2021"
+description = "Material Design components implemented in Rust leveraging mui-system."
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+mui-system = { path = "../mui-system" }
+leptos.workspace = true
+yew.workspace = true
+wasm-bindgen.workspace = true

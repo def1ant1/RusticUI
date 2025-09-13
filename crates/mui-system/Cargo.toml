@@ -1,0 +1,14 @@
+[package]
+name = "mui-system"
+version = "0.1.0"
+edition = "2021"
+description = "Foundational styling primitives for the Material UI Rust ecosystem."
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Use shared versions from the workspace. These dependencies are optional
+# and can be enabled when the crate needs to integrate with a specific
+# front-end framework.
+leptos.workspace = true
+yew.workspace = true
+wasm-bindgen.workspace = true

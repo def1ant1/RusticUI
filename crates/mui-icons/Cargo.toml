@@ -1,0 +1,11 @@
+[package]
+name = "mui-icons"
+version = "0.1.0"
+edition = "2021"
+description = "Bindings to Material UI's SVG icon set for Rust front-end frameworks."
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+leptos.workspace = true
+yew.workspace = true
+wasm-bindgen.workspace = true
