@@ -15,14 +15,15 @@ serde_json.workspace = true
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
+web-sys = { workspace = true, optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true
 
 [features]
 default = []
-yew = ["dep:yew", "dep:wasm-bindgen"]
-leptos = ["dep:leptos", "dep:wasm-bindgen"]
+yew = ["dep:yew", "dep:wasm-bindgen", "dep:web-sys"]
+leptos = ["dep:leptos", "dep:wasm-bindgen", "dep:web-sys"]
 
 [[example]]
 name = "basic"
