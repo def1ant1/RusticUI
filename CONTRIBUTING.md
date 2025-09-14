@@ -20,6 +20,7 @@ Here are a few guidelines that will help you along the way.
   - [How to find docs issues to work on](#how-to-find-docs-issues-to-work-on)
   - [How to add a new demo to the docs](#how-to-add-a-new-demo-to-the-docs)
 - [Experimental features](#experimental-features)
+- [Automated Rust workflow](#automated-rust-workflow)
 - [How can I use a change that hasn't been released yet?](#how-can-i-use-a-change-that-hasnt-been-released-yet)
 - [Roadmap](#roadmap)
 - [License](#license)
@@ -336,6 +337,31 @@ The `mui-lab` crate contains opt-in, unstable widgets. When proposing changes to
 - Document the feature in `crates/mui-lab/README.md` so other users know how to try it out.
 
 Expect rapid iteration and potentially breaking changes as feedback is incorporated.
+
+## Automated Rust workflow
+
+To keep development friction low, the Rust crates in this repository share a
+set of managed tasks exposed through [`cargo xtask`](https://github.com/matklad/cargo-xtask).
+This small binary lives in `crates/xtask` and encapsulates formatting, linting
+and testing so that contributors and CI invoke the exact same logic.
+
+Common commands:
+
+```bash
+cargo xtask fmt          # Format all sources (use --check in CI)
+cargo xtask clippy       # Lint the workspace and deny warnings
+cargo xtask test         # Execute the standard test suites
+cargo xtask wasm-test    # Run WebAssembly tests in headless Chrome
+cargo xtask doc          # Build API documentation
+cargo xtask icon-update  # Refresh Material Design icon bindings
+cargo xtask coverage     # Generate lcov.info via grcov
+cargo xtask bench        # Run Criterion benchmarks
+```
+
+The root `Makefile` delegates to these tasks (`make fmt`, `make test`, etc.)
+and the GitHub Actions workflow mirrors this setup. CI caches build artifacts
+and uploads coverage, documentation and benchmark reports as artifacts so that
+contributors can focus on writing code rather than on bespoke scripting.
 
 ## How can I use a change that hasn't been released yet?
 

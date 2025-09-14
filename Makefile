@@ -1,39 +1,42 @@
-# Central Makefile driving common developer workflows for the Rust
-# workspace. These targets wrap cargo commands and provide a single
-# entrypoint for CI and local development.
-#
-# Examples:
-#   make build   # compile all crates
-#   make test    # run unit tests across the workspace
-#   make doc     # generate API documentation
+# Developer friendly entrypoints for the Rust workspace.
+# Each target delegates to `cargo xtask` which encapsulates the
+# underlying commands so contributors and CI use the same logic.
 
 .RECIPEPREFIX := >
-.PHONY: build test doc fmt check icons
+.PHONY: build fmt clippy test wasm-test doc icon-update coverage bench
 
-# Fetch the latest Material Design icon set and update generated bindings.
-# This target is idempotent; it removes outdated icons and downloads fresh
-# assets so subsequent builds operate on a clean slate.
-icons:
-> @cargo run -p mui-icons-material --bin update_icons --features update-icons
+# Format the entire workspace. Use `cargo xtask fmt --check` in CI.
+fmt:
+> @cargo xtask fmt
 
-build: icons
+# Lint all crates with Clippy and deny warnings.
+clippy:
+> @cargo xtask clippy
+
+# Run the standard test suites for every crate.
+test:
+> @cargo xtask test
+
+# Execute WebAssembly tests in headless Chrome.
+wasm-test:
+> @cargo xtask wasm-test
+
+# Generate API documentation.
+doc:
+> @cargo xtask doc
+
+# Refresh Material Design icon bindings used by component crates.
+icon-update:
+> @cargo xtask icon-update
+
+# Build all crates after ensuring icons are up to date.
+build: icon-update
 > @cargo build --workspace
 
-# Run the default test suites for all crates. Additional integration tests
-# can be wired in here as the project grows.
-test:
-> @cargo test --workspace
+# Produce an lcov coverage report using grcov.
+coverage:
+> @cargo xtask coverage
 
-# Produce HTML documentation for all crates in the workspace.
-doc:
-> @cargo doc --no-deps --workspace
-
-# Format the code base using rustfmt. Keeping formatting consistent allows
-# contributors to focus on functionality rather than style.
-fmt:
-> @cargo fmt --all
-
-# Run a lightweight pre-commit style check. `cargo fmt` verifies formatting
-# and `cargo check` ensures everything still builds.
-check: fmt
-> @cargo check --workspace
+# Run Criterion benchmarks. The command succeeds even when no benches exist.
+bench:
+> @cargo xtask bench
