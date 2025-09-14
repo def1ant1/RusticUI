@@ -1,8 +1,9 @@
 //! Helper macros for defining Material UI component props and enums.
 
-/// Generates a `yew::Properties` struct with `Default` implementation.
-/// Each field automatically receives `#[prop_or_default]` so callers can
-/// omit them.
+/// Generates a `Properties` struct for the target framework with a
+/// `Default` implementation. Each field automatically receives the
+/// appropriate attribute so callers may omit them when instantiating the
+/// component.
 #[macro_export]
 macro_rules! material_props {
     ($name:ident { $( $(#[$meta:meta])* $field:ident : $ty:ty ),* $(,)? }) => {
@@ -11,17 +12,40 @@ macro_rules! material_props {
         pub struct $name {
             $( $(#[$meta])* #[prop_or_default] pub $field: $ty, )*
         }
+
+        #[cfg(feature = "leptos")]
+        #[derive(leptos::Props, Clone, PartialEq)]
+        pub struct $name {
+            $( $(#[$meta])* #[prop(optional, into)] pub $field: $ty, )*
+        }
+
+        #[cfg(feature = "leptos")]
+        impl Default for $name {
+            fn default() -> Self {
+                Self {
+                    $( $field: Default::default(), )*
+                }
+            }
+        }
     };
 }
 
 /// Declares a simple enum and implements `Default` for the first variant.
 #[macro_export]
 macro_rules! material_enum {
-    ($name:ident { $first:ident $(, $rest:ident)* $(,)? }) => {
+    (
+        $name:ident {
+            $(#[$meta_first:meta])* $first:ident
+            $(,
+                $(#[$meta:meta])* $rest:ident
+            )*
+            $(,)?
+        }
+    ) => {
         #[derive(Clone, PartialEq)]
         pub enum $name {
-            $first,
-            $( $rest, )*
+            $(#[$meta_first])* $first,
+            $( $(#[$meta])* $rest, )*
         }
         impl Default for $name {
             fn default() -> Self { Self::$first }
@@ -33,15 +57,26 @@ macro_rules! material_enum {
 // keeps the public API uniform and avoids repeating the common color, variant
 // and size options across every widget.  Components are free to re-export
 // these or declare their own more specific enums if required.
-material_enum!(Color { Primary, Secondary });
+material_enum!(Color {
+    /// Use the primary theme color.
+    Primary,
+    /// Use the secondary theme color.
+    Secondary
+});
 material_enum!(Variant {
+    /// Minimal text-only style.
     Text,
+    /// Filled background emphasizing the component.
     Contained,
+    /// Outlined style with transparent background.
     Outlined
 });
 material_enum!(Size {
+    /// Smallest padding and font size.
     Small,
+    /// Default medium size.
     Medium,
+    /// Largest spacing for prominent components.
     Large
 });
 

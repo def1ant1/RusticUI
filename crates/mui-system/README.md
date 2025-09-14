@@ -8,13 +8,16 @@ runtime configuration.
 ## Usage
 
 ```rust
-use mui_system::{Box, Stack, style_props};
+use mui_system::{Box, Stack, style_props, ThemeProvider, Theme};
 # #[cfg(feature = "yew")]
 # fn render() -> yew::Html {
+let theme = Theme::default();
 html! {
-    <Stack spacing={Some("8px".into())}>
-        <Box style={style_props!{ padding: "4px" }}>{"Item"}</Box>
-    </Stack>
+    <ThemeProvider theme={theme}>
+        <Stack spacing={Some("8px".into())} justify_content={Some("center".into())}>
+            <Box sx={style_props!{ padding: "4px" }}>{"Item"}</Box>
+        </Stack>
+    </ThemeProvider>
 }
 # }
 ```
