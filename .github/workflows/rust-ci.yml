@@ -1,0 +1,131 @@
+name: Rust Workspace CI
+
+on:
+  push:
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust-ci.yml'
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust-ci.yml'
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    name: Format and Clippy
+    runs-on: ubuntu-latest
+    steps:
+      # Pull the code so the linter operates on the latest sources
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      # Install stable toolchain with formatting and linting components
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      # Cache dependencies to speed up repeated CI runs
+      - uses: Swatinem/rust-cache@v2
+      # Enforce consistent style across the workspace
+      - run: cargo fmt --all -- --check
+      # Fail on any warnings to keep code quality high
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  test:
+    name: Test and Coverage
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository for testing
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      # Install toolchain with LLVM tools required for coverage
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: llvm-tools-preview
+      # Reuse build artifacts between runs
+      - uses: Swatinem/rust-cache@v2
+      # Run the full test suite across all crates
+      - run: cargo test --workspace
+      # Convert coverage profiles into an lcov report understood by Codecov
+      - name: Generate coverage
+        run: |
+          grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing -o lcov.info
+        if: success()
+      # Publish coverage statistics to external service
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+        if: success()
+
+  wasm:
+    name: WebAssembly Tests
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout sources for wasm-enabled crates
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      # Install the wasm target for browser-based test execution
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+      # Share compiled artifacts between CI runs
+      - uses: Swatinem/rust-cache@v2
+      # Install wasm-pack for running browser tests
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      # Execute headless browser tests for each crate that declares wasm tests
+      - name: Run wasm tests
+        run: |
+          for crate in crates/mui-joy crates/mui-material; do
+            (cd "$crate" && wasm-pack test --headless --chrome);
+          done
+
+  docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout repository so documentation reflects current code
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      # Install the standard toolchain
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      # Cache build output to speed up doc rebuilds
+      - uses: Swatinem/rust-cache@v2
+      # Generate API documentation for all crates
+      - run: cargo doc --no-deps --workspace
+      # Publish the docs as an artifact so they can be inspected from the CI UI
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rust-docs
+          path: target/doc
+
+  bench:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout source code for benchmarking
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      # Install the Rust toolchain
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      # Cache compiled dependencies for faster benchmarking
+      - uses: Swatinem/rust-cache@v2
+      # Run any defined Criterion benches; tolerate absence gracefully
+      - run: cargo bench --workspace || true
+      # Upload benchmark reports for inspection and future comparison
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rust-benchmarks
+          path: target/criterion
+          if-no-files-found: ignore
