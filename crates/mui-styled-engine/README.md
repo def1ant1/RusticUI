@@ -2,7 +2,8 @@
 
 `mui-styled-engine` binds the [stylist] CSS-in-Rust library with the
 `mui-system` theme primitives. It generates scoped CSS at compile time and
-provides Yew components for global style injection and style management.
+provides Yew components for global style injection, style collection and server
+side rendering (SSR).
 
 ## Macros
 
@@ -37,6 +38,36 @@ provides helpers that run a render closure inside an isolated style manager and
 return both the generated HTML and the associated style tags. The
 `render_to_string` convenience function produces a complete HTML document ready
 to be returned from an Axum or Actix handler.
+
+### Yew Provider and Style Registry
+
+For component based applications the crate exposes a `StyledEngineProvider`
+which wraps its children with both a `ThemeProvider` and a `ContextProvider`
+carrying a `StyleRegistry`. Components can obtain the registry through
+`use_context::<StyleRegistry>()` and create styles via
+`Style::new_with_manager(..., registry.style_manager())`.  During SSR each HTTP
+request should instantiate its own registry to avoid cross-request leakage.  The
+registry implements `flush_styles()` which drains and returns `<style>` blocks:
+
+```rust
+use mui_styled_engine::{StyleRegistry, StyledEngineProvider, Theme};
+use yew::ServerRenderer;
+
+let registry = StyleRegistry::new(Theme::default());
+let html = yew::platform::block_on(
+    ServerRenderer::<StyledEngineProvider>::with_props(StyledEngineProviderProps {
+        theme: Theme::default(),
+        registry: Some(registry.clone()),
+        children: yew::html::ChildrenRenderer::new(vec![/* ... */]),
+    }).render(),
+);
+let styles = registry.flush_styles();
+```
+
+Because style data is drained on flush, the registry can be reused for multiple
+renders within the same request without manual cleanup. This design scales to
+highly concurrent environments since each request owns its registry and the
+internal reader is protected by a mutex.
 
 ## Benchmarks
 
