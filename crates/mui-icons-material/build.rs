@@ -4,9 +4,12 @@
 // guaranteeing repeatable builds. Contributors can drop new SVGs into the
 // directory and functions will be produced automatically.
 
-use std::{env, fs, path::{Path, PathBuf}};
 use proc_macro2::{Literal, TokenStream};
-use quote::{quote, format_ident};
+use quote::{format_ident, quote};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Directory containing the raw SVG icon files.
@@ -30,6 +33,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Sanitize the identifier: replace dashes with underscores and prefix with 'icon_'.
         let ident_str = name_no_ext.replace('-', "_");
         let ident = format_ident!("icon_{}", ident_str);
+        // Each icon gets its own Cargo feature so downstream crates can select
+        // only the symbols they need. The CLI keeps this list up to date.
+        let feature_name = format!("icon-{}", name_no_ext);
+        let feature_lit = Literal::string(&feature_name);
 
         // Parse and minify the SVG using usvg to ensure valid syntax.
         let raw_svg = fs::read_to_string(&path)?;
@@ -44,6 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Generate a function returning a memoized &'static str of the SVG data.
         functions.push(quote! {
+            #[cfg(feature = #feature_lit)]
             #[doc = concat!("Returns the `", #name_lit, "` icon as an SVG string.")]
             pub fn #ident() -> &'static str {
                 static SVG: once_cell::sync::Lazy<&'static str> =
@@ -54,7 +62,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Add a macro arm mapping the original file name to the function.
         macro_arms.push(quote! {
-            (#name_lit) => { $crate::#ident() };
+            (#name_lit) => {{
+                #[cfg(feature = #feature_lit)]
+                { $crate::#ident() }
+                #[cfg(not(feature = #feature_lit))]
+                { compile_error!(concat!("feature `", #feature_lit, "` is not enabled")); }
+            }};
         });
     }
 

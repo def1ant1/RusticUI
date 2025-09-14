@@ -31,4 +31,12 @@ mod tests {
         let tree = usvg::Tree::from_str(svg, &opt).expect("valid svg");
         assert!(tree.root().has_children());
     }
+
+    #[test]
+    fn function_matches_svg_contents() {
+        // The generated function should return the minified SVG written by the
+        // build script. We load the same file from OUT_DIR and compare.
+        let expected = include_str!(concat!(env!("OUT_DIR"), "/10k_24px.svg"));
+        assert_eq!(icon_10k_24px(), expected);
+    }
 }
