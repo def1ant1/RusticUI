@@ -1,0 +1,20 @@
+[package]
+name = "mui-icons-material"
+version = "0.1.0"
+edition = "2021"
+description = "Material Icons auto-generated from SVGs for Rust front-end frameworks."
+license = "MIT OR Apache-2.0"
+
+# Build script performs SVG -> Rust conversion.
+build = "build.rs"
+
+[dependencies]
+once_cell.workspace = true
+
+[build-dependencies]
+usvg.workspace = true
+quote.workspace = true
+proc-macro2.workspace = true
+
+[dev-dependencies]
+usvg.workspace = true
