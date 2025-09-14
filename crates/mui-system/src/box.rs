@@ -2,6 +2,9 @@
 use yew::prelude::*;
 
 /// Lightweight wrapper around a `div` that accepts style properties.
+///
+/// Combine with the [`style_props!`](crate::style_props) macro to build the
+/// `style` string in a concise and type‑checked manner.
 #[derive(Properties, PartialEq)]
 pub struct BoxProps {
     /// Inline CSS style string typically generated via the `style_props!` macro.

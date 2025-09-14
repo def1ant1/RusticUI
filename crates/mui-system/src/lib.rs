@@ -8,25 +8,37 @@
 //! Features are gated so that downstream users only compile the code required
 //! for their target framework (`yew`, `leptos`, ...).
 
-pub mod style;
-pub mod theme;
+pub mod macros;
 pub mod responsive;
+pub mod theme;
 
 #[cfg(feature = "yew")]
 pub mod r#box;
 #[cfg(feature = "yew")]
+pub mod container;
+#[cfg(feature = "yew")]
 pub mod grid;
 #[cfg(feature = "yew")]
-pub mod theme_provider;
-
-pub use responsive::{grid_span_to_percent, Responsive};
-pub use theme::{Breakpoints, Palette, Theme};
+pub mod stack;
 #[cfg(feature = "yew")]
-pub use r#box::Box;
+pub mod theme_provider;
+#[cfg(feature = "yew")]
+pub mod typography;
+
+#[cfg(feature = "yew")]
+pub use container::Container;
 #[cfg(feature = "yew")]
 pub use grid::Grid;
 #[cfg(feature = "yew")]
+pub use r#box::Box;
+pub use responsive::{grid_span_to_percent, Responsive};
+#[cfg(feature = "yew")]
+pub use stack::{Stack, StackDirection};
+pub use theme::{Breakpoints, Palette, Theme};
+#[cfg(feature = "yew")]
 pub use theme_provider::{use_theme, ThemeProvider};
+#[cfg(feature = "yew")]
+pub use typography::{Typography, TypographyVariant};
 
 /// Legacy no-op function retained to keep dependent crates compiling while
 /// more features are ported. New functionality resides in the modules above.

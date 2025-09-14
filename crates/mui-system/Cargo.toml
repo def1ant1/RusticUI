@@ -16,6 +16,9 @@ leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+
 [features]
 default = []
 yew = ["dep:yew", "dep:wasm-bindgen"]

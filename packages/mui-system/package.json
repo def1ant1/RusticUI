@@ -1,6 +1,8 @@
 {
   "name": "@mui/system",
   "version": "7.3.2",
+  "private": true,
+  "deprecated": "This package has been archived. Use the Rust crate 'mui-system'.",
   "author": "MUI Team",
   "description": "MUI System is a set of CSS utilities to help you build custom designs more efficiently. It makes it possible to rapidly lay out custom designs.",
   "keywords": [

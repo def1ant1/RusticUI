@@ -1,19 +1,10 @@
-# MUI System
+# MUI System (Archived)
 
-MUI System is a set of CSS utilities to help you build custom designs more efficiently. It makes it possible to rapidly lay out custom designs.
+> **Deprecated**: This package has been superseded by the Rust crate under
+> `crates/mui-system`.  No further updates will be published here.
+>
+> Consumers should migrate to the Rust implementation which offers equivalent
+> APIs with stronger typing and WebAssembly support.
 
-## Installation
-
-Install the package in your project directory with:
-
-<!-- #npm-tag-reference -->
-
-```bash
-npm install @mui/system @emotion/react @emotion/styled
-```
-
-## Documentation
-
-<!-- #host-reference -->
-
-Visit [https://mui.com/system/getting-started/](https://mui.com/system/getting-started/) to view the full documentation.
+The previous JavaScript-based MUI System provided CSS utilities for rapid
+layout prototyping.  Its source remains available for historical reference.
