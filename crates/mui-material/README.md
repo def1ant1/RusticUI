@@ -11,6 +11,11 @@ Utilities from [`mui-utils`](../mui-utils) are integrated to provide
 enterprise-friendly ergonomics: button callbacks can be throttled,
 text inputs debounced and style overrides merged via JSON using `deep_merge`.
 
+## Feature Flags
+
+Components are gated behind framework features. Enable `yew`, `leptos`,
+`dioxus` or `sycamore` depending on the desired front-end backend.
+
 ## Example
 
 ```rust

@@ -2,8 +2,8 @@
 
 This crate provides the low level layout and theming primitives that power the
 Material UI ecosystem in Rust.  Components target modern frameworks like
-[`yew`](https://yew.rs) and `leptos` and favor compile‑time safety over
-runtime configuration.
+[`yew`](https://yew.rs), `leptos`, `dioxus` and `sycamore` and favor compile‑time
+safety over runtime configuration.
 
 ## Usage
 
@@ -27,6 +27,8 @@ Enable the desired front‑end framework via Cargo features:
 ```toml
 mui-system = { version = "0.1", features = ["yew"] }
 ```
+
+Available features include `yew`, `leptos`, `dioxus` and `sycamore`.
 
 ## Legacy JavaScript Package
 

@@ -24,3 +24,5 @@ gloo-utils = "0.2"
 default = []
 yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew", "mui-styled-engine/yew", "dep:stylist", "dep:web-sys"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "mui-system/leptos"]
+dioxus = ["mui-system/dioxus", "mui-styled-engine/dioxus"]
+sycamore = ["mui-system/sycamore", "mui-styled-engine/sycamore"]

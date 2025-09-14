@@ -6,7 +6,7 @@
 //! truth for styling.
 //!
 //! # Example
-//! ```rust
+//! ```rust,ignore
 //! use mui_material::{Button, ButtonProps};
 //! use mui_styled_engine::{ThemeProvider, Theme};
 //! use yew::prelude::*;
