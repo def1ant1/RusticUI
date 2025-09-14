@@ -62,6 +62,8 @@ make doc      # generate API docs
 
 These targets minimize manual steps and offer a single entry point for local development and CI.
 
+For end-to-end style orchestration that plays well with build pipelines and CI, see [docs/styled-engine/automation.md](docs/styled-engine/automation.md).
+
 ## Migrating from React/TypeScript
 
 Teams moving from React or TypeScript can leverage familiar patterns:
