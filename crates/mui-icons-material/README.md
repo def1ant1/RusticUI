@@ -10,6 +10,21 @@ for validation and minification, then transformed into a memoized Rust function
 via [`quote`](https://crates.io/crates/quote). A `material_icon!` macro maps icon
 names to these functions.
 
+## Feature flags
+
+Every SVG is gated behind an opt-in Cargo feature named `icon-<file name>`. An
+umbrella `all-icons` feature pulls in the full set and is enabled by default for
+ease of use. To keep compile times and binary sizes minimal in production,
+disable the default and enable only the icons your application actually uses:
+
+```toml
+[dependencies]
+mui-icons-material = { version = "0.1", default-features = false, features = ["icon-10k_24px"] }
+```
+
+The `update_icons` tool (see below) regenerates the `[features]` block in
+`Cargo.toml` so this list stays in sync with the available SVGs.
+
 ## Custom icon sets
 
 Add or remove SVG files from `material-icons/` and rebuild; the bindings update
