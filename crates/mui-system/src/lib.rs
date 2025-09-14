@@ -21,7 +21,6 @@ pub mod container;
 pub mod grid;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod stack;
-#[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod theme_provider;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod typography;
@@ -38,8 +37,12 @@ pub use stack::{Stack, StackDirection};
 #[allow(unused_imports)]
 pub use style::*;
 pub use theme::{Breakpoints, Palette, Theme};
-#[cfg(any(feature = "yew", feature = "leptos"))]
+#[cfg(feature = "yew")]
 pub use theme_provider::{use_theme, ThemeProvider};
+#[cfg(feature = "leptos")]
+pub use theme_provider::{use_theme, ThemeProvider};
+#[cfg(any(feature = "dioxus", feature = "sycamore"))]
+pub use theme_provider::use_theme;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use typography::{Typography, TypographyVariant};
 

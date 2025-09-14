@@ -24,6 +24,8 @@ wasm-bindgen-test.workspace = true
 default = []
 yew = ["dep:yew", "dep:wasm-bindgen", "dep:web-sys"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "dep:web-sys"]
+dioxus = []
+sycamore = []
 
 [[example]]
 name = "basic"
