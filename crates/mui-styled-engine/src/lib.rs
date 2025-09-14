@@ -20,13 +20,16 @@ pub use mui_system::theme::{Breakpoints, Palette, Theme};
 #[cfg(feature = "yew")]
 pub use mui_system::theme_provider::{use_theme, ThemeProvider};
 // Re-export procedural macros so crate users only depend on one package.
-pub use mui_styled_engine_macros::{styled_component, Theme as Theme};
+pub use mui_styled_engine_macros::{styled_component, Theme};
 // Ensure procedural macros can reference this crate as `mui_styled_engine` even
 // when used internally.
 extern crate self as mui_styled_engine;
 
 mod ssr;
 pub use ssr::*;
+
+mod context;
+pub use context::*;
 
 pub use stylist::{css, global_style, Style, StyleSource};
 
@@ -47,25 +50,72 @@ mod yew_integration {
     use super::*;
     use yew::prelude::*;
 
-    /// Provides a [`Theme`] context to all child components.  This simplified
-    /// provider can be expanded in the future to collect styles for SSR, but
-    /// for now it keeps compilation light-weight.
+    /// Properties accepted by [`StyledEngineProvider`].
     #[derive(Properties, PartialEq)]
     pub struct StyledEngineProviderProps {
         /// Theme made available to all children.
         #[prop_or_default]
         pub theme: Theme,
+        /// Optional registry allowing callers to reuse style collections across
+        /// renders (useful during SSR). If omitted a fresh registry is created
+        /// per provider instance.
+        #[prop_or_default]
+        pub registry: Option<StyleRegistry>,
         /// Child components that require styling.
         #[prop_or_default]
         pub children: Children,
     }
 
-    #[function_component(StyledEngineProvider)]
-    pub fn styled_engine_provider(props: &StyledEngineProviderProps) -> Html {
-        html! {
-            <ThemeProvider theme={props.theme.clone()}>
-                { for props.children.iter() }
-            </ThemeProvider>
+    /// Yew component that wires [`ThemeProvider`] with a shared [`StyleRegistry`].
+    ///
+    /// The registry is exposed via a [`ContextProvider`] so nested components can
+    /// obtain the [`StyleManager`] and record CSS as they render. After the tree
+    /// is rendered on the server, calling [`StyledEngineProvider::flush_styles`]
+    /// will return all accumulated `<style>` blocks.
+    pub struct StyledEngineProvider {
+        registry: StyleRegistry,
+    }
+
+    impl StyledEngineProvider {
+        /// Drains collected styles from the internal registry.
+        pub fn flush_styles(&self) -> String {
+            self.registry.flush_styles()
+        }
+    }
+
+    impl Component for StyledEngineProvider {
+        type Message = ();
+        type Properties = StyledEngineProviderProps;
+
+        fn create(ctx: &Context<Self>) -> Self {
+            let registry = ctx
+                .props()
+                .registry
+                .clone()
+                .unwrap_or_else(|| StyleRegistry::new(ctx.props().theme.clone()));
+            Self { registry }
+        }
+
+        fn changed(&mut self, ctx: &Context<Self>, _old: &Self::Properties) -> bool {
+            // Always refresh the registry on prop change to avoid leaking styles
+            // from previous renders. Callers can supply an existing registry via
+            // props if they want to retain styles across renders.
+            self.registry = ctx
+                .props()
+                .registry
+                .clone()
+                .unwrap_or_else(|| StyleRegistry::new(ctx.props().theme.clone()));
+            true
+        }
+
+        fn view(&self, ctx: &Context<Self>) -> Html {
+            html! {
+                <ContextProvider<StyleRegistry> context={self.registry.clone()}>
+                    <ThemeProvider theme={ctx.props().theme.clone()}>
+                        { for ctx.props().children.iter() }
+                    </ThemeProvider>
+                </ContextProvider<StyleRegistry>>
+            }
         }
     }
 }
@@ -113,8 +163,15 @@ mod tests {
     #[test]
     fn theme_can_be_derived() {
         #[derive(Theme)]
-        struct Custom { palette: Palette }
-        let custom = Custom { palette: Palette { primary: "#fff".into(), ..Palette::default() } };
+        struct Custom {
+            palette: Palette,
+        }
+        let custom = Custom {
+            palette: Palette {
+                primary: "#fff".into(),
+                ..Palette::default()
+            },
+        };
         let t = custom.into_theme();
         assert_eq!(t.palette.primary, "#fff");
     }
