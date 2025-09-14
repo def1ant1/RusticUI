@@ -11,33 +11,36 @@
 pub mod macros;
 pub mod responsive;
 pub mod theme;
+pub mod style;
 
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod r#box;
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod container;
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod grid;
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod stack;
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod theme_provider;
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod typography;
 
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub use container::Container;
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub use grid::Grid;
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub use r#box::Box;
 pub use responsive::{grid_span_to_percent, Responsive};
-#[cfg(feature = "yew")]
+#[allow(unused_imports)]
+pub use style::*;
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub use stack::{Stack, StackDirection};
 pub use theme::{Breakpoints, Palette, Theme};
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub use theme_provider::{use_theme, ThemeProvider};
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 pub use typography::{Typography, TypographyVariant};
 
 /// Legacy no-op function retained to keep dependent crates compiling while
