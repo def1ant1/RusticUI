@@ -34,7 +34,11 @@ mod yew_impl {
         };
         let (bg, color, border) = match props.variant {
             ButtonVariant::Contained => (palette.clone(), "#fff".to_string(), "none".to_string()),
-            ButtonVariant::Outlined => ("transparent".into(), palette.clone(), format!("1px solid {}", palette)),
+            ButtonVariant::Outlined => (
+                "transparent".into(),
+                palette.clone(),
+                format!("1px solid {}", palette),
+            ),
             ButtonVariant::Text => ("transparent".into(), palette.clone(), "none".into()),
         };
         let style = css_with_theme!(
@@ -106,7 +110,11 @@ mod leptos_impl {
         };
         let (bg, color, border) = match props.variant {
             ButtonVariant::Contained => (palette.clone(), "#fff".to_string(), "none".to_string()),
-            ButtonVariant::Outlined => ("transparent".into(), palette.clone(), format!("1px solid {}", palette)),
+            ButtonVariant::Outlined => (
+                "transparent".into(),
+                palette.clone(),
+                format!("1px solid {}", palette),
+            ),
             ButtonVariant::Text => ("transparent".into(), palette.clone(), "none".into()),
         };
         let style = css_with_theme!(

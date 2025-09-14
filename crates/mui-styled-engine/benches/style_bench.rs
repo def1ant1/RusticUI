@@ -1,8 +1,8 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use mui_styled_engine::{Style, css};
+use mui_styled_engine::{css, Style};
 
 fn rust_style() {
-    Style::new(css!("color: red;" )).unwrap();
+    Style::new(css!("color: red;")).unwrap();
 }
 
 fn criterion_benchmark(c: &mut Criterion) {

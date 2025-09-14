@@ -1,4 +1,3 @@
-
 /// Typography variants represented as semantic HTML tags.
 #[derive(Clone, PartialEq)]
 pub enum TypographyVariant {

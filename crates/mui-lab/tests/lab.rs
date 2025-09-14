@@ -1,10 +1,14 @@
 use mui_lab::adapters::{AdapterChrono, AdapterTime, DateAdapter, TimeAdapter};
+use mui_lab::autocomplete::Autocomplete;
+use mui_lab::data_grid::DataGrid;
 use mui_lab::date_picker::{DatePicker, Key};
 use mui_lab::localization::{
     init_default_locales, register_locale, LocalePack, LocalizationProvider,
 };
 use mui_lab::masonry::Masonry;
 use mui_lab::time_picker::TimePicker;
+use mui_lab::timeline::{Timeline, TimelineEvent};
+use mui_lab::tree_view::TreeNode;
 
 /// Custom locale used to prove that the provider can be extended at
 /// runtime by the community.
@@ -80,4 +84,34 @@ fn time_adapter_from_time_crate_roundtrip() {
     let now = adapter.now();
     let later = adapter.add_minutes(&now, 30);
     assert_eq!(adapter.add_minutes(&later, -30), now);
+}
+
+#[test]
+fn autocomplete_returns_matching_options() {
+    let ac = Autocomplete::new(vec!["apple".into(), "banana".into()]);
+    assert_eq!(ac.suggestions("ba"), vec!["banana"]);
+}
+
+#[test]
+fn data_grid_sorts_rows_ascending() {
+    let mut grid = DataGrid::new(vec![3, 1, 2]);
+    grid.sort_by(|a, b| a.cmp(b));
+    assert_eq!(grid.rows, vec![1, 2, 3]);
+}
+
+#[test]
+fn tree_node_toggle_expands() {
+    let mut node = TreeNode::new("root");
+    assert!(!node.expanded);
+    node.toggle();
+    assert!(node.expanded);
+}
+
+#[test]
+fn timeline_orders_pushed_events() {
+    let mut tl = Timeline::new();
+    tl.push(TimelineEvent { at: 2, data: "b" });
+    tl.push(TimelineEvent { at: 1, data: "a" });
+    let events: Vec<_> = tl.events().iter().map(|e| e.data).collect();
+    assert_eq!(events, vec!["a", "b"]);
 }
