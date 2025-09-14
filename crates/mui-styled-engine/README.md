@@ -4,6 +4,22 @@
 `mui-system` theme primitives. It generates scoped CSS at compile time and
 provides Yew components for global style injection and style management.
 
+## Macros
+
+To minimize repetitive boilerplate when working with themes, the crate ships
+with two procedural macros:
+
+* `#[derive(Theme)]` - converts a user defined struct into a full
+  [`Theme`](https://docs.rs/mui-styled-engine/latest/mui_styled_engine/struct.Theme.html)
+  by merging the provided fields with `Theme::default()`. This is useful for
+  creating lightweight theme overrides.
+* `styled_component!` - wraps a regular function and turns it into a Yew
+  component that automatically wires up `use_theme()`. The body of the function
+  can reference a `theme` binding without additional setup.
+
+Both macros are re-exported from this crate so downstream code only needs a
+single dependency.
+
 ## Usage
 
 ```rust
@@ -16,10 +32,11 @@ assert!(style.get_class_name().starts_with("css-"));
 
 ## Server Side Rendering
 
-`StyledEngineProvider` accepts an optional `StyleManager` which collects CSS
-rules during server side rendering. After rendering, call
-`manager.render().to_string()` to obtain the CSS payload for the `<head>` of the
-generated HTML.
+The [`ssr` module](https://docs.rs/mui-styled-engine/latest/mui_styled_engine/ssr/index.html)
+provides helpers that run a render closure inside an isolated style manager and
+return both the generated HTML and the associated style tags. The
+`render_to_string` convenience function produces a complete HTML document ready
+to be returned from an Axum or Actix handler.
 
 ## Benchmarks
 
