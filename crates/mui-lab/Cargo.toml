@@ -16,9 +16,13 @@ time = { workspace = true, optional = true }
 [features]
 default = []
 # Enable experimental widgets individually to keep compile times lean.
+autocomplete = []
 date-picker = []
+data-grid = []
 time-picker = []
 masonry = []
+tree-view = []
+timeline = []
 localization = ["dep:serde", "dep:once_cell"]
 # Features toggling which date library backing to use.
 chrono = ["dep:chrono"]

@@ -10,8 +10,8 @@
 
 pub mod macros;
 pub mod responsive;
-pub mod theme;
 pub mod style;
+pub mod theme;
 
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod r#box;
@@ -33,10 +33,10 @@ pub use grid::Grid;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use r#box::Box;
 pub use responsive::{grid_span_to_percent, Responsive};
-#[allow(unused_imports)]
-pub use style::*;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use stack::{Stack, StackDirection};
+#[allow(unused_imports)]
+pub use style::*;
 pub use theme::{Breakpoints, Palette, Theme};
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use theme_provider::{use_theme, ThemeProvider};

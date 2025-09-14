@@ -31,7 +31,7 @@ mod yew_impl {
 }
 
 #[cfg(feature = "yew")]
-pub use yew_impl::{ThemeProvider, ThemeProviderProps, use_theme};
+pub use yew_impl::{use_theme, ThemeProvider, ThemeProviderProps};
 
 #[cfg(feature = "leptos")]
 mod leptos_impl {
@@ -52,4 +52,4 @@ mod leptos_impl {
 }
 
 #[cfg(feature = "leptos")]
-pub use leptos_impl::{ThemeProvider, use_theme};
+pub use leptos_impl::{use_theme, ThemeProvider};

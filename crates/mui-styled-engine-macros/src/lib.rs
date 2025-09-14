@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, ItemFn, Fields};
+use syn::{parse_macro_input, DeriveInput, Fields, ItemFn};
 
 /// Derive macro generating an `into_theme` helper for custom theme structs.
 ///

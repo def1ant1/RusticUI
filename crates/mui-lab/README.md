@@ -15,10 +15,14 @@ at your own risk and pin versions accordingly.
 Each preview widget lives behind a Cargo feature so consumers only compile
 what they need:
 
+- `autocomplete` – lightweight string matcher for building suggestion UIs.
 - `date-picker` – opt-in to the minimal date picker demonstrating the
   `DateAdapter` abstraction.
+- `data-grid` – in-memory tabular data manipulation.
 - `time-picker` – enables the time picker powered by `TimeAdapter`.
 - `masonry` – experimental Masonry layout algorithm.
+- `tree-view` – hierarchical tree structure with expand/collapse state.
+- `timeline` – ordered collection of timestamped events.
 - `localization` – runtime `LocalizationProvider` and built-in `en-US`
   locale pack (requires `serde`).
 

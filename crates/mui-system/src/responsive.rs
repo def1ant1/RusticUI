@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::theme::Breakpoints;
+use serde::{Deserialize, Serialize};
 
 /// Helper structure representing values that change across breakpoints.
 /// Missing values fall back to the next smallest defined one, mirroring
@@ -17,20 +17,23 @@ impl<T: Clone> Responsive<T> {
     /// Resolves the appropriate value for a given viewport width.
     pub fn resolve(&self, width: u32, bp: &Breakpoints) -> T {
         if width >= bp.xl {
-            self.xl.as_ref()
+            self.xl
+                .as_ref()
                 .or(self.lg.as_ref())
                 .or(self.md.as_ref())
                 .or(self.sm.as_ref())
                 .unwrap_or(&self.xs)
                 .clone()
         } else if width >= bp.lg {
-            self.lg.as_ref()
+            self.lg
+                .as_ref()
                 .or(self.md.as_ref())
                 .or(self.sm.as_ref())
                 .unwrap_or(&self.xs)
                 .clone()
         } else if width >= bp.md {
-            self.md.as_ref()
+            self.md
+                .as_ref()
                 .or(self.sm.as_ref())
                 .unwrap_or(&self.xs)
                 .clone()
