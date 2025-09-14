@@ -4,7 +4,7 @@ use crate::theme::Breakpoints;
 /// Helper structure representing values that change across breakpoints.
 /// Missing values fall back to the next smallest defined one, mirroring
 /// the cascading behavior of CSS media queries.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Responsive<T> {
     pub xs: T,
     pub sm: Option<T>,

@@ -38,7 +38,9 @@ mod yew_impl {
         let theme = use_theme();
         let width = window()
             .and_then(|w| w.inner_width().ok())
-            .and_then(|v| v.as_f64().ok())
+
+            .and_then(|v| v.as_f64())
+
             .unwrap_or(0.0) as u32;
         let mut style_string = String::new();
         if let Some(m) = &props.m {
