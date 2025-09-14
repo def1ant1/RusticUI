@@ -34,6 +34,7 @@
 members = [
     "crates/mui-system",
     "crates/mui-styled-engine",
+    "crates/mui-styled-engine-macros",
     "crates/mui-material",
     "crates/mui-icons",
     "crates/mui-icons-material",

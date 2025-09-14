@@ -10,6 +10,7 @@ mui-system = { path = "../mui-system" }
 stylist = { version = "0.13", default-features = false, features = ["macros", "parser", "yew_integration", "ssr"] }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
+mui-styled-engine-macros = { path = "../mui-styled-engine-macros" }
 
 [features]
 default = []
@@ -17,3 +18,7 @@ yew = ["mui-system/yew", "dep:yew", "dep:wasm-bindgen", "stylist/yew_integration
 
 [dev-dependencies]
 criterion = "0.5"
+
+[[bench]]
+name = "style_bench"
+harness = false

@@ -1736,10 +1736,20 @@ name = "mui-styled-engine"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "mui-styled-engine-macros",
  "mui-system",
  "stylist",
  "wasm-bindgen",
  "yew",
+]
+
+[[package]]
+name = "mui-styled-engine-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
 ]
 
 [[package]]

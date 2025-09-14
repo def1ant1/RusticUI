@@ -19,6 +19,14 @@
 pub use mui_system::theme::{Breakpoints, Palette, Theme};
 #[cfg(feature = "yew")]
 pub use mui_system::theme_provider::{use_theme, ThemeProvider};
+// Re-export procedural macros so crate users only depend on one package.
+pub use mui_styled_engine_macros::{styled_component, Theme as Theme};
+// Ensure procedural macros can reference this crate as `mui_styled_engine` even
+// when used internally.
+extern crate self as mui_styled_engine;
+
+mod ssr;
+pub use ssr::*;
 
 pub use stylist::{css, global_style, Style, StyleSource};
 
@@ -89,5 +97,25 @@ mod tests {
         let theme = Theme::default();
         let style = css_with_theme!(theme, r#"color: ${c};"#, c = theme.palette.primary.clone());
         assert!(style.get_style_str().contains(&theme.palette.primary));
+    }
+
+    #[test]
+    fn ssr_collects_styles() {
+        use stylist::Style;
+        let out = render_with_style(|mgr| {
+            let style = Style::new_with_manager(css!("color:red;"), mgr).unwrap();
+            format!("<div class=\"{}\"></div>", style.get_class_name())
+        });
+        assert!(out.styles.contains("color: red"), "{}", out.styles);
+        assert!(out.html.contains("class"));
+    }
+
+    #[test]
+    fn theme_can_be_derived() {
+        #[derive(Theme)]
+        struct Custom { palette: Palette }
+        let custom = Custom { palette: Palette { primary: "#fff".into(), ..Palette::default() } };
+        let t = custom.into_theme();
+        assert_eq!(t.palette.primary, "#fff");
     }
 }
