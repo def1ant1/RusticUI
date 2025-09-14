@@ -49,3 +49,5 @@ packed
 
 # Rust build artifacts
 /target
+
+docs/rust-book/book/

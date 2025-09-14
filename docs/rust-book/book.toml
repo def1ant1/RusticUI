@@ -1,0 +1,11 @@
+[book]
+title = "MUI Rust Guide"
+description = "Rust-first documentation for building interfaces with MUI crates."
+authors = ["MUI Contributors"]
+language = "en"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "rust"
