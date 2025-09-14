@@ -41,6 +41,7 @@ members = [
     "crates/mui-utils",
     "crates/mui-joy",
     "crates/mui-lab",
+    "crates/xtask",
 ]
 
 # Use Cargo's second feature resolver so optional dependencies don't
@@ -68,6 +69,9 @@ yew = { version = "0.21", features = ["csr"], default-features = false }
 serde = { version = "1.0", features = ["derive"], default-features = false }
 serde_json = "1.0"
 wasm-bindgen-test = "0.3"
+# Tooling dependencies powering `cargo xtask`.
+clap = { version = "4.5", features = ["derive", "std"], default-features = false }
+anyhow = "1.0"
 usvg = "0.45.1"
 quote = "1.0"
 proc-macro2 = "1.0"
