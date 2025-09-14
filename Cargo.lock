@@ -1704,9 +1704,12 @@ dependencies = [
 name = "mui-icons"
 version = "0.1.0"
 dependencies = [
- "leptos",
- "wasm-bindgen",
- "yew",
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "ureq",
+ "usvg",
+ "zip",
 ]
 
 [[package]]
