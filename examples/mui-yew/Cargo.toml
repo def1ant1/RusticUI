@@ -1,0 +1,8 @@
+[package]
+name = "mui-yew-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+yew.workspace = true
+mui-system = { path = "../../crates/mui-system", features = ["yew"] }

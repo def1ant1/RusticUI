@@ -1,0 +1,49 @@
+name: Rust Documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'pages'
+  cancel-in-progress: false
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - uses: peaceiris/actions-mdbook@v1
+        with:
+          mdbook-version: '0.4.36'
+      - name: Build API docs
+        run: cargo doc --no-deps --all
+      - name: Build mdBook guide
+        run: |
+          mdbook build docs/rust-book
+          mkdir -p public/api
+          cp -r target/doc/* public/api/
+          cp -r docs/rust-book/book/* public/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: docs
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
