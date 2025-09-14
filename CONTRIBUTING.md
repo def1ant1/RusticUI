@@ -19,6 +19,7 @@ Here are a few guidelines that will help you along the way.
 - [Contributing to the documentation](#contributing-to-the-documentation)
   - [How to find docs issues to work on](#how-to-find-docs-issues-to-work-on)
   - [How to add a new demo to the docs](#how-to-add-a-new-demo-to-the-docs)
+- [Experimental features](#experimental-features)
 - [How can I use a change that hasn't been released yet?](#how-can-i-use-a-change-that-hasnt-been-released-yet)
 - [Roadmap](#roadmap)
 - [License](#license)
@@ -325,6 +326,16 @@ Add a header and a brief description of the demo and its use case, along with th
 Now you're ready to [open a PR](#sending-a-pull-request) to add your new demo to the docs.
 
 Check out [this Toggle Button demo PR](https://github.com/mui/material-ui/pull/19582/files) for an example of what your new and edited files should look like when opening your own demo PR.
+
+## Experimental features
+
+The `mui-lab` crate contains opt-in, unstable widgets. When proposing changes to these components:
+
+- Gate new functionality behind a dedicated Cargo feature.
+- Include unit tests that cover localization and keyboard navigation.
+- Document the feature in `crates/mui-lab/README.md` so other users know how to try it out.
+
+Expect rapid iteration and potentially breaking changes as feedback is incorporated.
 
 ## How can I use a change that hasn't been released yet?
 

@@ -54,6 +54,13 @@ Keep in mind that the maintainers are primarily focused on other projects and ma
 
 View the [Joy UI documentation](https://mui.com/joy-ui/getting-started/).
 
+## MUI Lab (Rust)
+
+This repository also includes `mui-lab`, a crate that houses
+experimental widgets for the Rust port.  The APIs are feature gated and
+unstable; expect breaking changes.  See `crates/mui-lab/README.md` for
+contribution guidelines and current status.
+
 ## Sponsors
 
 ### Diamond 💎
