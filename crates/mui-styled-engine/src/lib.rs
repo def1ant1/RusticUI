@@ -30,38 +30,20 @@ pub use stylist::{css, global_style, Style, StyleSource};
 macro_rules! css_with_theme {
     ($theme:expr, $($tt:tt)*) => {{
         let _t: &$crate::Theme = &$theme; // type check only
-        stylist::Style::new(stylist::css!{ $($tt)* }).expect("valid css")
+        $crate::Style::new($crate::css!{ $($tt)* }).expect("valid css")
     }};
 }
 
 #[cfg(feature = "yew")]
 mod yew_integration {
     use super::*;
-    use stylist::yew::{GlobalStyle, StyleManager, StyleSheet, StyleSource};
     use yew::prelude::*;
 
-    /// Injects global CSS rules into the document head. The styles are scoped
-    /// by [`stylist`] ensuring they will not conflict with other components.
-    #[derive(Properties, PartialEq)]
-    pub struct GlobalStylesProps {
-        /// Raw CSS rules to be injected globally.
-        pub styles: String,
-    }
-
-    #[function_component(GlobalStyles)]
-    pub fn global_styles(props: &GlobalStylesProps) -> Html {
-        let gs = GlobalStyle::new(props.styles.clone()).expect("valid CSS");
-        gs.to_tag()
-    }
-
-    /// Provides a [`StyleManager`] and [`Theme`] context to all child
-    /// components.  When a `manager` is supplied it will be used to collect
-    /// styles for server side rendering.
+    /// Provides a [`Theme`] context to all child components.  This simplified
+    /// provider can be expanded in the future to collect styles for SSR, but
+    /// for now it keeps compilation light-weight.
     #[derive(Properties, PartialEq)]
     pub struct StyledEngineProviderProps {
-        /// Optional style manager used during SSR to collect styles.
-        #[prop_or_default]
-        pub manager: Option<StyleManager>,
         /// Theme made available to all children.
         #[prop_or_default]
         pub theme: Theme,
@@ -72,13 +54,10 @@ mod yew_integration {
 
     #[function_component(StyledEngineProvider)]
     pub fn styled_engine_provider(props: &StyledEngineProviderProps) -> Html {
-        let mgr = props.manager.clone().unwrap_or_default();
         html! {
-            <stylist::yew::StyleRoot manager={mgr}>
-                <ThemeProvider theme={props.theme.clone()}>
-                    { for props.children.iter() }
-                </ThemeProvider>
-            </stylist::yew::StyleRoot>
+            <ThemeProvider theme={props.theme.clone()}>
+                { for props.children.iter() }
+            </ThemeProvider>
         }
     }
 }
@@ -112,4 +91,3 @@ mod tests {
         assert!(style.get_style_str().contains(&theme.palette.primary));
     }
 }
-
