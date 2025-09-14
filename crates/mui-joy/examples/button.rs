@@ -3,7 +3,7 @@
 //! Run with:
 //! `cargo run -p mui-joy --example button --features yew`
 
-use mui_joy::Button;
+use mui_joy::{Button, Color, Variant};
 use mui_system::theme_provider::ThemeProvider;
 use mui_system::Theme;
 use yew::prelude::*;
@@ -17,7 +17,7 @@ fn app() -> Html {
     };
     html! {
         <ThemeProvider theme={Theme::default()}>
-            <Button label="Add" {onclick} />
+            <Button label="Add" color={Color::Primary} variant={Variant::Solid} {onclick} />
             <p>{ format!("Clicks: {}", *count) }</p>
         </ThemeProvider>
     }
