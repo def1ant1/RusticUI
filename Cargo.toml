@@ -39,6 +39,7 @@ members = [
     "crates/mui-icons-material",
     "crates/mui-utils",
     "crates/mui-joy",
+    "crates/mui-lab",
 ]
 
 # Use Cargo's second feature resolver so optional dependencies don't
@@ -73,6 +74,8 @@ once_cell = "1.21.3"
 proptest = "1.2"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = ["Window", "HtmlElement", "Event", "EventTarget"] }
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+time = { version = "0.3", default-features = false, features = ["formatting", "macros"] }
 
 [profile.dev]
 # Development builds prioritize compile time over runtime performance.

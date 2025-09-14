@@ -1,0 +1,27 @@
+[package]
+name = "mui-lab"
+version = "0.1.0"
+edition = "2021"
+description = "Experimental widgets for MUI Rust. These APIs are unstable and subject to change."
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+once_cell.workspace = true
+serde.workspace = true
+
+# Optional date/time backends
+chrono = { workspace = true, optional = true }
+time = { workspace = true, optional = true }
+
+[features]
+default = []
+# Enable experimental widgets individually to keep compile times lean.
+date-picker = []
+time-picker = []
+# Features toggling which date library backing to use.
+chrono = ["dep:chrono"]
+time = ["dep:time"]
+
+[dev-dependencies]
+# Use chrono in tests for deterministic date math.
+chrono = { workspace = true }
