@@ -358,6 +358,8 @@ cargo xtask coverage     # Generate lcov.info via grcov
 cargo xtask bench        # Run Criterion benchmarks
 ```
 
+For automated style flushing, SSR rendering and variable auditing with `StyledEngineProvider`, see [docs/styled-engine/automation.md](docs/styled-engine/automation.md).
+
 The root `Makefile` delegates to these tasks (`make fmt`, `make test`, etc.)
 and the GitHub Actions workflow mirrors this setup. CI caches build artifacts
 and uploads coverage, documentation and benchmark reports as artifacts so that
