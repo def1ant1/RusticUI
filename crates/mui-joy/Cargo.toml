@@ -1,0 +1,22 @@
+[package]
+name = "mui-joy"
+version = "0.1.0"
+edition = "2021"
+description = "Joy UI components implemented in Rust leveraging mui-system."
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+mui-system = { path = "../mui-system" }
+leptos = { workspace = true, optional = true }
+yew = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+gloo-utils = "0.2"
+web-sys = { workspace = true, features = ["HtmlElement", "Event", "EventTarget"] }
+
+[features]
+default = []
+yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew"]
+leptos = ["dep:leptos", "dep:wasm-bindgen", "mui-system/leptos"]

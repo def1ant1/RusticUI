@@ -1624,6 +1624,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mui-joy"
+version = "0.1.0"
+dependencies = [
+ "gloo-utils 0.2.0",
+ "leptos",
+ "mui-system",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "web-sys",
+ "yew",
+]
+
+[[package]]
 name = "mui-material"
 version = "0.1.0"
 dependencies = [
