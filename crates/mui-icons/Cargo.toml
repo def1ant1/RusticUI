@@ -4,8 +4,30 @@ version = "0.1.0"
 edition = "2021"
 description = "Bindings to Material UI's SVG icon set for Rust front-end frameworks."
 license = "MIT OR Apache-2.0"
+# Build script converts SVGs into memoized Rust functions.
+build = "build.rs"
+
+[features]
+# Enable all icons by default for ease of use.
+default = ["all-icons"]
+all-icons = ["set-material"]
+# Feature enabling the entire material set.
+set-material = ["icon-material-10k_24px", "icon-material-10mp_24px"]
+# Individual icon features.
+icon-material-10k_24px = []
+icon-material-10mp_24px = []
+# Internal feature for the icon update utility.
+update-icons = ["ureq", "zip"]
 
 [dependencies]
-leptos.workspace = true
-yew.workspace = true
-wasm-bindgen.workspace = true
+once_cell.workspace = true
+ureq = { workspace = true, optional = true }
+zip = { workspace = true, optional = true }
+
+[build-dependencies]
+usvg.workspace = true
+quote.workspace = true
+proc-macro2.workspace = true
+
+[dev-dependencies]
+usvg.workspace = true
