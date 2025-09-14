@@ -10,6 +10,23 @@ The code in this crate is considered pre-production and is not covered by the
 standard SemVer guarantees.  Breaking changes may land in any release.  Use it
 at your own risk and pin versions accordingly.
 
+## Feature Flags
+
+Each preview widget lives behind a Cargo feature so consumers only compile
+what they need:
+
+- `date-picker` – opt-in to the minimal date picker demonstrating the
+  `DateAdapter` abstraction.
+- `time-picker` – enables the time picker powered by `TimeAdapter`.
+- `masonry` – experimental Masonry layout algorithm.
+- `localization` – runtime `LocalizationProvider` and built-in `en-US`
+  locale pack (requires `serde`).
+
+Adapters for multiple date/time libraries are also feature gated:
+
+- `chrono` – use the `chrono` crate for date and time math.
+- `time` – use the `time` crate.
+
 ## Contributing
 
 Community contributions are welcome!  To minimize churn:

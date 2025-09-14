@@ -1,6 +1,10 @@
 //! Minimal date picker used for tests and as a reference implementation.
-//! Real applications are expected to build richer UIs on top of the core
-//! logic showcased here.
+//!
+//! **Unstable:** This widget is intentionally tiny and focused purely on the
+//! underlying state transitions.  Rendering and accessibility concerns are
+//! outside the scope of this crate for now.  As the community experiments
+//! with it the API will evolve, therefore downstream crates should pin
+//! versions and expect breaking changes.
 
 use crate::adapters::DateAdapter;
 
@@ -15,7 +19,10 @@ pub enum Key {
 /// Extremely small date picker that only tracks the selected date.
 /// In a real widget this would manage focus, overlays and rendering but
 /// here we keep it intentionally tiny so tests run fast and contributors
-/// can understand the code quickly.
+/// can understand the code quickly.  The design purposely favors a clear
+/// separation between state management and presentation so larger
+/// applications can automate the UI layer with code generation or design
+/// systems without touching the core logic.
 pub struct DatePicker<A: DateAdapter> {
     /// Adapter powering all date math and formatting.
     pub adapter: A,
@@ -42,4 +49,3 @@ impl<A: DateAdapter> DatePicker<A> {
         self.selected = self.adapter.add_days(&self.selected, delta);
     }
 }
-

@@ -6,8 +6,8 @@ description = "Experimental widgets for MUI Rust. These APIs are unstable and su
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-once_cell.workspace = true
-serde.workspace = true
+once_cell = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
 
 # Optional date/time backends
 chrono = { workspace = true, optional = true }
@@ -18,10 +18,14 @@ default = []
 # Enable experimental widgets individually to keep compile times lean.
 date-picker = []
 time-picker = []
+masonry = []
+localization = ["dep:serde", "dep:once_cell"]
 # Features toggling which date library backing to use.
 chrono = ["dep:chrono"]
 time = ["dep:time"]
 
 [dev-dependencies]
-# Use chrono in tests for deterministic date math.
+# Use chrono and time in tests for deterministic date math and serialization checks.
 chrono = { workspace = true }
+time = { workspace = true }
+serde_json = { workspace = true }
