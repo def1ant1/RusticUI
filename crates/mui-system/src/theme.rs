@@ -13,8 +13,10 @@ pub struct Theme {
     pub spacing: u16,
     /// Responsive breakpoints measured in pixels.
     pub breakpoints: Breakpoints,
-    /// Primary and secondary colors expressed as hex strings.
+    /// Primary, secondary and extended palette colors expressed as hex strings.
     pub palette: Palette,
+    /// Joy specific design tokens such as corner radius.
+    pub joy: JoyTokens,
 }
 
 impl Default for Theme {
@@ -23,6 +25,7 @@ impl Default for Theme {
             spacing: 8,
             breakpoints: Breakpoints::default(),
             palette: Palette::default(),
+            joy: JoyTokens::default(),
         }
     }
 }
@@ -61,6 +64,10 @@ impl Default for Breakpoints {
 pub struct Palette {
     pub primary: String,
     pub secondary: String,
+    /// Neutral color used by Joy components.
+    pub neutral: String,
+    /// Danger color used by Joy components.
+    pub danger: String,
 }
 
 impl Default for Palette {
@@ -68,7 +75,22 @@ impl Default for Palette {
         Self {
             primary: "#1976d2".to_string(),
             secondary: "#dc004e".to_string(),
+            neutral: "#64748b".to_string(),
+            danger: "#d32f2f".to_string(),
         }
+    }
+}
+
+/// Joy specific design tokens that do not exist in the core Material theme.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct JoyTokens {
+    /// Default corner radius applied to Joy components.
+    pub radius: u8,
+}
+
+impl Default for JoyTokens {
+    fn default() -> Self {
+        Self { radius: 4 }
     }
 }
 
@@ -81,6 +103,9 @@ mod tests {
         let theme = Theme::default();
         // Verify spacing helper
         assert_eq!(theme.spacing(2), 16);
+        // Joy tokens available
+        assert_eq!(theme.joy.radius, 4);
+        assert_eq!(theme.palette.neutral, "#64748b");
 
         // Round trip through JSON to ensure `serde` wiring is correct
         let json = serde_json::to_string(&theme).expect("serialize");
