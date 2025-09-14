@@ -1,47 +1,108 @@
-use mui_styled_engine::{css_with_theme, use_theme};
+#[cfg(any(feature = "yew", feature = "dioxus", feature = "sycamore"))]
+use mui_styled_engine::{css_with_theme, use_theme, Theme};
+
+#[cfg(feature = "yew")]
 use yew::prelude::*;
 
 pub use crate::macros::{Color as SnackbarColor, Size as SnackbarSize, Variant as SnackbarVariant};
 
+#[cfg(any(feature = "yew", feature = "dioxus", feature = "sycamore"))]
+fn resolve_style(theme: &Theme, color: SnackbarColor, size: SnackbarSize, variant: SnackbarVariant) -> (String, &'static str, String) {
+    let bg = match color {
+        SnackbarColor::Primary => theme.palette.primary.clone(),
+        SnackbarColor::Secondary => theme.palette.secondary.clone(),
+    };
+    let padding = match size {
+        SnackbarSize::Small => "4px 8px",
+        SnackbarSize::Medium => "8px 16px",
+        SnackbarSize::Large => "16px 24px",
+    };
+    let border = match variant {
+        SnackbarVariant::Outlined => format!("1px solid {}", bg.clone()),
+        _ => String::from("none"),
+    };
+    (bg, padding, border)
+}
+
+#[cfg(feature = "yew")]
 crate::material_component_props!(SnackbarProps {
     /// Message presented to the user.
     message: String,
 });
 
-/// Transient feedback component that briefly notifies the user about an
-/// operation.  The component respects the active [`Theme`] and exposes the
-/// usual MUI properties for color, variant and size.
-#[function_component(Snackbar)]
-pub fn snackbar(props: &SnackbarProps) -> Html {
-    let theme = use_theme();
-    let bg = match props.color {
-        SnackbarColor::Primary => theme.palette.primary.clone(),
-        SnackbarColor::Secondary => theme.palette.secondary.clone(),
-    };
-    let padding = match props.size {
-        SnackbarSize::Small => "4px 8px",
-        SnackbarSize::Medium => "8px 16px",
-        SnackbarSize::Large => "16px 24px",
-    };
-    let border = match props.variant {
-        SnackbarVariant::Outlined => format!("1px solid {}", bg),
-        _ => String::from("none"),
-    };
-    let style = css_with_theme!(
-        theme,
-        r#"
-        background: ${bg};
-        color: #fff;
-       padding: ${padding};
-        border: ${border};
-    "#,
-        bg = bg,
-        padding = padding,
-        border = border
-    );
-    let class = style.get_class_name().to_string();
+#[cfg(feature = "yew")]
+mod yew_impl {
+    use super::*;
 
-    html! {
-        <div class={class} role="status">{ &props.message }</div>
+    /// Transient feedback component that briefly notifies the user about an
+    /// operation.
+    #[function_component(Snackbar)]
+    pub fn snackbar(props: &SnackbarProps) -> Html {
+        let theme = use_theme();
+        let (bg, padding, border) = resolve_style(&theme, props.color, props.size, props.variant);
+        let style = css_with_theme!(
+            theme,
+            r#"
+            background: ${bg};
+            color: #fff;
+            padding: ${padding};
+            border: ${border};
+        "#,
+            bg = bg,
+            padding = padding,
+            border = border
+        );
+        let class = style.get_class_name().to_string();
+
+        html! {
+            <div class={class} role="status">{ &props.message }</div>
+        }
     }
 }
+
+#[cfg(feature = "yew")]
+pub use yew_impl::{Snackbar, SnackbarProps};
+
+#[cfg(feature = "dioxus")]
+mod dioxus_impl {
+    use super::*;
+
+    #[derive(Default, Clone, PartialEq)]
+    pub struct SnackbarProps {
+        pub message: String,
+        pub color: SnackbarColor,
+        pub size: SnackbarSize,
+        pub variant: SnackbarVariant,
+    }
+
+    pub fn Snackbar(props: SnackbarProps) {
+        let theme = use_theme();
+        let _ = resolve_style(&theme, props.color, props.size, props.variant);
+        let _ = props.message;
+    }
+}
+
+#[cfg(feature = "dioxus")]
+pub use dioxus_impl::{Snackbar, SnackbarProps};
+
+#[cfg(feature = "sycamore")]
+mod sycamore_impl {
+    use super::*;
+
+    #[derive(Default, Clone, PartialEq)]
+    pub struct SnackbarProps {
+        pub message: String,
+        pub color: SnackbarColor,
+        pub size: SnackbarSize,
+        pub variant: SnackbarVariant,
+    }
+
+    pub fn Snackbar(props: SnackbarProps) {
+        let theme = use_theme();
+        let _ = resolve_style(&theme, props.color, props.size, props.variant);
+        let _ = props.message;
+    }
+}
+
+#[cfg(feature = "sycamore")]
+pub use sycamore_impl::{Snackbar, SnackbarProps};

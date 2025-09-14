@@ -1,3 +1,5 @@
+#![cfg(feature = "yew")]
+
 use mui_material::{AppBar, Button, Snackbar, TextField};
 use mui_styled_engine::{Theme, ThemeProvider};
 use wasm_bindgen_test::*;

@@ -1,11 +1,44 @@
 #[cfg(feature = "leptos")]
 use mui_styled_engine::css_with_theme;
-#[cfg(any(feature = "yew", feature = "leptos"))]
+#[cfg(any(feature = "yew", feature = "leptos", feature = "dioxus", feature = "sycamore"))]
 use mui_styled_engine::use_theme;
+#[cfg(any(feature = "yew", feature = "leptos", feature = "dioxus", feature = "sycamore"))]
+use mui_styled_engine::Theme;
 
 // Re-export shared enums under component specific names so the public API
 // remains ergonomic while the underlying definitions stay centralized.
 pub use crate::macros::{Color as ButtonColor, Size as ButtonSize, Variant as ButtonVariant};
+
+#[cfg(any(feature = "yew", feature = "leptos", feature = "dioxus", feature = "sycamore"))]
+fn compute_styles(
+    theme: &Theme,
+    color: ButtonColor,
+    size: ButtonSize,
+    variant: ButtonVariant,
+    disabled: bool,
+) -> (String, String, String, &'static str, &'static str, f32) {
+    let palette = match color {
+        ButtonColor::Primary => theme.palette.primary.clone(),
+        ButtonColor::Secondary => theme.palette.secondary.clone(),
+    };
+    let padding = match size {
+        ButtonSize::Small => "2px 8px",
+        ButtonSize::Medium => "4px 16px",
+        ButtonSize::Large => "8px 24px",
+    };
+    let (bg, fg, border) = match variant {
+        ButtonVariant::Contained => (palette.clone(), "#fff".into(), "none".into()),
+        ButtonVariant::Outlined => (
+            "transparent".into(),
+            palette.clone(),
+            format!("1px solid {}", palette),
+        ),
+        ButtonVariant::Text => ("transparent".into(), palette.clone(), "none".into()),
+    };
+    let cursor = if disabled { "default" } else { "pointer" };
+    let opacity = if disabled { 0.5 } else { 1.0 };
+    (bg, fg, border, padding, cursor, opacity)
+}
 
 #[cfg(feature = "yew")]
 mod yew_impl {
@@ -33,34 +66,15 @@ mod yew_impl {
     #[function_component(Button)]
     pub fn button(props: &ButtonProps) -> Html {
         let theme = use_theme();
-        let palette = match props.color {
-            ButtonColor::Primary => theme.palette.primary.clone(),
-            ButtonColor::Secondary => theme.palette.secondary.clone(),
-        };
-        let padding = match props.size {
-            ButtonSize::Small => "2px 8px",
-            ButtonSize::Medium => "4px 16px",
-            ButtonSize::Large => "8px 24px",
-        };
-        let (bg, color, border) = match props.variant {
-            ButtonVariant::Contained => (palette.clone(), "#fff".to_string(), "none".to_string()),
-            ButtonVariant::Outlined => (
-                "transparent".into(),
-                palette.clone(),
-                format!("1px solid {}", palette),
-            ),
-            ButtonVariant::Text => ("transparent".into(), palette.clone(), "none".into()),
-        };
-        // Base styles derived from the theme. Represented as JSON so they can
-        // be merged with user provided overrides using `deep_merge` for a fully
-        // declarative styling pipeline.
+        let (bg, color, border, padding, cursor, opacity) =
+            compute_styles(&theme, props.color, props.size, props.variant, props.disabled);
         let mut style = json!({
             "background": bg,
             "color": color,
             "border": border,
             "padding": padding,
-            "cursor": if props.disabled { "default" } else { "pointer" },
-            "opacity": if props.disabled { 0.5 } else { 1.0 },
+            "cursor": cursor,
+            "opacity": opacity,
         });
         if let Some(extra) = &props.style_overrides {
             // Merge overrides deeply so callers can tweak any subset of
@@ -142,24 +156,8 @@ mod leptos_impl {
     #[component]
     pub fn Button(props: ButtonProps) -> impl IntoView {
         let theme = use_theme();
-        let palette = match props.color {
-            ButtonColor::Primary => theme.palette.primary.clone(),
-            ButtonColor::Secondary => theme.palette.secondary.clone(),
-        };
-        let padding = match props.size {
-            ButtonSize::Small => "2px 8px",
-            ButtonSize::Medium => "4px 16px",
-            ButtonSize::Large => "8px 24px",
-        };
-        let (bg, color, border) = match props.variant {
-            ButtonVariant::Contained => (palette.clone(), "#fff".to_string(), "none".to_string()),
-            ButtonVariant::Outlined => (
-                "transparent".into(),
-                palette.clone(),
-                format!("1px solid {}", palette),
-            ),
-            ButtonVariant::Text => ("transparent".into(), palette.clone(), "none".into()),
-        };
+        let (bg, color, border, padding, cursor, opacity) =
+            compute_styles(&theme, props.color, props.size, props.variant, props.disabled);
         let style = css_with_theme!(
             theme,
             r#"
@@ -174,8 +172,8 @@ mod leptos_impl {
             color = color,
             border = border,
             padding = padding,
-            cursor = if props.disabled { "default" } else { "pointer" },
-            opacity = if props.disabled { 0.5 } else { 1.0 },
+            cursor = cursor,
+            opacity = opacity,
         );
         let class = style.get_class_name().to_string();
         let on_click = props.on_click;
@@ -192,3 +190,49 @@ mod leptos_impl {
 
 #[cfg(feature = "leptos")]
 pub use leptos_impl::{Button, ButtonProps};
+
+#[cfg(feature = "dioxus")]
+mod dioxus_impl {
+    use super::*;
+
+    #[derive(Default, Clone, PartialEq)]
+    pub struct ButtonProps {
+        pub label: String,
+        pub color: ButtonColor,
+        pub variant: ButtonVariant,
+        pub size: ButtonSize,
+        pub disabled: bool,
+    }
+
+    pub fn Button(_props: ButtonProps) {
+        let theme = use_theme();
+        let _ = compute_styles(&theme, ButtonColor::Primary, ButtonSize::Medium, ButtonVariant::Text, false);
+        let _ = _props.label;
+    }
+}
+
+#[cfg(feature = "dioxus")]
+pub use dioxus_impl::{Button, ButtonProps};
+
+#[cfg(feature = "sycamore")]
+mod sycamore_impl {
+    use super::*;
+
+    #[derive(Default, Clone, PartialEq)]
+    pub struct ButtonProps {
+        pub label: String,
+        pub color: ButtonColor,
+        pub variant: ButtonVariant,
+        pub size: ButtonSize,
+        pub disabled: bool,
+    }
+
+    pub fn Button(_props: ButtonProps) {
+        let theme = use_theme();
+        let _ = compute_styles(&theme, ButtonColor::Primary, ButtonSize::Medium, ButtonVariant::Text, false);
+        let _ = _props.label;
+    }
+}
+
+#[cfg(feature = "sycamore")]
+pub use sycamore_impl::{Button, ButtonProps};

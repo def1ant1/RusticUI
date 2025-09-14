@@ -54,35 +54,20 @@ mod leptos_impl {
 #[cfg(feature = "leptos")]
 pub use leptos_impl::{use_theme, ThemeProvider};
 
-#[cfg(feature = "dioxus")]
-mod dioxus_impl {
+#[cfg(any(feature = "dioxus", feature = "sycamore"))]
+mod other_impl {
     use super::*;
 
-    /// Placeholder theme hook for Dioxus backends. Currently just returns
-    /// [`Theme::default`] allowing compile-time integration tests to exercise
-    /// the styling macros without pulling in a full Dioxus dependency.
+    /// Placeholder theme hook for non Yew/Leptos backends like Dioxus and
+    /// Sycamore. Returns [`Theme::default()`] so integration tests can compile
+    /// without pulling additional dependencies.
     pub fn use_theme() -> Theme {
         Theme::default()
     }
 }
 
-#[cfg(feature = "dioxus")]
-pub use dioxus_impl::use_theme;
-
-#[cfg(feature = "sycamore")]
-mod sycamore_impl {
-    use super::*;
-
-    /// Placeholder theme hook for Sycamore backends mirroring the behaviour of
-    /// other frameworks. This keeps the API surface consistent while avoiding
-    /// heavyweight dependencies in tests.
-    pub fn use_theme() -> Theme {
-        Theme::default()
-    }
-}
-
-#[cfg(feature = "sycamore")]
-pub use sycamore_impl::use_theme;
+#[cfg(any(feature = "dioxus", feature = "sycamore"))]
+pub use other_impl::use_theme;
 
 // Fallback implementation used when no front-end integration feature is enabled.
 #[cfg(not(any(feature = "yew", feature = "leptos", feature = "dioxus", feature = "sycamore")))]

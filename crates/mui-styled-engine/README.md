@@ -2,8 +2,8 @@
 
 `mui-styled-engine` binds the [stylist] CSS-in-Rust library with the
 `mui-system` theme primitives. It generates scoped CSS at compile time and
-provides Yew components for global style injection, style collection and server
-side rendering (SSR).
+provides components for global style injection, style collection and server
+side rendering (SSR) across Yew, Leptos, Dioxus and Sycamore front-ends.
 
 ## Macros
 
@@ -23,6 +23,11 @@ with several procedural macros:
 
 All macros are re-exported from this crate so downstream code only needs a
 single dependency.
+
+## Feature Flags
+
+Activate front-end integrations with Cargo features: `yew`, `leptos`, `dioxus`
+or `sycamore`.
 
 ## Usage
 
