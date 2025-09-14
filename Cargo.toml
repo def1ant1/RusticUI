@@ -77,6 +77,11 @@ js-sys = "0.3"
 web-sys = { version = "0.3", features = ["Window", "HtmlElement", "Event", "EventTarget"] }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 time = { version = "0.3", default-features = false, features = ["formatting", "macros"] }
+# Lightweight tooling dependencies used by maintenance utilities like the
+# icon updater. These are optional in downstream crates but centralised here
+# so versions stay consistent across the workspace.
+ureq = { version = "2.9", features = ["tls"], default-features = false }
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
 [profile.dev]
 # Development builds prioritize compile time over runtime performance.
@@ -93,5 +98,7 @@ codegen-units = 1
 
 [workspace.metadata]
 # Placeholder for future automation hooks. `cargo xtask` or CI pipelines
-# can read data from this table to decide which tasks to run.
-ci-tool = { build = "make build", test = "make test", doc = "make doc" }
+# can read data from this table to decide which tasks to run. The `icons`
+# step runs the SVG downloader prior to compilation so CI always operates on
+# the freshest assets.
+ci-tool = { icons = "make icons", build = "make icons && cargo build --workspace", test = "make test", doc = "make doc" }

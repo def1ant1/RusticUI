@@ -8,8 +8,27 @@ license = "MIT OR Apache-2.0"
 # Build script performs SVG -> Rust conversion.
 build = "build.rs"
 
+[features]
+# By default include all icons so downstream users get a drop-in experience.
+default = ["all-icons"]
+
+# BEGIN ICON FEATURES -- auto-generated, do not edit by hand.
+all-icons = [
+    "icon-10k_24px",
+    "icon-10mp_24px",
+]
+icon-10k_24px = []
+icon-10mp_24px = []
+# END ICON FEATURES
+
+# Internal feature used only for the maintenance CLI. Keeping it optional
+# prevents heavy HTTP/ZIP dependencies from impacting normal builds.
+update-icons = ["ureq", "zip"]
+
 [dependencies]
 once_cell.workspace = true
+ureq = { workspace = true, optional = true }
+zip = { workspace = true, optional = true }
 
 [build-dependencies]
 usvg.workspace = true
@@ -18,3 +37,8 @@ proc-macro2.workspace = true
 
 [dev-dependencies]
 usvg.workspace = true
+
+[[bin]]
+name = "update_icons"
+path = "src/bin/update_icons.rs"
+required-features = ["update-icons"]
