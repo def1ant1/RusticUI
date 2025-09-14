@@ -12,6 +12,9 @@ leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 stylist = { version = "0.13", optional = true }
+mui-utils = { path = "../mui-utils" }
+serde_json = { workspace = true }
+web-sys = { workspace = true, optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true
@@ -19,5 +22,5 @@ gloo-utils = "0.2"
 
 [features]
 default = []
-yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew", "mui-styled-engine/yew", "dep:stylist"]
+yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew", "mui-styled-engine/yew", "dep:stylist", "dep:web-sys"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "mui-system/leptos"]

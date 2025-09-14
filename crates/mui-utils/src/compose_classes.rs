@@ -1,10 +1,40 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Compose CSS class names for each slot from multiple sources.
 ///
 /// Slots map to arrays of optional class keys. For every defined key the
 /// `get_utility_class` function resolves the base utility class. If `classes`
-/// contains an entry for the same key its value is appended as well.
+/// contains an entry for the same key its value is appended as well. Empty
+/// strings are ignored and duplicate keys are de-duplicated to avoid bloated
+/// `class` attributes.
+///
+/// # Examples
+/// Basic composition with user provided overrides:
+/// ```
+/// use std::collections::HashMap;
+/// use mui_utils::compose_classes;
+///
+/// let slots = HashMap::from([
+///     ("root".to_string(), vec![Some("root".into()), Some("primary".into())])
+/// ]);
+/// let classes = HashMap::from([("root".to_string(), "custom".to_string())]);
+/// let get = |s: &str| format!("MuiButton-{s}");
+/// let out = compose_classes(&slots, get, Some(&classes));
+/// assert_eq!(out.get("root").unwrap(), "MuiButton-root custom MuiButton-primary");
+/// ```
+///
+/// Duplicate and empty entries are skipped automatically:
+/// ```
+/// use std::collections::HashMap;
+/// use mui_utils::compose_classes;
+///
+/// let slots = HashMap::from([
+///     ("root".to_string(), vec![Some("root".into()), Some("root".into()), Some("".into())])
+/// ]);
+/// // Identity resolver – returns the key verbatim
+/// let out = compose_classes(&slots, |s| s.to_string(), None);
+/// assert_eq!(out.get("root").unwrap(), "root");
+/// ```
 ///
 /// # Performance
 /// Each slot is processed in a single pass and output strings are built with
@@ -20,19 +50,27 @@ where
     let mut out = HashMap::with_capacity(slots.len());
     for (slot_name, slot_values) in slots {
         let mut buf = String::new();
-        let mut first = true;
+        let mut seen = HashSet::new();
         for opt in slot_values {
             if let Some(ref value) = opt {
-                if !first {
-                    buf.push(' ');
-                } else {
-                    first = false;
-                }
-                buf.push_str(&get_utility_class(value));
-                if let Some(class_map) = classes {
-                    if let Some(extra) = class_map.get(value) {
-                        buf.push(' ');
-                        buf.push_str(extra);
+                // Avoid repeating the same utility key
+                if seen.insert(value.clone()) {
+                    let util = get_utility_class(value);
+                    if !util.is_empty() {
+                        if !buf.is_empty() {
+                            buf.push(' ');
+                        }
+                        buf.push_str(&util);
+                    }
+                    if let Some(class_map) = classes {
+                        if let Some(extra) = class_map.get(value) {
+                            if !extra.is_empty() {
+                                if !buf.is_empty() {
+                                    buf.push(' ');
+                                }
+                                buf.push_str(extra);
+                            }
+                        }
                     }
                 }
             }

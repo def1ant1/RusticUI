@@ -3,8 +3,42 @@ use serde_json::Value;
 /// Merge two JSON-like values deeply.
 ///
 /// The `source` value is merged into `target` recursively. When both sides
-/// contain an object for the same key, their entries are merged. Otherwise the
-/// `source` value replaces the existing entry in `target`.
+/// contain an object for the same key, their entries are merged. Arrays are
+/// concatenated. For all other type combinations the `source` value replaces
+/// the existing entry in `target`.
+///
+/// # Examples
+/// Basic object merging:
+/// ```
+/// use mui_utils::deep_merge;
+/// use serde_json::json;
+///
+/// let mut a = json!({"a": {"b": 1}});
+/// let b = json!({"a": {"c": 2}});
+/// deep_merge(&mut a, b);
+/// assert_eq!(a, json!({"a": {"b": 1, "c": 2}}));
+/// ```
+///
+/// Arrays are appended:
+/// ```
+/// use mui_utils::deep_merge;
+/// use serde_json::json;
+///
+/// let mut a = json!({"nums": [1,2]});
+/// let b = json!({"nums": [3]});
+/// deep_merge(&mut a, b);
+/// assert_eq!(a, json!({"nums": [1,2,3]}));
+/// ```
+///
+/// Primitive values replace the previous entry:
+/// ```
+/// use mui_utils::deep_merge;
+/// use serde_json::json;
+///
+/// let mut a = json!({"value": 1});
+/// deep_merge(&mut a, json!({"value": "overwritten"}));
+/// assert_eq!(a, json!({"value": "overwritten"}));
+/// ```
 ///
 /// # Performance
 /// This function operates in-place and moves values from `source` into
@@ -21,6 +55,9 @@ pub fn deep_merge(target: &mut Value, source: Value) {
                     }
                 }
             }
+        }
+        (Value::Array(target_arr), Value::Array(source_arr)) => {
+            target_arr.extend(source_arr);
         }
         (t, s) => {
             *t = s;

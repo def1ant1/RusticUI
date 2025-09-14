@@ -24,14 +24,21 @@ proptest! {
             let mut out = HashMap::new();
             for (slot, values) in &slots {
                 let mut buf = String::new();
-                let mut first = true;
+                let mut seen = std::collections::HashSet::new();
                 for opt in values {
                     if let Some(v) = opt {
-                        if !first { buf.push(' '); } else { first = false; }
-                        buf.push_str(&get(v));
-                        if let Some(extra) = classes.get(v) {
-                            buf.push(' ');
-                            buf.push_str(extra);
+                        if seen.insert(v.clone()) {
+                            let util = get(v);
+                            if !util.is_empty() {
+                                if !buf.is_empty() { buf.push(' '); }
+                                buf.push_str(&util);
+                            }
+                            if let Some(extra) = classes.get(v) {
+                                if !extra.is_empty() {
+                                    if !buf.is_empty() { buf.push(' '); }
+                                    buf.push_str(extra);
+                                }
+                            }
                         }
                     }
                 }
