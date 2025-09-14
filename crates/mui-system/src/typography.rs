@@ -37,5 +37,8 @@ pub fn typography(props: &TypographyProps) -> Html {
         node.add_attribute("style", props.style.clone());
     }
     node.add_children(props.children.iter());
-    Html::VTag(node)
+    // `Html::VTag` expects the element to be heap allocated so it can be
+    // shared across render passes.  Boxing here keeps the API ergonomic for
+    // callers while satisfying the enum's requirements.
+    Html::VTag(Box::new(node))
 }

@@ -1,0 +1,11 @@
+[package]
+name = "mui-ssr-accessibility"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+yew.workspace = true
+# Tokio runtime enables async server side rendering.
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+mui-material = { path = "../../crates/mui-material", features = ["yew"] }
+mui-styled-engine = { path = "../../crates/mui-styled-engine", features = ["yew"] }
