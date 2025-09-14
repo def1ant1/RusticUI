@@ -15,7 +15,7 @@ pub struct Theme {
     pub breakpoints: Breakpoints,
     /// Primary, secondary and extended palette colors expressed as hex strings.
     pub palette: Palette,
-    /// Joy specific design tokens such as corner radius.
+    /// Joy specific design tokens such as corner radius and focus outlines.
     pub joy: JoyTokens,
 }
 
@@ -82,15 +82,23 @@ impl Default for Palette {
 }
 
 /// Joy specific design tokens that do not exist in the core Material theme.
+///
+/// They capture stylistic elements unique to Joy such as rounded corners and
+/// the thickness of focus indicators.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct JoyTokens {
     /// Default corner radius applied to Joy components.
     pub radius: u8,
+    /// Thickness in pixels of the default focus ring used for accessibility.
+    pub focus_thickness: u8,
 }
 
 impl Default for JoyTokens {
     fn default() -> Self {
-        Self { radius: 4 }
+        Self {
+            radius: 4,
+            focus_thickness: 2,
+        }
     }
 }
 
@@ -105,6 +113,7 @@ mod tests {
         assert_eq!(theme.spacing(2), 16);
         // Joy tokens available
         assert_eq!(theme.joy.radius, 4);
+        assert_eq!(theme.joy.focus_thickness, 2);
         assert_eq!(theme.palette.neutral, "#64748b");
 
         // Round trip through JSON to ensure `serde` wiring is correct
