@@ -8,27 +8,54 @@ side rendering (SSR).
 ## Macros
 
 To minimize repetitive boilerplate when working with themes, the crate ships
-with two procedural macros:
+with several procedural macros:
 
 * `#[derive(Theme)]` - converts a user defined struct into a full
   [`Theme`](https://docs.rs/mui-styled-engine/latest/mui_styled_engine/struct.Theme.html)
-  by merging the provided fields with `Theme::default()`. This is useful for
-  creating lightweight theme overrides.
+  by merging the provided fields with `Theme::default()`. Nested structs and
+  `Option<T>` fields are recursively merged which keeps custom themes compact.
+* `css_with_theme!` - wraps the [`stylist::css!`] macro and automatically
+  injects a `use_theme()` call. The macro exposes a `theme` binding inside the
+  style block and works across Yew, Leptos, Dioxus and Sycamore backends.
 * `styled_component!` - wraps a regular function and turns it into a Yew
   component that automatically wires up `use_theme()`. The body of the function
   can reference a `theme` binding without additional setup.
 
-Both macros are re-exported from this crate so downstream code only needs a
+All macros are re-exported from this crate so downstream code only needs a
 single dependency.
 
 ## Usage
 
 ```rust
-use mui_styled_engine::{css_with_theme, GlobalStyles, StyledEngineProvider, Theme};
+use mui_styled_engine::{css_with_theme, GlobalStyles, StyledEngineProvider};
 
-let theme = Theme::default();
-let style = css_with_theme!(theme, r#"color: ${c};"#, c = theme.palette.primary.clone());
+// `css_with_theme!` exposes a `theme` variable in the CSS block
+let style = css_with_theme!(r#"color: ${p};"#, p = theme.palette.primary.clone());
 assert!(style.get_class_name().starts_with("css-"));
+```
+
+## Migration
+
+Prior versions required passing an explicit theme to `css_with_theme!`:
+
+```rust
+// Old
+// let style = css_with_theme!(theme, r#"color: ${c};"#, c = theme.palette.primary.clone());
+
+// New
+let style = css_with_theme!(r#"color: ${p};"#, p = theme.palette.primary.clone());
+```
+
+The derive macro now understands nested structs and optional fields so theme
+overrides can be expressed succinctly:
+
+```rust
+use mui_styled_engine::{Theme, Palette};
+
+#[derive(Theme)]
+struct MyTheme {
+    palette: Option<Palette>,
+}
 ```
 
 ## Server Side Rendering

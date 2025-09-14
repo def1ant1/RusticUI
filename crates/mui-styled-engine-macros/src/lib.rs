@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Fields, ItemFn};
+use syn::{parse_macro_input, DeriveInput, Fields, ItemFn, Type};
 
 /// Derive macro generating an `into_theme` helper for custom theme structs.
 ///
@@ -23,7 +23,17 @@ pub fn derive_theme(input: TokenStream) -> TokenStream {
 
     let assignments = fields.iter().map(|f| {
         let ident = f.ident.as_ref().unwrap();
-        quote! { #ident: self.#ident }
+        let ty = &f.ty;
+        let assignment = if is_option(ty) {
+            quote! {
+                #ident: self.#ident
+                    .map(::core::convert::Into::into)
+                    .unwrap_or_else(|| ::mui_styled_engine::Theme::default().#ident)
+            }
+        } else {
+            quote! { #ident: ::core::convert::Into::into(self.#ident) }
+        };
+        assignment
     });
 
     let expanded = quote! {
@@ -37,6 +47,10 @@ pub fn derive_theme(input: TokenStream) -> TokenStream {
     };
 
     expanded.into()
+}
+
+fn is_option(ty: &Type) -> bool {
+    matches!(ty, Type::Path(tp) if tp.path.segments.first().map(|s| s.ident == "Option").unwrap_or(false))
 }
 
 /// Function-like macro that converts a regular function into a Yew component
@@ -67,4 +81,23 @@ pub fn styled_component(input: TokenStream) -> TokenStream {
     };
 
     expanded.into()
+}
+
+/// Function-like macro that wraps [`stylist::css!`] while automatically injecting
+/// a `use_theme` call. The macro works across supported front-end frameworks by
+/// delegating theme retrieval to `mui_styled_engine::use_theme`.
+///
+/// ```ignore
+/// let style = css_with_theme!(r#"color: ${theme.palette.primary};"#);
+/// assert!(style.get_class_name().starts_with("css-"));
+/// ```
+#[proc_macro]
+pub fn css_with_theme(input: TokenStream) -> TokenStream {
+    let tokens = proc_macro2::TokenStream::from(input);
+    let expanded = quote! {{
+        let theme = ::mui_styled_engine::use_theme();
+        ::mui_styled_engine::Style::new(::mui_styled_engine::css!(#tokens))
+            .expect("valid css")
+    }};
+    TokenStream::from(expanded)
 }

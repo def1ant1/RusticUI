@@ -15,10 +15,14 @@ mui-styled-engine-macros = { path = "../mui-styled-engine-macros" }
 [features]
 default = []
 yew = ["mui-system/yew", "dep:yew", "dep:wasm-bindgen", "stylist/yew_integration"]
+leptos = ["mui-system/leptos"]
+dioxus = ["mui-system/dioxus"]
+sycamore = ["mui-system/sycamore"]
 
 [dev-dependencies]
 criterion = "0.5"
 proptest.workspace = true
+trybuild = "1.0"
 
 [[bench]]
 name = "style_bench"

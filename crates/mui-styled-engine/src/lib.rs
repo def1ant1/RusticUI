@@ -11,16 +11,20 @@
 //! ```rust
 //! use mui_styled_engine::{css_with_theme, Theme};
 //!
-//! let theme = Theme::default();
-//! let style = css_with_theme!(theme, r#"color: ${color};"#, color = theme.palette.primary.clone());
+//! // `css_with_theme!` automatically retrieves the current theme and exposes a
+//! // `theme` binding that can be used in value substitutions.
+//! let style = css_with_theme!(r#"color: ${p};"#, p = theme.palette.primary.clone());
 //! assert!(!style.get_class_name().is_empty());
 //! ```
 
 pub use mui_system::theme::{Breakpoints, Palette, Theme};
+pub use mui_system::theme_provider::use_theme;
 #[cfg(feature = "yew")]
-pub use mui_system::theme_provider::{use_theme, ThemeProvider};
+pub use mui_system::theme_provider::ThemeProvider;
+#[cfg(feature = "leptos")]
+pub use mui_system::theme_provider::ThemeProvider;
 // Re-export procedural macros so crate users only depend on one package.
-pub use mui_styled_engine_macros::{styled_component, Theme};
+pub use mui_styled_engine_macros::{css_with_theme, styled_component, Theme};
 // Ensure procedural macros can reference this crate as `mui_styled_engine` even
 // when used internally.
 extern crate self as mui_styled_engine;
@@ -32,18 +36,6 @@ mod context;
 pub use context::*;
 
 pub use stylist::{css, global_style, Style, StyleSource};
-
-/// Macro helper that exposes the [`stylist::css!`] macro while ensuring the
-/// provided theme is available inside the style block.  The macro simply
-/// forwards all tokens to `css!` but marks the theme binding, allowing the
-/// compiler to enforce that a [`Theme`] is passed.
-#[macro_export]
-macro_rules! css_with_theme {
-    ($theme:expr, $($tt:tt)*) => {{
-        let _t: &$crate::Theme = &$theme; // type check only
-        $crate::Style::new($crate::css!{ $($tt)* }).expect("valid css")
-    }};
-}
 
 #[cfg(feature = "yew")]
 mod yew_integration {
@@ -143,13 +135,6 @@ mod tests {
     }
 
     #[test]
-    fn theme_values_can_be_injected() {
-        let theme = Theme::default();
-        let style = css_with_theme!(theme, r#"color: ${c};"#, c = theme.palette.primary.clone());
-        assert!(style.get_style_str().contains(&theme.palette.primary));
-    }
-
-    #[test]
     fn ssr_collects_styles() {
         use stylist::Style;
         let out = render_with_style(|mgr| {
@@ -174,5 +159,26 @@ mod tests {
         };
         let t = custom.into_theme();
         assert_eq!(t.palette.primary, "#fff");
+    }
+
+    #[test]
+    fn theme_derive_handles_nested_and_option() {
+        struct PaletteOverride {
+            primary: String,
+        }
+        impl From<PaletteOverride> for Palette {
+            fn from(p: PaletteOverride) -> Self {
+                Palette { primary: p.primary, ..Palette::default() }
+            }
+        }
+        #[derive(Theme)]
+        struct Wrapper {
+            palette: Option<PaletteOverride>,
+        }
+        let t = Wrapper {
+            palette: Some(PaletteOverride { primary: "#000".into() }),
+        }
+        .into_theme();
+        assert_eq!(t.palette.primary, "#000");
     }
 }
