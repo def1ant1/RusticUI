@@ -9,6 +9,8 @@ license = "MIT OR Apache-2.0"
 wasm-bindgen = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [features]
 # No default features to keep the crate lightweight. Consumers opt into
