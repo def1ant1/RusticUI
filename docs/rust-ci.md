@@ -32,12 +32,20 @@ grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existin
 ```
 
 ### WebAssembly Tests
-Only crates with `wasm-bindgen-test` are executed.
+Only crates with `wasm-bindgen-test` are executed. Interactive components rely
+on the `yew` feature and are automatically audited for accessibility using
+[`axe-core`](https://github.com/dequelabs/axe-core).
 ```bash
 for crate in crates/mui-joy crates/mui-material; do
-  (cd "$crate" && wasm-pack test --headless --chrome)
+  (cd "$crate" && wasm-pack test --headless --chrome --features yew)
 done
 ```
+
+### Accessibility Audits
+The `mui-material` test suite integrates `axe-core` via `wasm-bindgen` to
+validate ARIA roles, keyboard navigation and overall accessibility. Tests fail
+if any violation is detected, making a11y compliance part of the standard CI
+pipeline.
 
 ### Documentation and Benchmarks
 ```bash
