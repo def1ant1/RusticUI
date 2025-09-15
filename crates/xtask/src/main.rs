@@ -36,11 +36,17 @@ enum Commands {
     /// Build API documentation for the entire workspace.
     Doc,
     /// Refresh the Material Design icon bindings.
-    IconUpdate,
+    RefreshIcons,
     /// Generate an `lcov.info` report using grcov.
     Coverage,
     /// Execute Criterion benchmarks. Succeeds even if none exist.
     Bench,
+    /// Regenerate component scaffolding and associated metadata.
+    UpdateComponents,
+    /// Run automated accessibility audits against the docs site.
+    AccessibilityAudit,
+    /// Build the JavaScript documentation site.
+    BuildDocs,
 }
 
 fn main() -> Result<()> {
@@ -51,14 +57,24 @@ fn main() -> Result<()> {
         Commands::Test => test(),
         Commands::WasmTest => wasm_test(),
         Commands::Doc => doc(),
-        Commands::IconUpdate => icon_update(),
+        Commands::RefreshIcons => refresh_icons(),
         Commands::Coverage => coverage(),
         Commands::Bench => bench(),
+        Commands::UpdateComponents => update_components(),
+        Commands::AccessibilityAudit => accessibility_audit(),
+        Commands::BuildDocs => build_docs(),
     }
 }
 
-/// Helper to run a command and bubble up any failure with context.
+/// Helper to execute an external command with verbose logging.
+///
+/// By centralizing the spawning logic we ensure that every task
+/// propagates failures and surfaces the exact command line that
+/// was executed. This dramatically simplifies troubleshooting in
+/// large CI systems where logs are often the only feedback.
 fn run(mut cmd: Command) -> Result<()> {
+    // Print the command for transparency before execution.
+    println!("[xtask] running: {:?}", cmd);
     let status = cmd.status()?;
     if !status.success() {
         return Err(anyhow!("command {:?} failed with status {:?}", cmd, status));
@@ -116,7 +132,9 @@ fn doc() -> Result<()> {
     run(cmd)
 }
 
-fn icon_update() -> Result<()> {
+fn refresh_icons() -> Result<()> {
+    // Delegate to the existing Rust binary that fetches the latest
+    // Material Design SVGs and regenerates the strongly typed bindings.
     let mut cmd = Command::new("cargo");
     cmd.arg("run")
         .arg("-p")
@@ -125,6 +143,33 @@ fn icon_update() -> Result<()> {
         .arg("update_icons")
         .arg("--features")
         .arg("update-icons");
+    run(cmd)
+}
+
+fn update_components() -> Result<()> {
+    // Rebuild component metadata such as PropTypes or other generated
+    // artifacts. This leverages the existing Node script so contributors
+    // do not need to remember the exact incantation.
+    let mut cmd = Command::new("pnpm");
+    cmd.arg("proptypes");
+    run(cmd)
+}
+
+fn accessibility_audit() -> Result<()> {
+    // Execute Playwright based accessibility tests that crawl the
+    // documentation site. Any violation bubbles up as a command failure
+    // ensuring CI visibility.
+    let mut cmd = Command::new("pnpm");
+    cmd.arg("test:e2e-website");
+    run(cmd)
+}
+
+fn build_docs() -> Result<()> {
+    // Build the full documentation website via the existing npm script.
+    // This compiles API documentation, markdown demos and bundles the
+    // static site for deployment.
+    let mut cmd = Command::new("pnpm");
+    cmd.arg("docs:build");
     run(cmd)
 }
 

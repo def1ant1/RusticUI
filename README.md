@@ -70,6 +70,21 @@ make doc      # generate API docs
 
 These targets minimize manual steps and offer a single entry point for local development and CI.
 
+For fine-grained routines the repository exposes a small companion CLI via
+`cargo xtask`. It mirrors the approach used in many large Rust workspaces by
+codifying repeatable maintenance in a single binary. Common subcommands
+include:
+
+```bash
+cargo xtask update-components   # regenerate component metadata from source
+cargo xtask refresh-icons       # pull the latest Material icons
+cargo xtask accessibility-audit # run Playwright accessibility tests
+cargo xtask build-docs          # build the documentation site
+```
+
+Each task emits verbose logs and returns a non-zero exit code on failure so it
+can be safely wired into CI pipelines.
+
 For end-to-end style orchestration that plays well with build pipelines and CI, see [docs/styled-engine/automation.md](docs/styled-engine/automation.md).
 
 ## Migrating from React/TypeScript
