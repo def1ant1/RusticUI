@@ -43,6 +43,43 @@ Run an example:
 cargo run --package mui-yew --example hello_world
 ```
 
+## Centralized theming and accessible markup
+
+`css_with_theme!` exposes the active `Theme` inside a `css!` block, eliminating
+manual plumbing and generating a scoped class. Apply the class alongside ARIA
+attributes for accessible widgets:
+
+```rust
+use leptos::*;
+use mui_material::Button;
+use mui_styled_engine::css_with_theme;
+
+#[component]
+fn SaveButton() -> impl IntoView {
+    // Generate a theme-aware class. The macro injects the workspace theme so
+    // palette tokens can be referenced without repetitive wiring.
+    let style = css_with_theme!(
+        r#"
+        background-color: ${theme.palette.primary.main};
+        color: ${theme.palette.primary.contrast_text};
+        "#,
+    );
+
+    view! {
+        // Apply the class and an ARIA label so screen readers announce the
+        // button's intent.
+        <Button class=style.get_class_name() aria-label="save file">
+            "Save"
+        </Button>
+    }
+}
+```
+
+Centralized theme tokens keep colors and spacing consistent across large
+codebases while ARIA annotations ensure assistive technology can navigate the
+interface. This automation scales well for enterprise teams that demand brand
+consistency and accessibility compliance.
+
 ## Cargo features
 
 The workspace crates disable most features by default so applications pull in
