@@ -15,7 +15,8 @@ accurately describe the UI without additional boilerplate.
 
 Utilities from [`mui-utils`](../mui-utils) are integrated to provide
 enterprise-friendly ergonomics: button callbacks can be throttled,
-text inputs debounced and style overrides merged via JSON using `deep_merge`.
+text inputs debounced and style overrides appended directly within
+`css_with_theme!` blocks.
 
 ## Feature Flags
 
@@ -38,7 +39,6 @@ disabling defaults and enabling only the framework your application requires.
 use mui_material::{Button, AppBar, TextField};
 use mui_styled_engine::{ThemeProvider, Theme};
 use yew::prelude::*;
-use serde_json::json;
 
 #[function_component(App)]
 fn app() -> Html {
@@ -53,7 +53,7 @@ fn app() -> Html {
                 placeholder="Search"
                 aria_label="search"
                 debounce_ms={300}
-                style_overrides={json!({"background": "#eee"})}
+                style_overrides={"background: #eee;"}
             />
         </ThemeProvider>
     }

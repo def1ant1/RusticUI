@@ -1,11 +1,28 @@
-#[cfg(any(feature = "yew", feature = "dioxus", feature = "sycamore"))]
-use mui_styled_engine::{use_theme, Theme};
+//! Debounced text input component with theme-aware styling.
+//!
+//! The widget exposes adapters for Yew, Leptos, Dioxus and Sycamore. Shared
+//! styling is expressed through [`css_with_theme!`](mui_styled_engine::css_with_theme)
+//! so palette and spacing values derive from the active [`Theme`]. Optional
+//! `style_overrides` allow callers to append raw CSS declarations without
+//! abandoning the centralized theme approach. Yew and Leptos variants also
+//! support a debounced `on_input` callback, reducing needless updates during
+//! rapid typing while still surfacing an accessible `aria-label` for assistive
+//! technologies.
+#[cfg(feature = "leptos")]
+use leptos::*;
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore"
+))]
+use mui_styled_engine::{css_with_theme, use_theme, Theme};
 #[cfg(target_arch = "wasm32")]
 use mui_utils::debounce;
-use mui_utils::deep_merge;
-use serde_json::{json, Value};
 #[cfg(target_arch = "wasm32")]
 use std::time::Duration;
+#[cfg(feature = "leptos")]
+use std::{cell::RefCell, rc::Rc};
 #[cfg(feature = "yew")]
 use wasm_bindgen::JsCast;
 #[cfg(feature = "yew")]
@@ -17,7 +34,12 @@ pub use crate::macros::{
     Color as TextFieldColor, Size as TextFieldSize, Variant as TextFieldVariant,
 };
 
-#[cfg(any(feature = "yew", feature = "dioxus", feature = "sycamore"))]
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore"
+))]
 fn compute_parts(
     theme: &Theme,
     color: TextFieldColor,
@@ -41,6 +63,38 @@ fn compute_parts(
     (color, font_size, border)
 }
 
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore"
+))]
+fn resolve_class(
+    color: TextFieldColor,
+    size: TextFieldSize,
+    variant: TextFieldVariant,
+    style_overrides: Option<String>,
+) -> String {
+    let theme = use_theme();
+    let (color, font_size, border) = compute_parts(&theme, color, size, variant);
+    let extra = style_overrides.unwrap_or_default();
+    let style = css_with_theme!(
+        theme,
+        r#"
+        color: ${color};
+        font-size: ${font_size};
+        border: ${border};
+        padding: 4px 8px;
+        ${extra}
+        "#,
+        color = color,
+        font_size = font_size,
+        border = border,
+        extra = extra
+    );
+    style.get_class_name().to_string()
+}
+
 #[cfg(feature = "yew")]
 crate::material_component_props!(TextFieldProps {
     /// Current value displayed in the input element.
@@ -53,8 +107,8 @@ crate::material_component_props!(TextFieldProps {
     debounce_ms: u64,
     /// Callback emitting the latest value after debouncing.
     on_input: Option<Callback<String>>,
-    /// Optional style overrides expressed as JSON.
-    style_overrides: Option<Value>,
+    /// Additional CSS declarations appended to the themed base style.
+    style_overrides: Option<String>,
 });
 
 #[cfg(feature = "yew")]
@@ -62,33 +116,21 @@ mod yew_impl {
     use super::*;
 
     /// Controlled text input field.
+    ///
+    /// Styling is centralized through [`css_with_theme!`] so palette colors,
+    /// font sizes and borders track the active [`Theme`]. Optional `style_overrides`
+    /// allow callers to append raw CSS snippets. When `debounce_ms` is greater
+    /// than zero input events are delayed to avoid spamming the `on_input`
+    /// callback. The `aria_label` is forwarded to ensure assistive technologies
+    /// announce the purpose of the field.
     #[function_component(TextField)]
     pub fn text_field(props: &TextFieldProps) -> Html {
-        let theme = use_theme();
-        let (color, font_size, border) = compute_parts(&theme, props.color, props.size, props.variant);
-        let mut style = json!({
-            "color": color,
-            "font-size": font_size,
-            "border": border,
-            "padding": "4px 8px",
-        });
-        if let Some(extra) = &props.style_overrides {
-            deep_merge(&mut style, extra.clone());
-        }
-        let style_str = style
-            .as_object()
-            .map(|m| {
-                m.iter()
-                    .map(|(k, v)| {
-                        let val = v
-                            .as_str()
-                            .map(|s| s.to_string())
-                            .unwrap_or_else(|| v.to_string());
-                        format!("{k}: {val};")
-                    })
-                    .collect::<String>()
-            })
-            .unwrap_or_default();
+        let class = resolve_class(
+            props.color,
+            props.size,
+            props.variant,
+            props.style_overrides.clone(),
+        );
 
         let on_input_cb = props.on_input.clone().unwrap_or_else(|| Callback::noop());
         let _debounce_ms = props.debounce_ms;
@@ -126,7 +168,7 @@ mod yew_impl {
 
         html! {
             <input
-                style={style_str}
+                class={class}
                 value={props.value.clone()}
                 placeholder={props.placeholder.clone()}
                 aria-label={props.aria_label.clone()}
@@ -139,50 +181,145 @@ mod yew_impl {
 #[cfg(feature = "yew")]
 pub use yew_impl::{TextField, TextFieldProps};
 
-#[cfg(feature = "dioxus")]
-mod dioxus_impl {
+#[cfg(feature = "leptos")]
+mod leptos_impl {
     use super::*;
+    use leptos::{ev::Event, event_target_value};
 
-    #[derive(Default, Clone, PartialEq)]
-    pub struct TextFieldProps {
-        pub value: String,
-        pub placeholder: String,
-        pub aria_label: String,
-        pub color: TextFieldColor,
-        pub size: TextFieldSize,
-        pub variant: TextFieldVariant,
-    }
-
-    pub fn TextField(props: TextFieldProps) {
-        let theme = use_theme();
-        let _ = compute_parts(&theme, props.color, props.size, props.variant);
-        let _ = (props.value, props.placeholder, props.aria_label);
+    /// Leptos variant rendering an accessible `<input>` element.
+    ///
+    /// Theme tokens drive colors, fonts and borders through [`css_with_theme!`].
+    /// Optional `style_overrides` are interpolated into the same style block so
+    /// callers can tweak presentation without abandoning the theme. An optional
+    /// debounced callback limits rapid-fire updates while the `aria-label`
+    /// ensures assistive technologies describe the field.
+    #[component]
+    pub fn TextField(
+        #[prop(optional)] value: String,
+        #[prop(optional)] placeholder: String,
+        #[prop(optional)] aria_label: String,
+        #[prop(optional)] debounce_ms: u64,
+        #[prop(optional)] on_input: Option<Rc<dyn Fn(String)>>,
+        #[prop(optional)] style_overrides: Option<String>,
+        #[prop(optional)] color: TextFieldColor,
+        #[prop(optional)] variant: TextFieldVariant,
+        #[prop(optional)] size: TextFieldSize,
+    ) -> impl IntoView {
+        let class = resolve_class(color, size, variant, style_overrides.clone());
+        let on_input_cb = on_input.unwrap_or_else(|| Rc::new(|_| {}));
+        #[cfg(target_arch = "wasm32")]
+        let debounced = {
+            let cb = on_input_cb.clone();
+            Rc::new(RefCell::new(if debounce_ms > 0 {
+                Box::new(debounce(
+                    move |v: String| cb(v),
+                    Duration::from_millis(debounce_ms),
+                )) as Box<dyn FnMut(String)>
+            } else {
+                Box::new(move |v: String| cb(v)) as Box<dyn FnMut(String)>
+            }))
+        };
+        #[cfg(not(target_arch = "wasm32"))]
+        let debounced = Rc::new(RefCell::new({
+            let cb = on_input_cb.clone();
+            Box::new(move |v: String| cb(v)) as Box<dyn FnMut(String)>
+        }));
+        let on_input_handler = {
+            let debounced = debounced.clone();
+            move |ev: Event| {
+                let value = event_target_value(&ev);
+                (debounced.borrow_mut())(value);
+            }
+        };
+        view! {
+            <input
+                class=class
+                value=value
+                placeholder=placeholder
+                aria-label=aria_label
+                on:input=on_input_handler
+            />
+        }
     }
 }
 
-#[cfg(feature = "dioxus")]
-pub use dioxus_impl::{TextField, TextFieldProps};
+#[cfg(feature = "leptos")]
+pub use leptos_impl::TextField;
 
-#[cfg(feature = "sycamore")]
-mod sycamore_impl {
+#[cfg(feature = "dioxus")]
+pub mod dioxus {
     use super::*;
 
+    /// Properties consumed by the Dioxus adapter.
     #[derive(Default, Clone, PartialEq)]
     pub struct TextFieldProps {
+        /// Current value displayed in the input element.
         pub value: String,
+        /// Placeholder hint shown when the field is empty.
         pub placeholder: String,
+        /// Accessibility label describing the purpose of the field.
         pub aria_label: String,
+        /// Visual color scheme from the theme.
         pub color: TextFieldColor,
+        /// Font sizing variant.
         pub size: TextFieldSize,
+        /// Border style variant.
         pub variant: TextFieldVariant,
+        /// Additional CSS declarations appended to the generated class.
+        pub style_overrides: Option<String>,
     }
 
-    pub fn TextField(props: TextFieldProps) {
-        let theme = use_theme();
-        let _ = compute_parts(&theme, props.color, props.size, props.variant);
-        let _ = (props.value, props.placeholder, props.aria_label);
+    /// Render the text field into an `<input>` tag with themed styling and
+    /// `aria-label` metadata for accessibility.
+    pub fn render(props: &TextFieldProps) -> String {
+        let class = resolve_class(
+            props.color.clone(),
+            props.size.clone(),
+            props.variant.clone(),
+            props.style_overrides.clone(),
+        );
+        format!(
+            "<input class=\"{}\" value=\"{}\" placeholder=\"{}\" aria-label=\"{}\" />",
+            class, props.value, props.placeholder, props.aria_label
+        )
     }
 }
 
 #[cfg(feature = "sycamore")]
-pub use sycamore_impl::{TextField, TextFieldProps};
+pub mod sycamore {
+    use super::*;
+
+    /// Properties consumed by the Sycamore adapter.
+    #[derive(Default, Clone, PartialEq)]
+    pub struct TextFieldProps {
+        /// Current value displayed in the input element.
+        pub value: String,
+        /// Placeholder hint shown when the field is empty.
+        pub placeholder: String,
+        /// Accessibility label describing the purpose of the field.
+        pub aria_label: String,
+        /// Visual color scheme from the theme.
+        pub color: TextFieldColor,
+        /// Font sizing variant.
+        pub size: TextFieldSize,
+        /// Border style variant.
+        pub variant: TextFieldVariant,
+        /// Additional CSS declarations appended to the generated class.
+        pub style_overrides: Option<String>,
+    }
+
+    /// Render the text field into plain HTML with a theme-derived class and
+    /// `aria-label` metadata for accessibility.
+    pub fn render(props: &TextFieldProps) -> String {
+        let class = resolve_class(
+            props.color.clone(),
+            props.size.clone(),
+            props.variant.clone(),
+            props.style_overrides.clone(),
+        );
+        format!(
+            "<input class=\"{}\" value=\"{}\" placeholder=\"{}\" aria-label=\"{}\" />",
+            class, props.value, props.placeholder, props.aria_label
+        )
+    }
+}
