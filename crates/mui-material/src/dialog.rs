@@ -16,9 +16,19 @@
 //! understand that keyboard focus is trapped within the modal.
 //!
 //! Each framework module is intentionally tiny and delegates styling to the
-//! shared [`resolve_class`] helper which centralizes theme lookups and keeps
-//! surface APIs consistent across integrations.
+//! shared [`resolve_class`] helper which centralizes theme lookups using the
+//! [`style_helpers::themed_class`](crate::style_helpers::themed_class) utility.
+//! Frameworks that render raw HTML strings reuse
+//! [`mui_utils::collect_attributes`] to attach `role="dialog"`,
+//! `aria-modal="true"` and caller supplied labels without duplicating string
+//! concatenation logic.
 
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore",
+))]
 use mui_styled_engine::css_with_theme;
 
 #[cfg(feature = "leptos")]
@@ -26,6 +36,7 @@ use leptos::Children;
 #[cfg(feature = "yew")]
 use yew::prelude::*;
 
+#[cfg(any(feature = "yew", feature = "leptos"))]
 use crate::material_props;
 
 /// Generates a CSS class scoped to this dialog using the active [`Theme`].
@@ -42,7 +53,7 @@ use crate::material_props;
     feature = "sycamore"
 ))]
 fn resolve_class() -> String {
-    let style = css_with_theme!(
+    crate::style_helpers::themed_class(css_with_theme!(
         r#"
         border: 2px solid ${border};
         padding: ${pad};
@@ -51,8 +62,7 @@ fn resolve_class() -> String {
         // global tokens instead of individual components.
         border = theme.palette.secondary.clone(),
         pad = format!("{}px", theme.spacing(3))
-    );
-    style.get_class_name().to_string()
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -164,10 +174,15 @@ pub mod dioxus {
             return String::new();
         }
         let class = super::resolve_class();
-        format!(
-            "<div class=\"{}\" role=\"dialog\" aria-modal=\"true\" aria-label=\"{}\">{}</div>",
-            class, props.aria_label, props.children
-        )
+        // Compose attributes through the shared helpers so every SSR adapter
+        // exposes the same ARIA metadata order and escaping.
+        let mut attrs = mui_utils::collect_attributes(
+            Some(class),
+            [("role", "dialog"), ("aria-modal", "true")],
+        );
+        mui_utils::extend_attributes(&mut attrs, [("aria-label", props.aria_label.clone())]);
+        let attr_string = mui_utils::attributes_to_html(&attrs);
+        format!("<div {}>{}</div>", attr_string, props.children)
     }
 }
 
@@ -199,9 +214,13 @@ pub mod sycamore {
             return String::new();
         }
         let class = super::resolve_class();
-        format!(
-            "<div class=\"{}\" role=\"dialog\" aria-modal=\"true\" aria-label=\"{}\">{}</div>",
-            class, props.aria_label, props.children
-        )
+        // Consistently wire accessibility metadata via the helper utilities.
+        let mut attrs = mui_utils::collect_attributes(
+            Some(class),
+            [("role", "dialog"), ("aria-modal", "true")],
+        );
+        mui_utils::extend_attributes(&mut attrs, [("aria-label", props.aria_label.clone())]);
+        let attr_string = mui_utils::attributes_to_html(&attrs);
+        format!("<div {}>{}</div>", attr_string, props.children)
     }
 }

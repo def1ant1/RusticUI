@@ -1,4 +1,25 @@
+//! Material themed application bar that demonstrates centralized styling and
+//! accessibility metadata.
+//!
+//! All adapters derive their visual appearance from
+//! [`css_with_theme!`](mui_styled_engine::css_with_theme) so palette and sizing
+//! decisions track the active [`Theme`](mui_styled_engine::Theme). The shared
+//! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
+//! converts those styles into scoped class names while
+//! [`mui_utils::collect_attributes`] assembles ARIA rich attribute sets for SSR
+//! oriented adapters. Each framework specific module layers the correct role and
+//! `aria-label` metadata onto a semantic `<header>` so screen readers announce
+//! the bar as the application's primary banner region.
+
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore"
+))]
 use mui_styled_engine::{css_with_theme, use_theme, Theme};
+#[cfg(any(feature = "dioxus", feature = "sycamore"))]
+use mui_utils::{attributes_to_html, collect_attributes, extend_attributes};
 
 #[cfg(feature = "yew")]
 use yew::prelude::*;
@@ -8,6 +29,12 @@ use yew::prelude::*;
 // `macros.rs`.
 pub use crate::macros::{Color as AppBarColor, Size as AppBarSize, Variant as AppBarVariant};
 
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore"
+))]
 fn resolve_style(theme: &Theme, color: AppBarColor, size: AppBarSize) -> (String, &'static str) {
     let bg = match color {
         AppBarColor::Primary => theme.palette.primary.clone(),
@@ -44,7 +71,7 @@ mod yew_impl {
     pub fn app_bar(props: &AppBarProps) -> Html {
         let theme = use_theme();
         let (bg, height) = resolve_style(&theme, props.color, props.size);
-        let style = css_with_theme!(
+        let class = crate::style_helpers::themed_class(css_with_theme!(
             theme,
             r#"
             background: ${bg};
@@ -55,8 +82,7 @@ mod yew_impl {
         "#,
             bg = bg,
             height = height
-        );
-        let class = style.get_class_name().to_string();
+        ));
 
         html! {
             <header
@@ -88,7 +114,7 @@ mod leptos_impl {
     pub fn AppBar(props: AppBarProps) -> impl IntoView {
         let theme = use_theme();
         let (bg, height) = resolve_style(&theme, props.color, props.size);
-        let style = css_with_theme!(
+        let class = crate::style_helpers::themed_class(css_with_theme!(
             theme,
             r#"
             background: ${bg};
@@ -99,8 +125,7 @@ mod leptos_impl {
         "#,
             bg = bg,
             height = height
-        );
-        let class = style.get_class_name().to_string();
+        ));
 
         view! {
             <header class=class role="banner" aria-label=props.aria_label>
@@ -148,7 +173,7 @@ pub mod dioxus {
     pub fn render(props: &AppBarProps) -> String {
         let theme = use_theme();
         let (bg, height) = resolve_style(&theme, props.color.clone(), props.size.clone());
-        let style = css_with_theme!(
+        let class = crate::style_helpers::themed_class(css_with_theme!(
             theme,
             r#"
             background: ${bg};
@@ -159,12 +184,13 @@ pub mod dioxus {
         "#,
             bg = bg,
             height = height
-        );
-        let class = style.get_class_name().to_string();
-        format!(
-            "<header class=\"{}\" role=\"banner\" aria-label=\"{}\">{}</header>",
-            class, props.aria_label, props.title
-        )
+        ));
+        // Use the shared helpers so attribute ordering and escaping matches the
+        // WebAssembly adapters without repeating formatting code.
+        let mut attrs = collect_attributes(Some(class), [("role", "banner")]);
+        extend_attributes(&mut attrs, [("aria-label", props.aria_label.clone())]);
+        let attr_string = attributes_to_html(&attrs);
+        format!("<header {}>{}</header>", attr_string, props.title)
     }
 }
 
@@ -195,7 +221,7 @@ pub mod sycamore {
     pub fn render(props: &AppBarProps) -> String {
         let theme = use_theme();
         let (bg, height) = resolve_style(&theme, props.color.clone(), props.size.clone());
-        let style = css_with_theme!(
+        let class = crate::style_helpers::themed_class(css_with_theme!(
             theme,
             r#"
             background: ${bg};
@@ -206,11 +232,10 @@ pub mod sycamore {
         "#,
             bg = bg,
             height = height
-        );
-        let class = style.get_class_name().to_string();
-        format!(
-            "<header class=\"{}\" role=\"banner\" aria-label=\"{}\">{}</header>",
-            class, props.aria_label, props.title
-        )
+        ));
+        let mut attrs = collect_attributes(Some(class), [("role", "banner")]);
+        extend_attributes(&mut attrs, [("aria-label", props.aria_label.clone())]);
+        let attr_string = attributes_to_html(&attrs);
+        format!("<header {}>{}</header>", attr_string, props.title)
     }
 }

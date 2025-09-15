@@ -4,17 +4,23 @@
 //! across all supported frameworks. The shared renderer uses
 //! [`css_with_theme!`](mui_styled_engine::css_with_theme) to derive visual
 //! styles from the active [`Theme`](mui_styled_engine::Theme) instead of hard
-//! coded strings.  Accessibility attributes returned by [`ButtonState`] are
-//! merged into the final element which allows assistive technologies to
-//! accurately describe the control.
+//! coded strings. The [`style_helpers::themed_class`](crate::style_helpers::themed_class)
+//! function converts the generated [`Style`](mui_styled_engine::Style) into a
+//! scoped class, documenting how the styled engine registers CSS. Accessibility
+//! attributes returned by [`ButtonState`] are merged using the
+//! [`mui_utils::collect_attributes`] helper which keeps ARIA wiring consistent
+//! across all adapters so assistive technologies accurately describe the
+//! control.
 //!
 //! This module intentionally contains no framework specific code.  Instead it
 //! exposes lightweight adapters which convert the shared state into view code
 //! for each supported front-end framework.  This design minimizes repeated
-//! business logic and keeps rendering concerns decoupled from behavior.
+//! business logic and keeps rendering concerns decoupled from behavior while
+//! encouraging adapters to reuse the shared helpers documented above.
 
 use mui_headless::button::ButtonState;
 use mui_styled_engine::css_with_theme;
+use mui_utils::{attributes_to_html, collect_attributes};
 
 /// Shared properties accepted by all adapter implementations.
 #[derive(Clone, Debug)]
@@ -42,7 +48,7 @@ impl ButtonProps {
 fn render_html(props: &ButtonProps, state: &ButtonState) -> String {
     // Build a themed style block. We intentionally keep the CSS minimal since
     // this example returns plain HTML rather than framework specific nodes.
-    let style = css_with_theme!(
+    let class = crate::style_helpers::themed_class(css_with_theme!(
         r#"
         background: ${bg};
         color: #fff;
@@ -52,19 +58,16 @@ fn render_html(props: &ButtonProps, state: &ButtonState) -> String {
         // Use the primary palette color so the button automatically adapts to
         // custom themes without manual tweaking.
         bg = theme.palette.primary.clone()
-    );
-    let class = style.get_class_name().to_string();
+    ));
 
-    // Compose the HTML attribute string starting with the generated class and
-    // then appending all ARIA attributes from the state.
-    let mut attrs = vec![format!(r#"class=\"{}\""#, class)];
-    for (k, v) in state.aria_attributes() {
-        attrs.push(format!(r#"{}=\"{}\""#, k, v));
-    }
+    // Compose the HTML attributes with the reusable helpers so SSR adapters
+    // mirror the DOM exposed by WebAssembly frameworks without bespoke code.
+    let attrs = collect_attributes(Some(class), state.aria_attributes());
+    let attr_string = attributes_to_html(&attrs);
 
     // Final HTML representation. Individual adapters simply forward to this
     // function keeping rendering logic DRY and easy to evolve.
-    format!("<button {}>{}</button>", attrs.join(" "), props.label)
+    format!("<button {}>{}</button>", attr_string, props.label)
 }
 
 // ---------------------------------------------------------------------------
