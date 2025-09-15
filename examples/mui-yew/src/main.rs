@@ -1,19 +1,31 @@
 use yew::prelude::*;
-use mui_system::Box;
+use mui_system::{theme::Theme, ThemeProvider, Box};
 
-/// Entry component showcasing a minimal Material UI setup in Yew.
-/// The example favors static generation via `trunk build --release`
-/// which yields a tiny, cacheable WebAssembly artifact.
+/// Yew application wired up with MUI theming and an SSR entry point.
 #[function_component(App)]
 fn app() -> Html {
+    let theme = Theme::default();
     html! {
-        <Box style="padding:1rem;">
-            <p>{ "Hello from Yew + MUI!" }</p>
-        </Box>
+        <ThemeProvider theme={theme}>
+            <Box sx="padding:1rem;">
+                <p>{ "Hello from Yew + MUI!" }</p>
+            </Box>
+        </ThemeProvider>
     }
 }
 
+#[cfg(feature = "csr")]
 fn main() {
-    // Mount the application to the document body.
-    yew::Renderer::<App>::new().render();
+    // Hydrate existing SSR markup when present, otherwise render from scratch.
+    yew::Renderer::<App>::new().hydrate();
+}
+
+#[cfg(feature = "ssr")]
+#[tokio::main]
+async fn main() {
+    // Produce HTML on the server. Downstream frameworks can embed this output
+    // in an HTTP response and serve the same bundle for client hydration.
+    use yew::ServerRenderer;
+    let html = ServerRenderer::<App>::new().render().await;
+    println!("{html}");
 }
