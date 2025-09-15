@@ -24,6 +24,7 @@ Here are a few guidelines that will help you along the way.
 - [How can I use a change that hasn't been released yet?](#how-can-i-use-a-change-that-hasnt-been-released-yet)
 - [Roadmap](#roadmap)
 - [License](#license)
+- [Cargo feature guide](docs/cargo-features.md)
 
 ## Code of conduct
 
@@ -339,6 +340,9 @@ The `mui-lab` crate contains opt-in, unstable widgets. When proposing changes to
 Expect rapid iteration and potentially breaking changes as feedback is incorporated.
 
 ## Automated Rust workflow
+
+Cargo feature flags let developers compile only the crates and icons they need.
+Consult the [Cargo feature guide](docs/cargo-features.md) for usage examples.
 
 To keep development friction low, the Rust crates in this repository share a
 set of managed tasks exposed through [`cargo xtask`](https://github.com/matklad/cargo-xtask).

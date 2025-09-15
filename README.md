@@ -43,6 +43,13 @@ Run an example:
 cargo run --package mui-yew --example hello_world
 ```
 
+## Cargo features
+
+The workspace crates disable most features by default so applications pull in
+only the components or icons they use. Consult
+[docs/cargo-features.md](docs/cargo-features.md) for a breakdown of available
+flags and example `Cargo.toml` snippets.
+
 ## Workspace layout
 
 The workspace is organized under the `crates/` directory:
