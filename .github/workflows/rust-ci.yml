@@ -147,3 +147,21 @@ jobs:
       - run: cargo xtask accessibility-audit
       # Build the JavaScript documentation site for validation
       - run: cargo xtask build-docs
+
+  publish-check:
+    name: Publish Dry Run
+    runs-on: ubuntu-latest
+    steps:
+      # Validate that each crate is ready for publication by running a dry run
+      # `cargo publish`. This catches missing metadata or ignored files early.
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          for crate in crates/*; do
+            if [ -f "$crate/Cargo.toml" ]; then
+              (cd "$crate" && cargo publish --dry-run)
+            fi
+          done

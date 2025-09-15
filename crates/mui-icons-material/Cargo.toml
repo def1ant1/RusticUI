@@ -7,6 +7,18 @@ license = "MIT OR Apache-2.0"
 
 # Build script performs SVG -> Rust conversion.
 build = "build.rs"
+# Expose rich metadata so tooling and crates.io users can easily discover the
+# crate. Centralizing the repository links streamlines issue tracking and
+# reduces manual curation across multiple crates.
+repository = "https://github.com/mui/mui-rust"
+homepage = "https://github.com/mui/mui-rust"
+documentation = "https://docs.rs/mui-icons-material"
+keywords = ["material", "ui", "web"]
+categories = ["gui"]
+
+[badges]
+# Flag the crate as experimental to set contributor expectations.
+maintenance = { status = "experimental" }
 
 [features]
 # By default include all icons so downstream users get a drop-in experience.
@@ -21,9 +33,9 @@ icon-10k_24px = []
 icon-10mp_24px = []
 # END ICON FEATURES
 
-# Internal feature used only for the maintenance CLI. Keeping it optional
-# prevents heavy HTTP/ZIP dependencies from impacting normal builds.
-update-icons = ["ureq", "zip"]
+# Internal feature used only for the maintenance CLI. `dep:` ensures the
+# optional network/ZIP dependencies stay isolated until explicitly requested.
+update-icons = ["dep:ureq", "dep:zip"]
 
 [dependencies]
 once_cell.workspace = true

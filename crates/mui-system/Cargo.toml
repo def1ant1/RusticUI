@@ -4,6 +4,14 @@ version = "0.1.0"
 edition = "2021"
 description = "Foundational styling primitives for the Material UI Rust ecosystem."
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/mui/mui-rust"
+homepage = "https://github.com/mui/mui-rust"
+documentation = "https://docs.rs/mui-system"
+keywords = ["material", "ui", "web"]
+categories = ["gui"]
+
+[badges]
+maintenance = { status = "experimental" }
 
 [dependencies]
 # Use shared versions from the workspace. These dependencies are optional
