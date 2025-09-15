@@ -106,7 +106,25 @@ fn clippy() -> Result<()> {
 fn test() -> Result<()> {
     let mut cmd = Command::new("cargo");
     cmd.arg("test").arg("--workspace").arg("--all-features");
-    run(cmd)
+    run(cmd)?;
+    // Also ensure each example still compiles for the WebAssembly target.
+    let examples = [
+        "examples/mui-yew",
+        "examples/mui-leptos",
+        "examples/mui-dioxus",
+        "examples/mui-sycamore",
+    ];
+    for ex in &examples {
+        let mut check = Command::new("cargo");
+        check
+            .arg("check")
+            .arg("--target")
+            .arg("wasm32-unknown-unknown")
+            .arg("--manifest-path")
+            .arg(format!("{}/Cargo.toml", ex));
+        run(check)?;
+    }
+    Ok(())
 }
 
 fn wasm_test() -> Result<()> {

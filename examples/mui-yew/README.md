@@ -1,22 +1,20 @@
 # MUI Yew Example
 
 This example demonstrates how to combine the `mui-system` crate with the
-[Yew](https://yew.rs) framework.  It is configured for production builds so the
-output can be served from a static host or CDN.
+[Yew](https://yew.rs) framework. It showcases basic components, theming and
+both client-side rendering and an optional server-side rendering setup.
 
-## Development
-
+## Development (CSR)
 ```bash
 trunk serve --open
 ```
+This builds the WebAssembly bundle and hosts it with live reload.
 
-## Production
-
+## Server-side rendering
 ```bash
+cargo run --manifest-path examples/mui-yew/Cargo.toml --features ssr > prerendered.html
+# serve `prerendered.html` and hydrate it with the client bundle
 trunk build --release
-# Deploy the `dist/` directory behind a CDN such as Vercel or Cloudflare
-# Workers for globally distributed hosting.
 ```
-
-The release build enables `wasm-opt` by default which keeps the WebAssembly
-binary small and fast to download.
+`trunk build` produces the `dist/` directory containing assets to hydrate the
+pre-rendered HTML. Any static host or CDN can serve this directory.
