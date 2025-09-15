@@ -3,6 +3,16 @@ name = "mui-headless"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
+# Standardized metadata keeps each crate aligned and enables automated tooling
+# to reason about the entire workspace without manual per-crate overrides.
+repository = "https://github.com/mui/mui-rust"
+homepage = "https://github.com/mui/mui-rust"
+documentation = "https://docs.rs/mui-headless"
+keywords = ["material", "ui", "web"]
+categories = ["gui"]
+
+[badges]
+maintenance = { status = "experimental" }
 
 [dependencies]
 # Use std only; no external dependencies beyond std.

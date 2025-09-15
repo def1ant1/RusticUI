@@ -4,6 +4,14 @@ version = "0.1.0"
 edition = "2021"
 description = "Material Design components implemented in Rust leveraging mui-system."
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/mui/mui-rust"
+homepage = "https://github.com/mui/mui-rust"
+documentation = "https://docs.rs/mui-material"
+keywords = ["material", "ui", "web"]
+categories = ["gui"]
+
+[badges]
+maintenance = { status = "experimental" }
 
 [dependencies]
 mui-styled-engine = { path = "../mui-styled-engine" }

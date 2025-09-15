@@ -2,8 +2,16 @@
 name = "mui-utils"
 version = "0.1.0"
 edition = "2021"
-description = "Utility helpers for the Material UI Rust ecosystem." 
+description = "Utility helpers for the Material UI Rust ecosystem."
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/mui/mui-rust"
+homepage = "https://github.com/mui/mui-rust"
+documentation = "https://docs.rs/mui-utils"
+keywords = ["material", "ui", "web"]
+categories = ["gui"]
+
+[badges]
+maintenance = { status = "experimental" }
 
 [dependencies]
 wasm-bindgen = { workspace = true, optional = true }

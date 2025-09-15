@@ -1,0 +1,12 @@
+# Central configuration for `cargo release`.
+# This keeps version management and tagging consistent across all crates while
+# avoiding manual repetitive steps.
+
+sign-commit = true
+push = false
+
+[workspace]
+# Manage versions for each crate independently so releases can happen as
+# components mature. The main branch is the default release target.
+independent = true
+allow-branch = ["main"]

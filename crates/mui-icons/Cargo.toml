@@ -6,6 +6,19 @@ description = "Bindings to Material UI's SVG icon set for Rust front-end framewo
 license = "MIT OR Apache-2.0"
 # Build script converts SVGs into memoized Rust functions.
 build = "build.rs"
+# Rich metadata surfaces crate intent on crates.io and enables automated
+# publishing workflows. The repository/homepage links funnel users to the
+# centralized documentation and issue tracker to reduce fragmentation.
+repository = "https://github.com/mui/mui-rust"
+homepage = "https://github.com/mui/mui-rust"
+documentation = "https://docs.rs/mui-icons"
+keywords = ["material", "ui", "web"]
+categories = ["gui"]
+
+[badges]
+# Mark the crate as experimental so downstream consumers understand the API
+# surface is still evolving.
+maintenance = { status = "experimental" }
 
 [features]
 # Enable all icons by default for ease of use.
@@ -16,8 +29,9 @@ set-material = ["icon-material-10k_24px", "icon-material-10mp_24px"]
 # Individual icon features.
 icon-material-10k_24px = []
 icon-material-10mp_24px = []
-# Internal feature for the icon update utility.
-update-icons = ["ureq", "zip"]
+# Internal feature for the icon update utility. Using `dep:` ensures the
+# optional HTTP/ZIP dependencies only activate when explicitly requested.
+update-icons = ["dep:ureq", "dep:zip"]
 
 [dependencies]
 once_cell.workspace = true

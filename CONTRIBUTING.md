@@ -369,6 +369,37 @@ and the GitHub Actions workflow mirrors this setup. CI caches build artifacts
 and uploads coverage, documentation and benchmark reports as artifacts so that
 contributors can focus on writing code rather than on bespoke scripting.
 
+## Release workflow
+
+Versioning for the Rust crates is automated with
+[`cargo release`](https://github.com/crate-ci/cargo-release). This utility
+reads the root `release.toml` and keeps versions, tags and changelog entries in
+sync across the workspace.
+
+1. Document user visible changes in each crate's `CHANGELOG.md`.
+2. Verify everything builds and is publishable:
+
+   ```bash
+   cargo xtask test
+   cargo publish --dry-run -p <crate>
+   ```
+
+3. Bump the version and create a signed tag:
+
+   ```bash
+   cargo release <patch|minor|major> -p <crate> --execute
+   ```
+
+4. Push the commit and tag, then publish to crates.io:
+
+   ```bash
+   git push --follow-tags
+   cargo publish -p <crate>
+   ```
+
+Automating releases this way keeps the process repeatable and avoids manual
+version mismatches between crates.
+
 ## How can I use a change that hasn't been released yet?
 
 We use [pkg.pr.new](https://pkg.pr.new) to publish a working version of the packages for each pull request as a "preview."

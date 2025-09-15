@@ -4,6 +4,14 @@ version = "0.1.0"
 edition = "2021"
 description = "Experimental widgets for MUI Rust. These APIs are unstable and subject to change."
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/mui/mui-rust"
+homepage = "https://github.com/mui/mui-rust"
+documentation = "https://docs.rs/mui-lab"
+keywords = ["material", "ui", "web"]
+categories = ["gui"]
+
+[badges]
+maintenance = { status = "experimental" }
 
 [dependencies]
 once_cell = { workspace = true, optional = true }
