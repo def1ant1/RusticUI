@@ -1,10 +1,51 @@
-use crate::{style, style_props};
+use crate::{responsive::Responsive, style, style_props, theme::Breakpoints};
 
 /// Direction of children placement inside [`Stack`].
 #[derive(Clone, PartialEq)]
 pub enum StackDirection {
     Row,
     Column,
+}
+
+impl StackDirection {
+    fn as_css_value(&self) -> &'static str {
+        match self {
+            StackDirection::Row => "row",
+            StackDirection::Column => "column",
+        }
+    }
+}
+
+/// Shared style assembly for framework adapters and integration tests.
+#[doc(hidden)]
+pub fn build_stack_style(
+    width: u32,
+    breakpoints: &Breakpoints,
+    direction: Option<StackDirection>,
+    spacing: Option<&Responsive<String>>,
+    align_items: Option<&str>,
+    justify_content: Option<&str>,
+    sx: &str,
+) -> String {
+    let direction_value = direction.unwrap_or(StackDirection::Column).as_css_value();
+    let mut style = style_props! { display: "flex", flex_direction: direction_value };
+
+    if let Some(sp) = spacing {
+        // Resolve the gap for the current viewport.  Using `gap` keeps both
+        // horizontal and vertical spacing in sync, mirroring the ergonomic
+        // defaults of the upstream Stack implementation.
+        let resolved = sp.resolve(width, breakpoints);
+        style.push_str(&style_props! { gap: resolved });
+    }
+    if let Some(ai) = align_items {
+        style.push_str(&style::align_items(ai));
+    }
+    if let Some(jc) = justify_content {
+        style.push_str(&style::justify_content(jc));
+    }
+
+    style.push_str(sx);
+    style
 }
 
 #[cfg(feature = "yew")]
@@ -20,7 +61,7 @@ mod yew_impl {
         pub direction: Option<StackDirection>,
         /// Gap between children. Accepts any CSS length value.
         #[prop_or_default]
-        pub spacing: Option<String>,
+        pub spacing: Option<Responsive<String>>,
         /// Align items on the cross axis.
         #[prop_or_default]
         pub align_items: Option<String>,
@@ -38,21 +79,17 @@ mod yew_impl {
     /// Minimal flexbox based stack layout.
     #[function_component(Stack)]
     pub fn stack(props: &StackProps) -> Html {
-        let direction = match props.direction {
-            Some(StackDirection::Row) => "row",
-            _ => "column",
-        };
-        let mut style = style_props! { display: "flex", flex_direction: direction };
-        if let Some(spacing) = &props.spacing {
-            style.push_str(&style_props! { gap: spacing.clone() });
-        }
-        if let Some(ai) = &props.align_items {
-            style.push_str(&style::align_items(ai.clone()));
-        }
-        if let Some(jc) = &props.justify_content {
-            style.push_str(&style::justify_content(jc.clone()));
-        }
-        style.push_str(&props.sx);
+        let theme = crate::theme_provider::use_theme();
+        let width = crate::responsive::viewport_width();
+        let style = build_stack_style(
+            width,
+            &theme.breakpoints,
+            props.direction.clone(),
+            props.spacing.as_ref(),
+            props.align_items.as_deref(),
+            props.justify_content.as_deref(),
+            &props.sx,
+        );
         html! { <div style={style}>{ for props.children.iter() }</div> }
     }
 }
@@ -69,27 +106,23 @@ mod leptos_impl {
     #[component]
     pub fn Stack(
         #[prop(optional)] direction: Option<StackDirection>,
-        #[prop(optional, into)] spacing: Option<String>,
+        #[prop(optional)] spacing: Option<Responsive<String>>,
         #[prop(optional, into)] align_items: Option<String>,
         #[prop(optional, into)] justify_content: Option<String>,
         #[prop(optional, into)] sx: String,
         children: Children,
     ) -> impl IntoView {
-        let direction = match direction {
-            Some(StackDirection::Row) => "row",
-            _ => "column",
-        };
-        let mut style = style_props! { display: "flex", flex_direction: direction };
-        if let Some(sp) = spacing {
-            style.push_str(&style_props! { gap: sp });
-        }
-        if let Some(ai) = align_items {
-            style.push_str(&style::align_items(ai));
-        }
-        if let Some(jc) = justify_content {
-            style.push_str(&style::justify_content(jc));
-        }
-        style.push_str(&sx);
+        let theme = crate::theme_provider::use_theme();
+        let width = crate::responsive::viewport_width();
+        let style = build_stack_style(
+            width,
+            &theme.breakpoints,
+            direction,
+            spacing.as_ref(),
+            align_items.as_deref(),
+            justify_content.as_deref(),
+            &sx,
+        );
         view! { <div style=style>{children()}</div> }
     }
 }

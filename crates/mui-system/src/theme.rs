@@ -42,6 +42,7 @@ impl Theme {
 /// struct if additional breakpoints are required.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Breakpoints {
+    pub xs: u32,
     pub sm: u32,
     pub md: u32,
     pub lg: u32,
@@ -51,6 +52,7 @@ pub struct Breakpoints {
 impl Default for Breakpoints {
     fn default() -> Self {
         Self {
+            xs: 0,
             sm: 600,
             md: 900,
             lg: 1200,
@@ -115,6 +117,7 @@ mod tests {
         assert_eq!(theme.joy.radius, 4);
         assert_eq!(theme.joy.focus_thickness, 2);
         assert_eq!(theme.palette.neutral, "#64748b");
+        assert_eq!(theme.breakpoints.xs, 0);
 
         // Round trip through JSON to ensure `serde` wiring is correct
         let json = serde_json::to_string(&theme).expect("serialize");
