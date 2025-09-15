@@ -7,6 +7,7 @@
 //! need and the compiler can aggressively optimize away unused code.
 //!
 //! # Modules
+//! * [`accessibility`] - compose ARIA rich HTML attribute collections.
 //! * [`debounce`] - delay execution until a burst of calls has
 //!   subsided.
 //! * [`throttle`] - ensure a function runs at most once per interval.
@@ -32,11 +33,13 @@
 //! Future utilities can extend this crate to keep application code DRY
 //! and encourage reuse across the ecosystem.
 
+pub mod accessibility;
 pub mod compose_classes;
 pub mod debounce;
 pub mod deep_merge;
 pub mod throttle;
 
+pub use accessibility::{attributes_to_html, collect_attributes, extend_attributes};
 pub use compose_classes::compose_classes;
 pub use debounce::debounce;
 pub use deep_merge::deep_merge;

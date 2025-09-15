@@ -1,11 +1,20 @@
 //! Simple container with a themed border and padding.
 //!
-//! The card demonstrates how `css_with_theme!` centralizes styling. Both the
-//! border color and interior spacing are pulled from the active
-//! [`Theme`](mui_styled_engine::Theme) so applications remain visually
-//! consistent. The generated class is attached to the root `<div>` element in
-//! every adapter which keeps markup lean and avoids repetitive inline styles.
+//! The card demonstrates how [`css_with_theme!`](mui_styled_engine::css_with_theme)
+//! centralizes styling. Both the border color and interior spacing are pulled
+//! from the active [`Theme`](mui_styled_engine::Theme) so applications remain
+//! visually consistent. The
+//! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
+//! converts the generated style into a scoped class which every adapter reuses.
+//! No additional ARIA attributes are applied because a `<div>` already conveys
+//! the correct semantics for a sectioning container.
 
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore",
+))]
 use mui_styled_engine::css_with_theme;
 
 #[cfg(feature = "leptos")]
@@ -13,6 +22,7 @@ use leptos::Children;
 #[cfg(feature = "yew")]
 use yew::prelude::*;
 
+#[cfg(any(feature = "yew", feature = "leptos"))]
 use crate::material_props;
 
 /// Generates a scoped CSS class using the active [`Theme`].
@@ -23,15 +33,14 @@ use crate::material_props;
     feature = "sycamore"
 ))]
 fn resolve_class() -> String {
-    let style = css_with_theme!(
+    crate::style_helpers::themed_class(css_with_theme!(
         r#"
         border: 1px solid ${border};
         padding: ${pad};
         "#,
         border = theme.palette.primary.clone(),
         pad = format!("{}px", theme.spacing(2))
-    );
-    style.get_class_name().to_string()
+    ))
 }
 
 // ---------------------------------------------------------------------------

@@ -2,12 +2,14 @@
 //!
 //! The widget exposes adapters for Yew, Leptos, Dioxus and Sycamore. Shared
 //! styling is expressed through [`css_with_theme!`](mui_styled_engine::css_with_theme)
-//! so palette and spacing values derive from the active [`Theme`]. Optional
-//! `style_overrides` allow callers to append raw CSS declarations without
-//! abandoning the centralized theme approach. Yew and Leptos variants also
-//! support a debounced `on_input` callback, reducing needless updates during
-//! rapid typing while still surfacing an accessible `aria-label` for assistive
-//! technologies.
+//! so palette and spacing values derive from the active [`Theme`]. The
+//! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
+//! converts styles into scoped classes ensuring each adapter references the
+//! same generated CSS. Optional `style_overrides` allow callers to append raw
+//! declarations without abandoning the centralized theme approach. Yew and
+//! Leptos variants also support a debounced `on_input` callback, reducing
+//! needless updates during rapid typing while still surfacing an accessible
+//! `aria-label` for assistive technologies.
 #[cfg(feature = "leptos")]
 use leptos::*;
 #[cfg(any(
@@ -78,7 +80,7 @@ fn resolve_class(
     let theme = use_theme();
     let (color, font_size, border) = compute_parts(&theme, color, size, variant);
     let extra = style_overrides.unwrap_or_default();
-    let style = css_with_theme!(
+    crate::style_helpers::themed_class(css_with_theme!(
         theme,
         r#"
         color: ${color};
@@ -91,8 +93,7 @@ fn resolve_class(
         font_size = font_size,
         border = border,
         extra = extra
-    );
-    style.get_class_name().to_string()
+    ))
 }
 
 #[cfg(feature = "yew")]

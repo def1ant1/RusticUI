@@ -27,6 +27,7 @@ pub mod card;
 pub mod dialog;
 pub mod macros;
 pub mod snackbar;
+mod style_helpers;
 pub mod text_field;
 
 pub use mui_styled_engine::Theme;
