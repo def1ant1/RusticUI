@@ -1,4 +1,3 @@
-#[cfg(any(feature = "yew", feature = "dioxus", feature = "sycamore"))]
 use mui_styled_engine::{css_with_theme, use_theme, Theme};
 
 #[cfg(feature = "yew")]
@@ -9,7 +8,6 @@ use yew::prelude::*;
 // `macros.rs`.
 pub use crate::macros::{Color as AppBarColor, Size as AppBarSize, Variant as AppBarVariant};
 
-#[cfg(any(feature = "yew", feature = "dioxus", feature = "sycamore"))]
 fn resolve_style(theme: &Theme, color: AppBarColor, size: AppBarSize) -> (String, &'static str) {
     let bg = match color {
         AppBarColor::Primary => theme.palette.primary.clone(),
@@ -23,7 +21,7 @@ fn resolve_style(theme: &Theme, color: AppBarColor, size: AppBarSize) -> (String
     (bg, height)
 }
 
-#[cfg(feature = "yew")]
+#[cfg(any(feature = "yew", feature = "leptos"))]
 crate::material_component_props!(AppBarProps {
     /// Title displayed inside the app bar.
     title: String,
@@ -33,6 +31,12 @@ crate::material_component_props!(AppBarProps {
 
 #[cfg(feature = "yew")]
 mod yew_impl {
+    //! Yew adapter rendering the [`AppBar`] as a semantic `<header>` element.
+    //!
+    //! Styling is resolved through [`css_with_theme!`] which pulls palette
+    //! values from the active [`Theme`]. The resulting class is applied to the
+    //! `<header>` element along with an explicit `role="banner"` and
+    //! configurable `aria-label` to aid screen readers.
     use super::*;
 
     /// High level navigation bar rendered at the top of the application.
@@ -67,46 +71,146 @@ mod yew_impl {
 }
 
 #[cfg(feature = "yew")]
-pub use yew_impl::{AppBar, AppBarProps};
+pub use yew_impl::AppBar;
 
-#[cfg(feature = "dioxus")]
-mod dioxus_impl {
+#[cfg(feature = "leptos")]
+mod leptos_impl {
+    //! Leptos adapter rendering the [`AppBar`] as a semantic `<header>` element.
     use super::*;
+    use leptos::*;
 
-    #[derive(Default, Clone, PartialEq)]
-    pub struct AppBarProps {
-        pub title: String,
-        pub aria_label: String,
-        pub color: AppBarColor,
-        pub size: AppBarSize,
-    }
-
-    pub fn AppBar(_props: AppBarProps) {
+    /// High level navigation bar rendered at the top of the application.
+    ///
+    /// The component resolves colors and sizing from the active [`Theme`] and
+    /// attaches an ARIA `role` and `aria-label` so assistive technologies can
+    /// announce the region accurately.
+    #[component]
+    pub fn AppBar(props: AppBarProps) -> impl IntoView {
         let theme = use_theme();
-        let _ = resolve_style(&theme, _props.color, _props.size);
+        let (bg, height) = resolve_style(&theme, props.color, props.size);
+        let style = css_with_theme!(
+            theme,
+            r#"
+            background: ${bg};
+            height: ${height};
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+        "#,
+            bg = bg,
+            height = height
+        );
+        let class = style.get_class_name().to_string();
+
+        view! {
+            <header class=class role="banner" aria-label=props.aria_label>
+                {props.title}
+            </header>
+        }
     }
 }
 
-#[cfg(feature = "dioxus")]
-pub use dioxus_impl::{AppBar, AppBarProps};
+#[cfg(feature = "leptos")]
+pub use leptos_impl::AppBar;
 
-#[cfg(feature = "sycamore")]
-mod sycamore_impl {
+#[cfg(any(feature = "yew", feature = "leptos"))]
+pub use AppBarProps;
+
+/// Adapter targeting the [`dioxus`] framework.
+///
+/// Generates a themed `<header>` element and wires up ARIA attributes so the
+/// navigation region is announced correctly by assistive technologies.
+#[cfg(feature = "dioxus")]
+pub mod dioxus {
     use super::*;
 
+    /// Properties consumed by the Dioxus adapter. The struct intentionally
+    /// mirrors the fields used by other frameworks so business logic remains
+    /// consistent across integrations.
     #[derive(Default, Clone, PartialEq)]
     pub struct AppBarProps {
+        /// Title displayed inside the app bar.
         pub title: String,
+        /// Accessible label announced by assistive technologies.
         pub aria_label: String,
+        /// Themed color palette applied to the background.
         pub color: AppBarColor,
+        /// Height variant influencing overall bar size.
         pub size: AppBarSize,
     }
 
-    pub fn AppBar(_props: AppBarProps) {
+    /// Render the app bar into a `<header>` tag using a theme derived class.
+    ///
+    /// [`css_with_theme!`] resolves palette values from the active [`Theme`]
+    /// which keeps styles centralized and easily overridable. The generated
+    /// class is merged with ARIA metadata so screen readers can announce the
+    /// banner role and label.
+    pub fn render(props: &AppBarProps) -> String {
         let theme = use_theme();
-        let _ = resolve_style(&theme, _props.color, _props.size);
+        let (bg, height) = resolve_style(&theme, props.color.clone(), props.size.clone());
+        let style = css_with_theme!(
+            theme,
+            r#"
+            background: ${bg};
+            height: ${height};
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+        "#,
+            bg = bg,
+            height = height
+        );
+        let class = style.get_class_name().to_string();
+        format!(
+            "<header class=\"{}\" role=\"banner\" aria-label=\"{}\">{}</header>",
+            class, props.aria_label, props.title
+        )
     }
 }
 
+/// Adapter targeting the [`sycamore`] framework.
+///
+/// Produces an accessible `<header>` with classes derived from the active
+/// [`Theme`] and optional `aria-label` metadata.
 #[cfg(feature = "sycamore")]
-pub use sycamore_impl::{AppBar, AppBarProps};
+pub mod sycamore {
+    use super::*;
+
+    /// Sycamore variant of [`AppBar`] sharing identical props with other
+    /// adapters to minimize repetitive setup across frameworks.
+    #[derive(Default, Clone, PartialEq)]
+    pub struct AppBarProps {
+        /// Title displayed inside the app bar.
+        pub title: String,
+        /// Accessible label describing the banner region.
+        pub aria_label: String,
+        /// Background color pulled from the theme palette.
+        pub color: AppBarColor,
+        /// Height variant controlling the overall size.
+        pub size: AppBarSize,
+    }
+
+    /// Render the app bar into plain HTML with themed styling and ARIA
+    /// attributes for accessibility.
+    pub fn render(props: &AppBarProps) -> String {
+        let theme = use_theme();
+        let (bg, height) = resolve_style(&theme, props.color.clone(), props.size.clone());
+        let style = css_with_theme!(
+            theme,
+            r#"
+            background: ${bg};
+            height: ${height};
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+        "#,
+            bg = bg,
+            height = height
+        );
+        let class = style.get_class_name().to_string();
+        format!(
+            "<header class=\"{}\" role=\"banner\" aria-label=\"{}\">{}</header>",
+            class, props.aria_label, props.title
+        )
+    }
+}
