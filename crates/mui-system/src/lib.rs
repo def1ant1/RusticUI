@@ -12,6 +12,10 @@ pub mod macros;
 pub mod responsive;
 pub mod style;
 pub mod theme;
+// Cross framework element demonstrating themed styling and ARIA metadata.
+// The module is gated behind feature specific adapters to keep compilation
+// lean while still allowing reuse across front-end targets.
+pub mod themed_element;
 
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod r#box;
@@ -37,12 +41,16 @@ pub use stack::{Stack, StackDirection};
 #[allow(unused_imports)]
 pub use style::*;
 pub use theme::{Breakpoints, Palette, Theme};
+#[cfg(all(
+    any(feature = "dioxus", feature = "sycamore"),
+    not(any(feature = "yew", feature = "leptos"))
+))]
+pub use theme_provider::use_theme;
 #[cfg(feature = "yew")]
 pub use theme_provider::{use_theme, ThemeProvider};
-#[cfg(feature = "leptos")]
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
 pub use theme_provider::{use_theme, ThemeProvider};
-#[cfg(any(feature = "dioxus", feature = "sycamore"))]
-pub use theme_provider::use_theme;
+pub use themed_element::{ThemedProps, Variant};
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use typography::{Typography, TypographyVariant};
 

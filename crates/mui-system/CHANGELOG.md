@@ -7,3 +7,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 - Initial release.
+- Added cross-framework `themed_element` module providing themed styling,
+  class name attachment and ARIA metadata for Leptos, Dioxus and Sycamore.

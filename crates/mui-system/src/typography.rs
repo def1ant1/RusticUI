@@ -57,12 +57,16 @@ mod leptos_impl {
         #[prop(optional, into)] sx: String,
         children: Children,
     ) -> impl IntoView {
-        let tag = match variant {
-            Some(TypographyVariant::H1) => "h1",
-            Some(TypographyVariant::H2) => "h2",
-            _ => "p",
+        let node: View = match variant {
+            Some(TypographyVariant::H1) => {
+                view! { <h1 style=sx.clone()>{children()}</h1> }.into_view()
+            }
+            Some(TypographyVariant::H2) => {
+                view! { <h2 style=sx.clone()>{children()}</h2> }.into_view()
+            }
+            _ => view! { <p style=sx>{children()}</p> }.into_view(),
         };
-        view! { <{tag} style=sx>{children()}</{tag}> }
+        node
     }
 }
 

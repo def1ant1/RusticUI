@@ -40,9 +40,9 @@ mod leptos_impl {
 
     /// Leptos variant of the [`ThemeProvider`].
     #[component]
-    pub fn ThemeProvider(theme: Theme, children: Children) -> impl IntoView {
+    pub fn ThemeProvider(theme: Theme, _children: Children) -> impl IntoView {
         provide_context(theme);
-        view! { {children()} }
+        view! { _children() }
     }
 
     /// Access the current [`Theme`] from context.
@@ -66,11 +66,19 @@ mod other_impl {
     }
 }
 
-#[cfg(any(feature = "dioxus", feature = "sycamore"))]
+// Only re-export the placeholder hook when a framework other than Leptos/Yew
+// is enabled.  This avoids duplicate `use_theme` definitions when multiple
+// adapters are compiled together in tests or examples.
+#[cfg(all(any(feature = "dioxus", feature = "sycamore"), not(feature = "leptos")))]
 pub use other_impl::use_theme;
 
 // Fallback implementation used when no front-end integration feature is enabled.
-#[cfg(not(any(feature = "yew", feature = "leptos", feature = "dioxus", feature = "sycamore")))]
+#[cfg(not(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore"
+)))]
 pub fn use_theme() -> Theme {
     Theme::default()
 }

@@ -24,7 +24,6 @@ leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 dioxus = { workspace = true, optional = true }
-dioxus-web = { workspace = true, optional = true }
 sycamore = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
 
@@ -35,7 +34,7 @@ wasm-bindgen-test.workspace = true
 default = []
 yew = ["dep:yew", "dep:wasm-bindgen", "dep:web-sys"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "dep:web-sys"]
-dioxus = ["dep:dioxus", "dep:dioxus-web", "dep:wasm-bindgen", "dep:web-sys"]
+dioxus = ["dep:dioxus", "dep:wasm-bindgen", "dep:web-sys"]
 sycamore = ["dep:sycamore", "dep:wasm-bindgen", "dep:web-sys"]
 
 [[example]]
