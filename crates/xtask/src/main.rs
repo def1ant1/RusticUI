@@ -135,6 +135,11 @@ fn wasm_test() -> Result<()> {
         cmd.arg("test")
             .arg("--headless")
             .arg("--chrome")
+            // All interactive components currently rely on the `yew` feature for
+            // rendering. By enabling it here we exercise the same code paths in
+            // CI and local development.
+            .arg("--features")
+            .arg("yew")
             .current_dir(krate);
         run(cmd)?;
     }
