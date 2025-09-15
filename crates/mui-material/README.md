@@ -7,6 +7,12 @@ The crate exposes high level widgets like `Button`, `AppBar`, `TextField` and
 Common property boilerplate is generated through `material_component_props!`
 macro so adding new widgets requires minimal manual code.
 
+Components such as `Dialog` leverage the `css_with_theme!` macro so padding and
+border colors are resolved from the active theme. The resulting class is
+attached to the root element together with accessibility metadata (for example
+`role="dialog"` and `aria-modal="true"`) ensuring assistive technologies can
+accurately describe the UI without additional boilerplate.
+
 Utilities from [`mui-utils`](../mui-utils) are integrated to provide
 enterprise-friendly ergonomics: button callbacks can be throttled,
 text inputs debounced and style overrides merged via JSON using `deep_merge`.
