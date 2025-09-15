@@ -1,26 +1,46 @@
-#![cfg(all(feature = "dioxus", feature = "sycamore"))]
+#![cfg(any(feature = "dioxus", feature = "sycamore"))]
 
-use mui_material::app_bar::{dioxus, sycamore};
+/// Verify that each framework adapter for [`AppBar`] emits a `<header>` element
+/// with the generated class and required ARIA attributes. Tests are compiled
+/// per feature so frameworks can be exercised independently.
 
-#[test]
-fn dioxus_and_sycamore_render_header() {
-    let props_dx = dioxus::AppBarProps {
-        title: "Dashboard".into(),
-        aria_label: "Application header".into(),
-        color: mui_material::app_bar::AppBarColor::Primary,
-        size: mui_material::app_bar::AppBarSize::Medium,
-    };
-    let dx = dioxus::render(&props_dx);
-    assert!(dx.starts_with("<header"));
-    assert!(dx.contains("aria-label=\"Application header\""));
+#[cfg(feature = "dioxus")]
+mod dioxus_tests {
+    use mui_material::app_bar::dioxus;
 
-    let props_sy = sycamore::AppBarProps {
-        title: "Dashboard".into(),
-        aria_label: "Application header".into(),
-        color: mui_material::app_bar::AppBarColor::Primary,
-        size: mui_material::app_bar::AppBarSize::Medium,
-    };
-    let sy = sycamore::render(&props_sy);
-    assert!(sy.starts_with("<header"));
-    assert!(sy.contains("aria-label=\"Application header\""));
+    #[test]
+    fn renders_header_with_aria() {
+        let props = dioxus::AppBarProps {
+            title: "Dashboard".into(),
+            aria_label: "Application header".into(),
+            color: mui_material::app_bar::AppBarColor::Primary,
+            size: mui_material::app_bar::AppBarSize::Medium,
+        };
+        let out = dioxus::render(&props);
+        assert!(out.starts_with("<header"));
+        assert!(out.contains("class=\""), "missing class attribute: {}", out);
+        assert!(out.contains("role=\"banner\""));
+        assert!(out.contains("aria-label=\"Application header\""));
+    }
 }
+
+#[cfg(feature = "sycamore")]
+mod sycamore_tests {
+    use mui_material::app_bar::sycamore;
+
+    #[test]
+    fn renders_header_with_aria() {
+        let props = sycamore::AppBarProps {
+            title: "Dashboard".into(),
+            aria_label: "Application header".into(),
+            color: mui_material::app_bar::AppBarColor::Primary,
+            size: mui_material::app_bar::AppBarSize::Medium,
+        };
+        let out = sycamore::render(&props);
+        assert!(out.starts_with("<header"));
+        assert!(out.contains("class=\""), "missing class attribute: {}", out);
+        assert!(out.contains("role=\"banner\""));
+        assert!(out.contains("aria-label=\"Application header\""));
+    }
+}
+

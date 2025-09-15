@@ -47,6 +47,13 @@ validate ARIA roles, keyboard navigation and overall accessibility. Tests fail
 if any violation is detected, making a11y compliance part of the standard CI
 pipeline.
 
+### Component Rendering Assertions
+
+Cross-framework unit tests in `mui-material` render each component and verify
+that the generated HTML includes the hashed CSS class and expected ARIA
+metadata. These structured assertions guard against regressions in both styling
+and accessibility across adapters.
+
 ### Documentation and Benchmarks
 ```bash
 cargo doc --no-deps --workspace
