@@ -27,7 +27,7 @@ jobs:
         with:
           mdbook-version: '0.4.36'
       - name: Build API docs
-        run: cargo doc --no-deps --all
+        run: cargo xtask doc
       - name: Build mdBook guide
         run: |
           mdbook build docs/rust-book
