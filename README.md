@@ -48,6 +48,7 @@ cargo run --package mui-yew --example hello_world
 The workspace is organized under the `crates/` directory:
 
 - `mui-system` – styling primitives.
+- `mui-headless` – framework-agnostic component state machines used by adapters.
 - `mui-material` – Material Design components.
 - `mui-icons-material` – SVG icon bindings.
 - `mui-lab` – unstable widgets under active development.

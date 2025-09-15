@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 mui-styled-engine = { path = "../mui-styled-engine" }
 mui-system = { path = "../mui-system" }
+mui-headless = { path = "../mui-headless" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
