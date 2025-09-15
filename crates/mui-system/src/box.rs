@@ -1,5 +1,5 @@
 use crate::theme_provider::use_theme;
-use crate::{responsive::Responsive, style, theme::Theme};
+use crate::{responsive::Responsive, style};
 
 #[cfg(feature = "yew")]
 mod yew_impl {
@@ -82,9 +82,12 @@ mod leptos_impl {
         children: Children,
     ) -> impl IntoView {
         let theme = use_theme();
+        // Determine the current viewport width so responsive props can be
+        // resolved.  `as_f64` already returns an `Option` so we avoid wrapping
+        // the value in an extra `Result` to keep the flow straightforward.
         let width = window()
             .and_then(|w| w.inner_width().ok())
-            .and_then(|v| v.as_f64().ok())
+            .and_then(|v| v.as_f64())
             .unwrap_or(0.0) as u32;
         let mut style_string = String::new();
         if let Some(m) = m {
