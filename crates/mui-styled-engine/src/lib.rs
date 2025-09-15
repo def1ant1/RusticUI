@@ -17,7 +17,7 @@
 //! assert!(!style.get_class_name().is_empty());
 //! ```
 
-pub use mui_system::theme::{Breakpoints, Palette, Theme};
+pub use mui_system::theme::{Breakpoints, Palette, Theme, TypographyScheme};
 pub use mui_system::theme_provider::use_theme;
 #[cfg(feature = "yew")]
 pub use mui_system::theme_provider::ThemeProvider;
@@ -168,7 +168,10 @@ mod tests {
         }
         impl From<PaletteOverride> for Palette {
             fn from(p: PaletteOverride) -> Self {
-                Palette { primary: p.primary, ..Palette::default() }
+                Palette {
+                    primary: p.primary,
+                    ..Palette::default()
+                }
             }
         }
         #[derive(Theme)]
@@ -176,7 +179,9 @@ mod tests {
             palette: Option<PaletteOverride>,
         }
         let t = Wrapper {
-            palette: Some(PaletteOverride { primary: "#000".into() }),
+            palette: Some(PaletteOverride {
+                primary: "#000".into(),
+            }),
         }
         .into_theme();
         assert_eq!(t.palette.primary, "#000");

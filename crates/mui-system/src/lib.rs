@@ -25,6 +25,8 @@ pub mod theme_provider;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub mod typography;
 
+#[doc(hidden)]
+pub use crate::theme_provider::use_theme;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use container::Container;
 #[cfg(any(feature = "yew", feature = "leptos"))]
@@ -36,7 +38,10 @@ pub use responsive::{grid_span_to_percent, Responsive};
 pub use stack::{Stack, StackDirection};
 #[allow(unused_imports)]
 pub use style::*;
+#[doc(hidden)]
+pub use stylist::{css, Style};
 pub use theme::{Breakpoints, Palette, Theme};
+extern crate self as mui_styled_engine;
 #[cfg(all(
     any(feature = "dioxus", feature = "sycamore"),
     not(any(feature = "yew", feature = "leptos"))
