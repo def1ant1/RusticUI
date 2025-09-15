@@ -5,9 +5,19 @@
 //! macro. Both the border color and interior padding are pulled from the
 //! theme's palette and spacing scale so applications stay visually
 //! consistent. The resulting scoped style is attached as a class to the
-//! root `<div>` element. Each adapter also wires up ARIA attributes—
-//! `role="dialog"` and `aria-modal="true"`—and accepts an `aria_label`
-//! to ensure assistive technologies can announce the region accurately.
+//! root `<div>` element rather than inline styles so repeated renders do
+//! not allocate duplicate strings.
+//!
+//! Rendering is gated on the `open` flag. When `open` is `false` no DOM
+//! nodes are produced which keeps hidden content out of the accessibility
+//! tree. When `open` is `true` each adapter emits a `<div>` decorated with
+//! `role="dialog"`, `aria-modal="true"` and a caller supplied
+//! `aria_label`. Screen readers can then accurately announce the region and
+//! understand that keyboard focus is trapped within the modal.
+//!
+//! Each framework module is intentionally tiny and delegates styling to the
+//! shared [`resolve_class`] helper which centralizes theme lookups and keeps
+//! surface APIs consistent across integrations.
 
 use mui_styled_engine::css_with_theme;
 
@@ -20,8 +30,10 @@ use crate::material_props;
 
 /// Generates a CSS class scoped to this dialog using the active [`Theme`].
 ///
-/// The class is derived once per render and applied to the `<div>` element in
-/// every framework adapter which keeps styling logic centralized and easy to
+/// [`css_with_theme!`] exposes a `theme` binding allowing palette and spacing
+/// values to be substituted directly inside the CSS template. The class is
+/// derived once per render and applied to the `<div>` element in every
+/// framework adapter which keeps styling logic centralized and easy to
 /// maintain.
 #[cfg(any(
     feature = "yew",
@@ -67,6 +79,11 @@ mod yew_impl {
 
     /// Minimal dialog implementation that toggles visibility and wires up
     /// accessibility attributes.
+    ///
+    /// When `open` is `false` an empty node is returned to keep the dialog out
+    /// of the DOM and accessibility tree. When `open` is `true` a `<div>` with
+    /// `role="dialog"` and `aria-modal="true"` is emitted so assistive
+    /// technologies understand focus is trapped within the region.
     #[function_component(Dialog)]
     pub fn dialog(props: &DialogProps) -> Html {
         if !props.open {
@@ -95,6 +112,9 @@ mod leptos_impl {
     use leptos::*;
 
     /// Leptos variant mirroring the Yew implementation.
+    ///
+    /// Closed dialogs return an empty view while open dialogs emit the
+    /// styled `<div>` with ARIA metadata.
     #[component]
     pub fn Dialog(props: DialogProps) -> impl IntoView {
         if !props.open {
@@ -137,7 +157,8 @@ pub mod dioxus {
     }
 
     /// Render the dialog into a `<div>` tag using a theme-derived class and
-    /// standard ARIA attributes.
+    /// standard ARIA attributes. Closed dialogs yield an empty string so hidden
+    /// content is never announced by screen readers.
     pub fn render(props: &DialogProps) -> String {
         if !props.open {
             return String::new();
@@ -171,7 +192,8 @@ pub mod sycamore {
     }
 
     /// Render the dialog into plain HTML with themed styling and ARIA
-    /// attributes for accessibility.
+    /// attributes for accessibility. If `open` is `false` an empty string is
+    /// returned to avoid leaving off-screen content in the markup.
     pub fn render(props: &DialogProps) -> String {
         if !props.open {
             return String::new();
