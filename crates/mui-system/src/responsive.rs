@@ -1,6 +1,37 @@
 use crate::theme::Breakpoints;
 use serde::{Deserialize, Serialize};
 
+/// Returns the current viewport width in pixels when executing in a browser
+/// environment. When the code is evaluated in a headless test or a non WASM
+/// target we simply return `0` so responsive props fall back to their base
+/// (`xs`) values. Centralising this helper avoids each component having to
+/// duplicate the same `web_sys::window` boilerplate and keeps breakpoints
+/// consistent across frameworks.
+pub fn viewport_width() -> u32 {
+    #[cfg(any(
+        feature = "yew",
+        feature = "leptos",
+        feature = "dioxus",
+        feature = "sycamore",
+    ))]
+    {
+        web_sys::window()
+            .and_then(|w| w.inner_width().ok())
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as u32
+    }
+
+    #[cfg(not(any(
+        feature = "yew",
+        feature = "leptos",
+        feature = "dioxus",
+        feature = "sycamore",
+    )))]
+    {
+        0
+    }
+}
+
 /// Helper structure representing values that change across breakpoints.
 /// Missing values fall back to the next smallest defined one, mirroring
 /// the cascading behavior of CSS media queries.
@@ -14,34 +45,52 @@ pub struct Responsive<T> {
 }
 
 impl<T: Clone> Responsive<T> {
+    /// Convenience constructor that assigns the same value to all breakpoints.
+    /// This keeps component props ergonomic when a value should stay constant
+    /// yet still opts into the responsive type so downstream callers can opt
+    /// into breakpoint specific overrides without changing the API surface.
+    pub fn constant(value: T) -> Self {
+        Self {
+            xs: value,
+            sm: None,
+            md: None,
+            lg: None,
+            xl: None,
+        }
+    }
+
     /// Resolves the appropriate value for a given viewport width.
     pub fn resolve(&self, width: u32, bp: &Breakpoints) -> T {
-        if width >= bp.xl {
-            self.xl
-                .as_ref()
-                .or(self.lg.as_ref())
-                .or(self.md.as_ref())
-                .or(self.sm.as_ref())
-                .unwrap_or(&self.xs)
-                .clone()
-        } else if width >= bp.lg {
-            self.lg
-                .as_ref()
-                .or(self.md.as_ref())
-                .or(self.sm.as_ref())
-                .unwrap_or(&self.xs)
-                .clone()
-        } else if width >= bp.md {
-            self.md
-                .as_ref()
-                .or(self.sm.as_ref())
-                .unwrap_or(&self.xs)
-                .clone()
-        } else if width >= bp.sm {
-            self.sm.as_ref().unwrap_or(&self.xs).clone()
-        } else {
-            self.xs.clone()
+        // Iterate from the largest breakpoint down to `xs`. The first matching
+        // breakpoint that contains an explicit value wins while undefined
+        // values cascade down to the next available entry, mirroring how CSS
+        // media queries behave in the JavaScript implementation.
+        let ordered = [
+            (bp.xl, self.xl.as_ref()),
+            (bp.lg, self.lg.as_ref()),
+            (bp.md, self.md.as_ref()),
+            (bp.sm, self.sm.as_ref()),
+            (bp.xs, Some(&self.xs)),
+        ];
+
+        for (threshold, value) in ordered.into_iter() {
+            if width >= threshold {
+                if let Some(v) = value {
+                    return v.clone();
+                }
+            }
         }
+
+        // The array always contains `xs` so this branch only triggers if the
+        // breakpoints are misconfigured (e.g. descending order). Falling back
+        // to the base value keeps behaviour predictable even in that scenario.
+        self.xs.clone()
+    }
+}
+
+impl<T: Clone> From<T> for Responsive<T> {
+    fn from(value: T) -> Self {
+        Self::constant(value)
     }
 }
 

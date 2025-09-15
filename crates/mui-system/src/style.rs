@@ -33,6 +33,27 @@ define_style_props! {
     flex_wrap => "flex-wrap",
     align_items => "align-items",
     justify_content => "justify-content",
+    width => "width",
+    height => "height",
+    min_width => "min-width",
+    max_width => "max-width",
+    min_height => "min-height",
+    max_height => "max-height",
+    position => "position",
+    top => "top",
+    right => "right",
+    bottom => "bottom",
+    left => "left",
+
+    // Typography -------------------------------------------------------------
+    font_size => "font-size",
+    font_weight => "font-weight",
+    line_height => "line-height",
+    letter_spacing => "letter-spacing",
+
+    // Colors -----------------------------------------------------------------
+    color => "color",
+    background_color => "background-color",
 }
 
 // The module intentionally re-exports all generated helpers so callers can do
