@@ -13,8 +13,18 @@ text inputs debounced and style overrides merged via JSON using `deep_merge`.
 
 ## Feature Flags
 
-Components are gated behind framework features. Enable `yew`, `leptos`,
-`dioxus` or `sycamore` depending on the desired front-end backend.
+Select a single front-end framework to keep builds lean. All features are
+disabled by default so applications opt in explicitly:
+
+| Feature | Enables | Notes |
+|---------|---------|-------|
+| `yew` | Yew adapter | pulls in `yew`, `wasm-bindgen`, `web-sys` and `stylist` |
+| `leptos` | Leptos adapter | activates `wasm-bindgen` and `mui-system/leptos` |
+| `dioxus` | Dioxus adapter | compiles `mui-system/dioxus` and `mui-styled-engine/dioxus` |
+| `sycamore` | Sycamore adapter | hooks into `mui-system/sycamore` |
+
+See the [Cargo feature guide](../../docs/cargo-features.md) for examples of
+disabling defaults and enabling only the framework your application requires.
 
 ## Example
 

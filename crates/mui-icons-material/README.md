@@ -12,6 +12,12 @@ names to these functions.
 
 ## Feature flags
 
+| Feature | Enables | Notes |
+|---------|---------|-------|
+| `all-icons` | every SVG icon | default; convenient for prototypes but slows compilation |
+| `icon-<name>` | a single icon | specify multiple entries for the icons your app uses |
+| `update-icons` | maintenance CLI | used only to refresh the icon list |
+
 Every SVG is gated behind an opt-in Cargo feature named `icon-<file name>`. An
 umbrella `all-icons` feature pulls in the full set and is enabled by default for
 ease of use. To keep compile times and binary sizes minimal in production,
@@ -21,6 +27,8 @@ disable the default and enable only the icons your application actually uses:
 [dependencies]
 mui-icons-material = { version = "0.1", default-features = false, features = ["icon-10k_24px"] }
 ```
+
+Additional examples live in the [Cargo feature guide](../../docs/cargo-features.md).
 
 The `update_icons` tool (see below) regenerates the `[features]` block in
 `Cargo.toml` so this list stays in sync with the available SVGs.
