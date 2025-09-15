@@ -44,6 +44,12 @@ pub fn derive_theme(input: TokenStream) -> TokenStream {
                 ::mui_styled_engine::Theme { #( #assignments, )* ..::mui_styled_engine::Theme::default() }
             }
         }
+
+        impl ::core::convert::From<#name> for ::mui_styled_engine::Theme {
+            fn from(value: #name) -> Self {
+                value.into_theme()
+            }
+        }
     };
 
     expanded.into()

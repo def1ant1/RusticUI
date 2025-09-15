@@ -20,6 +20,8 @@ maintenance = { status = "experimental" }
 # theme structures.
 serde.workspace = true
 serde_json.workspace = true
+stylist = { version = "0.13", default-features = false, features = ["macros", "parser", "ssr"] }
+mui-styled-engine-macros = { path = "../mui-styled-engine-macros" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
@@ -32,7 +34,7 @@ wasm-bindgen-test.workspace = true
 
 [features]
 default = []
-yew = ["dep:yew", "dep:wasm-bindgen", "dep:web-sys"]
+yew = ["dep:yew", "dep:wasm-bindgen", "dep:web-sys", "stylist/yew_integration"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "dep:web-sys"]
 dioxus = ["dep:dioxus", "dep:wasm-bindgen", "dep:web-sys"]
 sycamore = ["dep:sycamore", "dep:wasm-bindgen", "dep:web-sys"]

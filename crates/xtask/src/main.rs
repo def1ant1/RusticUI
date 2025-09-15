@@ -8,6 +8,8 @@
 
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
+use std::fs;
+use std::path::PathBuf;
 use std::process::Command;
 
 /// Entry point for the `cargo xtask` command.
@@ -47,6 +49,8 @@ enum Commands {
     AccessibilityAudit,
     /// Build the JavaScript documentation site.
     BuildDocs,
+    /// Regenerate serialized theme templates and CSS baselines.
+    GenerateTheme,
 }
 
 fn main() -> Result<()> {
@@ -63,6 +67,7 @@ fn main() -> Result<()> {
         Commands::UpdateComponents => update_components(),
         Commands::AccessibilityAudit => accessibility_audit(),
         Commands::BuildDocs => build_docs(),
+        Commands::GenerateTheme => generate_theme(),
     }
 }
 
@@ -212,6 +217,28 @@ fn coverage() -> Result<()> {
         .arg("-o")
         .arg("lcov.info");
     run(cmd)
+}
+
+fn generate_theme() -> Result<()> {
+    // Serialize the canonical Material theme so tooling and templates stay in
+    // sync with the Rust implementation.
+    let theme = mui_system::theme_provider::material_theme();
+    let json_path = PathBuf::from("crates/mui-system/templates/material_theme.json");
+    if let Some(parent) = json_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let json = serde_json::to_string_pretty(&theme)?;
+    fs::write(&json_path, format!("{json}\n"))?;
+    println!("[xtask] wrote {}", json_path.display());
+
+    // Emit the baseline CSS used by `CssBaseline` so static hosting setups can
+    // include it without executing Rust code (e.g. SSR pipelines).
+    let css_path = json_path.with_file_name("material_css_baseline.css");
+    let css = mui_system::theme_provider::material_css_baseline();
+    fs::write(&css_path, css)?;
+    println!("[xtask] wrote {}", css_path.display());
+
+    Ok(())
 }
 
 fn bench() -> Result<()> {

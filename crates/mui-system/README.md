@@ -104,6 +104,72 @@ the breakpoint logic centralised and encouraging automation over manual styling
 rules. Framework adapters (Yew, Leptos, etc.) invoke the same functions under
 the hood so behaviour is identical at runtime.
 
+## Theming and global styles
+
+Material Design defaults are baked directly into the crate so that a working
+experience is available out-of-the-box:
+
+```rust
+use mui_system::theme_provider::{material_theme, material_theme_with_optional_overrides};
+
+let theme = material_theme();
+assert_eq!(theme.spacing(2), 16);
+assert_eq!(theme.palette.background_default, "#fafafa");
+assert_eq!(theme.typography.font_family, "Roboto, Helvetica, Arial, sans-serif");
+
+// Optional overrides generated via `#[derive(Theme)]` merge with the defaults.
+#[derive(mui_styled_engine::Theme)]
+struct PaletteOnly {
+    palette: Option<PaletteOverride>,
+}
+
+struct PaletteOverride {
+    primary: String,
+}
+
+impl From<PaletteOverride> for mui_system::theme::Palette {
+    fn from(value: PaletteOverride) -> Self {
+        Self { primary: value.primary, ..Self::default() }
+    }
+}
+
+let merged = material_theme_with_optional_overrides(Some(PaletteOnly {
+    palette: Some(PaletteOverride { primary: "#123456".into() }),
+}));
+assert_eq!(merged.palette.primary, "#123456");
+// Unspecified fields inherit the canonical Material tokens.
+assert_eq!(merged.typography.font_family, theme.typography.font_family);
+```
+
+Framework adapters expose a [`CssBaseline`](./src/theme_provider.rs) component
+that injects the canonical Material reset using `css_with_theme!` so palette and
+typography overrides flow into the global styles automatically:
+
+```rust
+# #[cfg(feature = "yew")]
+use mui_system::theme_provider::{CssBaseline, ThemeProvider, material_theme};
+
+# #[cfg(feature = "yew")]
+# fn render() -> yew::Html {
+html! {
+    <ThemeProvider theme={material_theme()}>
+        <CssBaseline />
+        // application...
+    </ThemeProvider>
+}
+# }
+```
+
+To keep documentation, code samples and automation in sync run the helper task
+whenever defaults change:
+
+```bash
+cargo xtask generate-theme
+```
+
+The command serialises `material_theme()` into `crates/mui-system/templates`
+which downstream tooling can consume as a golden template.
+
 ## Legacy JavaScript Package
 
 The original `packages/mui-system` directory from the upstream project has been

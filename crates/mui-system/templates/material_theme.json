@@ -1,0 +1,49 @@
+{
+  "spacing": 8,
+  "breakpoints": {
+    "xs": 0,
+    "sm": 600,
+    "md": 900,
+    "lg": 1200,
+    "xl": 1536
+  },
+  "palette": {
+    "primary": "#1976d2",
+    "secondary": "#dc004e",
+    "neutral": "#64748b",
+    "danger": "#d32f2f",
+    "background_default": "#fafafa",
+    "background_paper": "#ffffff",
+    "text_primary": "#1f2933",
+    "text_secondary": "#52606d"
+  },
+  "typography": {
+    "font_family": "Roboto, Helvetica, Arial, sans-serif",
+    "font_family_monospace": "Roboto Mono, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    "font_size": 14.0,
+    "html_font_size": 16.0,
+    "font_weight_light": 300,
+    "font_weight_regular": 400,
+    "font_weight_medium": 500,
+    "font_weight_bold": 700,
+    "h1": 3.75,
+    "h2": 3.0,
+    "h3": 2.25,
+    "h4": 2.0,
+    "h5": 1.5,
+    "h6": 1.25,
+    "subtitle1": 1.0,
+    "subtitle2": 0.875,
+    "body1": 1.0,
+    "body2": 0.875,
+    "button": 0.875,
+    "caption": 0.75,
+    "overline": 0.75,
+    "line_height": 1.5,
+    "button_letter_spacing": 0.089
+  },
+  "joy": {
+    "radius": 4,
+    "focus_thickness": 2
+  }
+}

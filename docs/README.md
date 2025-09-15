@@ -21,3 +21,11 @@ on how to get started contributing to MUI.
 
 Please visit https://crowdin.com/project/material-ui-docs where you will be able to select a language and edit the translations.
 Please don't submit pull requests directly.
+
+## Rust theming resources
+
+Looking for the Rust-specific theming workflow (Material defaults, overrides via
+`#[derive(Theme)]`, and global baseline styles)? Start with the
+[`crates/mui-system/README.md`](../crates/mui-system/README.md#theming-and-global-styles)
+guide which mirrors the behaviour exposed by the JavaScript packages and keeps
+automation steps such as `cargo xtask generate-theme` documented in one place.
