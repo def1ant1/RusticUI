@@ -1,11 +1,20 @@
 //! Material flavored button that builds on the headless [`ButtonState`].
 //!
+//! Rendering logic is centralized so the button looks and behaves the same
+//! across all supported frameworks. The shared renderer uses
+//! [`css_with_theme!`](mui_styled_engine::css_with_theme) to derive visual
+//! styles from the active [`Theme`](mui_styled_engine::Theme) instead of hard
+//! coded strings.  Accessibility attributes returned by [`ButtonState`] are
+//! merged into the final element which allows assistive technologies to
+//! accurately describe the control.
+//!
 //! This module intentionally contains no framework specific code.  Instead it
 //! exposes lightweight adapters which convert the shared state into view code
 //! for each supported front-end framework.  This design minimizes repeated
 //! business logic and keeps rendering concerns decoupled from behavior.
 
 use mui_headless::button::ButtonState;
+use mui_styled_engine::css_with_theme;
 
 /// Shared properties accepted by all adapter implementations.
 #[derive(Clone, Debug)]
@@ -23,6 +32,41 @@ impl ButtonProps {
     }
 }
 
+/// Shared rendering routine used by all adapters.
+///
+/// The function generates a scoped CSS class using [`css_with_theme!`]. The
+/// macro pulls colors and spacing from the active [`Theme`] so the button's
+/// appearance automatically tracks global design tokens. The returned class is
+/// attached to the `<button>` element and the ARIA attributes emitted from
+/// [`ButtonState`] are merged into the final tag to enhance accessibility.
+fn render_html(props: &ButtonProps, state: &ButtonState) -> String {
+    // Build a themed style block. We intentionally keep the CSS minimal since
+    // this example returns plain HTML rather than framework specific nodes.
+    let style = css_with_theme!(
+        r#"
+        background: ${bg};
+        color: #fff;
+        padding: 8px 16px;
+        border: none;
+    "#,
+        // Use the primary palette color so the button automatically adapts to
+        // custom themes without manual tweaking.
+        bg = theme.palette.primary.clone()
+    );
+    let class = style.get_class_name().to_string();
+
+    // Compose the HTML attribute string starting with the generated class and
+    // then appending all ARIA attributes from the state.
+    let mut attrs = vec![format!(r#"class=\"{}\""#, class)];
+    for (k, v) in state.aria_attributes() {
+        attrs.push(format!(r#"{}=\"{}\""#, k, v));
+    }
+
+    // Final HTML representation. Individual adapters simply forward to this
+    // function keeping rendering logic DRY and easy to evolve.
+    format!("<button {}>{}</button>", attrs.join(" "), props.label)
+}
+
 // ---------------------------------------------------------------------------
 // Adapter implementations
 // ---------------------------------------------------------------------------
@@ -31,18 +75,12 @@ impl ButtonProps {
 pub mod yew {
     use super::*;
 
-    /// Render the button into a plain HTML string.
+    /// Render the button into a plain HTML string using a theme aware style.
     ///
-    /// In a real application this would construct a `yew::Html` node, however
-    /// for testing and portability we simply return a string representation.
+    /// The actual HTML generation is delegated to [`super::render_html`] so all
+    /// frameworks share the same behavior.
     pub fn render(props: &ButtonProps, state: &ButtonState) -> String {
-        let attrs = state.aria_attributes();
-        format!(
-            "<button role=\"{}\" {}>{}</button>",
-            attrs[0].1,
-            format!("{}=\"{}\"", attrs[1].0, attrs[1].1),
-            props.label
-        )
+        super::render_html(props, state)
     }
 }
 
@@ -50,14 +88,10 @@ pub mod yew {
 pub mod leptos {
     use super::*;
 
+    /// Render the button into a plain HTML string using a theme aware style.
+    /// This mirrors the [`yew`] adapter and keeps logic centralized.
     pub fn render(props: &ButtonProps, state: &ButtonState) -> String {
-        let attrs = state.aria_attributes();
-        format!(
-            "<button role=\"{}\" {}>{}</button>",
-            attrs[0].1,
-            format!("{}=\"{}\"", attrs[1].0, attrs[1].1),
-            props.label
-        )
+        super::render_html(props, state)
     }
 }
 
@@ -65,14 +99,10 @@ pub mod leptos {
 pub mod dioxus {
     use super::*;
 
+    /// Render the button into a plain HTML string using a theme aware style.
+    /// Delegates to [`super::render_html`] to avoid duplication.
     pub fn render(props: &ButtonProps, state: &ButtonState) -> String {
-        let attrs = state.aria_attributes();
-        format!(
-            "<button role=\"{}\" {}>{}</button>",
-            attrs[0].1,
-            format!("{}=\"{}\"", attrs[1].0, attrs[1].1),
-            props.label
-        )
+        super::render_html(props, state)
     }
 }
 
@@ -80,13 +110,9 @@ pub mod dioxus {
 pub mod sycamore {
     use super::*;
 
+    /// Render the button into a plain HTML string using a theme aware style.
+    /// Delegates to [`super::render_html`] just like the other adapters.
     pub fn render(props: &ButtonProps, state: &ButtonState) -> String {
-        let attrs = state.aria_attributes();
-        format!(
-            "<button role=\"{}\" {}>{}</button>",
-            attrs[0].1,
-            format!("{}=\"{}\"", attrs[1].0, attrs[1].1),
-            props.label
-        )
+        super::render_html(props, state)
     }
 }
