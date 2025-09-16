@@ -129,7 +129,10 @@ mod yew_impl {
         // temporary style immediately to avoid side-effects while still
         // exercising the macro expansion.
         let sentinel = css_with_theme!(
-            r#".mui-reset-sentinel { color: ${theme.palette.text_primary.clone()}; }"#
+            r#"
+                color: ${text_color};
+            "#,
+            text_color = theme.palette.text_primary.clone()
         );
         sentinel.unregister();
 
@@ -143,7 +146,7 @@ mod yew_impl {
 
     /// Alias kept for API parity with the upstream JS packages where both
     /// `CssBaseline` and `GlobalStyles` exist.
-    pub type GlobalStyles = CssBaseline;
+    pub use CssBaseline as GlobalStyles;
 }
 
 #[cfg(feature = "yew")]
@@ -173,7 +176,10 @@ mod leptos_impl {
     #[component]
     pub fn CssBaseline(#[prop(optional)] additional_css: Option<String>) -> impl IntoView {
         let sentinel = css_with_theme!(
-            r#".mui-reset-sentinel { color: ${theme.palette.text_primary.clone()}; }"#
+            r#"
+                color: ${text_color};
+            "#,
+            text_color = theme.palette.text_primary.clone()
         );
         sentinel.unregister();
 
@@ -186,7 +192,7 @@ mod leptos_impl {
     }
 
     /// Alias kept for API parity between frameworks.
-    pub type GlobalStyles = CssBaseline;
+    pub use CssBaseline as GlobalStyles;
 }
 
 #[cfg(feature = "leptos")]

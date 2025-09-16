@@ -22,6 +22,7 @@ serde.workspace = true
 serde_json.workspace = true
 stylist = { version = "0.13", default-features = false, features = ["macros", "parser", "ssr"] }
 mui-styled-engine-macros = { path = "../mui-styled-engine-macros" }
+mui-utils = { path = "../mui-utils" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }

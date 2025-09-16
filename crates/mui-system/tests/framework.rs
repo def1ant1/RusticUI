@@ -10,8 +10,10 @@ fn leptos_adapter_renders() {
         ..Default::default()
     };
     let html = mui_system::themed_element::leptos::render(&props);
-    assert!(html.contains("mui-plain"));
+    assert!(html.contains("<style>"), "expected inlined stylesheet");
+    assert!(html.contains("mui-themed-header--plain"));
     assert!(html.contains("role=\"note\""));
+    assert!(html.contains("<header"));
 }
 
 #[cfg(feature = "dioxus")]
@@ -25,7 +27,8 @@ fn dioxus_adapter_renders() {
     props.role = Some("button".into());
     props.aria_label = Some("greet".into());
     let html = mui_system::themed_element::dioxus::render(&props);
-    assert!(html.contains("mui-outlined"));
+    assert!(html.contains("mui-themed-header--outlined"));
+    assert!(html.contains("style=\""));
     assert!(html.contains("aria-label=\"greet\""));
 }
 
@@ -40,4 +43,6 @@ fn sycamore_adapter_renders() {
     };
     let html = mui_system::themed_element::sycamore::render(&props);
     assert!(html.contains("role=\"note\""));
+    assert!(html.contains("mui-themed-header"));
+    assert!(html.contains("style=\""));
 }
