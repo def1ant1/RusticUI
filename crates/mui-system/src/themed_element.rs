@@ -1,5 +1,5 @@
-//! Cross-framework helpers for rendering a themed `<header>` complete with
-//! scoped class names and ARIA metadata.
+//! Cross-framework helpers for rendering a themed `<div>` complete with
+//! scoped class names, generated CSS and ARIA metadata.
 //!
 //! The module exposes lightweight adapters for Leptos, Dioxus and Sycamore.
 //! Each adapter resolves spacing and colors from the active [`Theme`] before
@@ -13,18 +13,25 @@
 //!   design system's primary accent unless a bespoke value is supplied.
 //! * `padding` - Falls back to `theme.spacing(2)` (converted to pixels) to keep
 //!   breathing room consistent with Material defaults. Projects can override the
-//!   string directly to support complex responsive shorthands.
+//!   string directly to support complex responsive shorthands while still
+//!   benefiting from the theme scale.
+//! * `border` - `Variant::Outlined` uses the theme's secondary text colour to
+//!   render a subtle divider. Plain variants disable the border entirely so the
+//!   element can blend with surrounding layout chrome.
 //! * `variant` - Determines the visual treatment. A modifier class using the
 //!   [`BEM`](https://en.bem.info/methodology/) naming convention is produced so
 //!   downstream CSS can hook into `mui-themed-header--plain` / `--outlined`
-//!   without manual concatenation.
+//!   without manual concatenation. The scoped class generated via
+//!   [`css_with_theme!`](mui_styled_engine_macros::css_with_theme) is appended to
+//!   the list so automation can target the component using deterministic names.
 //!
 //! ## Accessibility
 //! Optional ARIA `role` and `aria-label` attributes are emitted to provide
-//! assistive technologies with rich context about the header.  Centralising this
-//! logic ensures the SSR-focused adapters (Dioxus & Sycamore) and the Leptos
-//! component render identical accessibility metadata, eliminating a whole class
-//! of drift bugs that are notoriously hard to catch in manual testing.
+//! assistive technologies with rich context about the container.  The helpers
+//! funnel every attribute through [`mui_utils::collect_attributes`] so the same
+//! metadata order is preserved across adapters, which keeps hydration and
+//! snapshot tests stable and documents exactly how accessibility data is
+//! applied to the rendered `<div>`.
 
 use crate::theme_provider::use_theme;
 use mui_utils::{attributes_to_html, collect_attributes, extend_attributes};
@@ -87,6 +94,18 @@ struct VisualTokens {
     gap: String,
 }
 
+/// Scoped style artefact produced by [`css_with_theme!`].
+///
+/// The struct records both the generated class name and the CSS string so SSR
+/// adapters can inline the stylesheet while client side frameworks simply reuse
+/// the class. Having a dedicated type keeps future automation (for example
+/// generating documentation snippets) straightforward.
+#[derive(Clone, Debug)]
+struct ScopedStyle {
+    class: String,
+    stylesheet: String,
+}
+
 /// Resolves theme driven styling tokens, applying sensible defaults where
 /// callers omitted a value.
 fn resolve_visual_tokens(props: &ThemedProps) -> VisualTokens {
@@ -125,26 +144,56 @@ fn deterministic_class(variant: Variant) -> String {
     format!("{BASE_CLASS} {BASE_CLASS}--{}", variant.modifier())
 }
 
-/// Formats inline styles for SSR adapters that cannot rely on live style
-/// managers.  The values mirror those produced by the Leptos component so the
-/// rendered markup remains visually consistent across frameworks.
-#[cfg(any(feature = "dioxus", feature = "sycamore"))]
-fn inline_style(tokens: &VisualTokens) -> String {
-    format!(
-        "color:{};padding:{};background-color:{};border-bottom:{};display:flex;align-items:center;gap:{};",
-        tokens.text_color, tokens.padding, tokens.background, tokens.border, tokens.gap
-    )
+/// Generates a scoped CSS class and stylesheet using the active [`Theme`].
+#[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
+fn scoped_style(tokens: &VisualTokens) -> ScopedStyle {
+    use mui_styled_engine_macros::css_with_theme;
+
+    // Drive every declaration from theme tokens so updates to palette/spacing
+    // cascade through the component without touching presentation code.
+    let style = css_with_theme!(
+        r#"
+            color: ${text_color};
+            padding: ${padding};
+            background-color: ${background};
+            border-bottom: ${border};
+            display: flex;
+            align-items: center;
+            gap: ${gap};
+        "#,
+        text_color = tokens.text_color.clone(),
+        padding = tokens.padding.clone(),
+        background = tokens.background.clone(),
+        border = tokens.border.clone(),
+        gap = tokens.gap.clone()
+    );
+
+    let stylesheet = style.get_style_str().to_string();
+    let class = style.get_class_name().to_string();
+    // Immediately unregister the temporary handle so the style registry remains
+    // free of duplicates when multiple adapters render concurrently.
+    style.unregister();
+
+    ScopedStyle { class, stylesheet }
 }
 
-/// Collects HTML attributes shared across adapters.  `style` is optional so the
-/// Leptos implementation can rely on generated CSS classes while SSR adapters
-/// emit inline styling for deterministic output.
-fn attribute_pairs(
-    props: &ThemedProps,
-    classes: String,
-    style: Option<String>,
-) -> Vec<(String, String)> {
-    let mut attrs = collect_attributes(Some(classes), style.into_iter().map(|s| ("style", s)));
+/// Resolves the deterministic BEM class and scoped theme class in one go.
+#[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
+fn themed_classes(props: &ThemedProps) -> (String, ScopedStyle) {
+    let tokens = resolve_visual_tokens(props);
+    let scoped = scoped_style(&tokens);
+    let classes = format!("{} {}", deterministic_class(props.variant), scoped.class);
+    (classes, scoped)
+}
+
+/// Collects HTML attributes shared across adapters.
+///
+/// The helper funnels the caller supplied class list through
+/// [`mui_utils::collect_attributes`] before layering optional ARIA role/label
+/// metadata on top. Returning a `Vec` keeps the structure ergonomic for
+/// [`attributes_to_html`], SSR renderers and potential future automation.
+fn attribute_pairs(props: &ThemedProps, classes: String) -> Vec<(String, String)> {
+    let mut attrs = collect_attributes(Some(classes), core::iter::empty::<(String, String)>());
     if let Some(role) = &props.role {
         extend_attributes(&mut attrs, [("role", role.clone())]);
     }
@@ -154,93 +203,74 @@ fn attribute_pairs(
     attrs
 }
 
-/// Renders the final header markup using precomputed attributes.
-fn render_header(props: &ThemedProps, classes: String, style: Option<String>) -> String {
-    let attrs = attribute_pairs(props, classes, style);
+/// Renders the final container markup, optionally prefixing an inline
+/// `<style>` tag for SSR scenarios.
+fn render_div(props: &ThemedProps, classes: String, stylesheet: Option<String>) -> String {
+    let attrs = attribute_pairs(props, classes);
     let attr_string = attributes_to_html(&attrs);
-    format!("<header {}>{}</header>", attr_string, props.child)
+    let markup = format!("<div {}>{}</div>", attr_string, props.child);
+    if let Some(css) = stylesheet {
+        format!("<style>{}</style>{}", css, markup)
+    } else {
+        markup
+    }
 }
 
 /// Adapter targeting the [`leptos`](https://docs.rs/leptos) framework.
 ///
 /// The implementation relies on [`css_with_theme!`](mui_styled_engine::css_with_theme)
 /// so colour and spacing automatically track the active [`Theme`].  A scoped
-/// style block is emitted alongside the `<header>` markup ensuring SSR output
+/// style block is emitted alongside the `<div>` markup ensuring SSR output
 /// remains deterministic even without a live style registry.
 #[cfg(feature = "leptos")]
 pub mod leptos {
-    //! Leptos adapter that renders a themed `<header>` while exercising the
-    //! `css_with_theme!` macro.  The generated CSS is inlined to make SSR easy
+    //! Leptos adapter that renders a themed `<div>` while exercising the
+    //! shared styling helpers. The generated CSS is inlined to make SSR easy
     //! to hydrate and still exposes the shared BEM class for additional
     //! enterprise customisation layers.
     use super::*;
-    use mui_styled_engine_macros::css_with_theme;
 
-    /// Render a themed `<header>` with ARIA metadata using Leptos.
+    /// Render a themed `<div>` with ARIA metadata using Leptos.
     pub fn render(props: &ThemedProps) -> String {
-        let tokens = resolve_visual_tokens(props);
-        let style = css_with_theme!(
-            r#"
-                color: ${text_color};
-                padding: ${padding};
-                background-color: ${background};
-                border-bottom: ${border};
-                display: flex;
-                align-items: center;
-                gap: ${gap};
-            "#,
-            text_color = tokens.text_color.clone(),
-            padding = tokens.padding.clone(),
-            background = tokens.background.clone(),
-            border = tokens.border.clone(),
-            gap = tokens.gap.clone()
-        );
-        // Capture the generated stylesheet before unregistering the temporary
-        // style handle.  The CSS is then inlined to keep the SSR adapter fully
-        // self-contained.
-        let stylesheet = style.get_style_str().to_string();
-        let scoped = style.get_class_name().to_string();
-        style.unregister();
-        let classes = format!("{} {}", deterministic_class(props.variant), scoped);
-        let header = render_header(props, classes, None);
-        format!("<style>{}</style>{}", stylesheet, header)
+        let (classes, scoped) = themed_classes(props);
+        // Feed the generated stylesheet back into the markup so SSR output and
+        // client side hydration share the exact same CSS payload.
+        render_div(props, classes, Some(scoped.stylesheet))
     }
 }
 
 /// Adapter targeting the [`dioxus`](https://dioxuslabs.com) framework.
 ///
-/// Delegates styling to [`resolve_visual_tokens`] ensuring the inline CSS and
-/// BEM modifier class mirror the Leptos variant.  The adapter also wires the
-/// optional ARIA `role`/`aria-label` attributes into the rendered `<header>` so
+/// Delegates styling to [`resolve_visual_tokens`] ensuring the scoped stylesheet
+/// and BEM modifier class mirror the Leptos variant.  The adapter also wires the
+/// optional ARIA `role`/`aria-label` attributes into the rendered `<div>` so
 /// server rendered output remains accessible without additional plumbing.
 #[cfg(feature = "dioxus")]
 pub mod dioxus {
     use super::*;
 
-    /// Render a themed `<header>` with ARIA metadata using Dioxus.
+    /// Render a themed `<div>` with ARIA metadata using Dioxus.
     pub fn render(props: &ThemedProps) -> String {
-        let tokens = resolve_visual_tokens(props);
-        let classes = deterministic_class(props.variant);
-        let style = inline_style(&tokens);
-        render_header(props, classes, Some(style))
+        // Share the same scoped stylesheet as the other adapters so string based
+        // renderers remain perfectly in sync with client side components.
+        let (classes, scoped) = themed_classes(props);
+        render_div(props, classes, Some(scoped.stylesheet))
     }
 }
 
 /// Adapter targeting the [`sycamore`](https://sycamore-rs.netlify.app) framework.
 ///
 /// Delegates to the shared helper functions so that Sycamore's SSR adapter emits
-/// the same inline styling, BEM modifier classes and ARIA metadata as the other
+/// the same scoped styling, BEM modifier classes and ARIA metadata as the other
 /// frameworks.  Keeping the logic central makes future automation (for example
 /// generating documentation snippets) straightforward.
 #[cfg(feature = "sycamore")]
 pub mod sycamore {
     use super::*;
 
-    /// Render a themed `<header>` with ARIA metadata using Sycamore.
+    /// Render a themed `<div>` with ARIA metadata using Sycamore.
     pub fn render(props: &ThemedProps) -> String {
-        let tokens = resolve_visual_tokens(props);
-        let classes = deterministic_class(props.variant);
-        let style = inline_style(&tokens);
-        render_header(props, classes, Some(style))
+        let (classes, scoped) = themed_classes(props);
+        render_div(props, classes, Some(scoped.stylesheet))
     }
 }
