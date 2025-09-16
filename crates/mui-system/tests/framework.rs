@@ -13,7 +13,12 @@ fn leptos_adapter_renders() {
     assert!(html.contains("<style>"), "expected inlined stylesheet");
     assert!(html.contains("mui-themed-header--plain"));
     assert!(html.contains("role=\"note\""));
-    assert!(html.contains("<header"));
+    assert!(html.contains("<div"));
+    assert!(html.contains("class=\""));
+    assert!(
+        !html.contains("style=\""),
+        "inline styles should be replaced with generated classes"
+    );
 }
 
 #[cfg(feature = "dioxus")]
@@ -28,7 +33,12 @@ fn dioxus_adapter_renders() {
     props.aria_label = Some("greet".into());
     let html = mui_system::themed_element::dioxus::render(&props);
     assert!(html.contains("mui-themed-header--outlined"));
-    assert!(html.contains("style=\""));
+    assert!(html.contains("<style>"));
+    assert!(html.contains("class=\""));
+    assert!(
+        !html.contains("style=\""),
+        "inline styles should be replaced with generated classes"
+    );
     assert!(html.contains("aria-label=\"greet\""));
 }
 
@@ -44,5 +54,9 @@ fn sycamore_adapter_renders() {
     let html = mui_system::themed_element::sycamore::render(&props);
     assert!(html.contains("role=\"note\""));
     assert!(html.contains("mui-themed-header"));
-    assert!(html.contains("style=\""));
+    assert!(html.contains("<style>"));
+    assert!(
+        !html.contains("style=\""),
+        "inline styles should be replaced with generated classes"
+    );
 }
