@@ -1774,6 +1774,7 @@ dependencies = [
  "dioxus",
  "leptos",
  "mui-styled-engine-macros",
+ "mui-utils",
  "serde",
  "serde_json",
  "stylist",
