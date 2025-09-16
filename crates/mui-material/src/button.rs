@@ -41,33 +41,84 @@ impl ButtonProps {
 /// Shared rendering routine used by all adapters.
 ///
 /// The function generates a scoped CSS class using [`css_with_theme!`]. The
-/// macro pulls colors and spacing from the active [`Theme`] so the button's
-/// appearance automatically tracks global design tokens. The returned class is
-/// attached to the `<button>` element and the ARIA attributes emitted from
-/// [`ButtonState`] are merged into the final tag to enhance accessibility.
+/// macro pulls spacing, typography and palette tokens from the active
+/// [`Theme`](mui_styled_engine::Theme) so the button's appearance automatically
+/// tracks global design decisions. The returned class is attached to the
+/// `<button>` element and the ARIA attributes emitted from [`ButtonState`] are
+/// merged into the final tag to enhance accessibility for assistive
+/// technologies.
 fn render_html(props: &ButtonProps, state: &ButtonState) -> String {
-    // Build a themed style block. We intentionally keep the CSS minimal since
-    // this example returns plain HTML rather than framework specific nodes.
-    let class = crate::style_helpers::themed_class(css_with_theme!(
-        r#"
-        background: ${bg};
-        color: #fff;
-        padding: 8px 16px;
-        border: none;
-    "#,
-        // Use the primary palette color so the button automatically adapts to
-        // custom themes without manual tweaking.
-        bg = theme.palette.primary.clone()
-    ));
-
-    // Compose the HTML attributes with the reusable helpers so SSR adapters
-    // mirror the DOM exposed by WebAssembly frameworks without bespoke code.
-    let attrs = collect_attributes(Some(class), state.aria_attributes());
+    // Build an attribute collection that includes the themed class and the
+    // latest ARIA metadata from the state machine. Centralizing the logic in a
+    // helper keeps adapters extremely small while guaranteeing they all emit
+    // the same markup for SSR and hydration scenarios.
+    let attrs = themed_button_attributes(state);
     let attr_string = attributes_to_html(&attrs);
 
     // Final HTML representation. Individual adapters simply forward to this
     // function keeping rendering logic DRY and easy to evolve.
     format!("<button {}>{}</button>", attr_string, props.label)
+}
+
+/// Builds the scoped CSS class that powers the Material flavored button.
+///
+/// [`css_with_theme!`] exposes a `theme` binding so the macro can pull values
+/// directly from the design tokens. We lean on that hook to derive:
+///
+/// * Background colors from the palette so primary/secondary overrides are
+///   respected automatically.
+/// * Typography settings (font family, weight and letter spacing) from the
+///   theme's button ramp, ensuring text matches the Material spec without
+///   sprinkling literal values around the codebase.
+/// * Padding, radius and focus outlines from the shared spacing and Joy token
+///   helpers which keeps spatial relationships consistent across components.
+fn themed_button_class() -> String {
+    crate::style_helpers::themed_class(css_with_theme!(
+        r#"
+        background: ${background};
+        color: ${text};
+        padding: ${padding_y} ${padding_x};
+        border: none;
+        border-radius: ${radius};
+        font-family: ${font_family};
+        font-weight: ${font_weight};
+        letter-spacing: ${letter_spacing};
+        cursor: pointer;
+        transition: background-color 160ms ease-in-out, box-shadow 160ms ease-in-out;
+
+        &:hover {
+            background: ${hover_background};
+        }
+
+        &:focus-visible {
+            outline: ${focus_outline_width} solid ${focus_outline_color};
+            outline-offset: 2px;
+        }
+    "#,
+        background = theme.palette.primary.clone(),
+        hover_background = theme.palette.secondary.clone(),
+        text = theme.palette.background_paper.clone(),
+        padding_y = format!("{}px", theme.spacing(1)),
+        padding_x = format!("{}px", theme.spacing(2)),
+        radius = format!("{}px", theme.joy.radius),
+        font_family = theme.typography.font_family.clone(),
+        font_weight = theme.typography.font_weight_medium.to_string(),
+        letter_spacing = format!("{:.3}rem", theme.typography.button_letter_spacing),
+        focus_outline_width = format!("{}px", theme.joy.focus_thickness),
+        focus_outline_color = theme.palette.text_primary.clone()
+    ))
+}
+
+/// Collects the generated class alongside ARIA attributes emitted by
+/// [`ButtonState`].
+///
+/// [`ButtonState::aria_attributes`] returns a small array containing `role`
+/// metadata and the current pressed flag. Merging that array with the themed
+/// class inside a single helper guarantees every framework adapter attaches the
+/// same accessibility affordances without duplicating knowledge about how the
+/// state machine works.
+fn themed_button_attributes(state: &ButtonState) -> Vec<(String, String)> {
+    collect_attributes(Some(themed_button_class()), state.aria_attributes())
 }
 
 // ---------------------------------------------------------------------------
