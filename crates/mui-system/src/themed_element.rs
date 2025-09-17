@@ -1,5 +1,5 @@
-//! Cross-framework helpers for rendering a themed `<div>` complete with
-//! scoped class names, generated CSS and ARIA metadata.
+//! Cross-framework helpers for rendering themed container elements complete
+//! with scoped class names, generated CSS and ARIA metadata.
 //!
 //! The module exposes lightweight adapters for Leptos, Dioxus and Sycamore.
 //! Each adapter resolves spacing and colors from the active [`Theme`] before
@@ -31,7 +31,7 @@
 //! funnel every attribute through [`mui_utils::collect_attributes`] so the same
 //! metadata order is preserved across adapters, which keeps hydration and
 //! snapshot tests stable and documents exactly how accessibility data is
-//! applied to the rendered `<div>`.
+//! applied to the rendered element.
 
 use crate::theme_provider::use_theme;
 use mui_utils::{attributes_to_html, collect_attributes, extend_attributes};
@@ -192,23 +192,49 @@ fn themed_classes(props: &ThemedProps) -> (String, ScopedStyle) {
 /// [`mui_utils::collect_attributes`] before layering optional ARIA role/label
 /// metadata on top. Returning a `Vec` keeps the structure ergonomic for
 /// [`attributes_to_html`], SSR renderers and potential future automation.
-fn attribute_pairs(props: &ThemedProps, classes: String) -> Vec<(String, String)> {
+fn attribute_pairs(
+    props: &ThemedProps,
+    classes: String,
+    default_role: Option<&str>,
+) -> Vec<(String, String)> {
     let mut attrs = collect_attributes(Some(classes), core::iter::empty::<(String, String)>());
-    if let Some(role) = &props.role {
-        extend_attributes(&mut attrs, [("role", role.clone())]);
+    // Promote the caller supplied role or fall back to the semantic role that
+    // matches the tag we are about to render. This ensures headers announce as
+    // banner regions even when the consumer forgot to pass a value explicitly.
+    if let Some(role) = props
+        .role
+        .clone()
+        .or_else(|| default_role.map(|role| role.to_string()))
+    {
+        extend_attributes(&mut attrs, [(String::from("role"), role)]);
     }
     if let Some(label) = &props.aria_label {
-        extend_attributes(&mut attrs, [("aria-label", label.clone())]);
+        // Copy the ARIA label verbatim – enterprise adopters frequently provide
+        // long-form descriptions, so we avoid trimming or altering the content.
+        extend_attributes(&mut attrs, [(String::from("aria-label"), label.clone())]);
     }
     attrs
 }
 
 /// Renders the final container markup, optionally prefixing an inline
 /// `<style>` tag for SSR scenarios.
-fn render_div(props: &ThemedProps, classes: String, stylesheet: Option<String>) -> String {
-    let attrs = attribute_pairs(props, classes);
+fn render_element(
+    tag: &str,
+    props: &ThemedProps,
+    classes: String,
+    stylesheet: Option<String>,
+    default_role: Option<&str>,
+) -> String {
+    let attrs = attribute_pairs(props, classes, default_role);
     let attr_string = attributes_to_html(&attrs);
-    let markup = format!("<div {}>{}</div>", attr_string, props.child);
+    // Compose the markup manually so adapters can run in headless test
+    // environments without pulling a virtual DOM dependency.
+    let markup = format!(
+        "<{tag} {attrs}>{child}</{tag}>",
+        tag = tag,
+        attrs = attr_string,
+        child = props.child
+    );
     if let Some(css) = stylesheet {
         format!("<style>{}</style>{}", css, markup)
     } else {
@@ -216,26 +242,40 @@ fn render_div(props: &ThemedProps, classes: String, stylesheet: Option<String>) 
     }
 }
 
+/// Renders a semantic `<header>` element with a default `role="banner"` to
+/// make it discoverable by assistive technologies.
+fn render_header(props: &ThemedProps, classes: String, stylesheet: Option<String>) -> String {
+    render_element("header", props, classes, stylesheet, Some("banner"))
+}
+
 /// Adapter targeting the [`leptos`](https://docs.rs/leptos) framework.
 ///
 /// The implementation relies on [`css_with_theme!`](mui_styled_engine::css_with_theme)
 /// so colour and spacing automatically track the active [`Theme`].  A scoped
-/// style block is emitted alongside the `<div>` markup ensuring SSR output
+/// style block is emitted alongside the `<header>` markup ensuring SSR output
 /// remains deterministic even without a live style registry.
 #[cfg(feature = "leptos")]
 pub mod leptos {
-    //! Leptos adapter that renders a themed `<div>` while exercising the
-    //! shared styling helpers. The generated CSS is inlined to make SSR easy
-    //! to hydrate and still exposes the shared BEM class for additional
-    //! enterprise customisation layers.
+    //! Leptos adapter that renders a themed `<header>` while exercising the
+    //! shared styling helpers.
+    //!
+    //! The adapter leans on [`css_with_theme!`](mui_styled_engine::css_with_theme)
+    //! to derive palette driven spacing and colours, ensuring the scoped class
+    //! aligns with the active [`Theme`](crate::theme::Theme). By delegating the
+    //! attribute assembly to [`attribute_pairs`](super::attribute_pairs) we
+    //! guarantee ARIA roles and labels are applied consistently across
+    //! frameworks, which dramatically reduces manual QA overhead when pursuing
+    //! enterprise accessibility certifications.
     use super::*;
 
-    /// Render a themed `<div>` with ARIA metadata using Leptos.
+    /// Render a themed `<header>` with ARIA metadata using Leptos.
     pub fn render(props: &ThemedProps) -> String {
         let (classes, scoped) = themed_classes(props);
         // Feed the generated stylesheet back into the markup so SSR output and
-        // client side hydration share the exact same CSS payload.
-        render_div(props, classes, Some(scoped.stylesheet))
+        // client side hydration share the exact same CSS payload. Returning a
+        // header keeps semantics aligned with the adapters implemented in
+        // `mui-material` and minimises bespoke overrides.
+        render_header(props, classes, Some(scoped.stylesheet))
     }
 }
 
@@ -243,18 +283,25 @@ pub mod leptos {
 ///
 /// Delegates styling to [`resolve_visual_tokens`] ensuring the scoped stylesheet
 /// and BEM modifier class mirror the Leptos variant.  The adapter also wires the
-/// optional ARIA `role`/`aria-label` attributes into the rendered `<div>` so
+/// optional ARIA `role`/`aria-label` attributes into the rendered `<header>` so
 /// server rendered output remains accessible without additional plumbing.
 #[cfg(feature = "dioxus")]
 pub mod dioxus {
+    //! Dioxus adapter that renders the themed region as a semantic `<header>`.
+    //!
+    //! Styling is pulled from [`resolve_visual_tokens`](super::resolve_visual_tokens)
+    //! which guarantees parity with the Leptos and Sycamore implementations.
+    //! The generated CSS class is merged with `role`/`aria-label` metadata so
+    //! server rendered strings and virtual DOM components share the same
+    //! accessibility contract – a vital property for pre-production QA.
     use super::*;
 
-    /// Render a themed `<div>` with ARIA metadata using Dioxus.
+    /// Render a themed `<header>` with ARIA metadata using Dioxus.
     pub fn render(props: &ThemedProps) -> String {
         // Share the same scoped stylesheet as the other adapters so string based
         // renderers remain perfectly in sync with client side components.
         let (classes, scoped) = themed_classes(props);
-        render_div(props, classes, Some(scoped.stylesheet))
+        render_header(props, classes, Some(scoped.stylesheet))
     }
 }
 
@@ -263,14 +310,20 @@ pub mod dioxus {
 /// Delegates to the shared helper functions so that Sycamore's SSR adapter emits
 /// the same scoped styling, BEM modifier classes and ARIA metadata as the other
 /// frameworks.  Keeping the logic central makes future automation (for example
-/// generating documentation snippets) straightforward.
+/// generating documentation snippets) straightforward while still emitting semantic `<header>` containers by default.
 #[cfg(feature = "sycamore")]
 pub mod sycamore {
+    //! Sycamore adapter that outputs a semantic `<header>`.
+    //!
+    //! The implementation mirrors the Dioxus adapter so future tweaks to token
+    //! resolution or ARIA defaults automatically cascade across both Virtual DOM
+    //! ecosystems. This keeps enterprise teams from writing bespoke wrappers in
+    //! each project and instead centralises the behaviour here.
     use super::*;
 
-    /// Render a themed `<div>` with ARIA metadata using Sycamore.
+    /// Render a themed `<header>` with ARIA metadata using Sycamore.
     pub fn render(props: &ThemedProps) -> String {
         let (classes, scoped) = themed_classes(props);
-        render_div(props, classes, Some(scoped.stylesheet))
+        render_header(props, classes, Some(scoped.stylesheet))
     }
 }
