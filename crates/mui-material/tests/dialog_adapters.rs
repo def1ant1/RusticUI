@@ -1,4 +1,4 @@
-#![cfg(any(feature = "dioxus", feature = "sycamore"))]
+#![cfg(any(feature = "dioxus", feature = "leptos", feature = "sycamore"))]
 
 /// Validate that dialog adapters attach the generated class and ARIA metadata
 /// when open while emitting no markup when closed.
@@ -21,7 +21,36 @@ mod dioxus_tests {
         assert!(out.contains("aria-modal=\"true\""));
         assert!(out.contains("aria-label=\"Settings\""));
 
-        let closed = dioxus::render(&dioxus::DialogProps { open: false, ..Default::default() });
+        let closed = dioxus::render(&dioxus::DialogProps {
+            open: false,
+            ..Default::default()
+        });
+        assert!(closed.is_empty());
+    }
+}
+
+#[cfg(feature = "leptos")]
+mod leptos_tests {
+    use mui_material::dialog::leptos;
+
+    #[test]
+    fn open_and_closed_states() {
+        let props = leptos::DialogProps {
+            open: true,
+            children: "body".into(),
+            aria_label: "Settings".into(),
+        };
+        let out = leptos::render(&props);
+        assert!(out.starts_with("<div"));
+        assert!(out.contains("class=\""), "missing class attribute: {}", out);
+        assert!(out.contains("role=\"dialog\""));
+        assert!(out.contains("aria-modal=\"true\""));
+        assert!(out.contains("aria-label=\"Settings\""));
+
+        let closed = leptos::render(&leptos::DialogProps {
+            open: false,
+            ..Default::default()
+        });
         assert!(closed.is_empty());
     }
 }
@@ -44,8 +73,10 @@ mod sycamore_tests {
         assert!(out.contains("aria-modal=\"true\""));
         assert!(out.contains("aria-label=\"Settings\""));
 
-        let closed = sycamore::render(&sycamore::DialogProps { open: false, ..Default::default() });
+        let closed = sycamore::render(&sycamore::DialogProps {
+            open: false,
+            ..Default::default()
+        });
         assert!(closed.is_empty());
     }
 }
-

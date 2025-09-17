@@ -1,27 +1,34 @@
 //! Minimal dialog container demonstrating theme-aware styling and accessibility.
 //!
-//! The component derives its visual appearance from the active
-//! [`Theme`](mui_styled_engine::Theme) via the [`css_with_theme!`]
-//! macro. Both the border color and interior padding are pulled from the
-//! theme's palette and spacing scale so applications stay visually
-//! consistent. The resulting scoped style is attached as a class to the
-//! root `<div>` element rather than inline styles so repeated renders do
-//! not allocate duplicate strings.
+//! ## Style composition
+//! * [`css_with_theme!`](mui_styled_engine::css_with_theme) powers every
+//!   adapter. The macro exposes a `theme` binding so border colours pull from
+//!   `theme.palette.secondary` while padding respects `theme.spacing(3)`.
+//!   Wrapping the declaration inside [`style_helpers::themed_class`](crate::style_helpers::themed_class)
+//!   produces a deterministic class name that can be safely reused across
+//!   renders without leaking duplicate strings.
+//! * Each framework module calls back into [`resolve_class`] so client side
+//!   components (Yew/Leptos) and server-side renderers (Leptos/Dioxus/Sycamore)
+//!   receive the identical scoped class. This keeps brand styling consistent
+//!   even when applications mix rendering strategies for pre-production smoke
+//!   tests or hybrid deployments.
 //!
-//! Rendering is gated on the `open` flag. When `open` is `false` no DOM
-//! nodes are produced which keeps hidden content out of the accessibility
-//! tree. When `open` is `true` each adapter emits a `<div>` decorated with
-//! `role="dialog"`, `aria-modal="true"` and a caller supplied
-//! `aria_label`. Screen readers can then accurately announce the region and
-//! understand that keyboard focus is trapped within the modal.
+//! ## Accessibility toggling
+//! * Rendering is gated on the `open` flag. When `open` is `false` adapters
+//!   emit no markup which keeps hidden content out of the accessibility tree
+//!   and mirrors the behaviour of Material UI's JavaScript implementation.
+//! * When `open` flips to `true` every adapter renders a `<div>` decorated
+//!   with `role="dialog"`, `aria-modal="true"` and the caller supplied
+//!   `aria_label`. Screen readers can then accurately announce the region and
+//!   understand that focus should remain trapped inside the modal until it is
+//!   dismissed.
 //!
-//! Each framework module is intentionally tiny and delegates styling to the
-//! shared [`resolve_class`] helper which centralizes theme lookups using the
-//! [`style_helpers::themed_class`](crate::style_helpers::themed_class) utility.
-//! Frameworks that render raw HTML strings reuse
-//! [`mui_utils::collect_attributes`] to attach `role="dialog"`,
-//! `aria-modal="true"` and caller supplied labels without duplicating string
-//! concatenation logic.
+//! Each framework module is intentionally tiny and delegates styling to
+//! [`resolve_class`] which centralizes theme lookups. Frameworks that render
+//! raw HTML strings reuse [`mui_utils::collect_attributes`] to attach the ARIA
+//! metadata without duplicating string concatenation logic. This shared
+//! machinery significantly reduces repetitive setup when scaling to multiple
+//! enterprise applications.
 
 #[cfg(any(
     feature = "yew",
@@ -63,6 +70,29 @@ fn resolve_class() -> String {
         border = theme.palette.secondary.clone(),
         pad = format!("{}px", theme.spacing(3))
     ))
+}
+
+/// Shared helper wiring framework agnostic ARIA metadata into the dialog.
+///
+/// String-based adapters (Leptos SSR/Dioxus/Sycamore) delegate to this function
+/// so the `role="dialog"` and `aria-modal="true"` attributes are emitted in a
+/// consistent order. Returning a `String` keeps the helpers friendly for
+/// snapshot tests and other automation harnesses that reason about serialized
+/// HTML.
+#[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
+fn render_open_dialog_html(class: String, aria_label: &str, child: &str) -> String {
+    // Centralize the ARIA metadata using the utilities from `mui-utils` so we can
+    // easily bolt on new attributes (for example `aria-describedby`) without
+    // touching every adapter individually.
+    let mut attrs =
+        mui_utils::collect_attributes(Some(class), [("role", "dialog"), ("aria-modal", "true")]);
+    mui_utils::extend_attributes(&mut attrs, [("aria-label", aria_label)]);
+    let attr_string = mui_utils::attributes_to_html(&attrs);
+    format!(
+        "<div {attrs}>{child}</div>",
+        attrs = attr_string,
+        child = child
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -146,6 +176,39 @@ pub use leptos_impl::Dialog;
 pub use DialogProps;
 
 // ---------------------------------------------------------------------------
+// Leptos SSR adapter
+// ---------------------------------------------------------------------------
+
+#[cfg(feature = "leptos")]
+pub mod leptos {
+    use super::*;
+
+    /// Properties consumed by the Leptos SSR adapter. We intentionally mirror
+    /// the structure of other SSR focused modules so applications can swap
+    /// adapters without re-mapping state or accessibility metadata.
+    #[derive(Default, Clone, PartialEq)]
+    pub struct DialogProps {
+        /// Whether the dialog should be rendered.
+        pub open: bool,
+        /// Raw HTML/text representing the dialog contents.
+        pub children: String,
+        /// Accessible label announced by assistive technologies.
+        pub aria_label: String,
+    }
+
+    /// Render the dialog into a HTML string using `css_with_theme!` for
+    /// styling. Closed dialogs return an empty string so hidden regions never
+    /// reach the accessibility tree.
+    pub fn render(props: &DialogProps) -> String {
+        if !props.open {
+            return String::new();
+        }
+        let class = super::resolve_class();
+        super::render_open_dialog_html(class, &props.aria_label, &props.children)
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Dioxus adapter
 // ---------------------------------------------------------------------------
 
@@ -174,15 +237,7 @@ pub mod dioxus {
             return String::new();
         }
         let class = super::resolve_class();
-        // Compose attributes through the shared helpers so every SSR adapter
-        // exposes the same ARIA metadata order and escaping.
-        let mut attrs = mui_utils::collect_attributes(
-            Some(class),
-            [("role", "dialog"), ("aria-modal", "true")],
-        );
-        mui_utils::extend_attributes(&mut attrs, [("aria-label", props.aria_label.clone())]);
-        let attr_string = mui_utils::attributes_to_html(&attrs);
-        format!("<div {}>{}</div>", attr_string, props.children)
+        super::render_open_dialog_html(class, &props.aria_label, &props.children)
     }
 }
 
@@ -214,13 +269,6 @@ pub mod sycamore {
             return String::new();
         }
         let class = super::resolve_class();
-        // Consistently wire accessibility metadata via the helper utilities.
-        let mut attrs = mui_utils::collect_attributes(
-            Some(class),
-            [("role", "dialog"), ("aria-modal", "true")],
-        );
-        mui_utils::extend_attributes(&mut attrs, [("aria-label", props.aria_label.clone())]);
-        let attr_string = mui_utils::attributes_to_html(&attrs);
-        format!("<div {}>{}</div>", attr_string, props.children)
+        super::render_open_dialog_html(class, &props.aria_label, &props.children)
     }
 }
