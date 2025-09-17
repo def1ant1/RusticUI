@@ -13,7 +13,7 @@ fn leptos_adapter_renders() {
     assert!(html.contains("<style>"), "expected inlined stylesheet");
     assert!(html.contains("mui-themed-header--plain"));
     assert!(html.contains("role=\"note\""));
-    assert!(html.contains("<div"));
+    assert!(html.contains("<header"));
     assert!(html.contains("class=\""));
     assert!(
         !html.contains("style=\""),
@@ -33,6 +33,7 @@ fn dioxus_adapter_renders() {
     props.aria_label = Some("greet".into());
     let html = mui_system::themed_element::dioxus::render(&props);
     assert!(html.contains("mui-themed-header--outlined"));
+    assert!(html.contains("<header"));
     assert!(html.contains("<style>"));
     assert!(html.contains("class=\""));
     assert!(
@@ -48,12 +49,14 @@ fn sycamore_adapter_renders() {
     let props = ThemedProps {
         child: "hi".into(),
         variant: Variant::Plain,
-        role: Some("note".into()),
+        aria_label: Some("global banner".into()),
         ..Default::default()
     };
     let html = mui_system::themed_element::sycamore::render(&props);
-    assert!(html.contains("role=\"note\""));
+    assert!(html.contains("role=\"banner\""));
+    assert!(html.contains("aria-label=\"global banner\""));
     assert!(html.contains("mui-themed-header"));
+    assert!(html.contains("<header"));
     assert!(html.contains("<style>"));
     assert!(
         !html.contains("style=\""),
