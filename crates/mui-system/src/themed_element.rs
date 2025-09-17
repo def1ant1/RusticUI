@@ -1,40 +1,49 @@
-//! Cross-framework helpers for rendering themed container elements complete
+//! Cross-framework helpers for rendering themed text input controls complete
 //! with scoped class names, generated CSS and ARIA metadata.
 //!
-//! The module exposes lightweight adapters for Leptos, Dioxus and Sycamore.
-//! Each adapter resolves spacing and colors from the active [`Theme`] before
-//! wiring the values into attributes and CSS.  By centralising the work here we
-//! avoid hand-writing slightly different class name builders and ARIA maps per
-//! framework – a small but compounding win when building enterprise scale
-//! design systems.
+//! The adapters exposed here produce an `<input type="text">` element for
+//! Leptos, Dioxus and Sycamore while sharing the same styling pipeline.  Each
+//! variant resolves palette colours, typography and focus treatments from the
+//! active [`Theme`] before wiring the values into a scoped stylesheet generated
+//! by [`css_with_theme!`](mui_styled_engine_macros::css_with_theme). Centralising
+//! the behaviour avoids subtle regressions between frameworks and keeps
+//! enterprise teams from hand-maintaining near-identical CSS snippets.
 //!
-//! ## Styling logic
-//! * `color` - Defaults to [`Theme::palette.primary`] ensuring headers adopt the
-//!   brand accent colour out of the box. Supplying a value overrides the
-//!   palette-driven choice so adopters can mirror contextual states (warning,
-//!   success, etc.) without re-implementing styling logic.
-//! * `padding` - Falls back to `theme.spacing(2)` (converted to pixels) to keep
-//!   breathing room consistent with Material defaults. Projects can override the
-//!   string directly to support complex responsive shorthands while still
-//!   benefiting from the theme scale and automated unit conversion.
-//! * `border` - `Variant::Outlined` uses the theme's secondary text colour to
-//!   render a subtle divider. Plain variants disable the border entirely so the
-//!   element can blend with surrounding layout chrome and avoid redundant
-//!   borders when nested inside other surfaces.
-//! * `variant` - Determines the visual treatment. A modifier class using the
-//!   [`BEM`](https://en.bem.info/methodology/) naming convention is produced so
-//!   downstream CSS can hook into `mui-themed-header--plain` / `--outlined`
-//!   without manual concatenation. The scoped class generated via
-//!   [`css_with_theme!`](mui_styled_engine_macros::css_with_theme) is appended to
-//!   the list so automation can target the component using deterministic names.
+//! ## Theme-driven styling
+//! * **Colour** – Defaults to [`Theme::palette.text_primary`] so input text
+//!   inherits the brand's body copy tone. Consumers can override the value via
+//!   [`ThemedProps::color`] to reflect contextual states such as success or
+//!   warning flows.
+//! * **Spacing** – Falls back to `theme.spacing(1)` giving the control generous
+//!   padding that still mirrors Material defaults. An optional
+//!   [`ThemedProps::padding`] string allows full customisation while the helper
+//!   continues to look after border radii, typography and focus feedback.
+//! * **Variants** – [`Variant::Outlined`] swaps in a subtle border using the
+//!   secondary text colour whereas [`Variant::Plain`] keeps the background clean
+//!   for use inside already-contained layouts. A deterministic BEM modifier is
+//!   appended to the scoped class so downstream automation can target
+//!   `mui-themed-input--outlined`/`--plain` without string concatenation.
+//! * **Overrides** – [`ThemedProps::style_overrides`] accepts raw CSS which is
+//!   spliced directly into the generated stylesheet. This makes it trivial to
+//!   adjust corner cases (for example, forcing uppercase text) without giving up
+//!   the theme-synchronised defaults.
+//!
+//! ## Debounce-friendly metadata
+//! When [`ThemedProps::debounce_ms`] is provided the adapters emit a
+//! `data-debounce-ms` attribute. Downstream frameworks frequently pair the
+//! rendered markup with [`mui_utils::debounce`] to delay expensive network or
+//! state updates; surfacing the chosen debounce window in the DOM keeps this
+//! behaviour declarative and easy to introspect during QA walkthroughs.
 //!
 //! ## Accessibility
-//! Optional ARIA `role` and `aria-label` attributes are emitted to provide
-//! assistive technologies with rich context about the container.  The helpers
-//! funnel every attribute through [`mui_utils::collect_attributes`] so the same
-//! metadata order is preserved across adapters, which keeps hydration and
-//! snapshot tests stable and documents exactly how accessibility data is
-//! applied to the rendered element.
+//! Assistive technologies rely on `aria-label` metadata to describe the purpose
+//! of text inputs.  The helpers automatically merge [`ThemedProps::aria_label`]
+//! into the rendered attributes via [`mui_utils::collect_attributes`], ensuring
+//! hydration friendly ordering while keeping the implementation identical across
+//! frameworks.  Additional attributes such as `placeholder` and
+//! `data-debounce-ms` are merged using [`mui_utils::extend_attributes`], making
+//! it easy to audit which metadata ships with the control in server rendered
+//! output.
 
 use crate::theme_provider::use_theme;
 use mui_utils::{attributes_to_html, collect_attributes, extend_attributes};
@@ -67,23 +76,27 @@ impl Variant {
 /// Properties shared by all adapter implementations.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ThemedProps {
-    /// Optional text color. Defaults to the theme's primary palette color.
+    /// Input value rendered in the `value` attribute.
+    pub value: String,
+    /// Optional placeholder hint shown when the input is empty.
+    pub placeholder: Option<String>,
+    /// Optional text colour. Defaults to the theme's primary text colour.
     pub color: Option<String>,
     /// Optional padding value applied to the element.
     pub padding: Option<String>,
     /// Style variant determining the generated class name.
     pub variant: Variant,
-    /// ARIA role announced by assistive technologies.
-    pub role: Option<String>,
     /// Human readable label exposed via `aria-label`.
     pub aria_label: Option<String>,
-    /// Inner HTML/text rendered inside the element.
-    pub child: String,
+    /// Additional CSS appended to the generated stylesheet.
+    pub style_overrides: Option<String>,
+    /// Optional debounce window surfaced through `data-debounce-ms`.
+    pub debounce_ms: Option<u64>,
 }
 
 /// Scoped CSS class prefix used by every adapter.  Centralising the constant
 /// avoids subtle typos when new integrations are added in the future.
-const BASE_CLASS: &str = "mui-themed-header";
+const BASE_CLASS: &str = "mui-themed-input";
 
 /// Convenience type holding precomputed visual tokens.  The helpers below share
 /// this struct so that colour, padding and border calculations remain consistent
@@ -94,7 +107,12 @@ struct VisualTokens {
     padding: String,
     background: String,
     border: String,
-    gap: String,
+    border_radius: String,
+    font_family: String,
+    font_size: String,
+    placeholder_color: String,
+    focus_border: String,
+    focus_shadow: String,
 }
 
 /// Scoped style artefact produced by [`css_with_theme!`].
@@ -113,32 +131,49 @@ struct ScopedStyle {
 /// callers omitted a value.
 fn resolve_visual_tokens(props: &ThemedProps) -> VisualTokens {
     let theme = use_theme();
-    // Default to the primary palette colour – a safe baseline for enterprise
-    // shells where brand accents dominate top level headers.
+    // Default to the primary body colour so the control mirrors Material text
+    // fields when no overrides are provided.
     let text_color = props
         .color
         .clone()
-        .unwrap_or_else(|| theme.palette.primary.clone());
+        .unwrap_or_else(|| theme.palette.text_primary.clone());
     // Provide a predictable padding default based on the spacing scale so the
     // layout feels harmonious even without explicit configuration.
     let padding = props
         .padding
         .clone()
-        .unwrap_or_else(|| format!("{}px", theme.spacing(2)));
-    let gap = format!("{}px", theme.spacing(1));
+        .unwrap_or_else(|| format!("{}px", theme.spacing(1)));
     let (background, border) = match props.variant {
-        Variant::Plain => (theme.palette.background_default, "none".to_string()),
+        Variant::Plain => (
+            theme.palette.background_paper.clone(),
+            String::from("1px solid transparent"),
+        ),
         Variant::Outlined => (
-            theme.palette.background_paper,
-            format!("1px solid {}", theme.palette.text_secondary),
+            theme.palette.background_default.clone(),
+            format!("1px solid {}", theme.palette.text_secondary.clone()),
         ),
     };
+    let border_radius = format!("{}px", theme.joy.radius);
+    let font_family = theme.typography.font_family.clone();
+    let font_size = format!("{}px", theme.typography.font_size);
+    let placeholder_color = theme.palette.text_secondary.clone();
+    let focus_border = theme.palette.primary.clone();
+    let focus_shadow = format!(
+        "0 0 0 {}px {}",
+        theme.joy.focus_thickness,
+        theme.palette.primary.clone()
+    );
     VisualTokens {
         text_color,
         padding,
         background,
         border,
-        gap,
+        border_radius,
+        font_family,
+        font_size,
+        placeholder_color,
+        focus_border,
+        focus_shadow,
     }
 }
 
@@ -149,7 +184,7 @@ fn deterministic_class(variant: Variant) -> String {
 
 /// Generates a scoped CSS class and stylesheet using the active [`Theme`].
 #[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
-fn scoped_style(tokens: &VisualTokens) -> ScopedStyle {
+fn scoped_style(tokens: &VisualTokens, overrides: Option<&str>) -> ScopedStyle {
     use mui_styled_engine_macros::css_with_theme;
 
     // Drive every declaration from theme tokens so updates to palette/spacing
@@ -159,23 +194,48 @@ fn scoped_style(tokens: &VisualTokens) -> ScopedStyle {
             color: ${text_color};
             padding: ${padding};
             background-color: ${background};
-            border-bottom: ${border};
-            display: flex;
-            align-items: center;
-            gap: ${gap};
+            border: ${border};
+            border-radius: ${border_radius};
+            font-family: ${font_family};
+            font-size: ${font_size};
+            line-height: 1.5;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 120ms ease, box-shadow 120ms ease;
+            &::placeholder {
+                color: ${placeholder_color};
+                opacity: 1;
+            }
+            &:focus {
+                outline: none;
+                border-color: ${focus_border};
+                box-shadow: ${focus_shadow};
+            }
         "#,
         text_color = tokens.text_color.clone(),
         padding = tokens.padding.clone(),
         background = tokens.background.clone(),
         border = tokens.border.clone(),
-        gap = tokens.gap.clone()
+        border_radius = tokens.border_radius.clone(),
+        font_family = tokens.font_family.clone(),
+        font_size = tokens.font_size.clone(),
+        placeholder_color = tokens.placeholder_color.clone(),
+        focus_border = tokens.focus_border.clone(),
+        focus_shadow = tokens.focus_shadow.clone()
     );
 
-    let stylesheet = style.get_style_str().to_string();
+    let mut stylesheet = style.get_style_str().to_string();
     let class = style.get_class_name().to_string();
     // Immediately unregister the temporary handle so the style registry remains
     // free of duplicates when multiple adapters render concurrently.
     style.unregister();
+
+    if let Some(extra) = overrides.and_then(|ov| {
+        let trimmed = ov.trim();
+        (!trimmed.is_empty()).then(|| trimmed.to_string())
+    }) {
+        stylesheet.push_str(&format!("\n.{class} {{{extra}}}"));
+    }
 
     ScopedStyle { class, stylesheet }
 }
@@ -184,7 +244,7 @@ fn scoped_style(tokens: &VisualTokens) -> ScopedStyle {
 #[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
 fn themed_classes(props: &ThemedProps) -> (String, ScopedStyle) {
     let tokens = resolve_visual_tokens(props);
-    let scoped = scoped_style(&tokens);
+    let scoped = scoped_style(&tokens, props.style_overrides.as_deref());
     let classes = format!("{} {}", deterministic_class(props.variant), scoped.class);
     (classes, scoped)
 }
@@ -192,52 +252,44 @@ fn themed_classes(props: &ThemedProps) -> (String, ScopedStyle) {
 /// Collects HTML attributes shared across adapters.
 ///
 /// The helper funnels the caller supplied class list through
-/// [`mui_utils::collect_attributes`] before layering optional ARIA role/label
-/// metadata on top. Returning a `Vec` keeps the structure ergonomic for
+/// [`mui_utils::collect_attributes`] before layering optional ARIA metadata on
+/// top. Returning a `Vec` keeps the structure ergonomic for
 /// [`attributes_to_html`], SSR renderers and potential future automation.
-fn attribute_pairs(
-    props: &ThemedProps,
-    classes: String,
-    default_role: Option<&str>,
-) -> Vec<(String, String)> {
+fn attribute_pairs(props: &ThemedProps, classes: String) -> Vec<(String, String)> {
     let mut attrs = collect_attributes(Some(classes), core::iter::empty::<(String, String)>());
-    // Promote the caller supplied role or fall back to the semantic role that
-    // matches the tag we are about to render. This ensures headers announce as
-    // banner regions even when the consumer forgot to pass a value explicitly.
-    if let Some(role) = props
-        .role
-        .clone()
-        .or_else(|| default_role.map(|role| role.to_string()))
-    {
-        extend_attributes(&mut attrs, [(String::from("role"), role)]);
+    extend_attributes(
+        &mut attrs,
+        [
+            (String::from("type"), String::from("text")),
+            (String::from("value"), props.value.clone()),
+        ],
+    );
+    if let Some(placeholder) = &props.placeholder {
+        extend_attributes(
+            &mut attrs,
+            [(String::from("placeholder"), placeholder.clone())],
+        );
     }
     if let Some(label) = &props.aria_label {
-        // Copy the ARIA label verbatim – enterprise adopters frequently provide
-        // long-form descriptions, so we avoid trimming or altering the content.
         extend_attributes(&mut attrs, [(String::from("aria-label"), label.clone())]);
+    }
+    if let Some(debounce) = props.debounce_ms {
+        extend_attributes(
+            &mut attrs,
+            [(String::from("data-debounce-ms"), debounce.to_string())],
+        );
     }
     attrs
 }
 
-/// Renders the final container markup, optionally prefixing an inline
+/// Renders the final `<input>` markup, optionally prefixing an inline
 /// `<style>` tag for SSR scenarios.
-fn render_element(
-    tag: &str,
-    props: &ThemedProps,
-    classes: String,
-    stylesheet: Option<String>,
-    default_role: Option<&str>,
-) -> String {
-    let attrs = attribute_pairs(props, classes, default_role);
+fn render_input(props: &ThemedProps, classes: String, stylesheet: Option<String>) -> String {
+    let attrs = attribute_pairs(props, classes);
     let attr_string = attributes_to_html(&attrs);
     // Compose the markup manually so adapters can run in headless test
     // environments without pulling a virtual DOM dependency.
-    let markup = format!(
-        "<{tag} {attrs}>{child}</{tag}>",
-        tag = tag,
-        attrs = attr_string,
-        child = props.child
-    );
+    let markup = format!("<input {attrs} />", attrs = attr_string);
     if let Some(css) = stylesheet {
         format!("<style>{}</style>{}", css, markup)
     } else {
@@ -245,40 +297,34 @@ fn render_element(
     }
 }
 
-/// Renders a semantic `<header>` element with a default `role="banner"` to
-/// make it discoverable by assistive technologies.
-fn render_header(props: &ThemedProps, classes: String, stylesheet: Option<String>) -> String {
-    render_element("header", props, classes, stylesheet, Some("banner"))
-}
-
 /// Adapter targeting the [`leptos`](https://docs.rs/leptos) framework.
 ///
 /// The implementation relies on [`css_with_theme!`](mui_styled_engine::css_with_theme)
-/// so colour and spacing automatically track the active [`Theme`].  A scoped
-/// style block is emitted alongside the `<header>` markup ensuring SSR output
-/// remains deterministic even without a live style registry.
+/// so colour, typography and focus feedback automatically track the active
+/// [`Theme`].  A scoped style block is emitted alongside the `<input>` markup
+/// ensuring SSR output remains deterministic even without a live style registry.
 #[cfg(feature = "leptos")]
 pub mod leptos {
-    //! Leptos adapter that renders a themed `<header>` while exercising the
+    //! Leptos adapter that renders a themed `<input>` while exercising the
     //! shared styling helpers.
     //!
     //! The adapter leans on [`css_with_theme!`](mui_styled_engine::css_with_theme)
-    //! to derive palette driven spacing and colours, ensuring the scoped class
-    //! aligns with the active [`Theme`](crate::theme::Theme). By delegating the
-    //! attribute assembly to [`attribute_pairs`](super::attribute_pairs) we
-    //! guarantee ARIA roles and labels are applied consistently across
-    //! frameworks, which dramatically reduces manual QA overhead when pursuing
-    //! enterprise accessibility certifications.
+    //! to derive palette driven spacing, typography and focus outlines ensuring
+    //! the scoped class aligns with the active [`Theme`](crate::theme::Theme).
+    //! By delegating attribute assembly to [`attribute_pairs`](super::attribute_pairs)
+    //! we guarantee ARIA labels, placeholders and debounce metadata surface in a
+    //! predictable order across frameworks – a massive win when validating
+    //! accessibility in large enterprises.
     use super::*;
 
-    /// Render a themed `<header>` with ARIA metadata using Leptos.
+    /// Render a themed `<input>` with ARIA metadata using Leptos.
     pub fn render(props: &ThemedProps) -> String {
         let (classes, scoped) = themed_classes(props);
         // Feed the generated stylesheet back into the markup so SSR output and
-        // client side hydration share the exact same CSS payload. Returning a
-        // header keeps semantics aligned with the adapters implemented in
-        // `mui-material` and minimises bespoke overrides.
-        render_header(props, classes, Some(scoped.stylesheet))
+        // client side hydration share the exact same CSS payload. The helpers
+        // emit an `<input>` so front-end integrations can hydrate directly onto
+        // the rendered string.
+        render_input(props, classes, Some(scoped.stylesheet))
     }
 }
 
@@ -286,25 +332,26 @@ pub mod leptos {
 ///
 /// Delegates styling to [`resolve_visual_tokens`] ensuring the scoped stylesheet
 /// and BEM modifier class mirror the Leptos variant.  The adapter also wires the
-/// optional ARIA `role`/`aria-label` attributes into the rendered `<header>` so
-/// server rendered output remains accessible without additional plumbing.
+/// optional `aria-label` attribute and debounce metadata into the rendered
+/// `<input>` so server rendered output remains accessible without additional
+/// plumbing.
 #[cfg(feature = "dioxus")]
 pub mod dioxus {
-    //! Dioxus adapter that renders the themed region as a semantic `<header>`.
+    //! Dioxus adapter that renders the themed input markup as a plain string.
     //!
     //! Styling is pulled from [`resolve_visual_tokens`](super::resolve_visual_tokens)
     //! which guarantees parity with the Leptos and Sycamore implementations.
-    //! The generated CSS class is merged with `role`/`aria-label` metadata so
-    //! server rendered strings and virtual DOM components share the same
-    //! accessibility contract – a vital property for pre-production QA.
+    //! The generated CSS class is merged with `aria-label` metadata and optional
+    //! debounce data so server rendered strings and virtual DOM components share
+    //! the same accessibility contract – a vital property for pre-production QA.
     use super::*;
 
-    /// Render a themed `<header>` with ARIA metadata using Dioxus.
+    /// Render a themed `<input>` with ARIA metadata using Dioxus.
     pub fn render(props: &ThemedProps) -> String {
         // Share the same scoped stylesheet as the other adapters so string based
         // renderers remain perfectly in sync with client side components.
         let (classes, scoped) = themed_classes(props);
-        render_header(props, classes, Some(scoped.stylesheet))
+        render_input(props, classes, Some(scoped.stylesheet))
     }
 }
 
@@ -313,10 +360,11 @@ pub mod dioxus {
 /// Delegates to the shared helper functions so that Sycamore's SSR adapter emits
 /// the same scoped styling, BEM modifier classes and ARIA metadata as the other
 /// frameworks.  Keeping the logic central makes future automation (for example
-/// generating documentation snippets) straightforward while still emitting semantic `<header>` containers by default.
+/// generating documentation snippets) straightforward while still emitting a
+/// semantic text input by default.
 #[cfg(feature = "sycamore")]
 pub mod sycamore {
-    //! Sycamore adapter that outputs a semantic `<header>`.
+    //! Sycamore adapter that outputs a semantic text input string.
     //!
     //! The implementation mirrors the Dioxus adapter so future tweaks to token
     //! resolution or ARIA defaults automatically cascade across both Virtual DOM
@@ -324,10 +372,10 @@ pub mod sycamore {
     //! each project and instead centralises the behaviour here.
     use super::*;
 
-    /// Render a themed `<header>` with ARIA metadata using Sycamore.
+    /// Render a themed `<input>` with ARIA metadata using Sycamore.
     pub fn render(props: &ThemedProps) -> String {
         let (classes, scoped) = themed_classes(props);
-        render_header(props, classes, Some(scoped.stylesheet))
+        render_input(props, classes, Some(scoped.stylesheet))
     }
 }
 
@@ -337,7 +385,8 @@ mod tests {
 
     fn base_props() -> ThemedProps {
         ThemedProps {
-            child: String::from("hello"),
+            value: String::from("hello"),
+            placeholder: Some(String::from("Type here")),
             ..Default::default()
         }
     }
@@ -355,25 +404,27 @@ mod tests {
     }
 
     #[test]
-    fn default_role_is_applied_when_missing() {
-        let html = render_header(&base_props(), String::from("mui"), None);
-        assert!(html.contains("role=\"banner\""));
+    fn renders_input_markup_with_value_and_placeholder() {
+        let html = render_input(&base_props(), String::from("mui"), None);
+        assert!(html.starts_with("<input"));
+        assert!(html.contains("class=\"mui"));
+        assert!(html.contains("value=\"hello\""));
+        assert!(html.contains("placeholder=\"Type here\""));
     }
 
     #[test]
-    fn explicit_role_overrides_default_banner() {
+    fn debounce_attribute_is_rendered() {
         let mut props = base_props();
-        props.role = Some(String::from("navigation"));
-        let html = render_header(&props, String::from("mui"), None);
-        assert!(html.contains("role=\"navigation\""));
-        assert!(!html.contains("role=\"banner\""));
+        props.debounce_ms = Some(300);
+        let html = render_input(&props, String::from("mui"), None);
+        assert!(html.contains("data-debounce-ms=\"300\""));
     }
 
     #[test]
     fn aria_label_is_propagated() {
         let mut props = base_props();
-        props.aria_label = Some(String::from("Main navigation"));
-        let html = render_header(&props, String::from("mui"), None);
-        assert!(html.contains("aria-label=\"Main navigation\""));
+        props.aria_label = Some(String::from("Search input"));
+        let html = render_input(&props, String::from("mui"), None);
+        assert!(html.contains("aria-label=\"Search input\""));
     }
 }
