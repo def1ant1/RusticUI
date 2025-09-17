@@ -46,13 +46,22 @@ mod yew_impl {
     pub fn container(props: &ContainerProps) -> Html {
         let theme = crate::theme_provider::use_theme();
         let width = crate::responsive::viewport_width();
-        let style = build_container_style(
+        let style_rules = build_container_style(
             width,
             &theme.breakpoints,
             props.max_width.as_ref(),
             &props.sx,
         );
-        html! { <div style={style}>{ for props.children.iter() }</div> }
+        // Convert the inline style string into a scoped class so the styled
+        // engine can deduplicate rules and we avoid sprinkling CSP sensitive
+        // `style` attributes across enterprise deployments.
+        let scoped = use_memo(style_rules, |css| {
+            // Dynamic `sx` strings produce arbitrary declarations so we register
+            // the combined CSS directly with the styled engine.
+            crate::ScopedClass::from_declarations(css.clone())
+        });
+        let class = scoped.class().to_string();
+        html! { <div class={class}>{ for props.children.iter() }</div> }
     }
 }
 
@@ -73,8 +82,12 @@ mod leptos_impl {
     ) -> impl IntoView {
         let theme = crate::theme_provider::use_theme();
         let width = crate::responsive::viewport_width();
-        let style = build_container_style(width, &theme.breakpoints, max_width.as_ref(), &sx);
-        view! { <div style=style>{children()}</div> }
+        let style_rules = build_container_style(width, &theme.breakpoints, max_width.as_ref(), &sx);
+        // Persist the scoped class for the component lifetime so the stylist
+        // registry keeps the CSS mounted until Leptos disposes the view.
+        let scoped = store_value(crate::ScopedClass::from_declarations(style_rules));
+        let class = scoped.with_value(|class| class.class().to_string());
+        view! { <div class=class>{children()}</div> }
     }
 }
 

@@ -81,7 +81,7 @@ mod yew_impl {
     pub fn stack(props: &StackProps) -> Html {
         let theme = crate::theme_provider::use_theme();
         let width = crate::responsive::viewport_width();
-        let style = build_stack_style(
+        let style_rules = build_stack_style(
             width,
             &theme.breakpoints,
             props.direction.clone(),
@@ -90,7 +90,13 @@ mod yew_impl {
             props.justify_content.as_deref(),
             &props.sx,
         );
-        html! { <div style={style}>{ for props.children.iter() }</div> }
+        // Reuse the shared scoped class helper so Stack benefits from CSS
+        // caching and avoids inline declarations which break strict CSPs.
+        let scoped = use_memo(style_rules, |css| {
+            crate::ScopedClass::from_declarations(css.clone())
+        });
+        let class = scoped.class().to_string();
+        html! { <div class={class}>{ for props.children.iter() }</div> }
     }
 }
 
@@ -114,7 +120,7 @@ mod leptos_impl {
     ) -> impl IntoView {
         let theme = crate::theme_provider::use_theme();
         let width = crate::responsive::viewport_width();
-        let style = build_stack_style(
+        let style_rules = build_stack_style(
             width,
             &theme.breakpoints,
             direction,
@@ -123,7 +129,11 @@ mod leptos_impl {
             justify_content.as_deref(),
             &sx,
         );
-        view! { <div style=style>{children()}</div> }
+        // Store the scoped class in the runtime so Leptos keeps the CSS alive
+        // until the component unmounts.
+        let scoped = store_value(crate::ScopedClass::from_declarations(style_rules));
+        let class = scoped.with_value(|class| class.class().to_string());
+        view! { <div class=class>{children()}</div> }
     }
 }
 

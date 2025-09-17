@@ -78,7 +78,7 @@ mod yew_impl {
     pub fn grid(props: &GridProps) -> Html {
         let theme = crate::theme_provider::use_theme();
         let width = crate::responsive::viewport_width();
-        let style_string = build_grid_style(
+        let style_rules = build_grid_style(
             width,
             &theme.breakpoints,
             props.columns.as_ref(),
@@ -87,7 +87,13 @@ mod yew_impl {
             props.align_items.as_deref(),
             &props.sx,
         );
-        html! { <div style={style_string}>{ for props.children.iter() }</div> }
+        // Promote the computed declarations into a scoped class so server
+        // renderers and client frameworks share the same CSS payload.
+        let scoped = use_memo(style_rules, |css| {
+            crate::ScopedClass::from_declarations(css.clone())
+        });
+        let class = scoped.class().to_string();
+        html! { <div class={class}>{ for props.children.iter() }</div> }
     }
 }
 
@@ -111,7 +117,7 @@ mod leptos_impl {
     ) -> impl IntoView {
         let theme = crate::theme_provider::use_theme();
         let width_px = crate::responsive::viewport_width();
-        let style_string = build_grid_style(
+        let style_rules = build_grid_style(
             width_px,
             &theme.breakpoints,
             columns.as_ref(),
@@ -120,7 +126,10 @@ mod leptos_impl {
             align_items.as_deref(),
             &sx,
         );
-        view! { <div style=style_string>{children()}</div> }
+        // Persist the scoped style for Leptos just like the Yew variant.
+        let scoped = store_value(crate::ScopedClass::from_declarations(style_rules));
+        let class = scoped.with_value(|class| class.class().to_string());
+        view! { <div class=class>{children()}</div> }
     }
 }
 

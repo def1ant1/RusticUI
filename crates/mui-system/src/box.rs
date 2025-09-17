@@ -297,7 +297,7 @@ mod yew_impl {
     pub fn box_component(props: &BoxProps) -> Html {
         let theme = use_theme();
         let viewport = crate::responsive::viewport_width();
-        let style_string = build_box_style(
+        let style_rules = build_box_style(
             viewport,
             &theme.breakpoints,
             BoxStyleInputs {
@@ -326,7 +326,13 @@ mod yew_impl {
                 sx: &props.sx,
             },
         );
-        html! { <div style={style_string}>{ for props.children.iter() }</div> }
+        // Register the declarations with the styled engine so Box participates
+        // in the same caching and SSR pathways as our Material components.
+        let scoped = use_memo(style_rules, |css| {
+            crate::ScopedClass::from_declarations(css.clone())
+        });
+        let class = scoped.class().to_string();
+        html! { <div class={class}>{ for props.children.iter() }</div> }
     }
 }
 
@@ -369,7 +375,7 @@ mod leptos_impl {
     ) -> impl IntoView {
         let theme = use_theme();
         let viewport = crate::responsive::viewport_width();
-        let style_string = build_box_style(
+        let style_rules = build_box_style(
             viewport,
             &theme.breakpoints,
             BoxStyleInputs {
@@ -398,7 +404,11 @@ mod leptos_impl {
                 sx: &sx,
             },
         );
-        view! { <div style=style_string>{children()}</div> }
+        // Mirror the Yew integration by registering the CSS once and reusing
+        // the class for subsequent renders, keeping hydration output stable.
+        let scoped = store_value(crate::ScopedClass::from_declarations(style_rules));
+        let class = scoped.with_value(|class| class.class().to_string());
+        view! { <div class=class>{children()}</div> }
     }
 }
 
