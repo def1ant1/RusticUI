@@ -4,16 +4,18 @@ use mui_system::themed_element::{ThemedProps, Variant};
 #[test]
 fn leptos_adapter_renders() {
     let props = ThemedProps {
-        child: "hi".into(),
+        value: "hi".into(),
+        placeholder: Some("type".into()),
         variant: Variant::Plain,
-        role: Some("note".into()),
+        aria_label: Some("note".into()),
         ..Default::default()
     };
     let html = mui_system::themed_element::leptos::render(&props);
     assert!(html.contains("<style>"), "expected inlined stylesheet");
-    assert!(html.contains("mui-themed-header--plain"));
-    assert!(html.contains("role=\"note\""));
-    assert!(html.contains("<header"));
+    assert!(html.contains("mui-themed-input--plain"));
+    assert!(html.contains("aria-label=\"note\""));
+    assert!(html.contains("<input"));
+    assert!(html.contains("placeholder=\"type\""));
     assert!(html.contains("class=\""));
     assert!(
         !html.contains("style=\""),
@@ -25,15 +27,15 @@ fn leptos_adapter_renders() {
 #[test]
 fn dioxus_adapter_renders() {
     let mut props = ThemedProps {
-        child: "hi".into(),
+        value: "hi".into(),
         variant: Variant::Outlined,
         ..Default::default()
     };
-    props.role = Some("button".into());
     props.aria_label = Some("greet".into());
+    props.debounce_ms = Some(200);
     let html = mui_system::themed_element::dioxus::render(&props);
-    assert!(html.contains("mui-themed-header--outlined"));
-    assert!(html.contains("<header"));
+    assert!(html.contains("mui-themed-input--outlined"));
+    assert!(html.contains("<input"));
     assert!(html.contains("<style>"));
     assert!(html.contains("class=\""));
     assert!(
@@ -41,22 +43,24 @@ fn dioxus_adapter_renders() {
         "inline styles should be replaced with generated classes"
     );
     assert!(html.contains("aria-label=\"greet\""));
+    assert!(html.contains("data-debounce-ms=\"200\""));
 }
 
 #[cfg(feature = "sycamore")]
 #[test]
 fn sycamore_adapter_renders() {
     let props = ThemedProps {
-        child: "hi".into(),
+        value: "hi".into(),
+        placeholder: Some("search".into()),
         variant: Variant::Plain,
-        aria_label: Some("global banner".into()),
+        aria_label: Some("global search".into()),
         ..Default::default()
     };
     let html = mui_system::themed_element::sycamore::render(&props);
-    assert!(html.contains("role=\"banner\""));
-    assert!(html.contains("aria-label=\"global banner\""));
-    assert!(html.contains("mui-themed-header"));
-    assert!(html.contains("<header"));
+    assert!(html.contains("aria-label=\"global search\""));
+    assert!(html.contains("mui-themed-input"));
+    assert!(html.contains("<input"));
+    assert!(html.contains("placeholder=\"search\""));
     assert!(html.contains("<style>"));
     assert!(
         !html.contains("style=\""),

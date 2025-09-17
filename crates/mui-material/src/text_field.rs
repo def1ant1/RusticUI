@@ -6,10 +6,34 @@
 //! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
 //! converts styles into scoped classes ensuring each adapter references the
 //! same generated CSS. Optional `style_overrides` allow callers to append raw
-//! declarations without abandoning the centralized theme approach. Yew and
-//! Leptos variants also support a debounced `on_input` callback, reducing
-//! needless updates during rapid typing while still surfacing an accessible
-//! `aria-label` for assistive technologies.
+//! declarations without abandoning the centralized theme approach.
+//!
+//! ## Theme-driven styling
+//! * **Palette integration** – colour variants map directly to
+//!   [`Theme::palette`](mui_styled_engine::Theme) entries ensuring a primary
+//!   field instantly reflects brand accents while secondary variants pick up the
+//!   complementary tone.
+//! * **Sizing** – font sizes align with Material defaults (`0.8rem`, `1rem`,
+//!   `1.2rem`) so transitions between components remain visually cohesive. The
+//!   generated CSS also standardises padding to mirror Material spacing tokens.
+//! * **Border variants** – outlined and contained options share consistent
+//!   border thickness while the text variant strips borders entirely. Because the
+//!   logic lives in Rust, all frameworks share the same canonical treatment.
+//!
+//! ## Debounced input handling
+//! Yew and Leptos adapters expose an optional `debounce_ms` prop that pipes user
+//! input through [`mui_utils::debounce`], dramatically reducing chatter during
+//! high-speed typing. Dioxus and Sycamore reuse the same styling helpers so the
+//! CSS class is deterministic; upstream applications can reuse the
+//! `data-debounce-ms` metadata emitted by `mui_system::themed_element` when
+//! pairing SSR and client-side hydration flows.
+//!
+//! ## Accessibility
+//! Every adapter forwards the `aria-label` to ensure assistive technologies have
+//! a human readable description. Placeholders and values are mirrored as native
+//! attributes so browser autofill and screen readers behave consistently. The
+//! shared attribute assembly also guarantees SSR output matches hydrated markup,
+//! eliminating brittle QA issues in pre-production environments.
 #[cfg(feature = "leptos")]
 use leptos::*;
 #[cfg(any(
