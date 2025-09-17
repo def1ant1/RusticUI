@@ -149,6 +149,45 @@ pub mod leptos {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn themed_attributes_include_class_and_aria_metadata() {
+        let state = ButtonState::new(false, None);
+        let attrs = themed_button_attributes(&state);
+
+        // Ensure the generated attributes include the scoped class followed by
+        // the ARIA metadata emitted by the state machine. This protects the
+        // accessibility contract shared across every adapter.
+        assert_eq!(attrs[0].0, "class");
+        assert!(attrs.iter().any(|(key, _)| key == "role"));
+        assert!(attrs.iter().any(|(key, _)| key == "aria-pressed"));
+    }
+
+    #[test]
+    fn render_html_includes_theme_class_and_accessibility_attributes() {
+        let props = ButtonProps::new("Submit");
+        let state = ButtonState::new(false, None);
+        let html = render_html(&props, &state);
+
+        // The rendered HTML should surface the scoped class name so the CSS
+        // emitted by `css_with_theme!` attaches to the element.
+        assert!(html.contains("class=\""));
+        // ARIA metadata describes the button semantics for assistive
+        // technologies. Confirm the merged attributes survive formatting.
+        assert!(html.contains("role=\"button\""));
+        assert!(html.contains("aria-pressed=\"false\""));
+        // The label should be rendered verbatim inside the button element.
+        assert!(html.contains(">Submit<"));
+    }
+}
+
 /// Adapter targeting the [`dioxus`] framework.
 pub mod dioxus {
     use super::*;
