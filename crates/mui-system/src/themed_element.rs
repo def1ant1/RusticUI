@@ -9,15 +9,18 @@
 //! design systems.
 //!
 //! ## Styling logic
-//! * `color` - Defaults to [`Theme::palette.primary`] so call sites inherit the
-//!   design system's primary accent unless a bespoke value is supplied.
+//! * `color` - Defaults to [`Theme::palette.primary`] ensuring headers adopt the
+//!   brand accent colour out of the box. Supplying a value overrides the
+//!   palette-driven choice so adopters can mirror contextual states (warning,
+//!   success, etc.) without re-implementing styling logic.
 //! * `padding` - Falls back to `theme.spacing(2)` (converted to pixels) to keep
 //!   breathing room consistent with Material defaults. Projects can override the
 //!   string directly to support complex responsive shorthands while still
-//!   benefiting from the theme scale.
+//!   benefiting from the theme scale and automated unit conversion.
 //! * `border` - `Variant::Outlined` uses the theme's secondary text colour to
 //!   render a subtle divider. Plain variants disable the border entirely so the
-//!   element can blend with surrounding layout chrome.
+//!   element can blend with surrounding layout chrome and avoid redundant
+//!   borders when nested inside other surfaces.
 //! * `variant` - Determines the visual treatment. A modifier class using the
 //!   [`BEM`](https://en.bem.info/methodology/) naming convention is produced so
 //!   downstream CSS can hook into `mui-themed-header--plain` / `--outlined`
@@ -325,5 +328,52 @@ pub mod sycamore {
     pub fn render(props: &ThemedProps) -> String {
         let (classes, scoped) = themed_classes(props);
         render_header(props, classes, Some(scoped.stylesheet))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn base_props() -> ThemedProps {
+        ThemedProps {
+            child: String::from("hello"),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn deterministic_class_uses_bem_modifier() {
+        assert_eq!(
+            deterministic_class(Variant::Plain),
+            format!("{BASE_CLASS} {BASE_CLASS}--plain")
+        );
+        assert_eq!(
+            deterministic_class(Variant::Outlined),
+            format!("{BASE_CLASS} {BASE_CLASS}--outlined")
+        );
+    }
+
+    #[test]
+    fn default_role_is_applied_when_missing() {
+        let html = render_header(&base_props(), String::from("mui"), None);
+        assert!(html.contains("role=\"banner\""));
+    }
+
+    #[test]
+    fn explicit_role_overrides_default_banner() {
+        let mut props = base_props();
+        props.role = Some(String::from("navigation"));
+        let html = render_header(&props, String::from("mui"), None);
+        assert!(html.contains("role=\"navigation\""));
+        assert!(!html.contains("role=\"banner\""));
+    }
+
+    #[test]
+    fn aria_label_is_propagated() {
+        let mut props = base_props();
+        props.aria_label = Some(String::from("Main navigation"));
+        let html = render_header(&props, String::from("mui"), None);
+        assert!(html.contains("aria-label=\"Main navigation\""));
     }
 }
