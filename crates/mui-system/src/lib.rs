@@ -10,6 +10,7 @@
 
 pub mod macros;
 pub mod responsive;
+mod scoped_class;
 pub mod style;
 pub mod theme;
 // Cross framework element demonstrating themed styling and ARIA metadata.
@@ -49,6 +50,9 @@ pub use theme_provider::ThemeProvider;
 pub use themed_element::{ThemedProps, Variant};
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use typography::{Typography, TypographyVariant};
+
+#[cfg(any(feature = "yew", feature = "leptos"))]
+pub(crate) use scoped_class::ScopedClass;
 
 /// Legacy no-op function retained to keep dependent crates compiling while
 /// more features are ported. New functionality resides in the modules above.
