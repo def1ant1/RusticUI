@@ -5,12 +5,12 @@
 //! [`css_with_theme!`](mui_styled_engine::css_with_theme) to derive visual
 //! styles from the active [`Theme`](mui_styled_engine::Theme) instead of hard
 //! coded strings. The [`style_helpers::themed_class`](crate::style_helpers::themed_class)
-//! function converts the generated [`Style`](mui_styled_engine::Style) into a
-//! scoped class, documenting how the styled engine registers CSS. Accessibility
-//! attributes returned by [`ButtonState`] are merged using the
-//! [`mui_utils::collect_attributes`] helper which keeps ARIA wiring consistent
-//! across all adapters so assistive technologies accurately describe the
-//! control.
+//! and [`style_helpers::themed_attributes_html`](crate::style_helpers::themed_attributes_html)
+//! helpers convert the generated [`Style`](mui_styled_engine::Style) into scoped
+//! classes and attribute strings so SSR adapters do not need to hand-roll
+//! concatenation logic. Accessibility attributes returned by [`ButtonState`]
+//! travel through the same helper which keeps ARIA wiring consistent across all
+//! adapters and ensures assistive technologies accurately describe the control.
 //!
 //! This module intentionally contains no framework specific code.  Instead it
 //! exposes lightweight adapters which convert the shared state into view code
@@ -19,8 +19,7 @@
 //! encouraging adapters to reuse the shared helpers documented above.
 
 use mui_headless::button::ButtonState;
-use mui_styled_engine::css_with_theme;
-use mui_utils::{attributes_to_html, collect_attributes};
+use mui_styled_engine::{css_with_theme, Style};
 
 /// Shared properties accepted by all adapter implementations.
 #[derive(Clone, Debug)]
@@ -48,19 +47,21 @@ impl ButtonProps {
 /// merged into the final tag to enhance accessibility for assistive
 /// technologies.
 fn render_html(props: &ButtonProps, state: &ButtonState) -> String {
-    // Build an attribute collection that includes the themed class and the
-    // latest ARIA metadata from the state machine. Centralizing the logic in a
-    // helper keeps adapters extremely small while guaranteeing they all emit
-    // the same markup for SSR and hydration scenarios.
-    let attrs = themed_button_attributes(state);
-    let attr_string = attributes_to_html(&attrs);
+    // Build an attribute string that includes the themed class and the latest
+    // ARIA metadata from the state machine. The shared helper keeps adapters
+    // extremely small while guaranteeing they all emit the same markup for SSR
+    // and hydration scenarios.
+    let attr_string = crate::style_helpers::themed_attributes_html(
+        themed_button_style(),
+        state.aria_attributes(),
+    );
 
     // Final HTML representation. Individual adapters simply forward to this
     // function keeping rendering logic DRY and easy to evolve.
     format!("<button {}>{}</button>", attr_string, props.label)
 }
 
-/// Builds the scoped CSS class that powers the Material flavored button.
+/// Builds the [`Style`] powering the Material flavored button.
 ///
 /// [`css_with_theme!`] exposes a `theme` binding so the macro can pull values
 /// directly from the design tokens. We lean on that hook to derive:
@@ -72,8 +73,8 @@ fn render_html(props: &ButtonProps, state: &ButtonState) -> String {
 ///   sprinkling literal values around the codebase.
 /// * Padding, radius and focus outlines from the shared spacing and Joy token
 ///   helpers which keeps spatial relationships consistent across components.
-fn themed_button_class() -> String {
-    crate::style_helpers::themed_class(css_with_theme!(
+fn themed_button_style() -> Style {
+    css_with_theme!(
         r#"
         background: ${background};
         color: ${text};
@@ -106,7 +107,7 @@ fn themed_button_class() -> String {
         letter_spacing = format!("{:.3}rem", theme.typography.button_letter_spacing),
         focus_outline_width = format!("{}px", theme.joy.focus_thickness),
         focus_outline_color = theme.palette.text_primary.clone()
-    ))
+    )
 }
 
 /// Collects the generated class alongside ARIA attributes emitted by
@@ -117,8 +118,9 @@ fn themed_button_class() -> String {
 /// class inside a single helper guarantees every framework adapter attaches the
 /// same accessibility affordances without duplicating knowledge about how the
 /// state machine works.
+#[cfg_attr(not(test), allow(dead_code))]
 fn themed_button_attributes(state: &ButtonState) -> Vec<(String, String)> {
-    collect_attributes(Some(themed_button_class()), state.aria_attributes())
+    crate::style_helpers::themed_attributes(themed_button_style(), state.aria_attributes())
 }
 
 // ---------------------------------------------------------------------------
