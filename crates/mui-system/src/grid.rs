@@ -6,6 +6,25 @@ use crate::{
 use mui_utils::deep_merge;
 use serde_json::{Map, Value};
 
+/// Shared descriptor passed into [`build_grid_style`].  The struct mirrors the
+/// ergonomics established by [`crate::r#box::BoxStyleInputs`], letting each
+/// adapter borrow responsive props without cloning.  Keeping this contract in
+/// sync across the stack ensures enterprise teams can automate style
+/// generation, and it documents every hook that participates in responsive
+/// calculations.
+pub struct GridStyleInputs<'a> {
+    /// Responsive column configuration for the surrounding grid container.
+    pub columns: Option<&'a Responsive<u16>>,
+    /// Responsive column span for the current item.
+    pub span: Option<&'a Responsive<u16>>,
+    /// Optional flexbox alignment on the main axis.
+    pub justify_content: Option<&'a str>,
+    /// Optional flexbox alignment on the cross axis.
+    pub align_items: Option<&'a str>,
+    /// Declarative JSON overrides merged through the `sx` pipeline.
+    pub sx: Option<&'a Value>,
+}
+
 /// Shared styling routine leveraged by every framework specific grid
 /// implementation and the integration tests.  Centralising the logic keeps the
 /// breakpoint cascade identical regardless of whether the consumer renders via
@@ -14,21 +33,19 @@ use serde_json::{Map, Value};
 pub fn build_grid_style(
     width: u32,
     breakpoints: &Breakpoints,
-    columns: Option<&Responsive<u16>>,
-    span: Option<&Responsive<u16>>,
-    justify_content: Option<&str>,
-    align_items: Option<&str>,
-    sx: Option<&Value>,
+    inputs: GridStyleInputs<'_>,
 ) -> String {
     // Compute the active column model for the current viewport.  We lean on the
     // `Responsive::constant` helper so callers can omit props entirely and
     // still reuse the same resolution pipeline used for explicit overrides.
     let default_columns = Responsive::constant(12);
-    let resolved_columns = columns
+    let resolved_columns = inputs
+        .columns
         .map(|value| value.resolve(width, breakpoints))
         .unwrap_or_else(|| default_columns.resolve(width, breakpoints));
     let default_span = Responsive::constant(12);
-    let resolved_span = span
+    let resolved_span = inputs
+        .span
         .map(|value| value.resolve(width, breakpoints))
         .unwrap_or_else(|| default_span.resolve(width, breakpoints));
     let width_percent = grid_span_to_percent(resolved_span, resolved_columns);
@@ -36,15 +53,15 @@ pub fn build_grid_style(
     let mut style_map = Map::new();
     style_map.insert("width".into(), Value::String(format!("{}%", width_percent)));
 
-    if let Some(jc) = justify_content {
+    if let Some(jc) = inputs.justify_content {
         style_map.insert("justify-content".into(), Value::String(jc.to_owned()));
     }
-    if let Some(ai) = align_items {
+    if let Some(ai) = inputs.align_items {
         style_map.insert("align-items".into(), Value::String(ai.to_owned()));
     }
 
     let mut style_value = Value::Object(style_map);
-    if let Some(sx) = sx {
+    if let Some(sx) = inputs.sx {
         deep_merge(&mut style_value, sx.clone());
     }
 
@@ -88,11 +105,13 @@ mod yew_impl {
         let style_rules = build_grid_style(
             width,
             &theme.breakpoints,
-            props.columns.as_ref(),
-            props.span.as_ref(),
-            props.justify_content.as_deref(),
-            props.align_items.as_deref(),
-            props.sx.as_ref(),
+            GridStyleInputs {
+                columns: props.columns.as_ref(),
+                span: props.span.as_ref(),
+                justify_content: props.justify_content.as_deref(),
+                align_items: props.align_items.as_deref(),
+                sx: props.sx.as_ref(),
+            },
         );
         // Promote the computed declarations into a scoped class so server
         // renderers and client frameworks share the same CSS payload.
@@ -127,11 +146,13 @@ mod leptos_impl {
         let style_rules = build_grid_style(
             width_px,
             &theme.breakpoints,
-            columns.as_ref(),
-            span.as_ref(),
-            justify_content.as_deref(),
-            align_items.as_deref(),
-            sx.as_ref(),
+            GridStyleInputs {
+                columns: columns.as_ref(),
+                span: span.as_ref(),
+                justify_content: justify_content.as_deref(),
+                align_items: align_items.as_deref(),
+                sx: sx.as_ref(),
+            },
         );
         // Persist the scoped style for Leptos just like the Yew variant.
         let scoped = store_value(crate::ScopedClass::from_declarations(style_rules));

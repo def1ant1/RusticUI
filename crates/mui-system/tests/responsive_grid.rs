@@ -1,4 +1,8 @@
-use mui_system::{grid::build_grid_style, responsive::Responsive, Theme};
+use mui_system::{
+    grid::{build_grid_style, GridStyleInputs},
+    responsive::Responsive,
+    Theme,
+};
 use serde_json::json;
 
 #[test]
@@ -22,13 +26,15 @@ fn grid_breakpoints_resolve_width_and_alignment() {
     let base = build_grid_style(
         500,
         &theme.breakpoints,
-        Some(&columns),
-        Some(&span),
-        Some("center"),
-        None,
-        Some(&json!({
-            "border": "1px solid red",
-        })),
+        GridStyleInputs {
+            columns: Some(&columns),
+            span: Some(&span),
+            justify_content: Some("center"),
+            align_items: None,
+            sx: Some(&json!({
+                "border": "1px solid red",
+            })),
+        },
     );
     assert!(base.contains("border:1px solid red;"));
     assert!(base.contains("width:100%;"));
@@ -37,11 +43,13 @@ fn grid_breakpoints_resolve_width_and_alignment() {
     let medium = build_grid_style(
         950,
         &theme.breakpoints,
-        Some(&columns),
-        Some(&span),
-        None,
-        Some("flex-end"),
-        None,
+        GridStyleInputs {
+            columns: Some(&columns),
+            span: Some(&span),
+            justify_content: None,
+            align_items: Some("flex-end"),
+            sx: None,
+        },
     );
     assert!(medium.contains("width:50%;"));
     assert!(medium.contains("align-items:flex-end;"));
@@ -49,11 +57,13 @@ fn grid_breakpoints_resolve_width_and_alignment() {
     let extra_large = build_grid_style(
         1600,
         &theme.breakpoints,
-        Some(&columns),
-        Some(&span),
-        None,
-        None,
-        None,
+        GridStyleInputs {
+            columns: Some(&columns),
+            span: Some(&span),
+            justify_content: None,
+            align_items: None,
+            sx: None,
+        },
     );
     assert!(extra_large.contains("width:75%;"));
 }

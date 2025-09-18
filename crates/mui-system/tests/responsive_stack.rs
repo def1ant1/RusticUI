@@ -1,6 +1,6 @@
 use mui_system::{
     responsive::Responsive,
-    stack::{build_stack_style, StackDirection},
+    stack::{build_stack_style, StackDirection, StackStyleInputs},
     Theme,
 };
 use serde_json::json;
@@ -19,11 +19,13 @@ fn stack_spacing_scales_with_breakpoints() {
     let column = build_stack_style(
         480,
         &theme.breakpoints,
-        None,
-        Some(&spacing),
-        Some("center"),
-        None,
-        None,
+        StackStyleInputs {
+            direction: None,
+            spacing: Some(&spacing),
+            align_items: Some("center"),
+            justify_content: None,
+            sx: None,
+        },
     );
     assert!(column.contains("display:flex;"));
     assert!(column.contains("flex-direction:column;"));
@@ -33,13 +35,15 @@ fn stack_spacing_scales_with_breakpoints() {
     let row = build_stack_style(
         1000,
         &theme.breakpoints,
-        Some(StackDirection::Row),
-        Some(&spacing),
-        None,
-        Some("space-between"),
-        Some(&json!({
-            "background": "blue",
-        })),
+        StackStyleInputs {
+            direction: Some(StackDirection::Row),
+            spacing: Some(&spacing),
+            align_items: None,
+            justify_content: Some("space-between"),
+            sx: Some(&json!({
+                "background": "blue",
+            })),
+        },
     );
     assert!(row.contains("flex-direction:row;"));
     assert!(row.contains("gap:16px;"));

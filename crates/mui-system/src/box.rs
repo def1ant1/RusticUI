@@ -47,7 +47,9 @@ fn apply_responsive_style(
 /// Assembles the inline CSS string for [`Box`] based on the supplied responsive
 /// props. Centralising the resolver keeps behaviour identical across the Yew
 /// and Leptos adapters and gives the integration tests something deterministic
-/// to exercise.
+/// to exercise. The grouped sections mirror the Issue 13 enhancements—spacing,
+/// typography, sizing, colour and positioning each route through
+/// `Responsive::resolve` so automated breakpoint handling stays declarative.
 #[doc(hidden)]
 pub fn build_box_style(
     width: u32,
