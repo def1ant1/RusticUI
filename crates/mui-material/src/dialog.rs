@@ -7,7 +7,7 @@
 //!   Wrapping the declaration inside [`style_helpers::themed_class`](crate::style_helpers::themed_class)
 //!   produces a deterministic class name that can be safely reused across
 //!   renders without leaking duplicate strings.
-//! * Each framework module calls back into [`resolve_class`] so client side
+//! * Each framework module calls back into [`resolve_style`] so client side
 //!   components (Yew/Leptos) and server-side renderers (Leptos/Dioxus/Sycamore)
 //!   receive the identical scoped class. This keeps brand styling consistent
 //!   even when applications mix rendering strategies for pre-production smoke
@@ -24,11 +24,12 @@
 //!   dismissed.
 //!
 //! Each framework module is intentionally tiny and delegates styling to
-//! [`resolve_class`] which centralizes theme lookups. Frameworks that render
-//! raw HTML strings reuse [`mui_utils::collect_attributes`] to attach the ARIA
-//! metadata without duplicating string concatenation logic. This shared
-//! machinery significantly reduces repetitive setup when scaling to multiple
-//! enterprise applications.
+//! [`resolve_style`] which centralizes theme lookups. Frameworks that render raw
+//! HTML strings reuse
+//! [`style_helpers::themed_attributes_html`](crate::style_helpers::themed_attributes_html)
+//! to attach the ARIA metadata without duplicating string concatenation logic.
+//! This shared machinery significantly reduces repetitive setup when scaling to
+//! multiple enterprise applications.
 
 #[cfg(any(
     feature = "yew",
@@ -36,7 +37,7 @@
     feature = "dioxus",
     feature = "sycamore",
 ))]
-use mui_styled_engine::css_with_theme;
+use mui_styled_engine::{css_with_theme, Style};
 
 #[cfg(feature = "leptos")]
 use leptos::Children;
@@ -46,7 +47,7 @@ use yew::prelude::*;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 use crate::material_props;
 
-/// Generates a CSS class scoped to this dialog using the active [`Theme`].
+/// Generates the [`Style`] scoped to this dialog using the active [`Theme`].
 ///
 /// [`css_with_theme!`] exposes a `theme` binding allowing palette and spacing
 /// values to be substituted directly inside the CSS template. The class is
@@ -59,8 +60,8 @@ use crate::material_props;
     feature = "dioxus",
     feature = "sycamore"
 ))]
-fn resolve_class() -> String {
-    crate::style_helpers::themed_class(css_with_theme!(
+fn resolve_style() -> Style {
+    css_with_theme!(
         r#"
         border: 2px solid ${border};
         padding: ${pad};
@@ -69,7 +70,7 @@ fn resolve_class() -> String {
         // global tokens instead of individual components.
         border = theme.palette.secondary.clone(),
         pad = format!("{}px", theme.spacing(3))
-    ))
+    )
 }
 
 /// Shared helper wiring framework agnostic ARIA metadata into the dialog.
@@ -80,14 +81,17 @@ fn resolve_class() -> String {
 /// snapshot tests and other automation harnesses that reason about serialized
 /// HTML.
 #[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
-fn render_open_dialog_html(class: String, aria_label: &str, child: &str) -> String {
-    // Centralize the ARIA metadata using the utilities from `mui-utils` so we can
-    // easily bolt on new attributes (for example `aria-describedby`) without
-    // touching every adapter individually.
-    let mut attrs =
-        mui_utils::collect_attributes(Some(class), [("role", "dialog"), ("aria-modal", "true")]);
-    mui_utils::extend_attributes(&mut attrs, [("aria-label", aria_label)]);
-    let attr_string = mui_utils::attributes_to_html(&attrs);
+fn render_open_dialog_html(aria_label: &str, child: &str) -> String {
+    // Centralize ARIA metadata via the shared helper so every SSR adapter emits
+    // identical markup and future attributes can be added in a single place.
+    let attr_string = crate::style_helpers::themed_attributes_html(
+        resolve_style(),
+        [
+            ("role", "dialog"),
+            ("aria-modal", "true"),
+            ("aria-label", aria_label),
+        ],
+    );
     format!(
         "<div {attrs}>{child}</div>",
         attrs = attr_string,
@@ -130,7 +134,7 @@ mod yew_impl {
             return Html::default();
         }
         // Generate a theme-aware class once and attach it to the `<div>`.
-        let class = resolve_class();
+        let class = crate::style_helpers::themed_class(resolve_style());
         html! {
             <div class={class} role="dialog" aria-modal="true" aria-label={props.aria_label.clone()}>
                 { for props.children.iter() }
@@ -160,7 +164,7 @@ mod leptos_impl {
         if !props.open {
             return view! {};
         }
-        let class = resolve_class();
+        let class = crate::style_helpers::themed_class(resolve_style());
         view! {
             <div class=class role="dialog" aria-modal="true" aria-label=props.aria_label>
                 {props.children()}
@@ -203,8 +207,7 @@ pub mod leptos {
         if !props.open {
             return String::new();
         }
-        let class = super::resolve_class();
-        super::render_open_dialog_html(class, &props.aria_label, &props.children)
+        super::render_open_dialog_html(&props.aria_label, &props.children)
     }
 }
 
@@ -236,8 +239,7 @@ pub mod dioxus {
         if !props.open {
             return String::new();
         }
-        let class = super::resolve_class();
-        super::render_open_dialog_html(class, &props.aria_label, &props.children)
+        super::render_open_dialog_html(&props.aria_label, &props.children)
     }
 }
 
@@ -268,7 +270,6 @@ pub mod sycamore {
         if !props.open {
             return String::new();
         }
-        let class = super::resolve_class();
-        super::render_open_dialog_html(class, &props.aria_label, &props.children)
+        super::render_open_dialog_html(&props.aria_label, &props.children)
     }
 }

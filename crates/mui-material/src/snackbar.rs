@@ -5,13 +5,14 @@
 //! spacing and border decisions from the active
 //! [`Theme`](mui_styled_engine::Theme). The
 //! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
-//! converts generated styles into scoped classes that every adapter consumes.
-//! Each variant applies `role="status"` to announce messages politely to assistive
-//! technologies with the help of [`mui_utils::collect_attributes`] in the SSR
-//! oriented adapters.
+//! converts generated styles into scoped classes that every adapter consumes
+//! while [`style_helpers::themed_attributes_html`](crate::style_helpers::themed_attributes_html)
+//! builds ARIA-rich attribute strings for HTML-first renderers. Each variant
+//! applies `role="status"` to announce messages politely to assistive
+//! technologies.
 
 #[cfg(any(feature = "yew", feature = "dioxus", feature = "sycamore"))]
-use mui_styled_engine::{css_with_theme, use_theme, Theme};
+use mui_styled_engine::{css_with_theme, use_theme, Style, Theme};
 
 #[cfg(feature = "yew")]
 use yew::prelude::*;
@@ -41,16 +42,15 @@ fn resolve_style(
     (bg, padding, border)
 }
 
-#[cfg(any(feature = "dioxus", feature = "sycamore"))]
-fn render_html(
-    message: &str,
+#[cfg(any(feature = "yew", feature = "dioxus", feature = "sycamore"))]
+fn snackbar_style(
+    theme: &Theme,
     color: SnackbarColor,
     size: SnackbarSize,
     variant: SnackbarVariant,
-) -> String {
-    let theme = use_theme();
-    let (bg, padding, border) = resolve_style(&theme, color, size, variant);
-    let class = crate::style_helpers::themed_class(css_with_theme!(
+) -> Style {
+    let (bg, padding, border) = resolve_style(theme, color, size, variant);
+    css_with_theme!(
         theme,
         r#"
         background: ${bg};
@@ -61,10 +61,23 @@ fn render_html(
         bg = bg,
         padding = padding,
         border = border
-    ));
-    // Build a stable attribute list so SSR adapters align with client-side output.
-    let attrs = mui_utils::collect_attributes(Some(class), [("role", "status")]);
-    let attr_string = mui_utils::attributes_to_html(&attrs);
+    )
+}
+
+#[cfg(any(feature = "dioxus", feature = "sycamore"))]
+fn render_html(
+    message: &str,
+    color: SnackbarColor,
+    size: SnackbarSize,
+    variant: SnackbarVariant,
+) -> String {
+    let theme = use_theme();
+    // Shared helper builds the final attribute string so SSR and client
+    // adapters stay perfectly aligned.
+    let attr_string = crate::style_helpers::themed_attributes_html(
+        snackbar_style(&theme, color, size, variant),
+        [("role", "status")],
+    );
     format!("<div {}>{}</div>", attr_string, message)
 }
 
@@ -83,18 +96,13 @@ mod yew_impl {
     #[function_component(Snackbar)]
     pub fn snackbar(props: &SnackbarProps) -> Html {
         let theme = use_theme();
-        let (bg, padding, border) = resolve_style(&theme, props.color, props.size, props.variant);
-        let class = crate::style_helpers::themed_class(css_with_theme!(
-            theme,
-            r#"
-            background: ${bg};
-            color: #fff;
-            padding: ${padding};
-            border: ${border};
-        "#,
-            bg = bg,
-            padding = padding,
-            border = border
+        // Shared helper keeps the scoped class consistent across server and
+        // client integrations.
+        let class = crate::style_helpers::themed_class(snackbar_style(
+            &theme,
+            props.color,
+            props.size,
+            props.variant,
         ));
 
         html! {

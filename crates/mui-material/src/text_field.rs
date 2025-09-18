@@ -5,8 +5,12 @@
 //! so palette and spacing values derive from the active [`Theme`]. The
 //! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
 //! converts styles into scoped classes ensuring each adapter references the
-//! same generated CSS. Optional `style_overrides` allow callers to append raw
-//! declarations without abandoning the centralized theme approach.
+//! same generated CSS. For SSR adapters,
+//! [`style_helpers::themed_attributes_html`](crate::style_helpers::themed_attributes_html)
+//! serializes the themed class alongside ARIA and native input attributes so
+//! hydration consistently matches server output. Optional `style_overrides`
+//! allow callers to append raw declarations without abandoning the centralized
+//! theme approach.
 //!
 //! ## Theme-driven styling
 //! * **Palette integration** – colour variants map directly to
@@ -42,7 +46,7 @@ use leptos::*;
     feature = "dioxus",
     feature = "sycamore"
 ))]
-use mui_styled_engine::{css_with_theme, use_theme, Theme};
+use mui_styled_engine::{css_with_theme, use_theme, Style, Theme};
 #[cfg(target_arch = "wasm32")]
 use mui_utils::debounce;
 #[cfg(target_arch = "wasm32")]
@@ -95,16 +99,16 @@ fn compute_parts(
     feature = "dioxus",
     feature = "sycamore"
 ))]
-fn resolve_class(
+fn resolve_style(
     color: TextFieldColor,
     size: TextFieldSize,
     variant: TextFieldVariant,
     style_overrides: Option<String>,
-) -> String {
+) -> Style {
     let theme = use_theme();
     let (color, font_size, border) = compute_parts(&theme, color, size, variant);
     let extra = style_overrides.unwrap_or_default();
-    crate::style_helpers::themed_class(css_with_theme!(
+    css_with_theme!(
         theme,
         r#"
         color: ${color};
@@ -117,7 +121,7 @@ fn resolve_class(
         font_size = font_size,
         border = border,
         extra = extra
-    ))
+    )
 }
 
 #[cfg(feature = "yew")]
@@ -150,12 +154,13 @@ mod yew_impl {
     /// announce the purpose of the field.
     #[function_component(TextField)]
     pub fn text_field(props: &TextFieldProps) -> Html {
-        let class = resolve_class(
+        // Shared helper keeps the scoped class consistent across all adapters.
+        let class = crate::style_helpers::themed_class(resolve_style(
             props.color,
             props.size,
             props.variant,
             props.style_overrides.clone(),
-        );
+        ));
 
         let on_input_cb = props.on_input.clone().unwrap_or_else(|| Callback::noop());
         let _debounce_ms = props.debounce_ms;
@@ -230,7 +235,13 @@ mod leptos_impl {
         #[prop(optional)] variant: TextFieldVariant,
         #[prop(optional)] size: TextFieldSize,
     ) -> impl IntoView {
-        let class = resolve_class(color, size, variant, style_overrides.clone());
+        // Shared helper keeps the scoped class consistent across all adapters.
+        let class = crate::style_helpers::themed_class(resolve_style(
+            color,
+            size,
+            variant,
+            style_overrides.clone(),
+        ));
         let on_input_cb = on_input.unwrap_or_else(|| Rc::new(|_| {}));
         #[cfg(target_arch = "wasm32")]
         let debounced = {
@@ -297,16 +308,23 @@ pub mod dioxus {
     /// Render the text field into an `<input>` tag with themed styling and
     /// `aria-label` metadata for accessibility.
     pub fn render(props: &TextFieldProps) -> String {
-        let class = resolve_class(
-            props.color.clone(),
-            props.size.clone(),
-            props.variant.clone(),
-            props.style_overrides.clone(),
+        let attr_string = crate::style_helpers::themed_attributes_html(
+            resolve_style(
+                props.color.clone(),
+                props.size.clone(),
+                props.variant.clone(),
+                props.style_overrides.clone(),
+            ),
+            [
+                ("type", "text"),
+                ("value", props.value.clone()),
+                ("placeholder", props.placeholder.clone()),
+                ("aria-label", props.aria_label.clone()),
+            ],
         );
-        format!(
-            "<input class=\"{}\" value=\"{}\" placeholder=\"{}\" aria-label=\"{}\" />",
-            class, props.value, props.placeholder, props.aria_label
-        )
+        // Shared helper keeps SSR output aligned with the WASM adapters while we
+        // append common ARIA metadata.
+        format!("<input {attrs} />", attrs = attr_string)
     }
 }
 
@@ -336,15 +354,22 @@ pub mod sycamore {
     /// Render the text field into plain HTML with a theme-derived class and
     /// `aria-label` metadata for accessibility.
     pub fn render(props: &TextFieldProps) -> String {
-        let class = resolve_class(
-            props.color.clone(),
-            props.size.clone(),
-            props.variant.clone(),
-            props.style_overrides.clone(),
+        let attr_string = crate::style_helpers::themed_attributes_html(
+            resolve_style(
+                props.color.clone(),
+                props.size.clone(),
+                props.variant.clone(),
+                props.style_overrides.clone(),
+            ),
+            [
+                ("type", "text"),
+                ("value", props.value.clone()),
+                ("placeholder", props.placeholder.clone()),
+                ("aria-label", props.aria_label.clone()),
+            ],
         );
-        format!(
-            "<input class=\"{}\" value=\"{}\" placeholder=\"{}\" aria-label=\"{}\" />",
-            class, props.value, props.placeholder, props.aria_label
-        )
+        // Shared helper keeps SSR output aligned with the WASM adapters while we
+        // append common ARIA metadata.
+        format!("<input {attrs} />", attrs = attr_string)
     }
 }

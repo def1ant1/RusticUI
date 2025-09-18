@@ -1,13 +1,22 @@
 //! Simple container with a themed border and padding.
 //!
-//! The card demonstrates how [`css_with_theme!`](mui_styled_engine::css_with_theme)
-//! centralizes styling. Both the border color and interior spacing are pulled
-//! from the active [`Theme`](mui_styled_engine::Theme) so applications remain
-//! visually consistent. The
-//! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
-//! converts the generated style into a scoped class which every adapter reuses.
-//! No additional ARIA attributes are applied because a `<div>` already conveys
-//! the correct semantics for a sectioning container.
+//! ## Style generation & theme integration
+//! * [`css_with_theme!`](mui_styled_engine::css_with_theme) centralizes styling.
+//!   Both the border color and interior spacing are pulled from the active
+//!   [`Theme`](mui_styled_engine::Theme) so applications remain visually
+//!   consistent.
+//! * [`style_helpers::themed_class`](crate::style_helpers::themed_class) wraps
+//!   the generated [`Style`](mui_styled_engine::Style) and hands back the scoped
+//!   class each adapter applies. Documenting the helper here keeps future
+//!   modules aligned with the established lifecycle for styled engine handles.
+//!
+//! ## Accessibility hooks
+//! Cards render as simple `<div>` containers and therefore intentionally omit
+//! additional ARIA metadata. Surface areas that require labelled semantics (for
+//! example dialogs or app bars) should lean on
+//! [`style_helpers::themed_attributes_html`](crate::style_helpers::themed_attributes_html)
+//! as shown in other modules. Recording that expectation here keeps the pattern
+//! front-of-mind for teams composing more complex surfaces.
 
 #[cfg(any(
     feature = "yew",
@@ -15,7 +24,7 @@
     feature = "dioxus",
     feature = "sycamore",
 ))]
-use mui_styled_engine::css_with_theme;
+use mui_styled_engine::{css_with_theme, Style};
 
 #[cfg(feature = "leptos")]
 use leptos::Children;
@@ -25,22 +34,22 @@ use yew::prelude::*;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 use crate::material_props;
 
-/// Generates a scoped CSS class using the active [`Theme`].
+/// Generates the [`Style`] used to render the card with the active [`Theme`].
 #[cfg(any(
     feature = "yew",
     feature = "leptos",
     feature = "dioxus",
     feature = "sycamore"
 ))]
-fn resolve_class() -> String {
-    crate::style_helpers::themed_class(css_with_theme!(
+fn resolve_style() -> Style {
+    css_with_theme!(
         r#"
         border: 1px solid ${border};
         padding: ${pad};
         "#,
         border = theme.palette.primary.clone(),
         pad = format!("{}px", theme.spacing(2))
-    ))
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -64,7 +73,8 @@ mod yew_impl {
     /// Simple container with themed border and padding.
     #[function_component(Card)]
     pub fn card(props: &CardProps) -> Html {
-        let class = resolve_class();
+        // Shared helper keeps the scoped class consistent across all adapters.
+        let class = crate::style_helpers::themed_class(resolve_style());
         html! { <div class={class}>{ for props.children.iter() }</div> }
     }
 }
@@ -84,7 +94,8 @@ mod leptos_impl {
     /// Leptos variant rendering a `<div>` with theme-derived styling.
     #[component]
     pub fn Card(props: CardProps) -> impl IntoView {
-        let class = resolve_class();
+        // Shared helper keeps the scoped class consistent across all adapters.
+        let class = crate::style_helpers::themed_class(resolve_style());
         view! { <div class=class>{props.children()}</div> }
     }
 }
@@ -112,7 +123,8 @@ pub mod dioxus {
 
     /// Render the card into a `<div>` tag with a theme-derived class.
     pub fn render(props: &CardProps) -> String {
-        let class = super::resolve_class();
+        // Shared helper keeps the scoped class consistent across all adapters.
+        let class = crate::style_helpers::themed_class(resolve_style());
         format!("<div class=\"{}\">{}</div>", class, props.children)
     }
 }
@@ -134,7 +146,8 @@ pub mod sycamore {
 
     /// Render the card into plain HTML with a themed class.
     pub fn render(props: &CardProps) -> String {
-        let class = super::resolve_class();
+        // Shared helper keeps the scoped class consistent across all adapters.
+        let class = crate::style_helpers::themed_class(resolve_style());
         format!("<div class=\"{}\">{}</div>", class, props.children)
     }
 }
