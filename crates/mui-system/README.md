@@ -8,14 +8,19 @@ safety over runtime configuration.
 ## Usage
 
 ```rust
-use mui_system::{Box, Stack, style_props, ThemeProvider, Theme};
+use mui_system::{Box, Stack, ThemeProvider, Theme};
+use serde_json::json;
 # #[cfg(feature = "yew")]
 # fn render() -> yew::Html {
 let theme = Theme::default();
 html! {
     <ThemeProvider theme={theme}>
         <Stack spacing={Some("8px".into())} justify_content={Some("center".into())}>
-            <Box sx={style_props!{ padding: "4px" }}>{"Item"}</Box>
+            <Box sx={json!({
+                "padding": "4px",
+                "background-color": "#f5f5f5",
+                "border-radius": "4px",
+            })}>{"Item"}</Box>
         </Stack>
     </ThemeProvider>
 }
@@ -51,13 +56,31 @@ use mui_system::{
 let theme = Theme::default();
 let columns = Responsive { xs: 4, sm: Some(8), md: Some(12), lg: None, xl: Some(16) };
 let span = Responsive { xs: 4, sm: Some(6), md: Some(6), lg: Some(8), xl: Some(12) };
-let grid_styles = build_grid_style(900, &theme.breakpoints, Some(&columns), Some(&span), None, None, "");
+let grid_styles = build_grid_style(900, &theme.breakpoints, Some(&columns), Some(&span), None, None, None);
 
 let max_width = Responsive { xs: "100%".into(), sm: Some("640px".into()), md: Some("960px".into()), lg: Some("1200px".into()), xl: Some("1440px".into()) };
-let container_styles = build_container_style(1280, &theme.breakpoints, Some(&max_width), "padding:24px;");
+let container_styles = build_container_style(
+    1280,
+    &theme.breakpoints,
+    Some(&max_width),
+    Some(&serde_json::json!({
+        "padding": "24px",
+        "box-shadow": "0 2px 8px rgba(0,0,0,0.15)",
+    })),
+);
 
 let spacing = Responsive { xs: "4px".into(), sm: Some("8px".into()), md: Some("16px".into()), lg: None, xl: Some("32px".into()) };
-let stack_styles = build_stack_style(1000, &theme.breakpoints, Some(StackDirection::Row), Some(&spacing), None, Some("space-between"), "");
+let stack_styles = build_stack_style(
+    1000,
+    &theme.breakpoints,
+    Some(StackDirection::Row),
+    Some(&spacing),
+    None,
+    Some("space-between"),
+    Some(&serde_json::json!({
+        "align-items": "center",
+    })),
+);
 
 let font_size = Responsive { xs: "14px".into(), sm: None, md: Some("16px".into()), lg: Some("18px".into()), xl: None };
 let margin = Responsive::from(String::from("8px"));
@@ -89,7 +112,10 @@ let box_styles = build_box_style(
         display: Some("flex"),
         align_items: Some("center"),
         justify_content: Some("space-between"),
-        sx: "border-radius:8px;",
+        sx: Some(&serde_json::json!({
+            "border-radius": "8px",
+            "background-color": "#fff",
+        })),
     },
 );
 
@@ -103,6 +129,40 @@ The helper builders above are available to integration tests as well, keeping
 the breakpoint logic centralised and encouraging automation over manual styling
 rules. Framework adapters (Yew, Leptos, etc.) invoke the same functions under
 the hood so behaviour is identical at runtime.
+
+### JSON-first `sx` overrides
+
+Every component now accepts `sx: Option<serde_json::Value>` instead of raw style
+strings. This keeps overrides declarative and lets us rely on `mui_utils::deep_merge`
+to combine user supplied JSON with the generated defaults. The merge step avoids
+hand written string concatenation and means that properties defined by the
+component (such as responsive `padding`) can be overridden without losing the
+rest of the style cascade.
+
+```rust
+use mui_system::container::build_container_style;
+use serde_json::json;
+
+let theme = mui_system::Theme::default();
+let merged = build_container_style(
+    1440,
+    &theme.breakpoints,
+    None,
+    Some(&json!({
+        "width": "90%",
+        "background-color": "#fafafa",
+        "box-shadow": "0 2px 8px rgba(0,0,0,0.1)",
+    })),
+);
+assert!(merged.contains("width:90%;"));
+```
+
+The [`style`](./src/style.rs) module exposes helpers for common properties so
+automation can stay type safe. Recent additions include typography and layout
+builders such as `font_size`, `font_weight`, `line_height`, `width`, `height`,
+`min_width`, `background_color`, `border_radius`, `box_shadow`, `position`,
+`top` and `left`. Prefer these helpers alongside JSON `sx` payloads to minimise
+manual style plumbing in enterprise codebases.
 
 ## Themed element helpers
 

@@ -1,4 +1,6 @@
-use crate::{responsive::Responsive, style, style_props, theme::Breakpoints};
+use crate::{responsive::Responsive, style, theme::Breakpoints};
+use mui_utils::deep_merge;
+use serde_json::{Map, Value};
 
 /// Direction of children placement inside [`Stack`].
 #[derive(Clone, PartialEq)]
@@ -25,27 +27,36 @@ pub fn build_stack_style(
     spacing: Option<&Responsive<String>>,
     align_items: Option<&str>,
     justify_content: Option<&str>,
-    sx: &str,
+    sx: Option<&Value>,
 ) -> String {
     let direction_value = direction.unwrap_or(StackDirection::Column).as_css_value();
-    let mut style = style_props! { display: "flex", flex_direction: direction_value };
+    let mut style_map = Map::new();
+    style_map.insert("display".into(), Value::String("flex".into()));
+    style_map.insert(
+        "flex-direction".into(),
+        Value::String(direction_value.into()),
+    );
 
     if let Some(sp) = spacing {
         // Resolve the gap for the current viewport.  Using `gap` keeps both
         // horizontal and vertical spacing in sync, mirroring the ergonomic
         // defaults of the upstream Stack implementation.
         let resolved = sp.resolve(width, breakpoints);
-        style.push_str(&style_props! { gap: resolved });
+        style_map.insert("gap".into(), Value::String(resolved));
     }
     if let Some(ai) = align_items {
-        style.push_str(&style::align_items(ai));
+        style_map.insert("align-items".into(), Value::String(ai.to_owned()));
     }
     if let Some(jc) = justify_content {
-        style.push_str(&style::justify_content(jc));
+        style_map.insert("justify-content".into(), Value::String(jc.to_owned()));
     }
 
-    style.push_str(sx);
-    style
+    let mut style_value = Value::Object(style_map);
+    if let Some(sx) = sx {
+        deep_merge(&mut style_value, sx.clone());
+    }
+
+    style::json_to_style_string(&style_value)
 }
 
 #[cfg(feature = "yew")]
@@ -68,9 +79,9 @@ mod yew_impl {
         /// Align items on the main axis.
         #[prop_or_default]
         pub justify_content: Option<String>,
-        /// Additional arbitrary style string merged into the generated CSS.
+        /// Additional arbitrary JSON merged into the generated CSS.
         #[prop_or_default]
-        pub sx: String,
+        pub sx: Option<Value>,
         /// Child elements to render.
         #[prop_or_default]
         pub children: Children,
@@ -88,7 +99,7 @@ mod yew_impl {
             props.spacing.as_ref(),
             props.align_items.as_deref(),
             props.justify_content.as_deref(),
-            &props.sx,
+            props.sx.as_ref(),
         );
         // Reuse the shared scoped class helper so Stack benefits from CSS
         // caching and avoids inline declarations which break strict CSPs.
@@ -115,7 +126,7 @@ mod leptos_impl {
         #[prop(optional)] spacing: Option<Responsive<String>>,
         #[prop(optional, into)] align_items: Option<String>,
         #[prop(optional, into)] justify_content: Option<String>,
-        #[prop(optional, into)] sx: String,
+        #[prop(optional)] sx: Option<Value>,
         children: Children,
     ) -> impl IntoView {
         let theme = crate::theme_provider::use_theme();
@@ -127,7 +138,7 @@ mod leptos_impl {
             spacing.as_ref(),
             align_items.as_deref(),
             justify_content.as_deref(),
-            &sx,
+            sx.as_ref(),
         );
         // Store the scoped class in the runtime so Leptos keeps the CSS alive
         // until the component unmounts.

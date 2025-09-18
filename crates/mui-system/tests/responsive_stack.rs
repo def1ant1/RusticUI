@@ -3,6 +3,7 @@ use mui_system::{
     stack::{build_stack_style, StackDirection},
     Theme,
 };
+use serde_json::json;
 
 #[test]
 fn stack_spacing_scales_with_breakpoints() {
@@ -22,7 +23,7 @@ fn stack_spacing_scales_with_breakpoints() {
         Some(&spacing),
         Some("center"),
         None,
-        "",
+        None,
     );
     assert!(column.contains("display:flex;"));
     assert!(column.contains("flex-direction:column;"));
@@ -36,10 +37,12 @@ fn stack_spacing_scales_with_breakpoints() {
         Some(&spacing),
         None,
         Some("space-between"),
-        "background:blue;",
+        Some(&json!({
+            "background": "blue",
+        })),
     );
     assert!(row.contains("flex-direction:row;"));
     assert!(row.contains("gap:16px;"));
     assert!(row.contains("justify-content:space-between;"));
-    assert!(row.ends_with("background:blue;"));
+    assert!(row.contains("background:blue;"));
 }
