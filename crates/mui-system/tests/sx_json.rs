@@ -1,5 +1,5 @@
 use mui_system::{
-    container::build_container_style,
+    container::{build_container_style, ContainerStyleInputs},
     r#box::{build_box_style, BoxStyleInputs},
     responsive::Responsive,
     Theme,
@@ -12,11 +12,13 @@ fn container_json_sx_overrides_width() {
     let style = build_container_style(
         1024,
         &theme.breakpoints,
-        None,
-        Some(&json!({
-            "width": "80%",
-            "background-color": "#fafafa",
-        })),
+        ContainerStyleInputs {
+            max_width: None,
+            sx: Some(&json!({
+                "width": "80%",
+                "background-color": "#fafafa",
+            })),
+        },
     );
 
     assert!(style.contains("width:80%;"));

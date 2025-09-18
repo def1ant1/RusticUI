@@ -18,18 +18,34 @@ impl StackDirection {
     }
 }
 
+/// Shared descriptor mirroring [`crate::r#box::BoxStyleInputs`] so adapters can
+/// forward borrowed responsive handles without cloning.  The optional
+/// `StackDirection` is kept by value since it is a small enum and avoids a
+/// lifetime parameter for ergonomic builder usage in tests.
+pub struct StackStyleInputs<'a> {
+    /// Orientation override. Defaults to [`StackDirection::Column`].
+    pub direction: Option<StackDirection>,
+    /// Responsive gap declaration applied via the modern `gap` property.
+    pub spacing: Option<&'a Responsive<String>>,
+    /// Optional flexbox alignment on the cross axis.
+    pub align_items: Option<&'a str>,
+    /// Optional flexbox alignment on the main axis.
+    pub justify_content: Option<&'a str>,
+    /// JSON overrides merged through the `sx` pipeline.
+    pub sx: Option<&'a Value>,
+}
+
 /// Shared style assembly for framework adapters and integration tests.
 #[doc(hidden)]
 pub fn build_stack_style(
     width: u32,
     breakpoints: &Breakpoints,
-    direction: Option<StackDirection>,
-    spacing: Option<&Responsive<String>>,
-    align_items: Option<&str>,
-    justify_content: Option<&str>,
-    sx: Option<&Value>,
+    inputs: StackStyleInputs<'_>,
 ) -> String {
-    let direction_value = direction.unwrap_or(StackDirection::Column).as_css_value();
+    let direction_value = inputs
+        .direction
+        .unwrap_or(StackDirection::Column)
+        .as_css_value();
     let mut style_map = Map::new();
     style_map.insert("display".into(), Value::String("flex".into()));
     style_map.insert(
@@ -37,22 +53,22 @@ pub fn build_stack_style(
         Value::String(direction_value.into()),
     );
 
-    if let Some(sp) = spacing {
+    if let Some(sp) = inputs.spacing {
         // Resolve the gap for the current viewport.  Using `gap` keeps both
         // horizontal and vertical spacing in sync, mirroring the ergonomic
         // defaults of the upstream Stack implementation.
         let resolved = sp.resolve(width, breakpoints);
         style_map.insert("gap".into(), Value::String(resolved));
     }
-    if let Some(ai) = align_items {
+    if let Some(ai) = inputs.align_items {
         style_map.insert("align-items".into(), Value::String(ai.to_owned()));
     }
-    if let Some(jc) = justify_content {
+    if let Some(jc) = inputs.justify_content {
         style_map.insert("justify-content".into(), Value::String(jc.to_owned()));
     }
 
     let mut style_value = Value::Object(style_map);
-    if let Some(sx) = sx {
+    if let Some(sx) = inputs.sx {
         deep_merge(&mut style_value, sx.clone());
     }
 
@@ -95,11 +111,13 @@ mod yew_impl {
         let style_rules = build_stack_style(
             width,
             &theme.breakpoints,
-            props.direction.clone(),
-            props.spacing.as_ref(),
-            props.align_items.as_deref(),
-            props.justify_content.as_deref(),
-            props.sx.as_ref(),
+            StackStyleInputs {
+                direction: props.direction.clone(),
+                spacing: props.spacing.as_ref(),
+                align_items: props.align_items.as_deref(),
+                justify_content: props.justify_content.as_deref(),
+                sx: props.sx.as_ref(),
+            },
         );
         // Reuse the shared scoped class helper so Stack benefits from CSS
         // caching and avoids inline declarations which break strict CSPs.
@@ -134,11 +152,13 @@ mod leptos_impl {
         let style_rules = build_stack_style(
             width,
             &theme.breakpoints,
-            direction,
-            spacing.as_ref(),
-            align_items.as_deref(),
-            justify_content.as_deref(),
-            sx.as_ref(),
+            StackStyleInputs {
+                direction,
+                spacing: spacing.as_ref(),
+                align_items: align_items.as_deref(),
+                justify_content: justify_content.as_deref(),
+                sx: sx.as_ref(),
+            },
         );
         // Store the scoped class in the runtime so Leptos keeps the CSS alive
         // until the component unmounts.

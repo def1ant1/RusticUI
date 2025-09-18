@@ -45,41 +45,55 @@ style string is emitted.
 
 ```rust
 use mui_system::{
-    container::build_container_style,
-    grid::build_grid_style,
+    container::{build_container_style, ContainerStyleInputs},
+    grid::{build_grid_style, GridStyleInputs},
     r#box::{build_box_style, BoxStyleInputs},
     responsive::Responsive,
-    stack::{build_stack_style, StackDirection},
+    stack::{build_stack_style, StackDirection, StackStyleInputs},
     Theme,
 };
 
 let theme = Theme::default();
 let columns = Responsive { xs: 4, sm: Some(8), md: Some(12), lg: None, xl: Some(16) };
 let span = Responsive { xs: 4, sm: Some(6), md: Some(6), lg: Some(8), xl: Some(12) };
-let grid_styles = build_grid_style(900, &theme.breakpoints, Some(&columns), Some(&span), None, None, None);
+let grid_styles = build_grid_style(
+    900,
+    &theme.breakpoints,
+    GridStyleInputs {
+        columns: Some(&columns),
+        span: Some(&span),
+        justify_content: None,
+        align_items: None,
+        sx: None,
+    },
+);
 
 let max_width = Responsive { xs: "100%".into(), sm: Some("640px".into()), md: Some("960px".into()), lg: Some("1200px".into()), xl: Some("1440px".into()) };
 let container_styles = build_container_style(
     1280,
     &theme.breakpoints,
-    Some(&max_width),
-    Some(&serde_json::json!({
-        "padding": "24px",
-        "box-shadow": "0 2px 8px rgba(0,0,0,0.15)",
-    })),
+    ContainerStyleInputs {
+        max_width: Some(&max_width),
+        sx: Some(&serde_json::json!({
+            "padding": "24px",
+            "box-shadow": "0 2px 8px rgba(0,0,0,0.15)",
+        })),
+    },
 );
 
 let spacing = Responsive { xs: "4px".into(), sm: Some("8px".into()), md: Some("16px".into()), lg: None, xl: Some("32px".into()) };
 let stack_styles = build_stack_style(
     1000,
     &theme.breakpoints,
-    Some(StackDirection::Row),
-    Some(&spacing),
-    None,
-    Some("space-between"),
-    Some(&serde_json::json!({
-        "align-items": "center",
-    })),
+    StackStyleInputs {
+        direction: Some(StackDirection::Row),
+        spacing: Some(&spacing),
+        align_items: None,
+        justify_content: Some("space-between"),
+        sx: Some(&serde_json::json!({
+            "align-items": "center",
+        })),
+    },
 );
 
 let font_size = Responsive { xs: "14px".into(), sm: None, md: Some("16px".into()), lg: Some("18px".into()), xl: None };
@@ -125,6 +139,12 @@ assert!(stack_styles.contains("gap:16px;"));
 assert!(box_styles.contains("font-size:18px;"));
 ```
 
+The helper builders accept lightweight `*StyleInputs` descriptors so framework
+adapters and test harnesses can forward borrowed `Responsive<T>` handles without
+cloning. This mirrors how enterprise design systems centralise layout rules—one
+place produces the responsive map, and every consumer resolves values through
+the shared automation shown above.
+
 The helper builders above are available to integration tests as well, keeping
 the breakpoint logic centralised and encouraging automation over manual styling
 rules. Framework adapters (Yew, Leptos, etc.) invoke the same functions under
@@ -140,19 +160,21 @@ component (such as responsive `padding`) can be overridden without losing the
 rest of the style cascade.
 
 ```rust
-use mui_system::container::build_container_style;
+use mui_system::container::{build_container_style, ContainerStyleInputs};
 use serde_json::json;
 
 let theme = mui_system::Theme::default();
 let merged = build_container_style(
     1440,
     &theme.breakpoints,
-    None,
-    Some(&json!({
-        "width": "90%",
-        "background-color": "#fafafa",
-        "box-shadow": "0 2px 8px rgba(0,0,0,0.1)",
-    })),
+    ContainerStyleInputs {
+        max_width: None,
+        sx: Some(&json!({
+            "width": "90%",
+            "background-color": "#fafafa",
+            "box-shadow": "0 2px 8px rgba(0,0,0,0.1)",
+        })),
+    },
 );
 assert!(merged.contains("width:90%;"));
 ```
