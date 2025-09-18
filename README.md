@@ -43,11 +43,13 @@ Run an example:
 cargo run --package mui-yew --example hello_world
 ```
 
-## Centralized theming and accessible markup
+## Theming automation with `css_with_theme!`
 
-`css_with_theme!` exposes the active `Theme` inside a `css!` block, eliminating
-manual plumbing and generating a scoped class. Apply the class alongside ARIA
-attributes for accessible widgets:
+Enterprise teams demand consistent design tokens without repetitive wiring.
+`css_with_theme!` automatically injects the active workspace
+[`Theme`](crates/mui-styled-engine/src/theme.rs) inside a scoped CSS block so
+styling remains centralized. The example below renders a Leptos button that
+consumes the generated class and publishes ARIA metadata for assistive tech:
 
 ```rust
 use leptos::*;
@@ -56,29 +58,36 @@ use mui_styled_engine::css_with_theme;
 
 #[component]
 fn SaveButton() -> impl IntoView {
-    // Generate a theme-aware class. The macro injects the workspace theme so
-    // palette tokens can be referenced without repetitive wiring.
+    // One macro call taps into palette, spacing and shape tokens. Centralizing
+    // this logic avoids copy/paste configuration across dozens of crates.
     let style = css_with_theme!(
         r#"
         background-color: ${theme.palette.primary.main};
         color: ${theme.palette.primary.contrast_text};
+        padding: ${theme.spacing(1.5)} ${theme.spacing(3)};
+        border-radius: ${theme.shape.border_radius}px;
         "#,
     );
 
     view! {
-        // Apply the class and an ARIA label so screen readers announce the
-        // button's intent.
-        <Button class=style.get_class_name() aria-label="save file">
+        // Attach the scoped class plus ARIA and automation hooks. Screen
+        // readers and QA pipelines now share the same semantic contract.
+        <Button
+            class=style.get_class_name()
+            aria-label="save file"
+            data-automation="primary-save-action"
+        >
             "Save"
         </Button>
     }
 }
 ```
 
-Centralized theme tokens keep colors and spacing consistent across large
-codebases while ARIA annotations ensure assistive technology can navigate the
-interface. This automation scales well for enterprise teams that demand brand
-consistency and accessibility compliance.
+Centralized theme tokens keep palettes, spacing and elevations synchronized
+across microfrontends while the ARIA attributes guarantee accessible markup.
+The additional `data-automation` hook encourages robust end-to-end tests,
+meeting enterprise expectations for compliance, observability and maintainable
+automation.
 
 ## Cargo features
 
