@@ -10,6 +10,7 @@
 //! properties can be added by appending a line to the macro invocation below.
 
 use crate::define_style_props;
+use serde_json::Value;
 
 // Generate a suite of style property builders. These mirror a subset of the
 // most commonly used system props from MUI. The list can easily be extended as
@@ -33,17 +34,9 @@ define_style_props! {
     flex_wrap => "flex-wrap",
     align_items => "align-items",
     justify_content => "justify-content",
-    width => "width",
-    height => "height",
-    min_width => "min-width",
     max_width => "max-width",
-    min_height => "min-height",
     max_height => "max-height",
-    position => "position",
-    top => "top",
-    right => "right",
-    bottom => "bottom",
-    left => "left",
+    min_height => "min-height",
 
     // Typography -------------------------------------------------------------
     font_size => "font-size",
@@ -51,9 +44,73 @@ define_style_props! {
     line_height => "line-height",
     letter_spacing => "letter-spacing",
 
-    // Colors -----------------------------------------------------------------
+    // Sizing -----------------------------------------------------------------
+    width => "width",
+    height => "height",
+    min_width => "min-width",
+
+    // Color & visual treatments ---------------------------------------------
     color => "color",
     background_color => "background-color",
+    border_radius => "border-radius",
+    box_shadow => "box-shadow",
+
+    // Positioning ------------------------------------------------------------
+    position => "position",
+    top => "top",
+    right => "right",
+    bottom => "bottom",
+    left => "left",
+}
+
+/// Convert a JSON object representing CSS declarations into a `prop:value;` string.
+///
+/// The helper keeps component code focused on the style *data* rather than the
+/// textual representation, making it trivial to bolt on new properties or merge
+/// JSON driven overrides without sprinkling string concatenation everywhere.
+pub fn json_to_style_string(value: &Value) -> String {
+    match value {
+        Value::Object(map) => {
+            let mut entries: Vec<_> = map.iter().collect();
+            entries.sort_by(|a, b| a.0.cmp(b.0));
+            let mut css = String::new();
+            for (key, value) in entries {
+                if let Some(nested) = value.as_object() {
+                    // Nested objects are serialised as `selector{...}` which can be
+                    // extended in future iterations. For now we flatten them into
+                    // scoped blocks to keep inline styles predictable.
+                    let mut nested_entries: Vec<_> = nested.iter().collect();
+                    nested_entries.sort_by(|a, b| a.0.cmp(b.0));
+                    css.push_str(key);
+                    css.push('{');
+                    for (nested_key, nested_value) in nested_entries {
+                        css.push_str(nested_key);
+                        css.push(':');
+                        css.push_str(&value_to_string(nested_value));
+                        css.push(';');
+                    }
+                    css.push('}');
+                } else if !value.is_null() {
+                    css.push_str(key);
+                    css.push(':');
+                    css.push_str(&value_to_string(value));
+                    css.push(';');
+                }
+            }
+            css
+        }
+        other => value_to_string(other),
+    }
+}
+
+fn value_to_string(value: &Value) -> String {
+    match value {
+        Value::String(s) => s.clone(),
+        Value::Number(n) => n.to_string(),
+        Value::Bool(b) => b.to_string(),
+        Value::Null => String::new(),
+        other => other.to_string(),
+    }
 }
 
 // The module intentionally re-exports all generated helpers so callers can do

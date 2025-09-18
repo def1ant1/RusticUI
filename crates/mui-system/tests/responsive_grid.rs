@@ -1,4 +1,5 @@
 use mui_system::{grid::build_grid_style, responsive::Responsive, Theme};
+use serde_json::json;
 
 #[test]
 fn grid_breakpoints_resolve_width_and_alignment() {
@@ -25,7 +26,9 @@ fn grid_breakpoints_resolve_width_and_alignment() {
         Some(&span),
         Some("center"),
         None,
-        "border:1px solid red;",
+        Some(&json!({
+            "border": "1px solid red",
+        })),
     );
     assert!(base.contains("border:1px solid red;"));
     assert!(base.contains("width:100%;"));
@@ -38,7 +41,7 @@ fn grid_breakpoints_resolve_width_and_alignment() {
         Some(&span),
         None,
         Some("flex-end"),
-        "",
+        None,
     );
     assert!(medium.contains("width:50%;"));
     assert!(medium.contains("align-items:flex-end;"));
@@ -50,7 +53,7 @@ fn grid_breakpoints_resolve_width_and_alignment() {
         Some(&span),
         None,
         None,
-        "",
+        None,
     );
     assert!(extra_large.contains("width:75%;"));
 }

@@ -3,6 +3,8 @@ use crate::{
     style,
     theme::Breakpoints,
 };
+use mui_utils::deep_merge;
+use serde_json::{Map, Value};
 
 /// Shared styling routine leveraged by every framework specific grid
 /// implementation and the integration tests.  Centralising the logic keeps the
@@ -16,7 +18,7 @@ pub fn build_grid_style(
     span: Option<&Responsive<u16>>,
     justify_content: Option<&str>,
     align_items: Option<&str>,
-    sx: &str,
+    sx: Option<&Value>,
 ) -> String {
     // Compute the active column model for the current viewport.  We lean on the
     // `Responsive::constant` helper so callers can omit props entirely and
@@ -31,17 +33,22 @@ pub fn build_grid_style(
         .unwrap_or_else(|| default_span.resolve(width, breakpoints));
     let width_percent = grid_span_to_percent(resolved_span, resolved_columns);
 
-    let mut style_string = String::from(sx);
-    style_string.push_str(&format!("width:{}%;", width_percent));
+    let mut style_map = Map::new();
+    style_map.insert("width".into(), Value::String(format!("{}%", width_percent)));
 
     if let Some(jc) = justify_content {
-        style_string.push_str(&style::justify_content(jc));
+        style_map.insert("justify-content".into(), Value::String(jc.to_owned()));
     }
     if let Some(ai) = align_items {
-        style_string.push_str(&style::align_items(ai));
+        style_map.insert("align-items".into(), Value::String(ai.to_owned()));
     }
 
-    style_string
+    let mut style_value = Value::Object(style_map);
+    if let Some(sx) = sx {
+        deep_merge(&mut style_value, sx.clone());
+    }
+
+    style::json_to_style_string(&style_value)
 }
 
 #[cfg(feature = "yew")]
@@ -65,9 +72,9 @@ mod yew_impl {
         /// Flexbox alignment on the cross axis.
         #[prop_or_default]
         pub align_items: Option<String>,
-        /// Additional inline styles merged with the computed width.
+        /// Additional JSON driven styles merged with the computed width.
         #[prop_or_default]
-        pub sx: String,
+        pub sx: Option<Value>,
         /// Child elements of the grid item.
         #[prop_or_default]
         pub children: Children,
@@ -85,7 +92,7 @@ mod yew_impl {
             props.span.as_ref(),
             props.justify_content.as_deref(),
             props.align_items.as_deref(),
-            &props.sx,
+            props.sx.as_ref(),
         );
         // Promote the computed declarations into a scoped class so server
         // renderers and client frameworks share the same CSS payload.
@@ -112,7 +119,7 @@ mod leptos_impl {
         #[prop(optional)] span: Option<Responsive<u16>>,
         #[prop(optional, into)] justify_content: Option<String>,
         #[prop(optional, into)] align_items: Option<String>,
-        #[prop(optional, into)] sx: String,
+        #[prop(optional)] sx: Option<Value>,
         children: Children,
     ) -> impl IntoView {
         let theme = crate::theme_provider::use_theme();
@@ -124,7 +131,7 @@ mod leptos_impl {
             span.as_ref(),
             justify_content.as_deref(),
             align_items.as_deref(),
-            &sx,
+            sx.as_ref(),
         );
         // Persist the scoped style for Leptos just like the Yew variant.
         let scoped = store_value(crate::ScopedClass::from_declarations(style_rules));

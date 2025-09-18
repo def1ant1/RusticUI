@@ -3,6 +3,7 @@ use mui_system::{
     responsive::Responsive,
     Theme,
 };
+use serde_json::json;
 
 #[test]
 fn box_resolves_all_responsive_groups() {
@@ -146,7 +147,9 @@ fn box_resolves_all_responsive_groups() {
             display: Some("flex"),
             align_items: Some("center"),
             justify_content: Some("flex-start"),
-            sx: "border-radius:4px;",
+            sx: Some(&json!({
+                "border-radius": "4px",
+            })),
         },
     );
     assert!(base.contains("margin:2px;"));
@@ -166,7 +169,7 @@ fn box_resolves_all_responsive_groups() {
     assert!(base.contains("position:relative;"));
     assert!(base.contains("top:0;"));
     assert!(base.contains("display:flex;"));
-    assert!(base.ends_with("border-radius:4px;"));
+    assert!(base.contains("border-radius:4px;"));
 
     let large = build_box_style(
         1400,
@@ -194,7 +197,9 @@ fn box_resolves_all_responsive_groups() {
             display: Some("flex"),
             align_items: Some("center"),
             justify_content: Some("flex-start"),
-            sx: "border-radius:4px;",
+            sx: Some(&json!({
+                "border-radius": "4px",
+            })),
         },
     );
     assert!(large.contains("margin:16px;"));

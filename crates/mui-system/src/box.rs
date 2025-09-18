@@ -1,4 +1,6 @@
 use crate::{responsive::Responsive, style, theme::Breakpoints};
+use mui_utils::deep_merge;
+use serde_json::{Map, Value};
 
 /// Lightweight descriptor passed into [`build_box_style`].  The struct keeps the
 /// rendering code terse because the framework adapters can forward borrowed
@@ -26,21 +28,19 @@ pub struct BoxStyleInputs<'a> {
     pub display: Option<&'a str>,
     pub align_items: Option<&'a str>,
     pub justify_content: Option<&'a str>,
-    pub sx: &'a str,
+    pub sx: Option<&'a Value>,
 }
 
-fn apply_responsive_style<F>(
-    style: &mut String,
+fn apply_responsive_style(
+    styles: &mut Map<String, Value>,
     width: u32,
     breakpoints: &Breakpoints,
     value: Option<&Responsive<String>>,
-    mut renderer: F,
-) where
-    F: FnMut(String) -> String,
-{
+    property: &str,
+) {
     if let Some(responsive) = value {
         let resolved = responsive.resolve(width, breakpoints);
-        style.push_str(&renderer(resolved));
+        styles.insert(property.to_owned(), Value::String(resolved));
     }
 }
 
@@ -54,160 +54,120 @@ pub fn build_box_style(
     breakpoints: &Breakpoints,
     inputs: BoxStyleInputs<'_>,
 ) -> String {
-    let mut style_string = String::new();
+    let mut style_map = Map::new();
 
     // Spacing ----------------------------------------------------------------
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.margin, "margin");
     apply_responsive_style(
-        &mut style_string,
-        width,
-        breakpoints,
-        inputs.margin,
-        |value| style::margin(value),
-    );
-    apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.padding,
-        |value| style::padding(value),
+        "padding",
     );
 
     // Typography -------------------------------------------------------------
     apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.font_size,
-        |value| style::font_size(value),
+        "font-size",
     );
     apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.font_weight,
-        |value| style::font_weight(value),
+        "font-weight",
     );
     apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.line_height,
-        |value| style::line_height(value),
+        "line-height",
     );
     apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.letter_spacing,
-        |value| style::letter_spacing(value),
+        "letter-spacing",
     );
 
     // Sizing -----------------------------------------------------------------
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.width, "width");
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.height, "height");
     apply_responsive_style(
-        &mut style_string,
-        width,
-        breakpoints,
-        inputs.width,
-        |value| style::width(value),
-    );
-    apply_responsive_style(
-        &mut style_string,
-        width,
-        breakpoints,
-        inputs.height,
-        |value| style::height(value),
-    );
-    apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.min_width,
-        |value| style::min_width(value),
+        "min-width",
     );
     apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.max_width,
-        |value| style::max_width(value),
+        "max-width",
     );
     apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.min_height,
-        |value| style::min_height(value),
+        "min-height",
     );
     apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.max_height,
-        |value| style::max_height(value),
+        "max-height",
     );
 
     // Color ------------------------------------------------------------------
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.color, "color");
     apply_responsive_style(
-        &mut style_string,
-        width,
-        breakpoints,
-        inputs.color,
-        |value| style::color(value),
-    );
-    apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.background_color,
-        |value| style::background_color(value),
+        "background-color",
     );
 
     // Positioning ------------------------------------------------------------
     apply_responsive_style(
-        &mut style_string,
+        &mut style_map,
         width,
         breakpoints,
         inputs.position,
-        |value| style::position(value),
+        "position",
     );
-    apply_responsive_style(&mut style_string, width, breakpoints, inputs.top, |value| {
-        style::top(value)
-    });
-    apply_responsive_style(
-        &mut style_string,
-        width,
-        breakpoints,
-        inputs.right,
-        |value| style::right(value),
-    );
-    apply_responsive_style(
-        &mut style_string,
-        width,
-        breakpoints,
-        inputs.bottom,
-        |value| style::bottom(value),
-    );
-    apply_responsive_style(
-        &mut style_string,
-        width,
-        breakpoints,
-        inputs.left,
-        |value| style::left(value),
-    );
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.top, "top");
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.right, "right");
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.bottom, "bottom");
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.left, "left");
 
     // Layout toggles that remain non-responsive for now ----------------------
     if let Some(display) = inputs.display {
-        style_string.push_str(&style::display(display));
+        style_map.insert("display".into(), Value::String(display.to_owned()));
     }
     if let Some(ai) = inputs.align_items {
-        style_string.push_str(&style::align_items(ai));
+        style_map.insert("align-items".into(), Value::String(ai.to_owned()));
     }
     if let Some(jc) = inputs.justify_content {
-        style_string.push_str(&style::justify_content(jc));
+        style_map.insert("justify-content".into(), Value::String(jc.to_owned()));
     }
 
-    style_string.push_str(inputs.sx);
-    style_string
+    let mut style_value = Value::Object(style_map);
+    if let Some(sx) = inputs.sx {
+        deep_merge(&mut style_value, sx.clone());
+    }
+
+    style::json_to_style_string(&style_value)
 }
 
 #[cfg(feature = "yew")]
@@ -285,9 +245,9 @@ mod yew_impl {
         /// Flexbox alignment of children on the main axis.
         #[prop_or_default]
         pub justify_content: Option<String>,
-        /// Raw style string allowing arbitrary `sx` values.
+        /// Optional JSON blob merged with the generated styles via `sx`.
         #[prop_or_default]
-        pub sx: String,
+        pub sx: Option<Value>,
         /// Elements to render inside the box.
         #[prop_or_default]
         pub children: Children,
@@ -323,7 +283,7 @@ mod yew_impl {
                 display: props.display.as_deref(),
                 align_items: props.align_items.as_deref(),
                 justify_content: props.justify_content.as_deref(),
-                sx: &props.sx,
+                sx: props.sx.as_ref(),
             },
         );
         // Register the declarations with the styled engine so Box participates
@@ -370,7 +330,7 @@ mod leptos_impl {
         #[prop(optional, into)] display: Option<String>,
         #[prop(optional, into)] align_items: Option<String>,
         #[prop(optional, into)] justify_content: Option<String>,
-        #[prop(optional, into)] sx: String,
+        #[prop(optional)] sx: Option<Value>,
         children: Children,
     ) -> impl IntoView {
         let theme = use_theme();
@@ -401,7 +361,7 @@ mod leptos_impl {
                 display: display.as_deref(),
                 align_items: align_items.as_deref(),
                 justify_content: justify_content.as_deref(),
-                sx: &sx,
+                sx: sx.as_ref(),
             },
         );
         // Mirror the Yew integration by registering the CSS once and reusing

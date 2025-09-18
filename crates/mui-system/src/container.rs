@@ -1,4 +1,6 @@
-use crate::{responsive::Responsive, style, style_props, theme::Breakpoints};
+use crate::{responsive::Responsive, style, theme::Breakpoints};
+use mui_utils::deep_merge;
+use serde_json::{Map, Value};
 
 /// Builds the inline style string for the container based on the current
 /// viewport width. The helper is used by all framework adapters and ensures the
@@ -8,18 +10,24 @@ pub fn build_container_style(
     width: u32,
     breakpoints: &Breakpoints,
     max_width: Option<&Responsive<String>>,
-    sx: &str,
+    sx: Option<&Value>,
 ) -> String {
-    let mut style = if let Some(mw) = max_width {
+    let mut style_map = Map::new();
+    style_map.insert("width".into(), Value::String("100%".into()));
+
+    if let Some(mw) = max_width {
         let resolved = mw.resolve(width, breakpoints);
-        let mut base = style_props! { margin_left: "auto", margin_right: "auto", width: "100%" };
-        base.push_str(&style::max_width(resolved));
-        base
-    } else {
-        style_props! { width: "100%" }
-    };
-    style.push_str(sx);
-    style
+        style_map.insert("margin-left".into(), Value::String("auto".into()));
+        style_map.insert("margin-right".into(), Value::String("auto".into()));
+        style_map.insert("max-width".into(), Value::String(resolved));
+    }
+
+    let mut style_value = Value::Object(style_map);
+    if let Some(sx) = sx {
+        deep_merge(&mut style_value, sx.clone());
+    }
+
+    style::json_to_style_string(&style_value)
 }
 
 #[cfg(feature = "yew")]
@@ -33,9 +41,9 @@ mod yew_impl {
         /// Optional maximum width of the container (e.g. `"1200px"`).
         #[prop_or_default]
         pub max_width: Option<Responsive<String>>,
-        /// Additional style string to merge, following the MUI `sx` syntax.
+        /// Additional JSON overrides to merge, following the MUI `sx` syntax.
         #[prop_or_default]
-        pub sx: String,
+        pub sx: Option<Value>,
         /// Child elements to display inside the container.
         #[prop_or_default]
         pub children: Children,
@@ -50,7 +58,7 @@ mod yew_impl {
             width,
             &theme.breakpoints,
             props.max_width.as_ref(),
-            &props.sx,
+            props.sx.as_ref(),
         );
         // Convert the inline style string into a scoped class so the styled
         // engine can deduplicate rules and we avoid sprinkling CSP sensitive
@@ -77,12 +85,13 @@ mod leptos_impl {
     #[component]
     pub fn Container(
         #[prop(optional)] max_width: Option<Responsive<String>>,
-        #[prop(optional, into)] sx: String,
+        #[prop(optional)] sx: Option<Value>,
         children: Children,
     ) -> impl IntoView {
         let theme = crate::theme_provider::use_theme();
         let width = crate::responsive::viewport_width();
-        let style_rules = build_container_style(width, &theme.breakpoints, max_width.as_ref(), &sx);
+        let style_rules =
+            build_container_style(width, &theme.breakpoints, max_width.as_ref(), sx.as_ref());
         // Persist the scoped class for the component lifetime so the stylist
         // registry keeps the CSS mounted until Leptos disposes the view.
         let scoped = store_value(crate::ScopedClass::from_declarations(style_rules));
