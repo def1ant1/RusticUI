@@ -1,16 +1,19 @@
 #![cfg(feature = "yew")]
 
 use mui_headless::checkbox::CheckboxState;
+use mui_headless::list::{ListState, SelectionMode};
 use mui_headless::radio::{RadioGroupState, RadioOrientation};
 use mui_headless::switch::SwitchState;
 use mui_material::checkbox::{self, CheckboxProps};
 use mui_material::radio::{self, RadioGroupProps};
 use mui_material::switch::{self, SwitchProps};
+use mui_material::table::{self, TableColumn, TableProps, TableRow};
 use mui_material::{AppBar, Button, Snackbar, TextField};
 use mui_styled_engine::{Theme, ThemeProvider};
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_test::*;
 use yew::prelude::*;
+use yew::AttrValue;
 use yew::Renderer;
 
 // Expose the axe-core helper so each test can easily perform an
@@ -202,6 +205,52 @@ async fn button_keyboard_navigation() {
     button.dispatch_event(&event).unwrap();
 
     assert!(clicked.get(), "Enter key should trigger click");
+    axe_check(&mount).await;
+}
+
+/// Validate that the data table renders semantic roles and passes an axe audit.
+#[wasm_bindgen_test(async)]
+async fn table_accessibility_contract() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let props = TableProps::new(
+            vec![
+                TableColumn::new("Region"),
+                TableColumn::new("Nodes").numeric(),
+            ],
+            vec![
+                TableRow::new(vec!["us-central".into(), "64".into()]),
+                TableRow::new(vec!["eu-west".into(), "48".into()]),
+            ],
+        )
+        .with_selection_mode(SelectionMode::Single)
+        .with_automation_id("wasm-table");
+        let state = ListState::uncontrolled(props.rows.len(), &[], SelectionMode::Single);
+        let markup = table::yew::render(&props, &state);
+
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                { Html::from_html_unchecked(AttrValue::from(markup)) }
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let table = mount
+        .query_selector("table")
+        .unwrap()
+        .expect("table rendered");
+    assert_eq!(table.get_attribute("role").unwrap(), "grid");
+    assert!(table
+        .get_attribute("data-automation-id")
+        .unwrap()
+        .contains("wasm-table"));
+
     axe_check(&mount).await;
 }
 

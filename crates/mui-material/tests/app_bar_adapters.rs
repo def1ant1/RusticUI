@@ -43,4 +43,3 @@ mod sycamore_tests {
         assert!(out.contains("aria-label=\"Application header\""));
     }
 }
-

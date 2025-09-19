@@ -1,0 +1,16 @@
+[package]
+name = "data-display-yew"
+version = "0.1.0"
+edition = "2021"
+description = "Cookbook example showcasing RusticUI list and table renderers with Yew"
+license = "MIT OR Apache-2.0"
+
+[workspace]
+members = []
+
+[dependencies]
+yew = { version = "0.21", default-features = false, features = ["csr", "hydration", "ssr"] }
+wasm-bindgen = "0.2"
+mui-material = { path = "../../crates/mui-material" }
+mui-headless = { path = "../../crates/mui-headless" }
+mui-styled-engine = { path = "../../crates/mui-styled-engine", features = ["yew"] }

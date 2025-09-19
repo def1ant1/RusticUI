@@ -318,9 +318,7 @@ mod tests {
             for key in case.keys {
                 last_seen = state.on_key(*key);
             }
-            assert_eq!(
-                last_seen, case.expect, "{}: highlight mismatch", case.name
-            );
+            assert_eq!(last_seen, case.expect, "{}: highlight mismatch", case.name);
         }
     }
 

@@ -130,6 +130,18 @@ hydrate client-side while reusing the same SSR shell emitted by
 `render_select_markup`, guaranteeing that automation and accessibility hooks
 stay in sync across environments.【F:examples/select-menu-yew/src/main.rs†L137-L157】【F:examples/select-menu-leptos/src/main.rs†L103-L123】
 
+## Data display blueprints
+
+Material themed data display components ship alongside the interactive widgets.
+The [`list`](crates/mui-material/src/list.rs) renderer exposes density and
+typography variants while emitting deterministic automation hooks for every
+item.【F:crates/mui-material/src/list.rs†L1-L355】 The [`table`](crates/mui-material/src/table.rs) module layers column
+metadata, zebra striping, and numeric alignment on top of the same headless
+state machine so selectable rows behave consistently.【F:crates/mui-material/src/table.rs†L1-L356】 Cookbook examples for
+Yew and Leptos live under `examples/data-display-*` and can be run with
+`cargo run --package data-display-yew` or
+`cargo run --package data-display-leptos --features csr` respectively.【F:examples/data-display-yew/README.md†L1-L21】【F:examples/data-display-leptos/README.md†L1-L21】
+
 ### Running the demos
 
 Each package ships with a README describing CSR development flows and the SSR
