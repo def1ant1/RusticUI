@@ -1,5 +1,11 @@
 #![cfg(feature = "yew")]
 
+use mui_headless::checkbox::CheckboxState;
+use mui_headless::radio::{RadioGroupState, RadioOrientation};
+use mui_headless::switch::SwitchState;
+use mui_material::checkbox::{self, CheckboxProps};
+use mui_material::radio::{self, RadioGroupProps};
+use mui_material::switch::{self, SwitchProps};
 use mui_material::{AppBar, Button, Snackbar, TextField};
 use mui_styled_engine::{Theme, ThemeProvider};
 use wasm_bindgen::{prelude::*, JsCast};
@@ -196,6 +202,100 @@ async fn button_keyboard_navigation() {
     button.dispatch_event(&event).unwrap();
 
     assert!(clicked.get(), "Enter key should trigger click");
+    axe_check(&mount).await;
+}
+
+/// Verify the checkbox control renders with accessible markup and passes the
+/// axe-core audit in a browser environment.
+#[wasm_bindgen_test(async)]
+async fn checkbox_accessibility_audit() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let props = CheckboxProps::new("Email updates");
+        let state = CheckboxState::uncontrolled(false, false);
+        let markup =
+            Html::from_html_unchecked(AttrValue::from(checkbox::yew::render(&props, &state)));
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                {markup}
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let checkbox = mount
+        .query_selector("[role='checkbox']")
+        .unwrap()
+        .expect("checkbox rendered");
+    assert_eq!(checkbox.get_attribute("aria-checked").unwrap(), "false");
+    axe_check(&mount).await;
+}
+
+/// Validate the radio group exposes radiogroup semantics and is free of axe
+/// violations.
+#[wasm_bindgen_test(async)]
+async fn radio_accessibility_audit() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let state = RadioGroupState::uncontrolled(
+            vec!["Alpha".into(), "Beta".into(), "Gamma".into()],
+            false,
+            RadioOrientation::Horizontal,
+            Some(0),
+        );
+        let props = RadioGroupProps::from_state(&state);
+        let markup = Html::from_html_unchecked(AttrValue::from(radio::yew::render(&props, &state)));
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                {markup}
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let radios = mount.query_selector_all("[role='radio']").unwrap();
+    assert_eq!(radios.length(), 3);
+    axe_check(&mount).await;
+}
+
+/// Validate the switch renders and passes accessibility audit.
+#[wasm_bindgen_test(async)]
+async fn switch_accessibility_audit() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let mut state = SwitchState::uncontrolled(false, false);
+        state.focus();
+        let props = SwitchProps::new("Notifications");
+        let markup =
+            Html::from_html_unchecked(AttrValue::from(switch::yew::render(&props, &state)));
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                {markup}
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let switch_el = mount
+        .query_selector("[role='switch']")
+        .unwrap()
+        .expect("switch rendered");
+    assert_eq!(switch_el.get_attribute("aria-checked").unwrap(), "false");
     axe_check(&mount).await;
 }
 
