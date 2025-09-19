@@ -18,6 +18,22 @@ enterprise-friendly ergonomics: button callbacks can be throttled,
 text inputs debounced and style overrides appended directly within
 `css_with_theme!` blocks.
 
+## Component Coverage
+
+Parity with the upstream React package is tracked automatically in the
+[Material component parity report](../../docs/material-component-parity.md).
+The snapshot lists every export from `packages/mui-material/src` and highlights
+which widgets are implemented in this crate or delegated to `mui-headless`.
+
+Current gaps most relevant to enterprise adopters include:
+
+- Advanced form helpers such as `Autocomplete` and `Select`.
+- The data-heavy `Table` family (`Table`, `TableBody`, `TablePagination`).
+- Navigation primitives including `Tabs` and related panels.
+
+Contributions that land these components should reference the report to keep
+the automation in sync; `cargo xtask material-parity` refreshes the metrics.
+
 ## Feature Flags
 
 Select a single front-end framework to keep builds lean. All features are

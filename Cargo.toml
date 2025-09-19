@@ -41,6 +41,7 @@ members = [
     "crates/mui-icons-material",
     "crates/mui-utils",
     "crates/xtask",
+    "tools/material-parity",
 ]
 
 # Use Cargo's second feature resolver so optional dependencies don't
@@ -83,13 +84,15 @@ once_cell = "1.21.3"
 proptest = "1.2"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = ["Window", "HtmlElement", "Event", "EventTarget"] }
-chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+chrono = { version = "0.4", default-features = false, features = ["std", "clock", "serde"] }
 time = { version = "0.3", default-features = false, features = ["formatting", "macros"] }
 # Lightweight tooling dependencies used by maintenance utilities like the
 # icon updater. These are optional in downstream crates but centralised here
 # so versions stay consistent across the workspace.
 ureq = { version = "2.9", features = ["tls"], default-features = false }
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
+walkdir = "2.5"
+heck = "0.5"
 
 [profile.dev]
 # Development builds prioritize compile time over runtime performance.

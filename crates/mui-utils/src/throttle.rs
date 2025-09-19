@@ -74,7 +74,7 @@ where
         }
         let now = Instant::now();
         let mut last_lock = last.lock().unwrap();
-        if last_lock.map_or(true, |l| now.duration_since(l) >= interval) {
+        if last_lock.is_none_or(|l| now.duration_since(l) >= interval) {
             *last_lock = Some(now);
             func(arg);
         }

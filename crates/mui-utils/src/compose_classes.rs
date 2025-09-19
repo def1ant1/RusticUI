@@ -51,25 +51,23 @@ where
     for (slot_name, slot_values) in slots {
         let mut buf = String::new();
         let mut seen = HashSet::new();
-        for opt in slot_values {
-            if let Some(ref value) = opt {
-                // Avoid repeating the same utility key
-                if seen.insert(value.clone()) {
-                    let util = get_utility_class(value);
-                    if !util.is_empty() {
-                        if !buf.is_empty() {
-                            buf.push(' ');
-                        }
-                        buf.push_str(&util);
+        for value in slot_values.iter().flatten() {
+            // Avoid repeating the same utility key
+            if seen.insert(value.clone()) {
+                let util = get_utility_class(value);
+                if !util.is_empty() {
+                    if !buf.is_empty() {
+                        buf.push(' ');
                     }
-                    if let Some(class_map) = classes {
-                        if let Some(extra) = class_map.get(value) {
-                            if !extra.is_empty() {
-                                if !buf.is_empty() {
-                                    buf.push(' ');
-                                }
-                                buf.push_str(extra);
+                    buf.push_str(&util);
+                }
+                if let Some(class_map) = classes {
+                    if let Some(extra) = class_map.get(value) {
+                        if !extra.is_empty() {
+                            if !buf.is_empty() {
+                                buf.push(' ');
                             }
+                            buf.push_str(extra);
                         }
                     }
                 }

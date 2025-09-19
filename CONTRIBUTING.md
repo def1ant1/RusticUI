@@ -29,6 +29,20 @@ Before starting large efforts, open a GitHub discussion or issue so the maintain
 
 All repetitive chores are encapsulated inside the `Makefile` or `cargo xtask`. Prefer these entry points over ad-hoc scripts.
 
+### Component parity tracker
+
+To monitor progress toward full Material UI coverage run the automated scanner:
+
+```bash
+cargo xtask material-parity
+```
+
+The command invokes the Rust CLI under `tools/material-parity` which parses the
+React source (`packages/mui-material/src`) and generates the consolidated
+report at `docs/material-component-parity.md`. Keep this artifact up to date in
+pull requests that add or remove components so downstream teams have a reliable
+signal when planning migrations.
+
 ## Branching and pull requests
 
 - Fork the repository and branch from `main`.

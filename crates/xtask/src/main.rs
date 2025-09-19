@@ -51,6 +51,8 @@ enum Commands {
     BuildDocs,
     /// Regenerate serialized theme templates and CSS baselines.
     GenerateTheme,
+    /// Recompute the Material component parity dashboard.
+    MaterialParity,
 }
 
 fn main() -> Result<()> {
@@ -68,6 +70,7 @@ fn main() -> Result<()> {
         Commands::AccessibilityAudit => accessibility_audit(),
         Commands::BuildDocs => build_docs(),
         Commands::GenerateTheme => generate_theme(),
+        Commands::MaterialParity => material_parity(),
     }
 }
 
@@ -239,6 +242,19 @@ fn generate_theme() -> Result<()> {
     println!("[xtask] wrote {}", css_path.display());
 
     Ok(())
+}
+
+fn material_parity() -> Result<()> {
+    // Keep the parity snapshot fresh so enterprise adopters can track adoption progress
+    // without spelunking through multiple repositories.
+    let mut cmd = Command::new("cargo");
+    cmd.arg("run")
+        .arg("-p")
+        .arg("material-parity")
+        .arg("--")
+        .arg("--report")
+        .arg("docs/material-component-parity.md");
+    run(cmd)
 }
 
 fn bench() -> Result<()> {
