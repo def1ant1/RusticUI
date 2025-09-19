@@ -24,7 +24,7 @@ pub fn derive_theme(input: TokenStream) -> TokenStream {
     let assignments = fields.iter().map(|f| {
         let ident = f.ident.as_ref().unwrap();
         let ty = &f.ty;
-        let assignment = if is_option(ty) {
+        if is_option(ty) {
             quote! {
                 #ident: self.#ident
                     .map(::core::convert::Into::into)
@@ -32,8 +32,7 @@ pub fn derive_theme(input: TokenStream) -> TokenStream {
             }
         } else {
             quote! { #ident: ::core::convert::Into::into(self.#ident) }
-        };
-        assignment
+        }
     });
 
     let expanded = quote! {
