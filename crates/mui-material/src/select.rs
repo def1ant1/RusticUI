@@ -18,6 +18,7 @@
 
 use mui_headless::select::SelectState;
 use mui_styled_engine::{css_with_theme, Style};
+use mui_system::portal::PortalMount;
 
 /// Discrete option rendered inside the Material select popover.
 #[derive(Clone, Debug)]
@@ -70,21 +71,22 @@ impl SelectProps {
 
 /// Shared rendering routine used by SSR adapters.
 fn render_html(props: &SelectProps, state: &SelectState) -> String {
+    let portal = popover_mount(props);
     // Compute the attribute strings for each element.  The helper automatically
     // attaches the generated class from the themed `Style` alongside ARIA and
     // data hooks.  Centralizing this ensures hydration order matches server
     // output and keeps automation selectors consistent across frameworks.
     let root_attrs = crate::style_helpers::themed_attributes_html(
         themed_root_style(),
-        root_attributes(props, state),
+        root_attributes(props, state, &portal),
     );
     let trigger_attrs = crate::style_helpers::themed_attributes_html(
         themed_trigger_style(),
-        trigger_attributes(props, state),
+        trigger_attributes(props, state, &portal),
     );
     let list_attrs = crate::style_helpers::themed_attributes_html(
         themed_list_style(),
-        list_attributes(props, state),
+        list_attributes(props, state, &portal),
     );
 
     // Render each option with its own themed attributes.  We intentionally keep
@@ -99,9 +101,14 @@ fn render_html(props: &SelectProps, state: &SelectState) -> String {
         options_html.push_str(&format!("<li {option_attrs}>{}</li>", option.label));
     }
 
+    let anchor_html = portal.anchor_html();
+    let popover_markup = portal.wrap(format!("<ul {list_attrs}>{options_html}</ul>"));
+
     format!(
-        "<div {root_attrs}><button {trigger_attrs}>{}</button><ul {list_attrs}>{options_html}</ul></div>",
-        props.label
+        "<div {root_attrs}><button {trigger_attrs}>{}</button>{}</div>{}",
+        props.label,
+        anchor_html,
+        popover_markup.into_html()
     )
 }
 
@@ -124,10 +131,18 @@ fn option_id(props: &SelectProps, index: usize) -> String {
 }
 
 /// Build the attribute map for the root container.
-fn root_attributes(props: &SelectProps, state: &SelectState) -> Vec<(String, String)> {
+fn root_attributes(
+    props: &SelectProps,
+    state: &SelectState,
+    portal: &PortalMount,
+) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("data-component".into(), "mui-select".into()));
     attrs.push(("data-open".into(), state.is_open().to_string()));
+    attrs.push((
+        "data-portal-layer".into(),
+        portal.layer().as_str().to_string(),
+    ));
     if let Some(id) = &props.automation_id {
         attrs.push(("data-automation-id".into(), id.clone()));
     }
@@ -135,7 +150,11 @@ fn root_attributes(props: &SelectProps, state: &SelectState) -> Vec<(String, Str
 }
 
 /// Build the attribute map for the trigger button.
-fn trigger_attributes(props: &SelectProps, state: &SelectState) -> Vec<(String, String)> {
+fn trigger_attributes(
+    props: &SelectProps,
+    state: &SelectState,
+    portal: &PortalMount,
+) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("role".into(), state.trigger_role().into()));
     let (key, value) = state.trigger_haspopup();
@@ -144,6 +163,8 @@ fn trigger_attributes(props: &SelectProps, state: &SelectState) -> Vec<(String, 
     attrs.push((expanded_key.into(), expanded_value.into()));
     attrs.push(("aria-controls".into(), list_id(props)));
     attrs.push(("data-open".into(), state.is_open().to_string()));
+    attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
+    attrs.push(("data-portal-root".into(), portal.container_id()));
     if let Some(id) = &props.automation_id {
         attrs.push(("data-automation-trigger".into(), id.clone()))
     }
@@ -151,7 +172,11 @@ fn trigger_attributes(props: &SelectProps, state: &SelectState) -> Vec<(String, 
 }
 
 /// Build the attribute map for the listbox container.
-fn list_attributes(props: &SelectProps, state: &SelectState) -> Vec<(String, String)> {
+fn list_attributes(
+    props: &SelectProps,
+    state: &SelectState,
+    portal: &PortalMount,
+) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("id".into(), list_id(props)));
     attrs.push(("role".into(), state.list_role().into()));
@@ -163,6 +188,8 @@ fn list_attributes(props: &SelectProps, state: &SelectState) -> Vec<(String, Str
         ));
     }
     attrs.push(("data-open".into(), state.is_open().to_string()));
+    attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
+    attrs.push(("data-portal-root".into(), portal.container_id()));
     if let Some(id) = &props.automation_id {
         attrs.push(("data-automation-list".into(), id.clone()));
     }
@@ -189,6 +216,11 @@ fn option_attributes(
         attrs.push(("data-automation-option".into(), format!("{id}-{index}")));
     }
     attrs
+}
+
+fn popover_mount(props: &SelectProps) -> PortalMount {
+    let base = format!("{}-popover", automation_base(props));
+    PortalMount::popover(base)
 }
 
 /// Baseline wrapper style ensuring the select trigger and list share consistent
@@ -407,11 +439,15 @@ mod tests {
     fn trigger_attributes_include_aria_contract() {
         let props = sample_props();
         let state = build_state(props.options.len());
-        let attrs = trigger_attributes(&props, &state);
+        let portal = popover_mount(&props);
+        let attrs = trigger_attributes(&props, &state, &portal);
         assert!(attrs
             .iter()
             .any(|(k, v)| k == "aria-haspopup" && v == "listbox"));
         assert!(attrs.iter().any(|(k, _)| k == "aria-controls"));
+        assert!(attrs
+            .iter()
+            .any(|(k, v)| k == "data-portal-root" && v.ends_with("-portal")));
     }
 
     #[test]
@@ -419,10 +455,14 @@ mod tests {
         let mut state = build_state(2);
         state.set_highlighted(Some(1));
         let props = sample_props();
-        let attrs = list_attributes(&props, &state);
+        let portal = popover_mount(&props);
+        let attrs = list_attributes(&props, &state, &portal);
         assert!(attrs
             .iter()
             .any(|(k, v)| k == "aria-activedescendant" && v.ends_with("-option-1")));
+        assert!(attrs
+            .iter()
+            .any(|(k, v)| k == "data-portal-anchor" && v.ends_with("-anchor")));
     }
 
     #[test]
@@ -432,5 +472,26 @@ mod tests {
         let html = render_html(&props, &state);
         assert!(html.contains("data-automation-id=\"sample\""));
         assert!(html.contains("data-value=\"1\""));
+        assert!(html.contains("data-portal-root"));
+        assert!(html.contains("data-portal-anchor"));
+    }
+
+    #[test]
+    fn render_html_appends_portal_container_once() {
+        let props = sample_props();
+        let state = build_state(props.options.len());
+        let html = render_html(&props, &state);
+        let anchor_count = html.matches("data-portal-anchor").count();
+        let root_count = html.matches("data-portal-root").count();
+        assert!(
+            anchor_count >= 2,
+            "expected anchor metadata on trigger/list/placeholder"
+        );
+        assert!(root_count >= 2, "expected root metadata across markup");
+        assert_eq!(
+            html.matches("<ul").count(),
+            1,
+            "list markup should only render once"
+        );
     }
 }

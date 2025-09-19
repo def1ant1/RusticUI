@@ -9,6 +9,7 @@
 
 use mui_headless::menu::MenuState;
 use mui_styled_engine::{css_with_theme, Style};
+use mui_system::portal::PortalMount;
 
 /// Individual actionable item rendered within the menu surface.
 #[derive(Clone, Debug)]
@@ -61,17 +62,18 @@ impl MenuProps {
 
 /// Shared rendering routine that produces SSR friendly HTML strings.
 fn render_html(props: &MenuProps, state: &MenuState) -> String {
+    let portal = popover_mount(props);
     let root_attrs = crate::style_helpers::themed_attributes_html(
         themed_root_style(),
-        root_attributes(props, state),
+        root_attributes(props, state, &portal),
     );
     let trigger_attrs = crate::style_helpers::themed_attributes_html(
         themed_trigger_style(),
-        trigger_attributes(props, state),
+        trigger_attributes(props, state, &portal),
     );
     let surface_attrs = crate::style_helpers::themed_attributes_html(
         themed_surface_style(),
-        surface_attributes(props, state),
+        surface_attributes(props, state, &portal),
     );
 
     let mut items_html = String::new();
@@ -83,9 +85,14 @@ fn render_html(props: &MenuProps, state: &MenuState) -> String {
         items_html.push_str(&format!("<li {item_attrs}>{}</li>", item.label));
     }
 
+    let anchor_html = portal.anchor_html();
+    let portal_markup = portal.wrap(format!("<ul {surface_attrs}>{items_html}</ul>"));
+
     format!(
-        "<div {root_attrs}><button {trigger_attrs}>{}</button><ul {surface_attrs}>{items_html}</ul></div>",
-        props.label
+        "<div {root_attrs}><button {trigger_attrs}>{}</button>{}</div>{}",
+        props.label,
+        anchor_html,
+        portal_markup.into_html()
     )
 }
 
@@ -104,17 +111,29 @@ fn item_id(props: &MenuProps, index: usize) -> String {
     format!("{}-item-{index}", automation_base(props))
 }
 
-fn root_attributes(props: &MenuProps, state: &MenuState) -> Vec<(String, String)> {
+fn root_attributes(
+    props: &MenuProps,
+    state: &MenuState,
+    portal: &PortalMount,
+) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("data-component".into(), "mui-menu".into()));
     attrs.push(("data-open".into(), state.is_open().to_string()));
+    attrs.push((
+        "data-portal-layer".into(),
+        portal.layer().as_str().to_string(),
+    ));
     if let Some(id) = &props.automation_id {
         attrs.push(("data-automation-id".into(), id.clone()));
     }
     attrs
 }
 
-fn trigger_attributes(props: &MenuProps, state: &MenuState) -> Vec<(String, String)> {
+fn trigger_attributes(
+    props: &MenuProps,
+    state: &MenuState,
+    portal: &PortalMount,
+) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("role".into(), state.trigger_role().into()));
     let (key, value) = state.trigger_haspopup();
@@ -123,13 +142,19 @@ fn trigger_attributes(props: &MenuProps, state: &MenuState) -> Vec<(String, Stri
     attrs.push((expanded_key.into(), expanded_value.into()));
     attrs.push(("aria-controls".into(), surface_id(props)));
     attrs.push(("data-open".into(), state.is_open().to_string()));
+    attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
+    attrs.push(("data-portal-root".into(), portal.container_id()));
     if let Some(id) = &props.automation_id {
         attrs.push(("data-automation-trigger".into(), id.clone()));
     }
     attrs
 }
 
-fn surface_attributes(props: &MenuProps, state: &MenuState) -> Vec<(String, String)> {
+fn surface_attributes(
+    props: &MenuProps,
+    state: &MenuState,
+    portal: &PortalMount,
+) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("id".into(), surface_id(props)));
     attrs.push(("role".into(), state.menu_role().into()));
@@ -138,6 +163,8 @@ fn surface_attributes(props: &MenuProps, state: &MenuState) -> Vec<(String, Stri
         attrs.push(("data-highlighted".into(), highlighted.to_string()));
     }
     attrs.push(("data-open".into(), state.is_open().to_string()));
+    attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
+    attrs.push(("data-portal-root".into(), portal.container_id()));
     if let Some(id) = &props.automation_id {
         attrs.push(("data-automation-surface".into(), id.clone()));
     }
@@ -156,6 +183,11 @@ fn item_attributes(props: &MenuProps, state: &MenuState, index: usize) -> Vec<(S
         attrs.push(("data-automation-item".into(), format!("{id}-{index}")));
     }
     attrs
+}
+
+fn popover_mount(props: &MenuProps) -> PortalMount {
+    let base = format!("{}-popover", automation_base(props));
+    PortalMount::popover(base)
 }
 
 fn themed_root_style() -> Style {
@@ -340,11 +372,15 @@ mod tests {
     fn trigger_attributes_include_menu_contract() {
         let props = sample_props();
         let state = build_state(props.items.len());
-        let attrs = trigger_attributes(&props, &state);
+        let portal = popover_mount(&props);
+        let attrs = trigger_attributes(&props, &state, &portal);
         assert!(attrs
             .iter()
             .any(|(k, v)| k == "aria-haspopup" && v == "menu"));
         assert!(attrs.iter().any(|(k, _)| k == "aria-controls"));
+        assert!(attrs
+            .iter()
+            .any(|(k, v)| k == "data-portal-root" && v.ends_with("-portal")));
     }
 
     #[test]
@@ -352,8 +388,12 @@ mod tests {
         let props = sample_props();
         let mut state = build_state(props.items.len());
         state.open(|_| {});
-        let attrs = surface_attributes(&props, &state);
+        let portal = popover_mount(&props);
+        let attrs = surface_attributes(&props, &state, &portal);
         assert!(attrs.iter().any(|(k, v)| k == "data-open" && v == "true"));
+        assert!(attrs
+            .iter()
+            .any(|(k, v)| k == "data-portal-anchor" && v.ends_with("-anchor")));
     }
 
     #[test]
@@ -363,5 +403,20 @@ mod tests {
         let html = render_html(&props, &state);
         assert!(html.contains("data-command=\"profile\""));
         assert!(html.contains("data-automation-id=\"sample-menu\""));
+        assert!(html.contains("data-portal-root"));
+        assert!(html.contains("data-portal-anchor"));
+    }
+
+    #[test]
+    fn render_html_renders_single_surface_instance() {
+        let props = sample_props();
+        let state = build_state(props.items.len());
+        let html = render_html(&props, &state);
+        assert_eq!(
+            html.matches("<ul").count(),
+            1,
+            "menu surface should only render once"
+        );
+        assert!(html.contains("data-portal-layer=\"popover\""));
     }
 }

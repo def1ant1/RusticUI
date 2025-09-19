@@ -9,6 +9,7 @@
 //! for their target framework (`yew`, `leptos`, ...).
 
 pub mod macros;
+pub mod portal;
 pub mod responsive;
 mod scoped_class;
 pub mod style;
@@ -32,6 +33,7 @@ pub use crate::theme_provider::use_theme;
 pub use container::Container;
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use grid::Grid;
+pub use portal::{PortalFragment, PortalLayer, PortalMount};
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use r#box::Box;
 pub use responsive::{grid_span_to_percent, Responsive};

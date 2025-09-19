@@ -35,6 +35,27 @@ mui-system = { version = "0.1", features = ["yew"] }
 
 Available features include `yew`, `leptos`, `dioxus` and `sycamore`.
 
+## Portal orchestration
+
+The [`portal`](./src/portal.rs) module centralises how floating surfaces are
+rendered during SSR. Use `PortalMount::popover` to generate deterministic anchor
+and container markup:
+
+```rust
+use mui_system::portal::PortalMount;
+
+let mount = PortalMount::popover("orders-popover");
+let anchor_html = mount.anchor_html(); // <span data-portal-anchor="orders-popover" ...>
+let detached_container = mount.wrap("<ul id=\"orders-list\">...</ul>");
+```
+
+Adapters emit `anchor_html` next to the trigger and append the detached container
+after the host markup. Client frameworks inspect the `data-portal-*` metadata
+once lifecycle hooks fire to mount the floating surface into `document.body`
+without duplicating markup. Because the portal IDs derive from automation IDs
+the resulting DOM is easy to target in QA automation regardless of hosting
+framework.
+
 ### Responsive props
 
 Every layout primitive understands breakpoint aware values through the
