@@ -1,3 +1,5 @@
+#![cfg(feature = "yew")]
+
 //! Simple bridge to the `axe-core` accessibility engine.
 //!
 //! The JS implementation lives alongside this file in `axe.js` and is imported

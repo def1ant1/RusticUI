@@ -1,7 +1,8 @@
 //! Material Design components built on top of [`mui-styled-engine`].
 //!
-//! The crate currently provides a small subset of widgets such as [`Button`],
-//! [`Card`], [`Dialog`], [`AppBar`], [`TextField`] and [`Snackbar`]. Each component consumes the shared [`Theme`]
+//! The crate currently provides a small subset of widgets such as [`button`],
+//! [`card`], [`dialog`], [`app_bar`], [`text_field`], [`snackbar`], [`checkbox`],
+//! [`radio`] and [`switch`]. Each component consumes the shared [`Theme`]
 //! provided by `mui-styled-engine` so applications have a single source of
 //! truth for styling.
 //!
@@ -24,10 +25,14 @@
 pub mod app_bar;
 pub mod button;
 pub mod card;
+pub mod checkbox;
 pub mod dialog;
 pub mod macros;
+pub mod radio;
+mod selection_control;
 pub mod snackbar;
 mod style_helpers;
+pub mod switch;
 pub mod text_field;
 
 pub use mui_styled_engine::Theme;
