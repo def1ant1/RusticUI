@@ -1,10 +1,10 @@
 # Cargo feature guide
 
-Material UI Rust crates expose fine‑grained Cargo features so applications compile only what they need. Disabling defaults and enabling a small feature set keeps builds fast and binaries lean.
+RusticUI crates expose fine‑grained Cargo features so applications compile only what they need. Disabling defaults and enabling a small feature set keeps builds fast and binaries lean.
 
 ## Components
 
-`mui-material` gates each front‑end framework behind a feature flag. Start with no default features and opt into the one you use:
+`mui-material` (soon to be published as `rustic-ui-material`) gates each front‑end framework behind a feature flag. Start with no default features and opt into the one you use:
 
 ```toml
 [dependencies]
@@ -22,7 +22,7 @@ The table below lists available framework adapters:
 
 ## Icons
 
-`mui-icons-material` ships thousands of SVGs, each behind its own feature. The crate enables `all-icons` by default for convenience. In production disable the default and cherry‑pick only the icons your UI references:
+`mui-icons-material`—the RusticUI icon pipeline during the transition period—ships thousands of SVGs, each behind its own feature. The crate enables `all-icons` by default for convenience. In production disable the default and cherry‑pick only the icons your UI references:
 
 ```toml
 [dependencies]
