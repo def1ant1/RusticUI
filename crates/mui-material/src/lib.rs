@@ -2,7 +2,7 @@
 //!
 //! The crate currently provides a small subset of widgets such as [`button`],
 //! [`card`], [`dialog`], [`app_bar`], [`text_field`], [`snackbar`], [`checkbox`],
-//! [`radio`] and [`switch`]. Each component consumes the shared [`Theme`]
+//! [`radio`], [`select`], [`menu`] and [`switch`]. Each component consumes the shared [`Theme`]
 //! provided by `mui-styled-engine` so applications have a single source of
 //! truth for styling.
 //!
@@ -28,7 +28,9 @@ pub mod card;
 pub mod checkbox;
 pub mod dialog;
 pub mod macros;
+pub mod menu;
 pub mod radio;
+pub mod select;
 mod selection_control;
 pub mod snackbar;
 mod style_helpers;
