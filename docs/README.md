@@ -1,6 +1,7 @@
 # Docs
 
-This is the website of the company (MUI), the documentation of Material UI, MUI Base, MUI System, and Joy UI.
+This directory powers the RusticUI documentation site maintained by Apotheon.ai. It covers the RusticUI component families,
+headless primitives, automation tooling, and migration paths.
 
 To start the docs site in development mode, from the project root, run:
 
@@ -14,18 +15,21 @@ Package managers other than pnpm (like npm or Yarn) are not supported and will n
 
 ## How can I add a new demo to the documentation?
 
-[You can follow this guide](https://github.com/mui/material-ui/blob/HEAD/CONTRIBUTING.md)
-on how to get started contributing to MUI.
+1. Open a discussion in the [RusticUI RFC board](https://github.com/apotheon-ai/rusticui/discussions/categories/rfcs) describing the
+   problem the demo should solve.
+2. Once approved, use `cargo xtask scaffold-component` or `cargo xtask scaffold-demo` to generate the baseline files. The script
+   injects accessibility tests, analytics tags, and translation scaffolding automatically to minimize manual wiring.
+3. Commit the generated files and update the appropriate page inside `docs/src/pages`.
 
 ## How do I help to improve the translations?
 
-Please visit https://crowdin.com/project/material-ui-docs where you will be able to select a language and edit the translations.
-Please don't submit pull requests directly.
+RusticUI translations are managed through the Apotheon.ai Crowdin workspace: <https://crowdin.com/project/rusticui-docs>.
+Please avoid submitting pull requests with manual translation edits; instead comment on the Crowdin strings so the localization
+team can propagate the updates across the automation pipeline.
 
-## Rust theming resources
+## Rustic theming resources
 
-Looking for the Rust-specific theming workflow (Material defaults, overrides via
-`#[derive(Theme)]`, and global baseline styles)? Start with the
-[`crates/mui-system/README.md`](../crates/mui-system/README.md#theming-and-global-styles)
-guide which mirrors the behaviour exposed by the JavaScript packages and keeps
-automation steps such as `cargo xtask generate-theme` documented in one place.
+Looking for the Rust-specific theming workflow (Rustic palettes, overrides via `#[derive(Theme)]`, and global baseline styles)?
+Start with [`crates/mui-system/README.md`](../crates/mui-system/README.md#theming-and-global-styles) while the crates transition to
+their RusticUI names. That guide documents the automation steps such as `cargo xtask generate-theme` and explains how the design
+tokens integrate with the continuous delivery workflows.
