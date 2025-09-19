@@ -27,7 +27,7 @@ which widgets are implemented in this crate or delegated to `mui-headless`.
 
 Current gaps most relevant to enterprise adopters include:
 
-- Advanced form helpers such as `Autocomplete` and `Select`.
+- Advanced form helpers such as `Autocomplete`.
 - The data-heavy `Table` family (`Table`, `TableBody`, `TablePagination`).
 - Navigation primitives including `Tabs` and related panels.
 
@@ -48,6 +48,30 @@ disabled by default so applications opt in explicitly:
 
 See the [Cargo feature guide](../../docs/cargo-features.md) for examples of
 disabling defaults and enabling only the framework your application requires.
+
+## Framework adapters & portal orchestration
+
+Every Material component exposes framework-specific adapter modules (`yew`,
+`leptos`, `dioxus`, `sycamore`) that simply forward props/state into shared
+renderers.  The adapters return HTML strings suitable for SSR pipelines and are
+careful to reuse the central markup helpers so hydration is deterministic across
+frameworks.
+
+Floating surfaces such as `Select` and `Menu` now leverage
+[`mui_system::PortalMount`](../mui-system/src/portal.rs) to emit deterministic
+`data-portal-*` anchors during SSR. Each adapter renders the trigger, appends a
+hidden anchor placeholder, and then emits a detached container that client
+frameworks attach to `document.body` once lifecycle hooks fire (`Component::view`
+for Yew, `create_effect`/`spawn_local` for Leptos, `use_future` for Dioxus and
+`create_effect` for Sycamore).  Because the portal IDs derive from the
+`automation_id` prop, QA suites can target the surfaces without caring about the
+host framework.
+
+When integrating the adapters in an application ensure the portal metadata is
+consumed during hydration—each framework has a lightweight bootstrap helper that
+looks up the `data-portal-anchor` element and positions the floating surface
+relative to it once the runtime is ready.  This keeps server and client output in
+lock-step and eliminates duplicate popover markup.
 
 ## Example
 
