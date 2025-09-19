@@ -358,7 +358,9 @@ mod tests {
                 last = state.on_key(*key, noop);
             }
             assert_eq!(
-                last, case.expect_highlight, "{}: unexpected highlight", case.name
+                last, case.expect_highlight,
+                "{}: unexpected highlight",
+                case.name
             );
         }
     }
@@ -473,10 +475,7 @@ mod tests {
             uncontrolled.trigger_haspopup(),
             ("aria-haspopup", "listbox")
         );
-        assert_eq!(
-            uncontrolled.trigger_expanded(),
-            ("aria-expanded", "true")
-        );
+        assert_eq!(uncontrolled.trigger_expanded(), ("aria-expanded", "true"));
         assert_eq!(uncontrolled.list_role(), "listbox");
         assert_eq!(uncontrolled.option_role(), "option");
 

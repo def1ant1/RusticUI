@@ -35,4 +35,3 @@ mod sycamore_tests {
         assert!(out.contains(">content</div>"));
     }
 }
-

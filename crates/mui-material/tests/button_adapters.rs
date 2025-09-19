@@ -81,4 +81,3 @@ mod sycamore_tests {
         assert!(out.ends_with(">Save</button>"));
     }
 }
-

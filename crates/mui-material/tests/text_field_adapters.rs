@@ -51,4 +51,3 @@ mod sycamore_tests {
         assert!(out.contains("aria-label=\"Email\""));
     }
 }
-
