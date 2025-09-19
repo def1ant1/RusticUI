@@ -45,6 +45,7 @@
 //! it easy to audit which metadata ships with the control in server rendered
 //! output.
 
+#[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
 use crate::theme_provider::use_theme;
 use mui_utils::{attributes_to_html, collect_attributes, extend_attributes};
 
@@ -129,6 +130,7 @@ struct ScopedStyle {
 
 /// Resolves theme driven styling tokens, applying sensible defaults where
 /// callers omitted a value.
+#[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
 fn resolve_visual_tokens(props: &ThemedProps) -> VisualTokens {
     let theme = use_theme();
     // Default to the primary body colour so the control mirrors Material text

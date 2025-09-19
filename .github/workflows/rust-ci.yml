@@ -165,3 +165,25 @@ jobs:
               (cd "$crate" && cargo publish --dry-run)
             fi
           done
+
+  select-menu-examples:
+    name: Select Menu Example Smoke Tests
+    runs-on: ubuntu-latest
+    steps:
+      # Ensure the examples build against the latest shared helpers
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: select-menu-examples
+      - name: Check Yew WASM build
+        run: cargo check --target wasm32-unknown-unknown --manifest-path examples/select-menu-yew/Cargo.toml
+      - name: SSR snapshot Yew demo
+        run: cargo run --manifest-path examples/select-menu-yew/Cargo.toml --no-default-features --features ssr
+      - name: Check Leptos WASM build
+        run: cargo check --target wasm32-unknown-unknown --manifest-path examples/select-menu-leptos/Cargo.toml
+      - name: SSR snapshot Leptos demo
+        run: cargo run --manifest-path examples/select-menu-leptos/Cargo.toml --no-default-features --features ssr

@@ -1,0 +1,21 @@
+[package]
+name = "select-menu-leptos"
+version = "0.1.0"
+edition = "2021"
+description = "Leptos adapter for the RusticUI select menu demo"
+license = "MIT OR Apache-2.0"
+
+[workspace]
+members = []
+
+[dependencies]
+leptos = { version = "=0.6.12", default-features = false }
+mui-material = { path = "../../crates/mui-material" }
+mui-headless = { path = "../../crates/mui-headless" }
+select-menu-shared = { path = "../select-menu-shared", default-features = false }
+tokio = { version = "1.37", default-features = false, features = ["macros", "rt-multi-thread", "time"], optional = true }
+
+[features]
+default = ["csr"]
+csr = ["select-menu-shared/csr", "leptos/csr"]
+ssr = ["tokio", "select-menu-shared/ssr", "leptos/ssr"]

@@ -100,6 +100,64 @@ cargo xtask build-docs            # build the documentation site
 
 Each task emits verbose logs and returns a non-zero exit code on failure so it can be safely wired into CI pipelines.
 
+## Select and menu reference implementations
+
+The `examples/select-menu-*` packages provide production-ready blueprints for
+accessible listboxes with deterministic automation hooks. Each example shares
+mock data loaders, theme overrides, and controlled state helpers via the
+[`select-menu-shared`](examples/select-menu-shared) crate so teams can lift the
+same primitives into any framework without drift.【F:examples/select-menu-shared/src/lib.rs†L1-L114】
+
+Key capabilities showcased in the examples:
+
+- **Asynchronous loading** – the shared `fetch_regions` helper yields to the
+  runtime before returning datacenter records so both SSR and CSR flows exercise
+  loading states.【F:examples/select-menu-shared/src/lib.rs†L34-L68】
+- **Controlled props** – every renderer uses `controlled_state` to keep the
+  open flag and selected option owned by the host application, mirroring the
+  expectations of enterprise analytics and RBAC pipelines.【F:examples/select-menu-shared/src/lib.rs†L70-L89】
+- **Automation ready markup** – deterministic `data-automation` attributes flow
+  from `AUTOMATION_ID`, giving QA suites stable selectors across SSR and
+  hydration.【F:examples/select-menu-shared/src/lib.rs†L16-L32】【F:examples/select-menu-yew/src/main.rs†L69-L106】
+- **Theme overrides** – both demos wrap the select in the high contrast
+  `enterprise_theme` so accessibility palettes stay consistent across surface
+  areas.【F:examples/select-menu-shared/src/lib.rs†L91-L109】【F:examples/select-menu-leptos/src/main.rs†L13-L84】【F:examples/select-menu-yew/src/main.rs†L96-L132】
+
+The `select-menu-shared` crate documents every helper and provides the entry
+point for new frameworks to consume the renderer, summary generator, and theme
+overrides without reimplementing any plumbing.【F:examples/select-menu-shared/README.md†L1-L27】 Both framework demos
+hydrate client-side while reusing the same SSR shell emitted by
+`render_select_markup`, guaranteeing that automation and accessibility hooks
+stay in sync across environments.【F:examples/select-menu-yew/src/main.rs†L137-L157】【F:examples/select-menu-leptos/src/main.rs†L103-L123】
+
+### Running the demos
+
+Each package ships with a README describing CSR development flows and the SSR
+smoke tests that CI executes. Locally you can validate the examples with:
+
+```bash
+cargo check --target wasm32-unknown-unknown --manifest-path examples/select-menu-yew/Cargo.toml
+cargo run --manifest-path examples/select-menu-yew/Cargo.toml --no-default-features --features ssr
+cargo check --target wasm32-unknown-unknown --manifest-path examples/select-menu-leptos/Cargo.toml
+cargo run --manifest-path examples/select-menu-leptos/Cargo.toml --no-default-features --features ssr
+```
+
+The dedicated CI job mirrors these commands so regressions in the shared
+renderers or framework integrations are caught immediately.【F:.github/workflows/rust-ci.yml†L120-L150】
+
+The Yew variant wires the shared renderer into a component while exposing
+explicit controls for toggling the popover and cycling the selected region:
+
+```rust
+let props = props_from_options("Primary replication region", AUTOMATION_ID, &*options);
+let state = controlled_state(props.options.len(), *selected, *open);
+let html = mui_material::select::yew::render(&props, &state);
+Html::from_html_unchecked(AttrValue::from(html));
+```
+
+The Leptos example mirrors the pattern with `RwSignal`s, ensuring the same state
+machine drives both SSR and CSR paths without duplicating logic.【F:examples/select-menu-leptos/src/main.rs†L13-L84】
+
 ## Workspace layout
 
 The workspace is organized under the `crates/` directory:
