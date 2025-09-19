@@ -279,67 +279,222 @@ mod tests {
 
     fn noop(_: usize) {}
 
+    fn sample_matcher(query: &str, _: Option<usize>, _: usize) -> Option<usize> {
+        match query {
+            "a" => Some(0),
+            "ap" => Some(1),
+            "c" => Some(2),
+            _ => None,
+        }
+    }
+
+    fn skip_disabled(query: &str, current: Option<usize>, len: usize) -> Option<usize> {
+        if query == "c" {
+            current
+        } else {
+            sample_matcher(query, current, len)
+        }
+    }
+
     #[test]
-    fn uncontrolled_selection_updates_internal_state() {
-        let mut state = SelectState::new(
+    fn keyboard_navigation_table_driven() {
+        struct Case {
+            name: &'static str,
+            option_count: usize,
+            initial_selected: Option<usize>,
+            keys: &'static [ControlKey],
+            expect_highlight: Option<usize>,
+        }
+
+        let cases = [
+            Case {
+                name: "wraps_backward_from_first",
+                option_count: 3,
+                initial_selected: Some(0),
+                keys: &[ControlKey::ArrowUp],
+                expect_highlight: Some(2),
+            },
+            Case {
+                name: "wraps_forward_from_last",
+                option_count: 3,
+                initial_selected: Some(2),
+                keys: &[ControlKey::ArrowDown],
+                expect_highlight: Some(0),
+            },
+            Case {
+                name: "home_key_moves_to_first",
+                option_count: 5,
+                initial_selected: Some(3),
+                keys: &[ControlKey::Home],
+                expect_highlight: Some(0),
+            },
+            Case {
+                name: "end_key_moves_to_last",
+                option_count: 5,
+                initial_selected: Some(0),
+                keys: &[ControlKey::End],
+                expect_highlight: Some(4),
+            },
+            Case {
+                name: "empty_select_has_no_highlight",
+                option_count: 0,
+                initial_selected: None,
+                keys: &[ControlKey::ArrowDown, ControlKey::ArrowUp],
+                expect_highlight: None,
+            },
+        ];
+
+        for case in cases {
+            let mut state = SelectState::new(
+                case.option_count,
+                case.initial_selected,
+                false,
+                ControlStrategy::Uncontrolled,
+                ControlStrategy::Uncontrolled,
+            );
+
+            let mut last = state.highlighted();
+            for key in case.keys {
+                last = state.on_key(*key, noop);
+            }
+            assert_eq!(
+                last, case.expect_highlight, "{}: unexpected highlight", case.name
+            );
+        }
+    }
+
+    #[test]
+    fn controlled_vs_uncontrolled_selection_sync() {
+        // Uncontrolled widgets update the backing field immediately.
+        let mut uncontrolled = SelectState::new(
             3,
             Some(1),
             false,
             ControlStrategy::Uncontrolled,
             ControlStrategy::Uncontrolled,
         );
-        state.select(2, noop);
-        assert_eq!(state.selected(), Some(2));
-    }
+        uncontrolled.select(2, noop);
+        assert_eq!(uncontrolled.selected(), Some(2));
 
-    #[test]
-    fn controlled_selection_does_not_mutate_internal_value() {
-        let mut state = SelectState::new(
+        // Controlled widgets emit intents but require the parent to synchronize
+        // state explicitly.
+        let mut controlled = SelectState::new(
             3,
             Some(1),
             false,
             ControlStrategy::Uncontrolled,
             ControlStrategy::Controlled,
         );
-        state.select(2, noop);
-        assert_eq!(state.selected(), Some(1));
-        state.sync_selected(Some(2));
-        assert_eq!(state.selected(), Some(2));
+        controlled.select(2, noop);
+        assert_eq!(controlled.selected(), Some(1));
+        controlled.sync_selected(Some(2));
+        assert_eq!(controlled.selected(), Some(2));
+        controlled.sync_selected(None);
+        assert_eq!(controlled.selected(), None);
     }
 
     #[test]
-    fn keyboard_navigation_wraps() {
-        let mut state = SelectState::new(
+    fn typeahead_cases_cover_disabled_and_rapid_sequences() {
+        struct Case {
+            name: &'static str,
+            sequence: &'static [char],
+            matcher: fn(&str, Option<usize>, usize) -> Option<usize>,
+            expect_selected: Option<usize>,
+            expect_highlight: Option<usize>,
+        }
+
+        let cases = [
+            Case {
+                name: "single_key_selects_and_highlights",
+                sequence: &['c'],
+                matcher: sample_matcher,
+                expect_selected: Some(2),
+                expect_highlight: Some(2),
+            },
+            Case {
+                name: "disabled_option_does_not_select",
+                sequence: &['c'],
+                matcher: skip_disabled,
+                expect_selected: Some(0),
+                expect_highlight: Some(0),
+            },
+            Case {
+                name: "rapid_sequence_uses_full_buffer",
+                sequence: &['a', 'p'],
+                matcher: sample_matcher,
+                expect_selected: Some(1),
+                expect_highlight: Some(1),
+            },
+        ];
+
+        for case in cases {
+            let mut state = SelectState::new(
+                3,
+                Some(0),
+                false,
+                ControlStrategy::Uncontrolled,
+                ControlStrategy::Uncontrolled,
+            );
+
+            for ch in case.sequence {
+                state.on_typeahead(*ch, case.matcher, noop);
+            }
+
+            assert_eq!(
+                state.selected(),
+                case.expect_selected,
+                "{}: unexpected selection",
+                case.name
+            );
+            assert_eq!(
+                state.highlighted(),
+                case.expect_highlight,
+                "{}: unexpected highlight",
+                case.name
+            );
+        }
+    }
+
+    #[test]
+    fn open_state_and_aria_contract() {
+        let mut uncontrolled = SelectState::new(
             2,
             Some(0),
-            true,
-            ControlStrategy::Uncontrolled,
-            ControlStrategy::Uncontrolled,
-        );
-        state.on_key(ControlKey::ArrowUp, noop);
-        assert_eq!(state.highlighted(), Some(1));
-    }
-
-    #[test]
-    fn typeahead_invokes_matcher() {
-        let mut state = SelectState::new(
-            3,
-            None,
             false,
             ControlStrategy::Uncontrolled,
             ControlStrategy::Uncontrolled,
         );
-        state.on_typeahead(
-            'c',
-            |query, _, _| {
-                if query == "c" {
-                    Some(2)
-                } else {
-                    None
-                }
-            },
-            noop,
+        let mut intents = Vec::new();
+        uncontrolled.toggle(|flag| intents.push(flag));
+        assert!(uncontrolled.is_open());
+        assert_eq!(intents, vec![true]);
+        assert_eq!(uncontrolled.trigger_role(), "button");
+        assert_eq!(
+            uncontrolled.trigger_haspopup(),
+            ("aria-haspopup", "listbox")
         );
-        assert_eq!(state.selected(), Some(2));
+        assert_eq!(
+            uncontrolled.trigger_expanded(),
+            ("aria-expanded", "true")
+        );
+        assert_eq!(uncontrolled.list_role(), "listbox");
+        assert_eq!(uncontrolled.option_role(), "option");
+
+        let mut controlled = SelectState::new(
+            2,
+            Some(0),
+            false,
+            ControlStrategy::Controlled,
+            ControlStrategy::Controlled,
+        );
+        let mut observed = Vec::new();
+        controlled.open(|flag| observed.push(flag));
+        assert!(!controlled.is_open());
+        controlled.sync_open(true);
+        assert!(controlled.is_open());
+        controlled.sync_selected(Some(1));
+        assert_eq!(controlled.highlighted(), Some(1));
+        controlled.sync_open(false);
+        assert!(!controlled.is_open());
     }
 }

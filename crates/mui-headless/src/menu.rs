@@ -226,41 +226,222 @@ impl MenuState {
 mod tests {
     use super::*;
 
-    #[test]
-    fn uncontrolled_highlight_updates() {
-        let mut state = MenuState::new(
-            3,
-            true,
-            ControlStrategy::Uncontrolled,
-            ControlStrategy::Uncontrolled,
-        );
-        state.on_key(ControlKey::ArrowDown);
-        assert_eq!(state.highlighted(), Some(1));
+    fn enabled_lookup(query: &str, _: Option<usize>, _: usize) -> Option<usize> {
+        match query {
+            "a" => Some(0),
+            "b" => Some(1),
+            "ap" => Some(1),
+            _ => None,
+        }
+    }
+
+    fn disabled_lookup(query: &str, current: Option<usize>, len: usize) -> Option<usize> {
+        // Delegate to the enabled matcher but treat the "b" query as disabled.
+        if query == "b" {
+            current
+        } else {
+            enabled_lookup(query, current, len)
+        }
+    }
+
+    fn rapid_lookup(query: &str, _: Option<usize>, _: usize) -> Option<usize> {
+        match query {
+            "ap" => Some(1),
+            "a" => Some(0),
+            _ => None,
+        }
     }
 
     #[test]
-    fn controlled_highlight_requires_sync() {
-        let mut state = MenuState::new(
+    fn keyboard_navigation_table_driven() {
+        // Scenario definitions keep expectations close to the inputs so future
+        // maintainers can easily extend coverage without having to mentally
+        // simulate the full interaction sequence.
+        struct Case {
+            name: &'static str,
+            item_count: usize,
+            initial_highlight: Option<usize>,
+            keys: &'static [ControlKey],
+            expect: Option<usize>,
+        }
+
+        let cases = [
+            Case {
+                name: "wraps_from_last_to_first",
+                item_count: 3,
+                initial_highlight: Some(2),
+                keys: &[ControlKey::ArrowDown],
+                expect: Some(0),
+            },
+            Case {
+                name: "wraps_from_first_to_last",
+                item_count: 3,
+                initial_highlight: Some(0),
+                keys: &[ControlKey::ArrowUp],
+                expect: Some(2),
+            },
+            Case {
+                name: "home_key_jumps_to_start",
+                item_count: 5,
+                initial_highlight: Some(3),
+                keys: &[ControlKey::Home],
+                expect: Some(0),
+            },
+            Case {
+                name: "end_key_jumps_to_tail",
+                item_count: 5,
+                initial_highlight: Some(0),
+                keys: &[ControlKey::End],
+                expect: Some(4),
+            },
+            Case {
+                name: "empty_menu_never_highlights",
+                item_count: 0,
+                initial_highlight: None,
+                keys: &[ControlKey::ArrowDown, ControlKey::ArrowUp],
+                expect: None,
+            },
+        ];
+
+        for case in cases {
+            let mut state = MenuState::new(
+                case.item_count,
+                false,
+                ControlStrategy::Uncontrolled,
+                ControlStrategy::Uncontrolled,
+            );
+            state.set_highlighted(case.initial_highlight);
+
+            // Drive the sequence defined in the table and capture the final
+            // highlight to assert that wrap-around logic behaves as designed.
+            let mut last_seen = state.highlighted();
+            for key in case.keys {
+                last_seen = state.on_key(*key);
+            }
+            assert_eq!(
+                last_seen, case.expect, "{}: highlight mismatch", case.name
+            );
+        }
+    }
+
+    #[test]
+    fn controlled_vs_uncontrolled_highlight_sync() {
+        // Controlled highlight mode should defer state updates until the
+        // component owner explicitly synchronizes a value.  Uncontrolled mode
+        // mutates immediately for ergonomics.
+        let mut uncontrolled = MenuState::new(
+            3,
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        uncontrolled.on_key(ControlKey::ArrowDown);
+        assert_eq!(uncontrolled.highlighted(), Some(1));
+
+        let mut controlled = MenuState::new(
             3,
             false,
             ControlStrategy::Uncontrolled,
             ControlStrategy::Controlled,
         );
-        state.on_key(ControlKey::ArrowDown);
-        assert_eq!(state.highlighted(), Some(0));
-        state.sync_highlighted(Some(2));
-        assert_eq!(state.highlighted(), Some(2));
+        let response = controlled.on_key(ControlKey::ArrowDown);
+        // The internal highlight should not move because the owner is expected
+        // to call `sync_highlighted` after handling the navigation intent.
+        assert_eq!(controlled.highlighted(), Some(0));
+        assert_eq!(response, Some(1));
+        controlled.sync_highlighted(response);
+        assert_eq!(controlled.highlighted(), Some(1));
     }
 
     #[test]
-    fn typeahead_updates_highlight() {
-        let mut state = MenuState::new(
-            3,
+    fn typeahead_cases_handle_disabled_and_rapid_input() {
+        // Menu items can be conceptually disabled by having the matcher reject
+        // them.  The table clarifies how the buffer interacts with those
+        // scenarios including the rapid-typeahead case where characters are
+        // entered faster than the timeout window.
+        struct Case {
+            name: &'static str,
+            expected: Option<usize>,
+            matcher: fn(&str, Option<usize>, usize) -> Option<usize>,
+            sequence: &'static [char],
+        }
+
+        let cases: [Case; 3] = [
+            Case {
+                name: "single_key_moves_highlight",
+                expected: Some(1),
+                matcher: enabled_lookup,
+                sequence: &['b'],
+            },
+            Case {
+                name: "disabled_item_prevents_focus_change",
+                expected: Some(0),
+                matcher: disabled_lookup,
+                sequence: &['b'],
+            },
+            Case {
+                name: "rapid_typeahead_uses_full_query",
+                expected: Some(1),
+                matcher: rapid_lookup,
+                sequence: &['a', 'p'],
+            },
+        ];
+
+        for case in cases {
+            let mut state = MenuState::new(
+                2,
+                false,
+                ControlStrategy::Uncontrolled,
+                ControlStrategy::Uncontrolled,
+            );
+            state.set_highlighted(Some(0));
+            for ch in case.sequence {
+                state.on_typeahead(*ch, case.matcher);
+            }
+            assert_eq!(
+                state.highlighted(),
+                case.expected,
+                "{}: highlight mismatch after typeahead",
+                case.name
+            );
+        }
+    }
+
+    #[test]
+    fn open_state_control_and_aria_contract() {
+        let mut uncontrolled = MenuState::new(
+            1,
             false,
             ControlStrategy::Uncontrolled,
             ControlStrategy::Uncontrolled,
         );
-        state.on_typeahead('b', |query, _, _| if query == "b" { Some(1) } else { None });
-        assert_eq!(state.highlighted(), Some(1));
+        let mut observed = Vec::new();
+        uncontrolled.toggle(|open| observed.push(open));
+        // Uncontrolled menus mutate internal state and still notify observers so
+        // renderers can react (for example by toggling CSS classes).
+        assert!(uncontrolled.is_open());
+        assert_eq!(observed, vec![true]);
+        assert_eq!(uncontrolled.trigger_role(), "button");
+        assert_eq!(uncontrolled.trigger_haspopup(), ("aria-haspopup", "menu"));
+        assert_eq!(uncontrolled.trigger_expanded(), ("aria-expanded", "true"));
+        assert_eq!(uncontrolled.menu_role(), "menu");
+        assert_eq!(uncontrolled.item_role(), "menuitem");
+
+        let mut controlled = MenuState::new(
+            1,
+            false,
+            ControlStrategy::Controlled,
+            ControlStrategy::Controlled,
+        );
+        let mut open_events = Vec::new();
+        controlled.open(|intent| open_events.push(intent));
+        // Controlled menus emit intents but leave the internal flag untouched
+        // until the host application calls `sync_open` with the actual value.
+        assert!(!controlled.is_open());
+        assert_eq!(open_events, vec![true]);
+        controlled.sync_open(true);
+        assert!(controlled.is_open());
+        controlled.sync_open(false);
+        assert!(!controlled.is_open());
     }
 }
