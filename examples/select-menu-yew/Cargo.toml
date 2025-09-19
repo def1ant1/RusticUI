@@ -1,0 +1,23 @@
+[package]
+name = "select-menu-yew"
+version = "0.1.0"
+edition = "2021"
+description = "Yew adapter for the RusticUI select menu demo"
+license = "MIT OR Apache-2.0"
+
+[workspace]
+members = []
+
+[dependencies]
+yew = { version = "0.21", default-features = false, features = ["csr", "ssr", "hydration"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+mui-material = { path = "../../crates/mui-material" }
+mui-headless = { path = "../../crates/mui-headless" }
+select-menu-shared = { path = "../select-menu-shared", default-features = false }
+tokio = { version = "1.37", default-features = false, features = ["macros", "rt-multi-thread", "time"], optional = true }
+
+[features]
+default = ["csr"]
+csr = ["select-menu-shared/csr"]
+ssr = ["tokio", "select-menu-shared/ssr"]

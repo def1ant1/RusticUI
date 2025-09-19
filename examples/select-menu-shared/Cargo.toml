@@ -1,0 +1,21 @@
+[package]
+name = "select-menu-shared"
+version = "0.1.0"
+edition = "2021"
+description = "Shared helpers for the RusticUI select menu examples."
+license = "MIT OR Apache-2.0"
+
+[workspace]
+members = []
+
+[dependencies]
+mui-headless = { path = "../../crates/mui-headless" }
+mui-material = { path = "../../crates/mui-material" }
+mui-system = { path = "../../crates/mui-system" }
+tokio = { version = "1.37", default-features = false, features = ["time"], optional = true }
+gloo-timers = { version = "0.2", features = ["futures"], optional = true }
+
+[features]
+default = []
+csr = ["dep:gloo-timers"]
+ssr = ["dep:tokio"]
