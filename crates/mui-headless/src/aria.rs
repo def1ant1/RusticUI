@@ -8,6 +8,18 @@ pub const fn role_button() -> &'static str {
     "button"
 }
 
+/// Returns the ARIA role for the listbox container element.
+#[inline]
+pub const fn role_listbox() -> &'static str {
+    "listbox"
+}
+
+/// Returns the ARIA role for individual options within a listbox.
+#[inline]
+pub const fn role_option() -> &'static str {
+    "option"
+}
+
 /// Returns the ARIA role used by checkbox controls.
 #[inline]
 pub const fn role_checkbox() -> &'static str {
@@ -27,6 +39,18 @@ pub const fn role_switch() -> &'static str {
     "switch"
 }
 
+/// Returns the ARIA role used by menu surfaces.
+#[inline]
+pub const fn role_menu() -> &'static str {
+    "menu"
+}
+
+/// Returns the ARIA role used by interactive menu items.
+#[inline]
+pub const fn role_menuitem() -> &'static str {
+    "menuitem"
+}
+
 /// Compute the `aria-pressed` attribute for toggleable buttons.
 #[inline]
 pub const fn aria_pressed(pressed: bool) -> (&'static str, &'static str) {
@@ -43,4 +67,16 @@ pub const fn aria_checked(checked: bool) -> (&'static str, &'static str) {
 #[inline]
 pub const fn aria_disabled(disabled: bool) -> (&'static str, &'static str) {
     ("aria-disabled", if disabled { "true" } else { "false" })
+}
+
+/// Compute the `aria-expanded` attribute shared by disclosure widgets.
+#[inline]
+pub const fn aria_expanded(expanded: bool) -> (&'static str, &'static str) {
+    ("aria-expanded", if expanded { "true" } else { "false" })
+}
+
+/// Compute the `aria-haspopup` attribute indicating the popup type.
+#[inline]
+pub const fn aria_haspopup(kind: &'static str) -> (&'static str, &'static str) {
+    ("aria-haspopup", kind)
 }
