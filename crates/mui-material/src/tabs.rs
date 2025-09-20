@@ -16,6 +16,106 @@
 
 use mui_headless::tabs::{TabListAttributes, TabsOrientation, TabsState};
 use mui_styled_engine::{css_with_theme, Style};
+use mui_system::{
+    responsive::{viewport_width, Responsive},
+    stack::{StackDirection, StackStyleInputs},
+    theme::Theme,
+};
+
+/// Configuration shared across framework adapters describing how the tab list
+/// should respond to viewport changes.
+///
+/// Enterprise teams frequently need horizontal tab bars on compact screens yet
+/// prefer vertical navigation rails on larger breakpoints.  Modeling that
+/// behaviour with [`Responsive`] keeps the decision declarative and allows the
+/// adapters below to lean on the centralized resolution logic provided by
+/// `mui-system`.
+#[derive(Clone, Debug)]
+pub struct TabListLayoutOptions {
+    /// Responsive orientation strategy. Defaults to horizontal tabs on small
+    /// screens and vertical rails from the medium breakpoint upwards.
+    pub orientation: Responsive<TabsOrientation>,
+    /// Responsive spacing factors expressed as `Theme::spacing` multipliers.
+    /// The values are converted into pixel based gap declarations for the
+    /// layout container. Keeping this in spacing units ensures global design
+    /// token tweaks automatically cascade through the adapters.
+    pub spacing: Responsive<u16>,
+}
+
+impl Default for TabListLayoutOptions {
+    fn default() -> Self {
+        Self {
+            orientation: Responsive {
+                xs: TabsOrientation::Horizontal,
+                sm: None,
+                md: Some(TabsOrientation::Vertical),
+                lg: Some(TabsOrientation::Vertical),
+                xl: Some(TabsOrientation::Vertical),
+            },
+            spacing: Responsive::constant(2),
+        }
+    }
+}
+
+impl TabListLayoutOptions {
+    /// Resolve the orientation for the provided viewport width using the
+    /// configured [`Responsive`] declaration.
+    #[must_use]
+    pub fn resolve_orientation(&self, theme: &Theme, viewport: u32) -> TabsOrientation {
+        self.orientation.resolve(viewport, &theme.breakpoints)
+    }
+
+    fn resolve_spacing(&self, theme: &Theme) -> Responsive<String> {
+        Responsive {
+            xs: format!("{}px", theme.spacing(self.spacing.xs)),
+            sm: self
+                .spacing
+                .sm
+                .map(|value| format!("{}px", theme.spacing(value))),
+            md: self
+                .spacing
+                .md
+                .map(|value| format!("{}px", theme.spacing(value))),
+            lg: self
+                .spacing
+                .lg
+                .map(|value| format!("{}px", theme.spacing(value))),
+            xl: self
+                .spacing
+                .xl
+                .map(|value| format!("{}px", theme.spacing(value))),
+        }
+    }
+}
+
+/// Properties consumed by the framework adapters when rendering a responsive
+/// tab list.
+///
+/// The struct intentionally mirrors the shape of adapters across every
+/// supported framework so internal automation can generate integration tests
+/// and documentation snippets without juggling bespoke prop names.
+#[derive(Clone, Debug)]
+pub struct TabListProps<'a> {
+    /// Resolved tab state produced by `mui-headless`.
+    pub state: &'a TabsState,
+    /// Attribute builder describing identifiers and labelling metadata.
+    pub attributes: TabListAttributes<'a>,
+    /// Pre-rendered markup for the tab buttons.
+    pub children: &'a str,
+    /// Layout directives shared across all adapters.
+    pub layout: &'a TabListLayoutOptions,
+    /// Active theme driving spacing and breakpoint resolution.
+    pub theme: &'a Theme,
+    /// Optional explicit viewport width used during SSR driven tests. When not
+    /// supplied we fall back to [`viewport_width`] which inspects the runtime
+    /// environment.
+    pub viewport: Option<u32>,
+    /// Optional event channel identifier allowing frameworks to wire custom
+    /// activation hooks. The adapters surface the value through a
+    /// `data-on-activate` attribute so orchestration layers can bind to the
+    /// event without stringly-typed duplication.
+    pub on_activate_event: Option<&'a str>,
+}
 
 /// Convert a `mui-headless` attribute builder into a stable vector of HTML
 /// attributes ready for SSR pipelines or client side adapters.
@@ -121,6 +221,133 @@ fn tab_list_style(_orientation: TabsOrientation) -> Style {
         sm = theme.breakpoints.sm,
         md = theme.breakpoints.md,
     )
+}
+
+struct TabListRenderParams<'a> {
+    state: &'a TabsState,
+    attributes: TabListAttributes<'a>,
+    children: &'a str,
+    layout: &'a TabListLayoutOptions,
+    theme: &'a Theme,
+    viewport: u32,
+    on_activate_event: Option<&'a str>,
+}
+
+impl<'a> From<TabListProps<'a>> for TabListRenderParams<'a> {
+    fn from(props: TabListProps<'a>) -> Self {
+        Self {
+            state: props.state,
+            attributes: props.attributes,
+            children: props.children,
+            layout: props.layout,
+            theme: props.theme,
+            viewport: props.viewport.unwrap_or_else(viewport_width),
+            on_activate_event: props.on_activate_event,
+        }
+    }
+}
+
+fn orientation_to_direction(orientation: TabsOrientation) -> StackDirection {
+    match orientation {
+        TabsOrientation::Horizontal => StackDirection::Row,
+        TabsOrientation::Vertical => StackDirection::Column,
+    }
+}
+
+fn render_tab_list_with_layout(params: TabListRenderParams<'_>) -> String {
+    let orientation = params
+        .layout
+        .resolve_orientation(params.theme, params.viewport);
+    debug_assert_eq!(
+        params.state.orientation(),
+        orientation,
+        "TabsState orientation should match responsive layout configuration",
+    );
+
+    let spacing = params.layout.resolve_spacing(params.theme);
+    let stack_css = mui_system::stack::build_stack_style(
+        params.viewport,
+        &params.theme.breakpoints,
+        StackStyleInputs {
+            direction: Some(orientation_to_direction(orientation)),
+            spacing: Some(&spacing),
+            align_items: Some("stretch"),
+            justify_content: Some("flex-start"),
+            sx: None,
+        },
+    );
+    let stack_style =
+        Style::new(stack_css).expect("mui-system stack builder should emit valid CSS");
+    let inner_html = render_tab_list_html(params.state, params.attributes, params.children);
+
+    let mut outer_attrs = Vec::with_capacity(1);
+    if let Some(event) = params.on_activate_event {
+        outer_attrs.push(("data-on-activate".to_string(), event.to_string()));
+    }
+
+    crate::render_helpers::render_element_html("div", stack_style, outer_attrs, &inner_html)
+}
+
+/// Adapter targeting server-rendered React integrations.  The adapter returns a
+/// HTML string so Node driven pipelines can stitch the markup into templates
+/// before hydration occurs on the client.  React specific behaviour is minimal
+/// because the shared helpers already emit declarative attributes and scoped
+/// classes.
+pub mod react {
+    use super::*;
+
+    /// Render the responsive tab list into HTML markup.
+    pub fn render_tab_list(props: TabListProps<'_>) -> String {
+        super::render_tab_list_with_layout(props.into())
+    }
+}
+
+/// Adapter targeting the [`yew`] framework.  Rendering is performed entirely by
+/// the shared helper which keeps parity with the React/Leptos variants and
+/// ensures automation tools can diff the serialized HTML across all
+/// integrations.
+pub mod yew {
+    use super::*;
+
+    /// Render the tab list into HTML markup for snapshot testing or static
+    /// generation pipelines.
+    pub fn render_tab_list(props: TabListProps<'_>) -> String {
+        super::render_tab_list_with_layout(props.into())
+    }
+}
+
+/// Adapter targeting the [`leptos`] framework.  Mirrors the Yew/React
+/// implementation so teams can swap frameworks without rewriting orchestration
+/// logic.
+pub mod leptos {
+    use super::*;
+
+    /// Render the tab list into HTML markup for SSR scenarios.
+    pub fn render_tab_list(props: TabListProps<'_>) -> String {
+        super::render_tab_list_with_layout(props.into())
+    }
+}
+
+/// Adapter targeting the [`sycamore`] framework.  Delegates straight to the
+/// shared renderer keeping the markup deterministic across integrations.
+pub mod sycamore {
+    use super::*;
+
+    /// Render the tab list into serialized HTML.
+    pub fn render_tab_list(props: TabListProps<'_>) -> String {
+        super::render_tab_list_with_layout(props.into())
+    }
+}
+
+/// Adapter targeting the [`dioxus`] framework.  The implementation mirrors all
+/// other adapters to guarantee consistent semantics and layout behaviour.
+pub mod dioxus {
+    use super::*;
+
+    /// Render the tab list into HTML markup.
+    pub fn render_tab_list(props: TabListProps<'_>) -> String {
+        super::render_tab_list_with_layout(props.into())
+    }
 }
 
 #[cfg(test)]
