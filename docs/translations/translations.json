@@ -153,6 +153,7 @@
     "/material-ui/guides": "How-to guides",
     "/material-ui/guides/minimizing-bundle-size": "Minimizing bundle size",
     "/material-ui/guides/server-rendering": "Server rendering",
+    "/material-ui/guides/navigation": "Navigation orchestration",
     "/material-ui/guides/responsive-ui": "Responsive UI",
     "/material-ui/guides/testing": "Testing",
     "/material-ui/guides/localization": "Localization",

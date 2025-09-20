@@ -3,6 +3,16 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-03-11 – Navigation orchestration blueprint
+
+### Highlights
+
+- Added a [Navigation orchestration guide](docs/data/material/guides/navigation/navigation.md) consolidating router integration, theming hooks, accessibility, and CI guardrails for Tabs and Drawer deployments.
+
+### Backlog
+
+- [ ] Automate navigation-registry validation across micro-frontend bundles using the shared docs examples.
+
 ## 2025-03-04 – Reintroducing RusticUI
 
 ### Highlights

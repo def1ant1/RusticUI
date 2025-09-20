@@ -16,6 +16,10 @@ Tabs organize and allow navigation between groups of content that are related an
 
 {{"component": "@mui/docs/ComponentLinkHeader"}}
 
+:::info
+Looking for deployment-ready routing, theming, and automation patterns? The [Navigation orchestration guide](/material-ui/guides/navigation/) dives deep into how Tabs integrate with enterprise routers, design systems, and CI guardrails.
+:::
+
 ## Introduction
 
 Tabs are implemented using a collection of related components:

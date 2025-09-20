@@ -2,6 +2,10 @@
 
 <p class="description">By default, the navigation is performed with a native &lt;a&gt; element. You can customize it, for instance, using Next.js's Link or react-router.</p>
 
+:::info
+Need a complete Tabs and Drawer blueprint once your routing adapters are in place? Jump to the [Navigation orchestration guide](/material-ui/guides/navigation/) for enterprise-ready patterns.
+:::
+
 ## Navigation components
 
 There are two main components available to perform navigations.

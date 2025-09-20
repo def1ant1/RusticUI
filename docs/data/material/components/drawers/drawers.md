@@ -17,6 +17,10 @@ A navigation drawer can either be permanently on-screen or controlled by a navig
 
 {{"component": "@mui/docs/ComponentLinkHeader"}}
 
+:::info
+Reusing Drawer at scale? Follow the [Navigation orchestration guide](/material-ui/guides/navigation/) for patterns that keep Drawer behavior, accessibility, and automation aligned across large product suites.
+:::
+
 ## Temporary drawer
 
 Temporary navigation drawers can toggle open or closed. Closed by default, the drawer opens temporarily above all other content until a section is selected.

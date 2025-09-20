@@ -245,6 +245,7 @@ const pages: MuiPage[] = [
     children: [
       { pathname: '/material-ui/guides/minimizing-bundle-size' },
       { pathname: '/material-ui/guides/server-rendering' },
+      { pathname: '/material-ui/guides/navigation', title: 'Navigation orchestration' },
       { pathname: '/material-ui/guides/responsive-ui', title: 'Responsive UI' },
       { pathname: '/material-ui/guides/testing' },
       { pathname: '/material-ui/guides/localization' },

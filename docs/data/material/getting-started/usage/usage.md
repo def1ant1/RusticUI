@@ -9,6 +9,10 @@ For example, try changing the `variant` on the [Button](/material-ui/react-butto
 
 {{"demo": "ButtonUsage.js", "defaultCodeOpen": true}}
 
+:::success
+Rolling a new workspace or onboarding a developer? Start with the [Navigation orchestration guide](/material-ui/guides/navigation/) to bootstrap Tabs and Drawer layouts that already meet routing, accessibility, and CI expectations.
+:::
+
 ## Globals
 
 Since Material UI components are built to function in isolation, they don't require any kind of globally scoped styles.
