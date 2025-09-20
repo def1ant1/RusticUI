@@ -11,12 +11,16 @@
 pub mod aria;
 pub mod button;
 pub mod checkbox;
+pub mod drawer;
 pub mod interaction;
 pub mod list;
 pub mod menu;
 pub mod radio;
 pub mod select;
 pub mod switch;
+pub mod tab;
+pub mod tab_panel;
+pub mod tabs;
 
 mod selection;
 mod toggle;
