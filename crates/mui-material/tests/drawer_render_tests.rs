@@ -53,7 +53,11 @@ fn react_surface_and_backdrop_expose_semantic_attributes() {
     assert!(render.surface.contains("data-variant=\"modal\""));
     assert!(render.surface.contains("data-on-toggle=\"drawer-toggle\""));
     assert!(render.surface.contains("id=\"demo-drawer\""));
-    assert!(render.backdrop.as_ref().unwrap().contains("data-variant=\"modal\""));
+    assert!(render
+        .backdrop
+        .as_ref()
+        .unwrap()
+        .contains("data-variant=\"modal\""));
 }
 
 #[test]
@@ -80,8 +84,18 @@ fn responsive_anchor_switches_at_breakpoint() {
     let start_state = build_state(DrawerAnchor::Start, DrawerVariant::Persistent, true);
     let top_state = build_state(DrawerAnchor::Top, DrawerVariant::Persistent, true);
 
-    let start_render = drawer::react::render(build_props(&start_state, &layout, &theme, theme.breakpoints.sm));
-    let top_render = drawer::react::render(build_props(&top_state, &layout, &theme, theme.breakpoints.xl));
+    let start_render = drawer::react::render(build_props(
+        &start_state,
+        &layout,
+        &theme,
+        theme.breakpoints.sm,
+    ));
+    let top_render = drawer::react::render(build_props(
+        &top_state,
+        &layout,
+        &theme,
+        theme.breakpoints.xl,
+    ));
 
     assert!(start_render.surface.contains("data-anchor=\"start\""));
     assert!(top_render.surface.contains("data-anchor=\"top\""));

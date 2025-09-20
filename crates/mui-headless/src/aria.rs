@@ -51,6 +51,12 @@ pub const fn role_menuitem() -> &'static str {
     "menuitem"
 }
 
+/// Returns the ARIA role for tooltip surfaces.
+#[inline]
+pub const fn role_tooltip() -> &'static str {
+    "tooltip"
+}
+
 /// Returns the ARIA role for tablist containers.
 #[inline]
 pub const fn role_tablist() -> &'static str {
@@ -139,4 +145,10 @@ pub const fn aria_orientation(orientation: &'static str) -> (&'static str, &'sta
 #[inline]
 pub const fn aria_modal(modal: bool) -> (&'static str, &'static str) {
     ("aria-modal", if modal { "true" } else { "false" })
+}
+
+/// Compute the `aria-hidden` attribute that automation tools often assert.
+#[inline]
+pub const fn aria_hidden(hidden: bool) -> (&'static str, &'static str) {
+    ("aria-hidden", if hidden { "true" } else { "false" })
 }
