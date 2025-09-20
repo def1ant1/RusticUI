@@ -16,3 +16,6 @@ maintenance = { status = "experimental" }
 
 [dependencies]
 # Use std only; no external dependencies beyond std.
+
+[dev-dependencies]
+proptest.workspace = true

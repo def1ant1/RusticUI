@@ -21,7 +21,7 @@ impl SwitchState {
     pub fn controlled(disabled: bool, on: bool) -> Self {
         let mode = ToggleMode::Controlled;
         Self {
-            inner: ToggleState::new(mode, disabled, on),
+            inner: ToggleState::new(mode, disabled, on.into()),
             mode,
         }
     }
@@ -30,7 +30,7 @@ impl SwitchState {
     pub fn uncontrolled(disabled: bool, default_on: bool) -> Self {
         let mode = ToggleMode::Uncontrolled;
         Self {
-            inner: ToggleState::new(mode, disabled, default_on),
+            inner: ToggleState::new(mode, disabled, default_on.into()),
             mode,
         }
     }
@@ -41,13 +41,17 @@ impl SwitchState {
     }
 
     /// Current on/off state.
+    /// Switches intentionally remain binary even though the shared toggle state
+    /// supports an indeterminate branch for checkboxes. Treating the value as a
+    /// boolean keeps the API ergonomic for home-automation style use cases
+    /// while letting us reuse the richer machine implementation.
     pub fn on(&self) -> bool {
-        self.inner.checked()
+        self.inner.is_on()
     }
 
     /// Synchronize the internal state with the provided value.
     pub fn sync_on(&mut self, on: bool) {
-        self.inner.sync(on);
+        self.inner.sync(on.into());
     }
 
     /// Returns whether the switch is disabled.
@@ -77,19 +81,19 @@ impl SwitchState {
 
     /// Toggle the switch.
     pub fn toggle<F: FnOnce(bool)>(&mut self, callback: F) {
-        self.inner.toggle(callback);
+        self.inner.toggle(|next| callback(bool::from(next)));
     }
 
     /// Handle keyboard input.
     pub fn on_key<F: FnOnce(bool)>(&mut self, key: ControlKey, callback: F) {
-        self.inner.on_key(key, callback);
+        self.inner.on_key(key, |next| callback(bool::from(next)));
     }
 
     /// Attributes describing the switch.
     pub fn aria_attributes(&self) -> Vec<(&'static str, String)> {
         let mut attrs = Vec::with_capacity(6);
         attrs.push(("role", aria::role_switch().into()));
-        let (k, v) = aria::aria_checked(self.on());
+        let (k, v) = aria::aria_checked(aria::AriaChecked::from(self.inner.checked()));
         attrs.push((k, v.into()));
         let (k, v) = aria::aria_disabled(self.disabled());
         attrs.push((k, v.into()));

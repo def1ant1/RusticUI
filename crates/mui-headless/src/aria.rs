@@ -2,6 +2,50 @@
 //! Keeping these utilities centralized ensures accessibility semantics
 //! stay consistent across framework adapters.
 
+use crate::toggle::ToggleCheckedState;
+
+/// Enumerates the values accepted by the `aria-checked` attribute.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AriaChecked {
+    /// Represents an unchecked control (`false`).
+    False,
+    /// Represents a checked control (`true`).
+    True,
+    /// Represents an indeterminate control (`mixed`).
+    Mixed,
+}
+
+impl AriaChecked {
+    /// Convert the enum variant into the string expected by automation tools.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::False => "false",
+            Self::True => "true",
+            Self::Mixed => "mixed",
+        }
+    }
+}
+
+impl From<bool> for AriaChecked {
+    fn from(value: bool) -> Self {
+        if value {
+            Self::True
+        } else {
+            Self::False
+        }
+    }
+}
+
+impl From<ToggleCheckedState> for AriaChecked {
+    fn from(value: ToggleCheckedState) -> Self {
+        match value {
+            ToggleCheckedState::Off => Self::False,
+            ToggleCheckedState::On => Self::True,
+            ToggleCheckedState::Indeterminate => Self::Mixed,
+        }
+    }
+}
+
 /// Returns the standard ARIA role for interactive buttons.
 #[inline]
 pub const fn role_button() -> &'static str {
@@ -89,8 +133,8 @@ pub const fn aria_pressed(pressed: bool) -> (&'static str, &'static str) {
 
 /// Compute the `aria-checked` attribute for selection controls.
 #[inline]
-pub const fn aria_checked(checked: bool) -> (&'static str, &'static str) {
-    ("aria-checked", if checked { "true" } else { "false" })
+pub const fn aria_checked(state: AriaChecked) -> (&'static str, &'static str) {
+    ("aria-checked", state.as_str())
 }
 
 /// Compute the `aria-disabled` attribute used across inputs.

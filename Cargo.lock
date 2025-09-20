@@ -1864,6 +1864,9 @@ dependencies = [
 [[package]]
 name = "mui-headless"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+]
 
 [[package]]
 name = "mui-icons"
