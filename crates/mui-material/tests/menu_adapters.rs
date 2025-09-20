@@ -40,6 +40,16 @@ mod yew_tests {
         assert!(html.contains("data-automation-id=\"adapter-menu\""));
         assert_portal_markup(&html);
     }
+
+    #[test]
+    fn yew_render_marks_disabled_items() {
+        let props = sample_props();
+        let mut state = build_state(props.items.len());
+        state.set_item_disabled(1, true);
+        let html = menu::yew::render(&props, &state);
+        assert!(html.contains("aria-disabled=\"true\""));
+        assert!(html.contains("data-disabled=\"true\""));
+    }
 }
 
 #[cfg(feature = "leptos")]
@@ -53,6 +63,16 @@ mod leptos_tests {
         let html = menu::leptos::render(&props, &state);
         assert!(html.contains("data-automation-id=\"adapter-menu\""));
         assert_portal_markup(&html);
+    }
+
+    #[test]
+    fn leptos_render_marks_disabled_items() {
+        let props = sample_props();
+        let mut state = build_state(props.items.len());
+        state.set_item_disabled(1, true);
+        let html = menu::leptos::render(&props, &state);
+        assert!(html.contains("aria-disabled=\"true\""));
+        assert!(html.contains("data-disabled=\"true\""));
     }
 }
 
@@ -68,6 +88,16 @@ mod dioxus_tests {
         assert!(html.contains("data-automation-id=\"adapter-menu\""));
         assert_portal_markup(&html);
     }
+
+    #[test]
+    fn dioxus_render_marks_disabled_items() {
+        let props = sample_props();
+        let mut state = build_state(props.items.len());
+        state.set_item_disabled(1, true);
+        let html = menu::dioxus::render(&props, &state);
+        assert!(html.contains("aria-disabled=\"true\""));
+        assert!(html.contains("data-disabled=\"true\""));
+    }
 }
 
 #[cfg(feature = "sycamore")]
@@ -81,5 +111,15 @@ mod sycamore_tests {
         let html = menu::sycamore::render(&props, &state);
         assert!(html.contains("data-component=\"mui-menu\""));
         assert_portal_markup(&html);
+    }
+
+    #[test]
+    fn sycamore_render_marks_disabled_items() {
+        let props = sample_props();
+        let mut state = build_state(props.items.len());
+        state.set_item_disabled(1, true);
+        let html = menu::sycamore::render(&props, &state);
+        assert!(html.contains("aria-disabled=\"true\""));
+        assert!(html.contains("data-disabled=\"true\""));
     }
 }
