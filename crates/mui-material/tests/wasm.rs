@@ -1,12 +1,17 @@
 #![cfg(feature = "yew")]
 
 use mui_headless::checkbox::CheckboxState;
+use mui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
 use mui_headless::list::{ListState, SelectionMode};
 use mui_headless::radio::{RadioGroupState, RadioOrientation};
 use mui_headless::switch::SwitchState;
+use mui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
 use mui_material::checkbox::{self, CheckboxProps};
+use mui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
 use mui_material::radio::{self, RadioGroupProps};
 use mui_material::switch::{self, SwitchProps};
+use mui_material::tab_panel;
+use mui_material::tabs::{self, TabListLayoutOptions, TabListProps};
 use mui_material::table::{self, TableColumn, TableProps, TableRow};
 use mui_material::{AppBar, Button, Snackbar, TextField};
 use mui_styled_engine::{Theme, ThemeProvider};
@@ -377,6 +382,191 @@ async fn text_field_styles_and_accessibility() {
     // primary color is present which proves theme integration works.
     let style = input.get_attribute("style").unwrap();
     assert!(style.contains("#1976d2"));
+
+    axe_check(&mount).await;
+}
+
+/// Render the Tabs adapter end-to-end in a browser to verify orientation
+/// switching, manual activation semantics and accessibility integration.
+#[wasm_bindgen_test(async)]
+async fn tabs_orientation_and_accessibility() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let layout = TabListLayoutOptions::default();
+        let theme = Theme::default();
+        let state = TabsState::new(
+            2,
+            Some(0),
+            ActivationMode::Manual,
+            TabsOrientation::Vertical,
+            unsafe { std::mem::transmute(1u8) },
+            unsafe { std::mem::transmute(1u8) },
+        );
+
+        let tabs_markup = vec![
+            mui_material::tab::render_tab_html(
+                &state,
+                state
+                    .tab(0)
+                    .id("tab-overview")
+                    .controls("panel-overview"),
+                "Overview",
+            ),
+            mui_material::tab::render_tab_html(
+                &state,
+                state.tab(1).id("tab-reports").controls("panel-reports"),
+                "Reports",
+            ),
+        ]
+        .join("");
+
+        let props = TabListProps {
+            state: &state,
+            attributes: state.list_attributes().id("account-tabs"),
+            children: tabs_markup.as_str(),
+            layout: &layout,
+            theme: &theme,
+            viewport: Some(theme.breakpoints.xl),
+            on_activate_event: Some("tab-activate"),
+        };
+
+        let list_markup = tabs::yew::render_tab_list(props);
+        let panels_markup = format!(
+            "{}{}",
+            tab_panel::render_tab_panel_html(
+                &state,
+                0,
+                state
+                    .panel(0)
+                    .id("panel-overview")
+                    .labelled_by("tab-overview"),
+                r#"<p data-testid=\"panel-body\">Overview metrics</p>"#,
+            ),
+            tab_panel::render_tab_panel_html(
+                &state,
+                1,
+                state
+                    .panel(1)
+                    .id("panel-reports")
+                    .labelled_by("tab-reports"),
+                "<p>Quarterly reports</p>",
+            ),
+        );
+
+        html! {
+            <ThemeProvider theme={theme.clone()}>
+                { Html::from_html_unchecked(AttrValue::from(format!("{}{}", list_markup, panels_markup))) }
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let wrapper = mount
+        .query_selector("[data-on-activate]")
+        .unwrap()
+        .expect("tabs wrapper rendered");
+    assert_eq!(
+        wrapper.get_attribute("data-on-activate").unwrap(),
+        "tab-activate"
+    );
+
+    let tablist = mount
+        .query_selector("[role='tablist']")
+        .unwrap()
+        .expect("tablist rendered");
+    assert_eq!(tablist.get_attribute("data-orientation").unwrap(), "vertical");
+    assert_eq!(tablist.get_attribute("data-activation").unwrap(), "manual");
+
+    let tabs = mount.query_selector_all("[role='tab']").unwrap();
+    assert_eq!(tabs.length(), 2);
+
+    let panel = mount
+        .query_selector("[role='tabpanel']")
+        .unwrap()
+        .expect("panel rendered");
+    assert_eq!(panel.get_attribute("aria-labelledby").unwrap(), "tab-overview");
+    assert!(panel
+        .inner_html()
+        .contains("data-testid=\"panel-body\""));
+
+    axe_check(&mount).await;
+}
+
+/// Smoke test the Drawer adapter in wasm to verify responsive anchor handling
+/// and accessibility attributes emitted by the modal variant.
+#[wasm_bindgen_test(async)]
+async fn drawer_modal_accessibility() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let mut layout = DrawerLayoutOptions::default();
+        layout.anchor.lg = Some(DrawerAnchor::Top);
+        layout.anchor.xl = Some(DrawerAnchor::Top);
+
+        let theme = Theme::default();
+        let state = DrawerState::new(
+            true,
+            unsafe { std::mem::transmute(1u8) },
+            DrawerVariant::Modal,
+            DrawerAnchor::Top,
+        );
+
+        let props = DrawerProps {
+            state: &state,
+            surface: state
+                .surface_attributes()
+                .id("nav-drawer")
+                .labelled_by("drawer-heading"),
+            backdrop: state.backdrop_attributes(),
+            body: "<header id=\"drawer-heading\">Navigation</header><ul><li><a href=\"/\" data-testid=\"drawer-home\">Home</a></li><li><a href=\"/reports\">Reports</a></li></ul>",
+            layout: &layout,
+            theme: &theme,
+            viewport: Some(theme.breakpoints.xl),
+            on_toggle_event: Some("drawer-toggle"),
+        };
+
+        let render = drawer::yew::render(props);
+        let mut nodes = vec![Html::from_html_unchecked(AttrValue::from(render.surface))];
+        if let Some(backdrop_markup) = render.backdrop {
+            nodes.push(Html::from_html_unchecked(AttrValue::from(backdrop_markup)));
+        }
+
+        html! {
+            <ThemeProvider theme={theme.clone()}>
+                { for nodes.into_iter() }
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let dialog = mount
+        .query_selector("[role='dialog']")
+        .unwrap()
+        .expect("drawer surface rendered");
+    assert_eq!(dialog.get_attribute("data-anchor").unwrap(), "top");
+    assert_eq!(dialog.get_attribute("data-variant").unwrap(), "modal");
+    assert_eq!(dialog.get_attribute("data-on-toggle").unwrap(), "drawer-toggle");
+
+    let backdrop = mount
+        .query_selector("[data-variant='modal'][aria-hidden]")
+        .unwrap()
+        .expect("backdrop rendered");
+    assert_eq!(backdrop.get_attribute("data-open").unwrap(), "true");
+
+    let nav_link = mount
+        .query_selector("[data-testid='drawer-home']")
+        .unwrap()
+        .expect("navigation link rendered");
+    assert_eq!(nav_link.text_content().unwrap(), "Home");
 
     axe_check(&mount).await;
 }
