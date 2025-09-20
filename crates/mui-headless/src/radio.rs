@@ -223,7 +223,10 @@ impl RadioGroupState {
         let mut attrs = Vec::with_capacity(6);
         attrs.push(("role", aria::role_radio().into()));
         let checked = self.selected == Some(index);
-        let (k, v) = aria::aria_checked(checked);
+        // Radios intentionally stay binary; mapping through `AriaChecked` keeps
+        // the implementation aligned with the richer toggle semantics without
+        // exposing unsupported intermediate values to assistive tech.
+        let (k, v) = aria::aria_checked(aria::AriaChecked::from(checked));
         attrs.push((k, v.into()));
         let (k, v) = aria::aria_disabled(self.disabled);
         attrs.push((k, v.into()));

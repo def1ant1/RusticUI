@@ -190,6 +190,10 @@ The workspace is organized under the `crates/` directory:
 
 - `mui-system` – styling primitives (will be published as `rustic-ui-system`).
 - `mui-headless` – framework-agnostic component state machines.
+  - Checkbox primitives expose a tri-state (`Off`/`On`/`Indeterminate`) toggle
+    API with ARIA-compliant metadata (`aria-checked="mixed"` plus a
+    `data-indeterminate` hook) so adapters can animate complex selection flows
+    without reimplementing keyboard orchestration.
 - `mui-material` – Material-inspired components during the transition period.
 - `mui-icons-material` – SVG icon bindings being retooled for Rustic iconography.
 - `mui-lab` – experimental widgets under active development.
