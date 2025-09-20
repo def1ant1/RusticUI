@@ -118,4 +118,25 @@ mod tests {
         assert!(attrs.is_selected());
         assert!(attrs.is_focused());
     }
+
+    #[test]
+    fn builder_reflects_inactive_tab_state() {
+        // Secondary tabs should stay untabbable until navigation reaches them
+        // so screen reader users do not land on hidden panels accidentally.
+        let state = TabsState::new(
+            3,
+            Some(0),
+            ActivationMode::Manual,
+            TabsOrientation::Horizontal,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        let attrs = state.tab(2);
+        assert_eq!(attrs.aria_selected(), ("aria-selected", "false"));
+        assert_eq!(attrs.tabindex(), ("tabindex", "-1"));
+        assert!(!attrs.is_selected());
+        assert!(!attrs.is_focused());
+        assert_eq!(attrs.id_attr(), None);
+        assert_eq!(attrs.aria_controls(), None);
+    }
 }

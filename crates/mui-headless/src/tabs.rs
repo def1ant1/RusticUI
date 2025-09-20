@@ -173,7 +173,7 @@ impl TabsState {
         focus_mode: ControlStrategy,
     ) -> Self {
         let selected = clamp_index(initial_selected, tab_count);
-        let focused = selected.or_else(|| if tab_count > 0 { Some(0) } else { None });
+        let focused = selected.or(if tab_count > 0 { Some(0) } else { None });
         Self {
             tab_count,
             selected,
@@ -236,7 +236,7 @@ impl TabsState {
         } else {
             clamp_index(self.focused, count)
                 .or(self.selected)
-                .or_else(|| if count > 0 { Some(0) } else { None })
+                .or(if count > 0 { Some(0) } else { None })
         };
     }
 
@@ -247,13 +247,8 @@ impl TabsState {
             if let Some(index) = self.selected {
                 self.focused = Some(index);
             } else {
-                self.focused = clamp_index(self.focused, self.tab_count).or_else(|| {
-                    if self.tab_count > 0 {
-                        Some(0)
-                    } else {
-                        None
-                    }
-                });
+                self.focused = clamp_index(self.focused, self.tab_count)
+                    .or(if self.tab_count > 0 { Some(0) } else { None });
             }
         }
     }
@@ -315,10 +310,10 @@ impl TabsState {
                     let next = Some(0);
                     outcome.focused = self.apply_focus(next);
                     if self.activation.is_automatic() {
-                        outcome.selected = outcome.focused.map(|index| {
+                        if let Some(index) = outcome.focused {
                             self.apply_selection(index, &mut on_select);
-                            index
-                        });
+                        }
+                        outcome.selected = outcome.focused;
                     }
                 }
             }
@@ -327,10 +322,10 @@ impl TabsState {
                     let next = Some(self.tab_count - 1);
                     outcome.focused = self.apply_focus(next);
                     if self.activation.is_automatic() {
-                        outcome.selected = outcome.focused.map(|index| {
+                        if let Some(index) = outcome.focused {
                             self.apply_selection(index, &mut on_select);
-                            index
-                        });
+                        }
+                        outcome.selected = outcome.focused;
                     }
                 }
             }
@@ -340,10 +335,10 @@ impl TabsState {
                     let next = wrap_index(self.focused, 1, self.tab_count);
                     outcome.focused = self.apply_focus(next);
                     if self.activation.is_automatic() {
-                        outcome.selected = outcome.focused.map(|index| {
+                        if let Some(index) = outcome.focused {
                             self.apply_selection(index, &mut on_select);
-                            index
-                        });
+                        }
+                        outcome.selected = outcome.focused;
                     }
                 }
             }
@@ -353,10 +348,10 @@ impl TabsState {
                     let next = wrap_index(self.focused, -1, self.tab_count);
                     outcome.focused = self.apply_focus(next);
                     if self.activation.is_automatic() {
-                        outcome.selected = outcome.focused.map(|index| {
+                        if let Some(index) = outcome.focused {
                             self.apply_selection(index, &mut on_select);
-                            index
-                        });
+                        }
+                        outcome.selected = outcome.focused;
                     }
                 }
             }
@@ -495,6 +490,96 @@ mod tests {
         assert!(selected.is_empty());
         state.sync_focused(outcome.focused);
         assert_eq!(state.focused(), Some(1));
+    }
+
+    #[test]
+    fn controlled_selection_emits_intent_without_mutating_internal_state() {
+        // Controlled selection keeps the internal field stable so adapters can
+        // drive it from React/Solid/etc.  We still expect callbacks and focus
+        // updates so the surrounding UI stays synchronized.
+        let mut state = TabsState::new(
+            3,
+            Some(1),
+            ActivationMode::Automatic,
+            TabsOrientation::Horizontal,
+            ControlStrategy::Controlled,
+            ControlStrategy::Uncontrolled,
+        );
+        let mut received = Vec::new();
+        state.select(2, |index| received.push(index));
+        assert_eq!(state.selected(), Some(1));
+        assert_eq!(state.focused(), Some(2));
+        assert_eq!(received, vec![2]);
+    }
+
+    #[test]
+    fn set_tab_count_clamps_selection_and_focus() {
+        // Shrinking the rendered tab set should gracefully clamp both the
+        // selection and the roving tabindex so focus management never points to
+        // a removed element.
+        let mut state = TabsState::new(
+            4,
+            Some(3),
+            ActivationMode::Manual,
+            TabsOrientation::Horizontal,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        state.set_focused(Some(2));
+        state.set_tab_count(2);
+        assert_eq!(state.selected(), None);
+        assert_eq!(state.focused(), Some(0));
+
+        state.set_tab_count(0);
+        assert_eq!(state.focused(), None);
+        assert_eq!(state.selected(), None);
+    }
+
+    #[test]
+    fn sync_selected_updates_focus_when_uncontrolled() {
+        // When consumers control the selected tab we still handle focus
+        // fallback to guarantee the active panel stays tabbable.
+        let mut state = TabsState::new(
+            3,
+            None,
+            ActivationMode::Manual,
+            TabsOrientation::Horizontal,
+            ControlStrategy::Controlled,
+            ControlStrategy::Uncontrolled,
+        );
+        state.set_focused(None);
+        state.sync_selected(Some(2));
+        assert_eq!(state.selected(), Some(2));
+        assert_eq!(state.focused(), Some(2));
+
+        state.set_focused(None);
+        state.sync_selected(None);
+        assert_eq!(state.selected(), None);
+        assert_eq!(state.focused(), Some(0));
+    }
+
+    #[test]
+    fn automatic_activation_wraps_navigation_across_edges() {
+        // Arrow navigation should wrap around the collection so users can keep
+        // cycling through the tabs without hitting a dead end.  Automatic
+        // activation selects eagerly and propagates each change through the
+        // callback.
+        let mut state = TabsState::new(
+            3,
+            Some(0),
+            ActivationMode::Automatic,
+            TabsOrientation::Horizontal,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        let mut selected = Vec::new();
+        state.on_key(ControlKey::ArrowRight, |index| selected.push(index));
+        state.on_key(ControlKey::ArrowRight, |index| selected.push(index));
+        let outcome = state.on_key(ControlKey::ArrowRight, |index| selected.push(index));
+        assert_eq!(state.selected(), Some(0));
+        assert_eq!(outcome.focused, Some(0));
+        assert_eq!(outcome.selected, Some(0));
+        assert_eq!(selected, vec![1, 2, 0]);
     }
 
     #[test]

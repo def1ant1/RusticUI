@@ -5,8 +5,11 @@
 //! higher level crates which consume these primitives.  Beyond the existing
 //! [`button`] machine, the crate now ships specialized state for selection
 //! controls – [`checkbox`], [`radio`] and [`switch`] – along with data display
-//! helpers such as [`list`] and [`menu`]. The [`interaction`] primitives expose
-//! keyboard orchestration shared across each state machine.
+//! helpers such as [`list`], [`menu`] and the accessible [`tabs`] family which
+//! includes [`tab`] and [`tab_panel`] attribute builders.  Layout driven
+//! components such as [`drawer`] also reuse the centralized accessibility
+//! primitives.  The [`interaction`] primitives expose keyboard orchestration
+//! shared across each state machine.
 
 pub mod aria;
 pub mod button;

@@ -330,4 +330,21 @@ mod tests {
         );
         assert!(!persistent.backdrop_attributes().is_visible());
     }
+
+    #[test]
+    fn persistent_drawer_surface_marks_modal_false() {
+        // Persistent drawers remain interactive with the page so `aria-modal`
+        // should announce the lack of modality.  We still expose the dialog role
+        // for consistent semantics across variants.
+        let state = DrawerState::new(
+            false,
+            ControlStrategy::Uncontrolled,
+            DrawerVariant::Persistent,
+            DrawerAnchor::Top,
+        );
+        let attrs = state.surface_attributes();
+        assert_eq!(attrs.role(), "dialog");
+        assert_eq!(attrs.aria_modal(), ("aria-modal", "false"));
+        assert_eq!(attrs.data_anchor(), ("data-anchor", "top"));
+    }
 }
