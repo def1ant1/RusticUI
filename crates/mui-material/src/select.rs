@@ -207,9 +207,12 @@ fn option_attributes(
     attrs.push(("role".into(), state.option_role().into()));
     let is_selected = state.selected() == Some(index);
     let is_highlighted = state.highlighted() == Some(index);
+    let is_disabled = state.is_option_disabled(index);
     attrs.push(("aria-selected".into(), is_selected.to_string()));
+    attrs.push(("aria-disabled".into(), is_disabled.to_string()));
     attrs.push(("data-selected".into(), is_selected.to_string()));
     attrs.push(("data-highlighted".into(), is_highlighted.to_string()));
+    attrs.push(("data-disabled".into(), is_disabled.to_string()));
     attrs.push(("data-index".into(), index.to_string()));
     attrs.push(("data-value".into(), props.options[index].value.clone()));
     if let Some(id) = &props.automation_id {

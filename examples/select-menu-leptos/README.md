@@ -24,6 +24,17 @@ The component spins up immediately with a fallback message, then updates once
 the async loader resolves. Toggle buttons demonstrate how controlled props can
 be wired into existing signals without bypassing the shared render helpers.
 
+Whenever business rules deactivate a region you can flip the headless state in
+place and let the renderer mirror the disabled affordance:
+
+```rust
+state.update(|state| state.set_option_disabled(1, true));
+```
+
+This keeps the SSR snapshot and CSR hydration path aligned because the
+underlying `SelectState` skips disabled options for keyboard/typeahead
+navigation while emitting the appropriate ARIA/data hooks for analytics.
+
 ## Server-side rendering smoke test
 
 ```bash

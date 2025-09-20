@@ -18,6 +18,13 @@ const TYPEAHEAD_TIMEOUT: Duration = Duration::from_millis(1000);
 #[derive(Debug, Clone)]
 pub struct SelectState {
     option_count: usize,
+    /// Tracks whether each option index is disabled.
+    ///
+    /// The vector mirrors [`option_count`] so adapters can declaratively toggle
+    /// interactivity without re-synchronizing the entire collection.  We keep a
+    /// concrete `Vec<bool>` instead of a predicate so the state can be cloned
+    /// for SSR and deterministic tests while remaining cheap to update in place.
+    disabled: Vec<bool>,
     highlighted: Option<usize>,
     selected: Option<usize>,
     open: bool,
@@ -42,9 +49,10 @@ impl SelectState {
         selection_mode: ControlStrategy,
     ) -> Self {
         let selected = clamp_index(initial_selected, option_count);
-        let highlighted = selected.or_else(|| if option_count > 0 { Some(0) } else { None });
-        Self {
+        let highlighted = selected.or(if option_count > 0 { Some(0) } else { None });
+        let mut state = Self {
             option_count,
+            disabled: vec![false; option_count],
             highlighted,
             selected,
             open: if open_mode.is_controlled() {
@@ -55,7 +63,11 @@ impl SelectState {
             open_mode,
             selection_mode,
             typeahead: TypeaheadBuffer::new(TYPEAHEAD_TIMEOUT),
-        }
+        };
+        // Ensure the initial highlight respects disabled bookkeeping even when
+        // callers immediately flag items as inert after construction.
+        state.ensure_highlight();
+        state
     }
 
     /// Returns the total number of options.
@@ -70,10 +82,36 @@ impl SelectState {
     /// referencing stale entries when options are dynamically removed.
     pub fn set_option_count(&mut self, count: usize) {
         self.option_count = count;
+        self.disabled.resize(count, false);
         self.selected = clamp_index(self.selected, count);
-        self.highlighted = clamp_index(self.highlighted, count)
-            .or_else(|| self.selected)
-            .or_else(|| if count > 0 { Some(0) } else { None });
+        self.reconcile_disabled_state();
+    }
+
+    /// Returns whether the option at the given index is enabled.
+    #[inline]
+    pub fn is_option_enabled(&self, index: usize) -> bool {
+        index < self.option_count && !self.disabled.get(index).copied().unwrap_or(true)
+    }
+
+    /// Returns whether the option at the given index is disabled.
+    #[inline]
+    pub fn is_option_disabled(&self, index: usize) -> bool {
+        !self.is_option_enabled(index)
+    }
+
+    /// Toggle the disabled flag for a given option.
+    ///
+    /// The method keeps highlight and selection in sync so adapters can
+    /// declaratively enable/disable ranges without emitting manual
+    /// focus/selection updates.
+    pub fn set_option_disabled(&mut self, index: usize, disabled: bool) {
+        if index >= self.option_count {
+            return;
+        }
+        if let Some(slot) = self.disabled.get_mut(index) {
+            *slot = disabled;
+        }
+        self.reconcile_disabled_state();
     }
 
     /// Returns whether the listbox popover is currently visible.
@@ -127,23 +165,31 @@ impl SelectState {
     pub fn sync_selected(&mut self, selected: Option<usize>) {
         self.selected = clamp_index(selected, self.option_count);
         if self.selection_mode.is_controlled() {
-            if self.selected.is_some() {
-                self.highlighted = self.selected;
+            if let Some(index) = self.selected {
+                self.highlighted = self.normalize_index(Some(index));
             } else {
-                self.highlighted = clamp_index(self.highlighted, self.option_count);
+                self.highlighted = self.normalize_index(self.highlighted);
             }
         }
+        self.ensure_highlight();
     }
 
     /// Manually override the highlighted index.  This is primarily used by
     /// adapters when focus moves via pointer interaction.
     pub fn set_highlighted(&mut self, index: Option<usize>) {
-        self.highlighted = clamp_index(index, self.option_count);
+        self.highlighted = self.normalize_index(index);
     }
 
     /// Selects the provided option index, invoking the supplied callback.
     pub fn select<F: FnMut(usize)>(&mut self, index: usize, mut on_select: F) {
         if index >= self.option_count {
+            return;
+        }
+        if self.is_option_disabled(index) {
+            // Keep highlight consistent with the nearest enabled option but do
+            // not emit callbacks for inert entries.  This mirrors how native
+            // listboxes ignore clicks on disabled nodes.
+            self.highlighted = self.normalize_index(Some(index));
             return;
         }
         self.highlighted = Some(index);
@@ -156,7 +202,9 @@ impl SelectState {
     /// Commits the current highlight if present.
     pub fn select_highlighted<F: FnMut(usize)>(&mut self, mut on_select: F) {
         if let Some(index) = self.highlighted {
-            self.select(index, &mut on_select);
+            if self.is_option_enabled(index) {
+                self.select(index, &mut on_select);
+            }
         }
     }
 
@@ -169,22 +217,18 @@ impl SelectState {
                 self.select_highlighted(on_select);
             }
             ControlKey::Home => {
-                self.highlighted = if self.option_count > 0 { Some(0) } else { None };
+                self.highlighted = self.first_enabled_index();
             }
             ControlKey::End => {
-                self.highlighted = if self.option_count > 0 {
-                    Some(self.option_count - 1)
-                } else {
-                    None
-                };
+                self.highlighted = self.last_enabled_index();
             }
             _ if key.is_forward() => {
                 self.ensure_highlight();
-                self.highlighted = wrap_index(self.highlighted, 1, self.option_count);
+                self.highlighted = self.advance_enabled(self.highlighted, 1);
             }
             _ if key.is_backward() => {
                 self.ensure_highlight();
-                self.highlighted = wrap_index(self.highlighted, -1, self.option_count);
+                self.highlighted = self.advance_enabled(self.highlighted, -1);
             }
             _ => {}
         }
@@ -205,11 +249,21 @@ impl SelectState {
     {
         let query = self.typeahead.push(ch);
         if let Some(index) = matcher(query, self.highlighted, self.option_count) {
-            self.highlighted = Some(index);
-            if !self.selection_mode.is_controlled() {
-                self.selected = Some(index);
+            if self.is_option_disabled(index) {
+                // Keep the highlight aligned with the next enabled option but
+                // do not update selection or invoke callbacks.  Adapters can
+                // surface their own fallbacks (e.g. status messages) without
+                // observing spurious selection intents.
+                self.highlighted = self.normalize_index(Some(index));
+                return;
             }
-            on_select(index);
+            if let Some(index) = self.normalize_index(Some(index)) {
+                self.highlighted = Some(index);
+                if !self.selection_mode.is_controlled() {
+                    self.selected = Some(index);
+                }
+                on_select(index);
+            }
         }
     }
 
@@ -257,19 +311,99 @@ impl SelectState {
     }
 
     fn ensure_highlight(&mut self) {
-        if self.option_count == 0 {
+        if !self.has_enabled_options() {
             self.highlighted = None;
             return;
         }
-        if self.highlighted.is_some() {
-            self.highlighted = clamp_index(self.highlighted, self.option_count);
-            if self.highlighted.is_some() {
-                return;
+        if let Some(candidate) = self.normalize_index(self.highlighted) {
+            self.highlighted = Some(candidate);
+            return;
+        }
+        if let Some(candidate) = self.normalize_index(self.selected) {
+            self.highlighted = Some(candidate);
+            return;
+        }
+        self.highlighted = self.first_enabled_index();
+    }
+
+    fn reconcile_disabled_state(&mut self) {
+        if self.option_count == 0 {
+            self.disabled.clear();
+            self.highlighted = None;
+            if !self.selection_mode.is_controlled() {
+                self.selected = None;
+            }
+            return;
+        }
+        if !self.selection_mode.is_controlled() {
+            if let Some(index) = self.selected {
+                if self.is_option_disabled(index) {
+                    self.selected = self
+                        .advance_enabled(Some(index), 1)
+                        .or_else(|| self.advance_enabled(Some(index), -1));
+                }
             }
         }
-        self.highlighted =
-            self.selected
-                .or_else(|| if self.option_count > 0 { Some(0) } else { None });
+        self.ensure_highlight();
+    }
+
+    fn has_enabled_options(&self) -> bool {
+        self.disabled
+            .iter()
+            .take(self.option_count)
+            .any(|flag| !*flag)
+    }
+
+    fn first_enabled_index(&self) -> Option<usize> {
+        if self.option_count == 0 {
+            return None;
+        }
+        (0..self.option_count).find(|index| self.is_option_enabled(*index))
+    }
+
+    fn last_enabled_index(&self) -> Option<usize> {
+        if self.option_count == 0 {
+            return None;
+        }
+        (0..self.option_count)
+            .rev()
+            .find(|index| self.is_option_enabled(*index))
+    }
+
+    fn advance_enabled(&self, current: Option<usize>, delta: isize) -> Option<usize> {
+        if self.option_count == 0 || !self.has_enabled_options() {
+            return None;
+        }
+        let mut base = match clamp_index(current, self.option_count) {
+            Some(index) => index,
+            None => {
+                return if delta >= 0 {
+                    self.first_enabled_index()
+                } else {
+                    self.last_enabled_index()
+                };
+            }
+        };
+        for _ in 0..self.option_count {
+            base = wrap_index(Some(base), delta, self.option_count)?;
+            if self.is_option_enabled(base) {
+                return Some(base);
+            }
+        }
+        None
+    }
+
+    fn normalize_index(&self, index: Option<usize>) -> Option<usize> {
+        let index = clamp_index(index, self.option_count);
+        if let Some(current) = index {
+            if self.is_option_enabled(current) {
+                return Some(current);
+            }
+            return self
+                .advance_enabled(Some(current), 1)
+                .or_else(|| self.advance_enabled(Some(current), -1));
+        }
+        None
     }
 }
 
@@ -285,14 +419,6 @@ mod tests {
             "ap" => Some(1),
             "c" => Some(2),
             _ => None,
-        }
-    }
-
-    fn skip_disabled(query: &str, current: Option<usize>, len: usize) -> Option<usize> {
-        if query == "c" {
-            current
-        } else {
-            sample_matcher(query, current, len)
         }
     }
 
@@ -366,6 +492,33 @@ mod tests {
     }
 
     #[test]
+    fn keyboard_navigation_skips_disabled_islands() {
+        let mut state = SelectState::new(
+            5,
+            Some(0),
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        state.set_option_disabled(1, true);
+        state.set_option_disabled(2, true);
+
+        // Arrow down should skip indices 1 and 2 landing on 3, then wrap to 4 and
+        // back to 0.
+        assert_eq!(state.on_key(ControlKey::ArrowDown, noop), Some(3));
+        assert_eq!(state.on_key(ControlKey::ArrowDown, noop), Some(4));
+        assert_eq!(state.on_key(ControlKey::ArrowDown, noop), Some(0));
+
+        // Arrow up from the first item wraps to the last enabled option.
+        assert_eq!(state.on_key(ControlKey::ArrowUp, noop), Some(4));
+
+        // Home/End respect the disabled map and land on the nearest enabled
+        // entries.
+        assert_eq!(state.on_key(ControlKey::Home, noop), Some(0));
+        assert_eq!(state.on_key(ControlKey::End, noop), Some(4));
+    }
+
+    #[test]
     fn controlled_vs_uncontrolled_selection_sync() {
         // Uncontrolled widgets update the backing field immediately.
         let mut uncontrolled = SelectState::new(
@@ -393,6 +546,13 @@ mod tests {
         assert_eq!(controlled.selected(), Some(2));
         controlled.sync_selected(None);
         assert_eq!(controlled.selected(), None);
+
+        // Disabling a controlled selection keeps the highlight on the next
+        // available option while leaving the controlled value untouched.
+        controlled.sync_selected(Some(1));
+        controlled.set_option_disabled(1, true);
+        assert_eq!(controlled.selected(), Some(1));
+        assert_eq!(controlled.highlighted(), Some(2));
     }
 
     #[test]
@@ -401,8 +561,10 @@ mod tests {
             name: &'static str,
             sequence: &'static [char],
             matcher: fn(&str, Option<usize>, usize) -> Option<usize>,
+            disabled: &'static [usize],
             expect_selected: Option<usize>,
             expect_highlight: Option<usize>,
+            expect_callbacks: &'static [usize],
         }
 
         let cases = [
@@ -410,22 +572,28 @@ mod tests {
                 name: "single_key_selects_and_highlights",
                 sequence: &['c'],
                 matcher: sample_matcher,
+                disabled: &[],
                 expect_selected: Some(2),
                 expect_highlight: Some(2),
+                expect_callbacks: &[2],
             },
             Case {
                 name: "disabled_option_does_not_select",
                 sequence: &['c'],
-                matcher: skip_disabled,
+                matcher: sample_matcher,
+                disabled: &[2],
                 expect_selected: Some(0),
                 expect_highlight: Some(0),
+                expect_callbacks: &[],
             },
             Case {
                 name: "rapid_sequence_uses_full_buffer",
                 sequence: &['a', 'p'],
                 matcher: sample_matcher,
+                disabled: &[],
                 expect_selected: Some(1),
                 expect_highlight: Some(1),
+                expect_callbacks: &[0, 1],
             },
         ];
 
@@ -437,9 +605,13 @@ mod tests {
                 ControlStrategy::Uncontrolled,
                 ControlStrategy::Uncontrolled,
             );
+            for index in case.disabled {
+                state.set_option_disabled(*index, true);
+            }
+            let mut observed = Vec::new();
 
             for ch in case.sequence {
-                state.on_typeahead(*ch, case.matcher, noop);
+                state.on_typeahead(*ch, case.matcher, |index| observed.push(index));
             }
 
             assert_eq!(
@@ -454,7 +626,58 @@ mod tests {
                 "{}: unexpected highlight",
                 case.name
             );
+            assert_eq!(
+                observed, case.expect_callbacks,
+                "{}: unexpected callback sequence",
+                case.name
+            );
         }
+    }
+
+    #[test]
+    fn disabling_options_updates_selection_and_highlight() {
+        let mut state = SelectState::new(
+            4,
+            Some(2),
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        state.set_option_disabled(2, true);
+
+        // Selection and highlight fall forward to the next enabled entry.
+        assert_eq!(state.selected(), Some(3));
+        assert_eq!(state.highlighted(), Some(3));
+
+        // Shrinking the option count drops disabled state and clamps indices.
+        state.set_option_count(2);
+        assert_eq!(state.option_count(), 2);
+        assert_eq!(state.disabled.len(), 2);
+        assert_eq!(state.selected(), None);
+        assert_eq!(state.highlighted(), Some(0));
+
+        // Expanding restores new slots as enabled by default.
+        state.set_option_count(4);
+        assert!(state.is_option_enabled(3));
+    }
+
+    #[test]
+    fn selection_callbacks_are_suppressed_for_disabled_indices() {
+        let mut state = SelectState::new(
+            3,
+            None,
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        state.set_option_disabled(1, true);
+        let mut calls = Vec::new();
+        state.select(1, |index| calls.push(index));
+        assert!(
+            calls.is_empty(),
+            "callbacks should not fire for disabled options"
+        );
+        assert_eq!(state.highlighted(), Some(2));
     }
 
     #[test]
