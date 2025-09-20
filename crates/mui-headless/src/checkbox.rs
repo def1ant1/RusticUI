@@ -131,12 +131,11 @@ impl CheckboxState {
     pub fn aria_attributes(&self) -> Vec<(&'static str, String)> {
         // The allocation size intentionally matches the number of pushed
         // attributes to avoid runtime reallocations in hot paths.
-        let mut attrs = Vec::with_capacity(7);
+        let mut attrs = Vec::with_capacity(8);
         attrs.push(("role", aria::role_checkbox().into()));
         let (k, v) = aria::aria_checked(self.checked().into());
         attrs.push((k, v.into()));
-        let (k, v) = aria::aria_disabled(self.disabled());
-        attrs.push((k, v.into()));
+        aria::extend_disabled_attributes(&mut attrs, self.disabled());
         attrs.push((
             "tabindex",
             if self.disabled() { "-1" } else { "0" }.to_string(),

@@ -58,9 +58,9 @@ Use the `disabled` prop on `MenuItem` to prevent pointer and keyboard activation
 For headless Rust adapters (`mui-headless` + `mui-material`), call
 `MenuState::set_item_disabled(index, true)` to toggle interactivity at runtime.
 The generated markup exposes both `aria-disabled="true"` and
-`data-disabled="true"` so automated tests, custom styling, and accessibility
-audits all observe the same state whether the menu is rendered during SSR or in
-the browser.
+`data-disabled="true"` only when an item is disabled so automated tests, custom
+styling, and accessibility audits observe the same state whether the menu is
+rendered during SSR or in the browser.
 
 ## Positioned menu
 

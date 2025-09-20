@@ -137,10 +137,46 @@ pub const fn aria_checked(state: AriaChecked) -> (&'static str, &'static str) {
     ("aria-checked", state.as_str())
 }
 
-/// Compute the `aria-disabled` attribute used across inputs.
+/// Internal utility converting boolean flags into optional attributes.
 #[inline]
-pub const fn aria_disabled(disabled: bool) -> (&'static str, &'static str) {
-    ("aria-disabled", if disabled { "true" } else { "false" })
+fn optional_bool_attribute(name: &'static str, active: bool) -> Option<(&'static str, String)> {
+    active.then(|| (name, "true".to_string()))
+}
+
+/// Compute the `aria-disabled` attribute used across inputs.
+///
+/// The helper only emits metadata when the control is disabled so adapters can
+/// avoid rendering noisy `aria-disabled="false"` tuples.  Consumers should
+/// combine this with [`data_disabled`] so enterprise automation and styling
+/// hooks receive the same declarative cues.
+#[inline]
+pub fn aria_disabled(disabled: bool) -> Option<(&'static str, String)> {
+    optional_bool_attribute("aria-disabled", disabled)
+}
+
+/// Compute the `data-disabled` attribute paired with [`aria_disabled`].
+///
+/// Headless adapters use the attribute to expose a consistent styling/automation
+/// hook across SSR and CSR renders without duplicating the disabled bookkeeping
+/// logic.
+#[inline]
+pub fn data_disabled(disabled: bool) -> Option<(&'static str, String)> {
+    optional_bool_attribute("data-disabled", disabled)
+}
+
+/// Push paired `aria-disabled`/`data-disabled` tuples into the provided buffer.
+///
+/// This helper centralises the boilerplate so state machines and adapters can
+/// remain declarative — they simply supply the disabled flag and receive the
+/// correct ARIA/data hooks when the control is inert.
+#[inline]
+pub fn extend_disabled_attributes(attrs: &mut Vec<(&'static str, String)>, disabled: bool) {
+    if let Some(attr) = aria_disabled(disabled) {
+        attrs.push(attr);
+    }
+    if let Some(attr) = data_disabled(disabled) {
+        attrs.push(attr);
+    }
 }
 
 /// Compute the `aria-expanded` attribute shared by disclosure widgets.

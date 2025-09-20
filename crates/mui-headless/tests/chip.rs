@@ -98,11 +98,17 @@ fn aria_builders_reflect_state() {
     assert_eq!(attrs.labelledby(), Some(("aria-labelledby", "label")));
     assert_eq!(attrs.describedby(), Some(("aria-describedby", "hint")));
     assert_eq!(attrs.hidden(), ("aria-hidden", "false"));
+    assert_eq!(ChipAttributes::new(&state).disabled(), None);
+    assert_eq!(ChipAttributes::new(&state).data_disabled(), None);
 
     state.set_disabled(true);
     assert_eq!(
         ChipAttributes::new(&state).disabled(),
-        ("aria-disabled", "true")
+        Some(("aria-disabled", "true".into()))
+    );
+    assert_eq!(
+        ChipAttributes::new(&state).data_disabled(),
+        Some(("data-disabled", "true".into()))
     );
 
     let delete_attrs = ChipDeleteAttributes::new(&state).label("Remove filter");

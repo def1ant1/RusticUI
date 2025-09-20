@@ -30,9 +30,14 @@ fn assert_portal_markup(html: &str) {
         1,
         "options should only be rendered once"
     );
+    assert!(html.contains("role=\"option\""));
     assert!(
-        html.contains("aria-disabled=\"false\""),
-        "options should surface their disabled metadata"
+        !html.contains("aria-disabled=\"false\""),
+        "enabled options should omit aria-disabled metadata"
+    );
+    assert!(
+        !html.contains("data-disabled=\"false\""),
+        "enabled options should omit data-disabled metadata"
     );
 }
 

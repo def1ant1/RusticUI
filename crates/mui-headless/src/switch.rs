@@ -95,8 +95,9 @@ impl SwitchState {
         attrs.push(("role", aria::role_switch().into()));
         let (k, v) = aria::aria_checked(aria::AriaChecked::from(self.inner.checked()));
         attrs.push((k, v.into()));
-        let (k, v) = aria::aria_disabled(self.disabled());
-        attrs.push((k, v.into()));
+        if let Some((k, v)) = aria::aria_disabled(self.disabled()) {
+            attrs.push((k, v));
+        }
         attrs.push((
             "tabindex",
             if self.disabled() { "-1" } else { "0" }.to_string(),

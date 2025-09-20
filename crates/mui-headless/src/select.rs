@@ -298,6 +298,18 @@ impl SelectState {
         aria::role_option()
     }
 
+    /// Builds the baseline accessibility attributes for a listbox option.
+    ///
+    /// The helper centralises disabled bookkeeping so adapters (Yew, Leptos,
+    /// Sycamore, etc.) can simply extend the returned buffer with framework
+    /// specific data hooks while keeping ARIA semantics consistent.
+    pub fn option_accessibility_attributes(&self, index: usize) -> Vec<(&'static str, String)> {
+        let mut attrs = Vec::with_capacity(3);
+        attrs.push(("role", aria::role_option().into()));
+        aria::extend_disabled_attributes(&mut attrs, self.is_option_disabled(index));
+        attrs
+    }
+
     fn set_open<F: FnOnce(bool)>(&mut self, next: bool, notify: F) {
         if !self.open_mode.is_controlled() {
             self.open = next;
@@ -718,5 +730,31 @@ mod tests {
         assert_eq!(controlled.highlighted(), Some(1));
         controlled.sync_open(false);
         assert!(!controlled.is_open());
+    }
+
+    #[test]
+    fn option_accessibility_attributes_follow_disabled_state() {
+        let mut state = SelectState::new(
+            3,
+            Some(0),
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+
+        let enabled = state.option_accessibility_attributes(0);
+        assert!(enabled.iter().any(|(k, v)| k == &"role" && v == "option"));
+        assert!(enabled.iter().all(|(k, _)| *k != "aria-disabled"));
+        assert!(enabled.iter().all(|(k, _)| *k != "data-disabled"));
+
+        state.set_option_disabled(1, true);
+        let disabled = state.option_accessibility_attributes(1);
+        assert!(disabled.iter().any(|(k, v)| k == &"role" && v == "option"));
+        assert!(disabled
+            .iter()
+            .any(|(k, v)| k == &"aria-disabled" && v == "true"));
+        assert!(disabled
+            .iter()
+            .any(|(k, v)| k == &"data-disabled" && v == "true"));
     }
 }

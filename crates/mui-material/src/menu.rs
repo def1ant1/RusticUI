@@ -174,12 +174,11 @@ fn surface_attributes(
 fn item_attributes(props: &MenuProps, state: &MenuState, index: usize) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("id".into(), item_id(props, index)));
-    attrs.push(("role".into(), state.item_role().into()));
+    for (key, value) in state.item_accessibility_attributes(index) {
+        attrs.push((key.into(), value));
+    }
     let is_highlighted = state.highlighted() == Some(index);
     attrs.push(("data-highlighted".into(), is_highlighted.to_string()));
-    let is_disabled = state.is_item_disabled(index);
-    attrs.push(("aria-disabled".into(), is_disabled.to_string()));
-    attrs.push(("data-disabled".into(), is_disabled.to_string()));
     attrs.push(("data-index".into(), index.to_string()));
     attrs.push(("data-command".into(), props.items[index].command.clone()));
     if let Some(id) = &props.automation_id {

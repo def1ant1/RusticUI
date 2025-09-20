@@ -19,7 +19,10 @@ markup, expose the same `data-*` hooks, and hydrate against the same HTML shell.
 The helpers bubble the headless disabled bookkeeping through to the shared
 renderer so any framework can call `state.set_option_disabled(index, true)` and
 receive matching `aria-disabled`/`data-disabled` hooks in both SSR and CSR
-renders without patching adapter code.
+renders without patching adapter code. Internally the renderer relies on
+`SelectState::option_accessibility_attributes` so enabled options omit
+`aria-disabled="false"` noise while disabled options consistently expose both
+attributes for automation and styling.
 
 ## Running the unit tests
 

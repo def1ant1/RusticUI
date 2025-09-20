@@ -21,6 +21,9 @@ interactivity during SSR and client renders.
   `SelectState::is_option_disabled(index)` expose read access for renderers that
   want to emit `aria-disabled` or `data-disabled` attributes without reimplementing
   the toggle logic.
+- `SelectState::option_accessibility_attributes(index)` builds the `role="option"`
+  metadata and conditionally appends disabled cues so adapters only need to
+  extend the returned vector with automation IDs or custom data hooks.
 - `SelectState::set_option_count(count)` keeps the disabled vector in sync with
   dynamic collections and clamps out-of-range indices. This avoids panics when
   async data loaders swap entire result sets.
@@ -51,6 +54,12 @@ assert!(state.is_option_disabled(2));
 // Keyboard navigation skips disabled entries automatically.
 let next = state.on_key(ControlKey::ArrowDown, |_| {});
 assert_eq!(next, Some(3));
+
+// Attribute builders centralize the `role`/disabled bookkeeping so adapters can
+// append framework specific metadata without duplicating logic.
+let attrs = state.option_accessibility_attributes(1);
+assert!(attrs.iter().any(|(k, v)| k == &"role" && v == "option"));
+assert!(attrs.iter().any(|(k, v)| k == &"aria-disabled" && v == "true"));
 ```
 
 ## Menu state machine quick reference
@@ -68,6 +77,9 @@ interactivity during SSR and client hydration.
 - `MenuState::is_item_enabled(index)`/`is_item_disabled(index)` expose read
   access for renderers that need to emit `aria-disabled` or
   `data-disabled` attributes without recalculating the bookkeeping.
+- `MenuState::item_accessibility_attributes(index)` mirrors the select helper by
+  returning the `role="menuitem"` tuple and optional disabled metadata ready to
+  be extended with framework specific automation hooks.
 - `MenuState::set_item_count(count)` resizes the disabled vector so dynamic
   collections stay in sync. Clamping prevents out-of-bounds indices when async
   loaders replace the entire menu payload.
@@ -100,6 +112,11 @@ assert_eq!(state.on_key(ControlKey::ArrowDown), Some(2));
 
 // Activation callbacks never fire for disabled indices.
 state.activate_highlighted(|_| panic!("disabled items should not activate"));
+
+// Menu attribute builders emit `role` and disabled metadata on demand.
+let attrs = state.item_accessibility_attributes(1);
+assert!(attrs.iter().any(|(k, v)| k == &"role" && v == "menuitem"));
+assert!(attrs.iter().any(|(k, v)| k == &"aria-disabled" && v == "true"));
 ```
 
 ### Testing strategy
