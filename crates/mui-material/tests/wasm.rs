@@ -4,13 +4,16 @@ use mui_headless::checkbox::CheckboxState;
 use mui_headless::chip::{ChipConfig, ChipState};
 use mui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
 use mui_headless::list::{ListState, SelectionMode};
+use mui_headless::menu::MenuState;
 use mui_headless::radio::{RadioGroupState, RadioOrientation};
+use mui_headless::selection::ControlStrategy;
 use mui_headless::switch::SwitchState;
 use mui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
 use mui_headless::tooltip::{TooltipConfig, TooltipState};
 use mui_material::checkbox::{self, CheckboxProps};
 use mui_material::chip::{self, ChipProps};
 use mui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
+use mui_material::menu::{self, MenuItem, MenuProps};
 use mui_material::radio::{self, RadioGroupProps};
 use mui_material::switch::{self, SwitchProps};
 use mui_material::tab_panel;
@@ -576,6 +579,57 @@ async fn drawer_modal_accessibility() {
         .unwrap()
         .expect("navigation link rendered");
     assert_eq!(nav_link.text_content().unwrap(), "Home");
+
+    axe_check(&mount).await;
+}
+
+#[wasm_bindgen_test(async)]
+async fn menu_disabled_items_expose_state_and_pass_axe() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let props = MenuProps::new(
+            "Actions",
+            vec![
+                MenuItem::new("Profile", "profile"),
+                MenuItem::new("Logout", "logout"),
+                MenuItem::new("Archive", "archive"),
+            ],
+        )
+        .with_automation_id("wasm-menu");
+        let mut state = MenuState::new(
+            props.items.len(),
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        state.set_item_disabled(1, true);
+        let markup = menu::yew::render(&props, &state);
+
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                { Html::from_html_unchecked(AttrValue::from(markup)) }
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let disabled_item = mount
+        .query_selector("[data-automation-item='wasm-menu-1']")
+        .unwrap()
+        .expect("disabled menu item rendered");
+    assert_eq!(
+        disabled_item.get_attribute("aria-disabled").unwrap(),
+        "true"
+    );
+    assert_eq!(
+        disabled_item.get_attribute("data-disabled").unwrap(),
+        "true"
+    );
 
     axe_check(&mount).await;
 }

@@ -53,6 +53,55 @@ let next = state.on_key(ControlKey::ArrowDown, |_| {});
 assert_eq!(next, Some(3));
 ```
 
+## Menu state machine quick reference
+
+`MenuState` powers menu button widgets (`role="menu"` + `menuitem`). The state
+machine mirrors the select implementation by tracking disabled items alongside
+the open/highlight bookkeeping so adapters can declaratively toggle
+interactivity during SSR and client hydration.
+
+- `MenuState::set_item_disabled(index, bool)` flips the internal `Vec<bool>` and
+  automatically advances the highlight to the nearest enabled entry when the
+  menu manages focus (uncontrolled mode). Disabled items therefore never trap
+  keyboard users even if RBAC rules or async data loads promote an action to a
+  read-only state mid-session.
+- `MenuState::is_item_enabled(index)`/`is_item_disabled(index)` expose read
+  access for renderers that need to emit `aria-disabled` or
+  `data-disabled` attributes without recalculating the bookkeeping.
+- `MenuState::set_item_count(count)` resizes the disabled vector so dynamic
+  collections stay in sync. Clamping prevents out-of-bounds indices when async
+  loaders replace the entire menu payload.
+- Navigation helpers (`ensure_highlight`, `on_key`, `on_typeahead`) skip disabled
+  items automatically and `activate_highlighted` suppresses callbacks if the
+  highlight resolves to an inert entry. Analytics hooks therefore never observe
+  impossible activations.
+
+### Example (framework agnostic)
+
+```rust
+use mui_headless::menu::MenuState;
+use mui_headless::interaction::ControlKey;
+use mui_headless::selection::ControlStrategy;
+
+let mut state = MenuState::new(
+    3,              // items rendered
+    false,          // menu closed by default
+    ControlStrategy::Uncontrolled,
+    ControlStrategy::Uncontrolled,
+);
+
+// Disable the middle action and rely on the state machine to skip it during
+// keyboard navigation.
+state.set_item_disabled(1, true);
+assert!(state.is_item_disabled(1));
+
+// Arrow keys automatically jump to the next enabled entry.
+assert_eq!(state.on_key(ControlKey::ArrowDown), Some(2));
+
+// Activation callbacks never fire for disabled indices.
+state.activate_highlighted(|_| panic!("disabled items should not activate"));
+```
+
 ### Testing strategy
 
 Unit tests live alongside the implementations (`src/select.rs`) and document how

@@ -16,6 +16,14 @@ const TYPEAHEAD_TIMEOUT: Duration = Duration::from_millis(1000);
 #[derive(Debug, Clone)]
 pub struct MenuState {
     item_count: usize,
+    /// Tracks whether each menu item index is disabled.
+    ///
+    /// We intentionally mirror [`item_count`] with a `Vec<bool>` so framework
+    /// adapters can declaratively toggle interactivity (for example during SSR
+    /// diffing or hydration) without re-sending the entire menu collection. The
+    /// headless state can therefore be cloned for deterministic snapshots while
+    /// still supporting O(1) enable/disable updates.
+    disabled: Vec<bool>,
     highlighted: Option<usize>,
     open: bool,
     open_mode: ControlStrategy,
@@ -36,8 +44,9 @@ impl MenuState {
         open_mode: ControlStrategy,
         highlight_mode: ControlStrategy,
     ) -> Self {
-        Self {
+        let mut state = Self {
             item_count,
+            disabled: vec![false; item_count],
             highlighted: if item_count > 0 { Some(0) } else { None },
             open: if open_mode.is_controlled() {
                 false
@@ -47,7 +56,12 @@ impl MenuState {
             open_mode,
             highlight_mode,
             typeahead: TypeaheadBuffer::new(TYPEAHEAD_TIMEOUT),
-        }
+        };
+        // Ensure that freshly constructed states immediately respect disabled
+        // bookkeeping so adapters can mark items inert before the first render
+        // without leaving the highlight stranded on a disabled entry.
+        state.ensure_highlight();
+        state
     }
 
     /// Returns whether the menu surface is currently expanded.
@@ -65,10 +79,36 @@ impl MenuState {
     /// Update the number of rendered menu items.
     pub fn set_item_count(&mut self, count: usize) {
         self.item_count = count;
+        self.disabled.resize(count, false);
         self.highlighted = clamp_index(self.highlighted, count);
-        if self.highlighted.is_none() && count > 0 && !self.highlight_mode.is_controlled() {
-            self.highlighted = Some(0);
+        self.reconcile_disabled_state();
+    }
+
+    /// Returns whether the menu item at the given index is enabled.
+    #[inline]
+    pub fn is_item_enabled(&self, index: usize) -> bool {
+        index < self.item_count && !self.disabled.get(index).copied().unwrap_or(true)
+    }
+
+    /// Returns whether the menu item at the given index is disabled.
+    #[inline]
+    pub fn is_item_disabled(&self, index: usize) -> bool {
+        !self.is_item_enabled(index)
+    }
+
+    /// Toggle the disabled flag for a menu item.
+    ///
+    /// Callers can flip individual indices in response to async data loads,
+    /// RBAC signals, or feature flags while letting the state machine advance
+    /// the highlight to the next enabled entry in uncontrolled mode.
+    pub fn set_item_disabled(&mut self, index: usize, disabled: bool) {
+        if index >= self.item_count {
+            return;
         }
+        if let Some(slot) = self.disabled.get_mut(index) {
+            *slot = disabled;
+        }
+        self.reconcile_disabled_state();
     }
 
     /// Synchronize the open flag when controlled by the parent.
@@ -91,7 +131,7 @@ impl MenuState {
     /// Imperatively set the highlighted item (uncontrolled mode).
     pub fn set_highlighted(&mut self, index: Option<usize>) {
         if !self.highlight_mode.is_controlled() {
-            self.highlighted = clamp_index(index, self.item_count);
+            self.highlighted = self.normalize_index(index);
         }
     }
 
@@ -116,22 +156,18 @@ impl MenuState {
         let mut next = self.highlighted;
         match key {
             ControlKey::Home => {
-                next = if self.item_count > 0 { Some(0) } else { None };
+                next = self.first_enabled_index();
             }
             ControlKey::End => {
-                next = if self.item_count > 0 {
-                    Some(self.item_count - 1)
-                } else {
-                    None
-                };
+                next = self.last_enabled_index();
             }
             _ if key.is_forward() => {
                 self.ensure_highlight();
-                next = wrap_index(self.highlighted, 1, self.item_count);
+                next = self.advance_enabled(self.highlighted, 1);
             }
             _ if key.is_backward() => {
                 self.ensure_highlight();
-                next = wrap_index(self.highlighted, -1, self.item_count);
+                next = self.advance_enabled(self.highlighted, -1);
             }
             _ => {}
         }
@@ -149,13 +185,30 @@ impl MenuState {
         F: Fn(&str, Option<usize>, usize) -> Option<usize>,
     {
         let query = self.typeahead.push(ch);
-        let next = matcher(query, self.highlighted, self.item_count);
-        if self.highlight_mode.is_controlled() {
-            next
-        } else {
-            if next.is_some() {
-                self.highlighted = next;
+        if let Some(index) = matcher(query, self.highlighted, self.item_count) {
+            if self.is_item_disabled(index) {
+                let normalized = self.normalize_index(Some(index));
+                if !self.highlight_mode.is_controlled() {
+                    self.highlighted = normalized;
+                }
+                return if self.highlight_mode.is_controlled() {
+                    normalized
+                } else {
+                    self.highlighted
+                };
             }
+            let normalized = self.normalize_index(Some(index));
+            if self.highlight_mode.is_controlled() {
+                return normalized;
+            }
+            if normalized.is_some() {
+                self.highlighted = normalized;
+            }
+            return self.highlighted;
+        }
+        if self.highlight_mode.is_controlled() {
+            None
+        } else {
             self.highlighted
         }
     }
@@ -163,6 +216,9 @@ impl MenuState {
     /// Invoke the supplied callback for the highlighted menu item.
     pub fn activate_highlighted<F: FnMut(usize)>(&mut self, mut on_activate: F) {
         if let Some(index) = self.highlighted {
+            if self.is_item_disabled(index) {
+                return;
+            }
             on_activate(index);
         }
     }
@@ -210,15 +266,109 @@ impl MenuState {
     }
 
     fn ensure_highlight(&mut self) {
-        if self.item_count == 0 {
+        if self.item_count == 0 || !self.has_enabled_items() {
             self.highlighted = None;
             return;
         }
         if self.highlight_mode.is_controlled() {
             self.highlighted = clamp_index(self.highlighted, self.item_count);
         } else if self.highlighted.is_none() {
-            self.highlighted = Some(0);
+            self.highlighted = self.first_enabled_index();
+        } else if let Some(index) = self.highlighted {
+            if self.is_item_disabled(index) {
+                self.highlighted = self
+                    .advance_enabled(Some(index), 1)
+                    .or_else(|| self.advance_enabled(Some(index), -1))
+                    .or_else(|| self.first_enabled_index());
+            }
         }
+    }
+
+    fn reconcile_disabled_state(&mut self) {
+        if self.item_count == 0 {
+            self.disabled.clear();
+            self.highlighted = None;
+            return;
+        }
+        if !self.has_enabled_items() {
+            if !self.highlight_mode.is_controlled() {
+                self.highlighted = None;
+            }
+            return;
+        }
+        if self.highlight_mode.is_controlled() {
+            self.highlighted = clamp_index(self.highlighted, self.item_count);
+            return;
+        }
+        if let Some(index) = self.highlighted {
+            if self.is_item_disabled(index) {
+                self.highlighted = self
+                    .advance_enabled(Some(index), 1)
+                    .or_else(|| self.advance_enabled(Some(index), -1));
+            }
+        }
+        if self.highlighted.is_none() {
+            self.highlighted = self.first_enabled_index();
+        }
+    }
+
+    fn has_enabled_items(&self) -> bool {
+        self.disabled
+            .iter()
+            .take(self.item_count)
+            .any(|flag| !*flag)
+    }
+
+    fn first_enabled_index(&self) -> Option<usize> {
+        if self.item_count == 0 {
+            return None;
+        }
+        (0..self.item_count).find(|index| self.is_item_enabled(*index))
+    }
+
+    fn last_enabled_index(&self) -> Option<usize> {
+        if self.item_count == 0 {
+            return None;
+        }
+        (0..self.item_count)
+            .rev()
+            .find(|index| self.is_item_enabled(*index))
+    }
+
+    fn advance_enabled(&self, current: Option<usize>, delta: isize) -> Option<usize> {
+        if self.item_count == 0 || !self.has_enabled_items() {
+            return None;
+        }
+        let mut base = match clamp_index(current, self.item_count) {
+            Some(index) => index,
+            None => {
+                return if delta >= 0 {
+                    self.first_enabled_index()
+                } else {
+                    self.last_enabled_index()
+                };
+            }
+        };
+        for _ in 0..self.item_count {
+            base = wrap_index(Some(base), delta, self.item_count)?;
+            if self.is_item_enabled(base) {
+                return Some(base);
+            }
+        }
+        None
+    }
+
+    fn normalize_index(&self, index: Option<usize>) -> Option<usize> {
+        let index = clamp_index(index, self.item_count);
+        if let Some(current) = index {
+            if self.is_item_enabled(current) {
+                return Some(current);
+            }
+            return self
+                .advance_enabled(Some(current), 1)
+                .or_else(|| self.advance_enabled(Some(current), -1));
+        }
+        None
     }
 }
 
@@ -232,15 +382,6 @@ mod tests {
             "b" => Some(1),
             "ap" => Some(1),
             _ => None,
-        }
-    }
-
-    fn disabled_lookup(query: &str, current: Option<usize>, len: usize) -> Option<usize> {
-        // Delegate to the enabled matcher but treat the "b" query as disabled.
-        if query == "b" {
-            current
-        } else {
-            enabled_lookup(query, current, len)
         }
     }
 
@@ -323,6 +464,29 @@ mod tests {
     }
 
     #[test]
+    fn keyboard_navigation_skips_disabled_items() {
+        let mut state = MenuState::new(
+            4,
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        state.set_item_disabled(1, true);
+        state.set_item_disabled(2, true);
+        state.set_highlighted(Some(0));
+
+        // Moving forward should jump over disabled entries and wrap when needed.
+        let forward = state.on_key(ControlKey::ArrowDown);
+        assert_eq!(forward, Some(3));
+        assert_eq!(state.highlighted(), Some(3));
+
+        // Moving backward should likewise skip disabled items.
+        let backward = state.on_key(ControlKey::ArrowUp);
+        assert_eq!(backward, Some(0));
+        assert_eq!(state.highlighted(), Some(0));
+    }
+
+    #[test]
     fn controlled_vs_uncontrolled_highlight_sync() {
         // Controlled highlight mode should defer state updates until the
         // component owner explicitly synchronizes a value.  Uncontrolled mode
@@ -349,19 +513,34 @@ mod tests {
         assert_eq!(response, Some(1));
         controlled.sync_highlighted(response);
         assert_eq!(controlled.highlighted(), Some(1));
+
+        // Disabling the controlled highlight index should not mutate the stored
+        // value — the parent component owns reconciliation.
+        controlled.set_item_disabled(1, true);
+        assert_eq!(controlled.highlighted(), Some(1));
+        // A subsequent navigation intent still reports the next enabled index.
+        assert_eq!(controlled.on_key(ControlKey::ArrowDown), Some(2));
     }
 
     #[test]
     fn typeahead_cases_handle_disabled_and_rapid_input() {
-        // Menu items can be conceptually disabled by having the matcher reject
-        // them.  The table clarifies how the buffer interacts with those
-        // scenarios including the rapid-typeahead case where characters are
-        // entered faster than the timeout window.
+        // Menu items can be disabled directly via `set_item_disabled`. The
+        // table clarifies how the buffer interacts with those scenarios
+        // including the rapid-typeahead case where characters are entered
+        // faster than the timeout window.
         struct Case {
             name: &'static str,
             expected: Option<usize>,
             matcher: fn(&str, Option<usize>, usize) -> Option<usize>,
+            setup: fn(&mut MenuState),
             sequence: &'static [char],
+        }
+
+        fn disabled_matcher(query: &str, _: Option<usize>, _: usize) -> Option<usize> {
+            match query {
+                "b" => Some(1),
+                _ => None,
+            }
         }
 
         let cases: [Case; 3] = [
@@ -369,30 +548,34 @@ mod tests {
                 name: "single_key_moves_highlight",
                 expected: Some(1),
                 matcher: enabled_lookup,
+                setup: |_| {},
                 sequence: &['b'],
             },
             Case {
-                name: "disabled_item_prevents_focus_change",
-                expected: Some(0),
-                matcher: disabled_lookup,
+                name: "disabled_item_advances_to_next_enabled",
+                expected: Some(2),
+                matcher: disabled_matcher,
+                setup: |state| state.set_item_disabled(1, true),
                 sequence: &['b'],
             },
             Case {
                 name: "rapid_typeahead_uses_full_query",
                 expected: Some(1),
                 matcher: rapid_lookup,
+                setup: |_| {},
                 sequence: &['a', 'p'],
             },
         ];
 
         for case in cases {
             let mut state = MenuState::new(
-                2,
+                3,
                 false,
                 ControlStrategy::Uncontrolled,
                 ControlStrategy::Uncontrolled,
             );
             state.set_highlighted(Some(0));
+            (case.setup)(&mut state);
             for ch in case.sequence {
                 state.on_typeahead(*ch, case.matcher);
             }
@@ -403,6 +586,46 @@ mod tests {
                 case.name
             );
         }
+    }
+
+    #[test]
+    fn disabling_highlight_advances_or_clears_focus() {
+        let mut state = MenuState::new(
+            3,
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        state.set_highlighted(Some(1));
+        state.set_item_disabled(1, true);
+        assert!(state.is_item_disabled(1));
+        assert_eq!(state.highlighted(), Some(2));
+        state.set_item_disabled(2, true);
+        assert_eq!(state.highlighted(), Some(0));
+        state.set_item_disabled(0, true);
+        assert_eq!(state.highlighted(), None);
+        state.set_item_disabled(0, false);
+        assert!(state.is_item_enabled(0));
+        assert_eq!(state.highlighted(), Some(0));
+    }
+
+    #[test]
+    fn activate_highlighted_ignores_disabled_items() {
+        let mut state = MenuState::new(
+            2,
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Controlled,
+        );
+        state.sync_highlighted(Some(1));
+        state.set_item_disabled(1, true);
+        let mut observed = Vec::new();
+        state.activate_highlighted(|index| observed.push(index));
+        assert!(observed.is_empty());
+        state.sync_highlighted(Some(0));
+        state.set_item_disabled(0, false);
+        state.activate_highlighted(|index| observed.push(index));
+        assert_eq!(observed, vec![0]);
     }
 
     #[test]

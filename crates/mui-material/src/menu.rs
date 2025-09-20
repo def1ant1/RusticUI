@@ -177,6 +177,9 @@ fn item_attributes(props: &MenuProps, state: &MenuState, index: usize) -> Vec<(S
     attrs.push(("role".into(), state.item_role().into()));
     let is_highlighted = state.highlighted() == Some(index);
     attrs.push(("data-highlighted".into(), is_highlighted.to_string()));
+    let is_disabled = state.is_item_disabled(index);
+    attrs.push(("aria-disabled".into(), is_disabled.to_string()));
+    attrs.push(("data-disabled".into(), is_disabled.to_string()));
     attrs.push(("data-index".into(), index.to_string()));
     attrs.push(("data-command".into(), props.items[index].command.clone()));
     if let Some(id) = &props.automation_id {
@@ -418,5 +421,19 @@ mod tests {
             "menu surface should only render once"
         );
         assert!(html.contains("data-portal-layer=\"popover\""));
+    }
+
+    #[test]
+    fn item_attributes_reflect_disabled_flags() {
+        let props = sample_props();
+        let mut state = build_state(props.items.len());
+        state.set_item_disabled(1, true);
+        let attrs = item_attributes(&props, &state, 1);
+        assert!(attrs
+            .iter()
+            .any(|(k, v)| k == "aria-disabled" && v == "true"));
+        assert!(attrs
+            .iter()
+            .any(|(k, v)| k == "data-disabled" && v == "true"));
     }
 }
