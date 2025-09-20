@@ -26,6 +26,7 @@ pub mod app_bar;
 pub mod button;
 pub mod card;
 pub mod checkbox;
+pub mod chip;
 pub mod dialog;
 pub mod drawer;
 pub mod list;
@@ -43,6 +44,7 @@ pub mod tab_panel;
 pub mod table;
 pub mod tabs;
 pub mod text_field;
+pub mod tooltip;
 
 pub use mui_styled_engine::Theme;
 
