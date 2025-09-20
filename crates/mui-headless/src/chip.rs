@@ -372,10 +372,16 @@ impl<'a, C: Clock> ChipAttributes<'a, C> {
         self.described_by.map(aria::aria_describedby)
     }
 
-    /// Returns the `aria-disabled` attribute based on state.
+    /// Returns the `aria-disabled` attribute when the chip is disabled.
     #[inline]
-    pub fn disabled(&self) -> (&'static str, &'static str) {
+    pub fn disabled(&self) -> Option<(&'static str, String)> {
         aria::aria_disabled(self.state.disabled())
+    }
+
+    /// Returns the `data-disabled` attribute when the chip is disabled.
+    #[inline]
+    pub fn data_disabled(&self) -> Option<(&'static str, String)> {
+        aria::data_disabled(self.state.disabled())
     }
 
     /// Returns the `aria-hidden` attribute when the chip has been deleted.

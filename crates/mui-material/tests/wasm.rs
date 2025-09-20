@@ -631,6 +631,13 @@ async fn menu_disabled_items_expose_state_and_pass_axe() {
         "true"
     );
 
+    let enabled_item = mount
+        .query_selector("[data-automation-item='wasm-menu-0']")
+        .unwrap()
+        .expect("enabled menu item rendered");
+    assert!(enabled_item.get_attribute("aria-disabled").is_none());
+    assert!(enabled_item.get_attribute("data-disabled").is_none());
+
     axe_check(&mount).await;
 }
 

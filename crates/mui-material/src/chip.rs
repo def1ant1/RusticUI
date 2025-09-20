@@ -182,8 +182,9 @@ fn root_attributes(
     if let Some((key, value)) = builder.describedby() {
         attrs.push((key.into(), value.into()));
     }
-    let (disabled_key, disabled_value) = builder.disabled();
-    attrs.push((disabled_key.into(), disabled_value.into()));
+    if let Some((disabled_key, disabled_value)) = builder.disabled() {
+        attrs.push((disabled_key.into(), disabled_value));
+    }
     let (hidden_key, hidden_value) = builder.hidden();
     attrs.push((hidden_key.into(), hidden_value.into()));
     attrs.push((
@@ -200,7 +201,9 @@ fn root_attributes(
         "data-deletion-pending".into(),
         state.deletion_pending().to_string(),
     ));
-    attrs.push(("data-disabled".into(), state.disabled().to_string()));
+    if let Some((data_key, data_value)) = builder.data_disabled() {
+        attrs.push((data_key.into(), data_value));
+    }
     attrs.push(("data-dismissible".into(), props.dismissible.to_string()));
     attrs.push(("data-label-id".into(), label_id.to_string()));
     attrs.push(("data-delete-id".into(), delete_id.to_string()));

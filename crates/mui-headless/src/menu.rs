@@ -253,6 +253,17 @@ impl MenuState {
         aria::role_menuitem()
     }
 
+    /// Builds the accessibility attributes shared by menu items.
+    ///
+    /// Adapters can extend the returned vector with automation hooks (for
+    /// example the command ID) without re-implementing disabled bookkeeping.
+    pub fn item_accessibility_attributes(&self, index: usize) -> Vec<(&'static str, String)> {
+        let mut attrs = Vec::with_capacity(3);
+        attrs.push(("role", aria::role_menuitem().into()));
+        aria::extend_disabled_attributes(&mut attrs, self.is_item_disabled(index));
+        attrs
+    }
+
     fn set_open<F: FnOnce(bool)>(&mut self, next: bool, notify: F) {
         if !self.open_mode.is_controlled() {
             self.open = next;
@@ -664,5 +675,32 @@ mod tests {
         assert!(controlled.is_open());
         controlled.sync_open(false);
         assert!(!controlled.is_open());
+    }
+
+    #[test]
+    fn item_accessibility_attributes_reflect_disabled_state() {
+        let mut state = MenuState::new(
+            2,
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+
+        let enabled = state.item_accessibility_attributes(0);
+        assert!(enabled.iter().any(|(k, v)| k == &"role" && v == "menuitem"));
+        assert!(enabled.iter().all(|(k, _)| *k != "aria-disabled"));
+        assert!(enabled.iter().all(|(k, _)| *k != "data-disabled"));
+
+        state.set_item_disabled(1, true);
+        let disabled = state.item_accessibility_attributes(1);
+        assert!(disabled
+            .iter()
+            .any(|(k, v)| k == &"role" && v == "menuitem"));
+        assert!(disabled
+            .iter()
+            .any(|(k, v)| k == &"aria-disabled" && v == "true"));
+        assert!(disabled
+            .iter()
+            .any(|(k, v)| k == &"data-disabled" && v == "true"));
     }
 }

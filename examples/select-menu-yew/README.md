@@ -34,8 +34,10 @@ state.set_option_disabled(2, true); // drop the third region from the active lis
 
 The Material renderer will automatically emit `aria-disabled="true"` and
 `data-disabled="true"` for the affected option while keyboard navigation skips
-over it. Controlled demos simply synchronize the state through the existing Yew
-signals to keep hydration and analytics in lock-step.
+over it. The implementation leans on
+`SelectState::option_accessibility_attributes` so enabled items omit noisy
+`aria-disabled="false"` tuples. Controlled demos simply synchronize the state
+through the existing Yew signals to keep hydration and analytics in lock-step.
 
 ## Server-side rendering smoke test
 

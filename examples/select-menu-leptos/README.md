@@ -33,7 +33,10 @@ state.update(|state| state.set_option_disabled(1, true));
 
 This keeps the SSR snapshot and CSR hydration path aligned because the
 underlying `SelectState` skips disabled options for keyboard/typeahead
-navigation while emitting the appropriate ARIA/data hooks for analytics.
+navigation while emitting the appropriate ARIA/data hooks for analytics via
+`SelectState::option_accessibility_attributes`. Enabled options therefore omit
+`aria-disabled="false"` noise while disabled entries reliably expose both
+attributes for styling and automation.
 
 ## Server-side rendering smoke test
 

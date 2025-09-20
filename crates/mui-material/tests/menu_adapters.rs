@@ -26,6 +26,14 @@ fn assert_portal_markup(html: &str) {
         1,
         "menu surface should only render once"
     );
+    assert!(
+        !html.contains("aria-disabled=\"false\""),
+        "enabled menu items should omit aria-disabled"
+    );
+    assert!(
+        !html.contains("data-disabled=\"false\""),
+        "enabled menu items should omit data-disabled"
+    );
 }
 
 #[cfg(feature = "yew")]
