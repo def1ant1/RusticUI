@@ -42,6 +42,9 @@ members = [
     "crates/mui-utils",
     "crates/xtask",
     "tools/material-parity",
+    "examples/feedback-tooltips",
+    "examples/feedback-chips",
+    "examples/data-display-avatar",
 ]
 
 # Use Cargo's second feature resolver so optional dependencies don't

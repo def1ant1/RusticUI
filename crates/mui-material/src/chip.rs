@@ -15,6 +15,38 @@
 //! hydration always agree on class names.  Extensive `data-*` attributes are
 //! included for large automation suites that need deterministic selectors across
 //! frameworks and render modes.
+//!
+//! ## Examples
+//!
+//! ```rust,no_run
+//! use mui_headless::chip::{ChipConfig, ChipState};
+//! use mui_material::chip::{yew as chip_yew, ChipProps};
+//! use mui_styled_engine::{StyleRegistry, Theme};
+//!
+//! let mut theme = Theme::default();
+//! theme.palette.secondary = "#D81B60".into();
+//! let registry = StyleRegistry::new(theme.clone());
+//!
+//! let mut state = ChipState::new(ChipConfig::enterprise_defaults());
+//! state.focus();
+//! state.poll();
+//!
+//! let props = ChipProps::new("Escalated")
+//!     .with_automation_id("feedback-chip")
+//!     .with_delete_label("remove escalation");
+//!
+//! let html = chip_yew::render(&props, &state);
+//! assert!(html.contains("data-component=\"mui-chip\""));
+//! assert!(html.contains("data-automation-id=\"feedback-chip\""));
+//!
+//! // Style collection mirrors the tooltip story so SSR snapshots remain themed.
+//! let _ = registry.style_manager();
+//! let _ = registry.flush_styles();
+//! ```
+//!
+//! See [`examples/feedback-chips`](../../examples/feedback-chips) for a
+//! multi-framework bootstrapper that renders dismissible and read-only chips
+//! with automation hooks pre-wired for analytics pipelines.
 
 use mui_headless::chip::{ChipAttributes, ChipDeleteAttributes, ChipState};
 use mui_styled_engine::{css_with_theme, Style};

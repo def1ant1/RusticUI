@@ -49,6 +49,67 @@ disabled by default so applications opt in explicitly:
 See the [Cargo feature guide](../../docs/cargo-features.md) for examples of
 disabling defaults and enabling only the framework your application requires.
 
+## Feedback primitives (Tooltip & Chip)
+
+Enterprise telemetry, accessibility, and automation pipelines lean heavily on
+the tooltip and chip primitives. `mui-material` layers themed markup on top of
+the deterministic state machines provided by [`mui-headless`](../mui-headless).
+The headless
+crate documents every transition in [`TooltipState`](../mui-headless/src/tooltip.rs)
+and [`ChipState`](../mui-headless/src/chip.rs) so QA suites, SSR renderers, and
+framework adapters can all share the same assumptions.
+
+### Tooltip API overview
+
+- [`TooltipProps`](src/tooltip.rs) centralizes the automation hooks, ARIA
+  metadata, and portal wiring. The shared renderer returns SSR-safe markup that
+  matches hydration output for Yew, Leptos, Dioxus, and Sycamore adapters.
+- [`TooltipTriggerAttributes` and `TooltipSurfaceAttributes`](../mui-headless/src/tooltip.rs)
+  expose fine-grained attribute builders when teams need to augment the
+  baseline HTML emitted by `mui-material`.
+- Portal containers derive their identifiers from `automation_id`, ensuring QA
+  selectors stay stable across frameworks and rendering modes.
+
+The [`feedback-tooltips`](../../examples/feedback-tooltips) blueprint packages a
+ready-to-run SSR snapshot plus hydration stubs for each supported framework.
+Run `cargo run --bin bootstrap --manifest-path examples/feedback-tooltips/Cargo.toml`
+to materialize the scaffolding under `target/feedback-tooltips` with themed
+overrides, portal markup, and automation IDs pre-wired.
+
+### Chip API overview
+
+- [`ChipProps`](src/chip.rs) mirrors the headless [`ChipConfig`](../mui-headless/src/chip.rs)
+  so automation identifiers, delete affordances, and ARIA relationships are
+  consistent between SSR and hydration.
+- [`ChipAttributes` and `ChipDeleteAttributes`](../mui-headless/src/chip.rs)
+  expose the underlying attribute builders when custom renderers or analytics
+  hooks need direct access to the state machine.
+- The renderer emits deterministic `data-*` hooks for visibility, deletion, and
+  control affordances which downstream telemetry can stream without per
+  framework adapters.
+
+The [`feedback-chips`](../../examples/feedback-chips) demo bootstraps the same
+multi-framework scaffolding with dismissible and non-dismissible variants so QA
+teams can validate automation flows with a single command.
+
+### Theming and automation hooks
+
+Both components pull palette, typography, and spacing tokens from
+[`mui-styled-engine`](../mui-styled-engine) through the `css_with_theme!`
+macro. During SSR the [`StyleRegistry`](../mui-styled-engine/src/context.rs)
+collects the generated CSS so automation can snapshot the rendered document
+without manual wiring. The blueprints above return the themed `Theme` instance
+alongside the markup to keep hydration shells and analytics dashboards in sync.
+
+### Additional examples
+
+- [`data-display-avatar`](../../examples/data-display-avatar) renders team
+  presence chips with optional tooltips to demonstrate cross-framework data
+  display patterns.
+- [`mui-ssr-accessibility`](../../examples/mui-ssr-accessibility) continues to
+  document broader SSR pipelines including global style flushing and automated
+  accessibility checks.
+
 ## Framework adapters & portal orchestration
 
 Every Material component exposes framework-specific adapter modules (`yew`,

@@ -6,6 +6,12 @@
 //! actions inside complex dashboards which means we need deterministic logic for
 //! when the trailing delete affordance appears, how long a pending deletion
 //! lingers for animations, and how keyboard driven cancellation behaves.
+//!
+//! The Material layer consumes this state machine to render the automation-rich
+//! chips documented in [`mui-material/README.md`](../mui-material/README.md#feedback-primitives-tooltip--chip)
+//! and exercised in `examples/feedback-chips`.  Those demos pair dismissible and
+//! read-only chips across Yew, Leptos, Dioxus, and Sycamore to validate that the
+//! automation hooks exposed here survive SSR and hydration.
 
 use crate::aria;
 use crate::timing::{Clock, SystemClock, Timer};
