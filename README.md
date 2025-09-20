@@ -140,7 +140,21 @@ metadata, zebra striping, and numeric alignment on top of the same headless
 state machine so selectable rows behave consistently.【F:crates/mui-material/src/table.rs†L1-L356】 Cookbook examples for
 Yew and Leptos live under `examples/data-display-*` and can be run with
 `cargo run --package data-display-yew` or
-`cargo run --package data-display-leptos --features csr` respectively.【F:examples/data-display-yew/README.md†L1-L21】【F:examples/data-display-leptos/README.md†L1-L21】
+`cargo run --package data-display-leptos --features csr` respectively.【F:examples/data-display-yew/README.md†L1-L21】【F:examples/data-display-leptos/README.md†L1-L21】 The
+new [`data-display-avatar`](examples/data-display-avatar) blueprint combines the
+chip and tooltip renderers into a reusable presence widget complete with SSR
+snapshots and hydration stubs for every supported framework.【F:examples/data-display-avatar/README.md†L1-L26】
+
+## Feedback primitives blueprints
+
+Contextual help and escalation cues now have dedicated blueprints under
+`examples/feedback-*`. `feedback-tooltips` renders automation-aware tooltips
+with portal metadata and emits hydration stubs for Yew, Leptos, Dioxus, and
+Sycamore in a single command.【F:examples/feedback-tooltips/README.md†L1-L30】 `feedback-chips` pairs dismissible and
+read-only chips across the same frameworks so QA suites can verify hover and
+deletion affordances without re-authoring markup.【F:examples/feedback-chips/README.md†L1-L30】 Both bootstraps are backed by
+Rust libraries with unit tests ensuring the generated HTML stays in sync as
+`mui-headless` evolves.【F:examples/feedback-tooltips/src/lib.rs†L1-L86】【F:examples/feedback-chips/src/lib.rs†L1-L95】
 
 ### Running the demos
 

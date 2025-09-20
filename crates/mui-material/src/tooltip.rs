@@ -22,6 +22,43 @@
 //! [`render_html`].  Downstream integrations wanting to hook into DOM portals or
 //! generate custom layouts can re-use the smaller helper functions documented
 //! below while still benefiting from the shared class/attribute logic.
+//!
+//! ## Examples
+//!
+//! Render a tooltip with enterprise automation hooks and prepare the SSR output
+//! for hydration across multiple frameworks:
+//!
+//! ```rust,no_run
+//! use mui_headless::tooltip::{TooltipConfig, TooltipState};
+//! use mui_material::tooltip::{yew, TooltipProps};
+//! use mui_styled_engine::{StyleRegistry, Theme};
+//!
+//! let mut theme = Theme::default();
+//! theme.palette.primary = "#0057B7".into();
+//! let registry = StyleRegistry::new(theme.clone());
+//!
+//! let mut state = TooltipState::new(TooltipConfig::enterprise_defaults());
+//! state.focus_anchor();
+//! state.poll();
+//!
+//! let props = TooltipProps::new("?", "Explain automation pipelines")
+//!     .with_automation_id("feedback-tooltip")
+//!     .with_surface_labelled_by("feedback-heading")
+//!     .with_trigger_haspopup("dialog");
+//!
+//! let html = yew::render(&props, &state);
+//! assert!(html.contains("data-portal-root"));
+//! assert!(html.contains("data-automation-id=\"feedback-tooltip\""));
+//!
+//! // Hydration shells reuse the themed registry to flush styles after SSR.
+//! let _ = registry.style_manager();
+//! let _ = registry.flush_styles();
+//! ```
+//!
+//! The [`examples/feedback-tooltips`](../../examples/feedback-tooltips)
+//! blueprint materializes this routine for Yew, Leptos, Dioxus, and Sycamore by
+//! emitting SSR snapshots, hydration entry points, and automation ids with a
+//! single `cargo run --bin bootstrap` invocation.
 
 use mui_headless::tooltip::{TooltipState, TooltipSurfaceAttributes, TooltipTriggerAttributes};
 use mui_styled_engine::{css_with_theme, Style};

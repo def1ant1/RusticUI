@@ -9,6 +9,13 @@
 //! or their rendering loop.  Framework bindings simply forward DOM events and
 //! mirror the derived attributes which keeps the UI layer essentially
 //! stateless.
+//!
+//! The Material wrappers described in
+//! [`mui-material/README.md`](../mui-material/README.md#feedback-primitives-tooltip--chip)
+//! reuse these primitives to emit SSR-ready HTML for Yew, Leptos, Dioxus, and
+//! Sycamore adapters.  The `examples/feedback-tooltips` bootstrap demonstrates
+//! how a single state machine instance can hydrate across frameworks while
+//! preserving automation identifiers and portal metadata.
 
 use crate::aria;
 use crate::timing::{Clock, SystemClock, Timer};

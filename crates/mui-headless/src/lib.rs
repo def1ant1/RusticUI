@@ -10,6 +10,13 @@
 //! components such as [`drawer`] also reuse the centralized accessibility
 //! primitives.  The [`interaction`] primitives expose keyboard orchestration
 //! shared across each state machine.
+//!
+//! The Material layer (`mui-material`) documents how these headless states are
+//! rendered with shared theming, automation identifiers, and SSR safe markup.
+//! See [`crates/mui-material/README.md`](../mui-material/README.md#feedback-primitives-tooltip--chip)
+//! for a tour of the tooltip and chip primitives and the
+//! `examples/feedback-*` blueprints that exercise them across Yew, Leptos,
+//! Dioxus, and Sycamore adapters.
 
 pub mod aria;
 pub mod button;

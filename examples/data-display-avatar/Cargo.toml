@@ -1,0 +1,13 @@
+[package]
+name = "data-display-avatar"
+version = "0.1.0"
+edition = "2021"
+description = "Cross-framework avatar blueprint combining mui-material chips and tooltips."
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+mui-material = { path = "../../crates/mui-material" }
+mui-headless = { path = "../../crates/mui-headless" }
+mui-styled-engine = { path = "../../crates/mui-styled-engine" }
+mui-system = { path = "../../crates/mui-system" }
