@@ -110,6 +110,27 @@ alongside the markup to keep hydration shells and analytics dashboards in sync.
   document broader SSR pipelines including global style flushing and automated
   accessibility checks.
 
+## Select component guide
+
+Material select adapters consume the headless [`SelectState`](../mui-headless/src/select.rs)
+directly.  Disabled bookkeeping is centralized in the state machine so renderers
+emit consistent ARIA/data attributes without duplicating logic:
+
+- Call `state.set_option_disabled(index, bool)` whenever async data or business
+  rules change option availability. Uncontrolled selects automatically advance
+  the highlight/selection to the next enabled entry.
+- Use `state.is_option_enabled(index)` to mirror the disabled contract into the
+  rendered HTML. The shared renderer now stamps both `aria-disabled` and
+  `data-disabled` hooks so SSR and hydration markup stay aligned.
+- Navigation helpers (`on_key`, `on_typeahead`) skip disabled islands; adapters
+  only need to forward the callbacks and respond to the returned indices (for
+  example to scroll newly highlighted rows into view).
+
+The framework-specific tests under `tests/select_adapters.rs` assert that Yew,
+Leptos, Dioxus, and Sycamore renders all include the disabled metadata. When
+augmenting the component ensure any additional markup preserves these hooks so
+end-to-end automation continues to function.
+
 ## Framework adapters & portal orchestration
 
 Every Material component exposes framework-specific adapter modules (`yew`,

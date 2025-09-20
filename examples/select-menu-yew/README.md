@@ -25,6 +25,18 @@ keeps the select fully controlled via Yew state hooks. Every interactive element
 exposes deterministic `data-automation` attributes so CI tooling can exercise
 the workflow without relying on brittle CSS selectors.
 
+Disabled regions can be toggled directly on the headless state machine without
+rewriting any adapter code:
+
+```rust
+state.set_option_disabled(2, true); // drop the third region from the active list
+```
+
+The Material renderer will automatically emit `aria-disabled="true"` and
+`data-disabled="true"` for the affected option while keyboard navigation skips
+over it. Controlled demos simply synchronize the state through the existing Yew
+signals to keep hydration and analytics in lock-step.
+
 ## Server-side rendering smoke test
 
 ```bash

@@ -83,6 +83,11 @@ impl RadioGroupState {
         self.options.len()
     }
 
+    /// Returns `true` when the group has no options configured.
+    pub fn is_empty(&self) -> bool {
+        self.options.is_empty()
+    }
+
     /// Whether the group is disabled.
     pub fn disabled(&self) -> bool {
         self.disabled
@@ -120,7 +125,7 @@ impl RadioGroupState {
 
     /// Apply focus to an option.
     pub fn focus(&mut self, index: usize) {
-        if self.len() == 0 {
+        if self.is_empty() {
             return;
         }
         self.focus_visible = Some(index.min(self.len() - 1));
@@ -149,7 +154,7 @@ impl RadioGroupState {
 
     /// Handle keyboard input according to the ARIA radio group guidance.
     pub fn on_key<F: FnOnce(usize)>(&mut self, key: ControlKey, callback: F) {
-        if self.disabled || self.len() == 0 {
+        if self.disabled || self.is_empty() {
             return;
         }
         let mut focus_index = self

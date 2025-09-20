@@ -241,7 +241,7 @@ impl ListState {
 
         let mut next = self.selection.clone();
         if matches!(self.selection_mode, SelectionMode::Single) {
-            if next.get(0).copied() == Some(index) {
+            if next.first().copied() == Some(index) {
                 next.clear();
             } else {
                 next.clear();

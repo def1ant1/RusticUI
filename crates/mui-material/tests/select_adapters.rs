@@ -30,6 +30,10 @@ fn assert_portal_markup(html: &str) {
         1,
         "options should only be rendered once"
     );
+    assert!(
+        html.contains("aria-disabled=\"false\""),
+        "options should surface their disabled metadata"
+    );
 }
 
 #[cfg(feature = "yew")]
@@ -43,6 +47,16 @@ mod yew_tests {
         let html = select::yew::render(&props, &state);
         assert!(html.contains("data-automation-id=\"adapter-select\""));
         assert_portal_markup(&html);
+    }
+
+    #[test]
+    fn yew_render_marks_disabled_options() {
+        let props = sample_props();
+        let mut state = build_state(props.options.len());
+        state.set_option_disabled(1, true);
+        let html = select::yew::render(&props, &state);
+        assert!(html.contains("aria-disabled=\"true\""));
+        assert!(html.contains("data-disabled=\"true\""));
     }
 }
 
@@ -58,6 +72,16 @@ mod leptos_tests {
         assert!(html.contains("data-automation-id=\"adapter-select\""));
         assert_portal_markup(&html);
     }
+
+    #[test]
+    fn leptos_render_marks_disabled_options() {
+        let props = sample_props();
+        let mut state = build_state(props.options.len());
+        state.set_option_disabled(1, true);
+        let html = select::leptos::render(&props, &state);
+        assert!(html.contains("aria-disabled=\"true\""));
+        assert!(html.contains("data-disabled=\"true\""));
+    }
 }
 
 #[cfg(feature = "dioxus")]
@@ -72,6 +96,16 @@ mod dioxus_tests {
         assert!(html.contains("data-component=\"mui-select\""));
         assert_portal_markup(&html);
     }
+
+    #[test]
+    fn dioxus_render_marks_disabled_options() {
+        let props = sample_props();
+        let mut state = build_state(props.options.len());
+        state.set_option_disabled(1, true);
+        let html = select::dioxus::render(&props, &state);
+        assert!(html.contains("aria-disabled=\"true\""));
+        assert!(html.contains("data-disabled=\"true\""));
+    }
 }
 
 #[cfg(feature = "sycamore")]
@@ -85,5 +119,15 @@ mod sycamore_tests {
         let html = select::sycamore::render(&props, &state);
         assert!(html.contains("data-automation-id=\"adapter-select\""));
         assert_portal_markup(&html);
+    }
+
+    #[test]
+    fn sycamore_render_marks_disabled_options() {
+        let props = sample_props();
+        let mut state = build_state(props.options.len());
+        state.set_option_disabled(1, true);
+        let html = select::sycamore::render(&props, &state);
+        assert!(html.contains("aria-disabled=\"true\""));
+        assert!(html.contains("data-disabled=\"true\""));
     }
 }

@@ -16,6 +16,11 @@ markup, expose the same `data-*` hooks, and hydrate against the same HTML shell.
 - `selection_summary` &mdash; utility that produces a human-readable status line for
   automation and screen readers.
 
+The helpers bubble the headless disabled bookkeeping through to the shared
+renderer so any framework can call `state.set_option_disabled(index, true)` and
+receive matching `aria-disabled`/`data-disabled` hooks in both SSR and CSR
+renders without patching adapter code.
+
 ## Running the unit tests
 
 The crate currently exposes helpers only, but you can still compile the
