@@ -1,20 +1,25 @@
 #![cfg(feature = "yew")]
 
 use mui_headless::checkbox::CheckboxState;
+use mui_headless::chip::{ChipConfig, ChipState};
 use mui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
 use mui_headless::list::{ListState, SelectionMode};
 use mui_headless::radio::{RadioGroupState, RadioOrientation};
 use mui_headless::switch::SwitchState;
 use mui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
+use mui_headless::tooltip::{TooltipConfig, TooltipState};
 use mui_material::checkbox::{self, CheckboxProps};
+use mui_material::chip::{self, ChipProps};
 use mui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
 use mui_material::radio::{self, RadioGroupProps};
 use mui_material::switch::{self, SwitchProps};
 use mui_material::tab_panel;
 use mui_material::table::{self, TableColumn, TableProps, TableRow};
 use mui_material::tabs::{self, TabListLayoutOptions, TabListProps};
+use mui_material::tooltip::{self, TooltipProps};
 use mui_material::{AppBar, Button, Snackbar, TextField};
 use mui_styled_engine::{Theme, ThemeProvider};
+use std::time::Duration;
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_test::*;
 use yew::prelude::*;
@@ -571,6 +576,231 @@ async fn drawer_modal_accessibility() {
         .unwrap()
         .expect("navigation link rendered");
     assert_eq!(nav_link.text_content().unwrap(), "Home");
+
+    axe_check(&mount).await;
+}
+
+/// Exercise the tooltip SSR adapter in a browser environment to confirm the
+/// ARIA linkage, keyboard affordances and portal metadata survive hydration.
+#[wasm_bindgen_test(async)]
+async fn tooltip_focus_keyboard_and_accessibility() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let markup = {
+            let mut config = TooltipConfig::default();
+            config.show_delay = Duration::from_millis(0);
+            let mut state = TooltipState::new(config);
+            state.focus_anchor();
+            let props = TooltipProps::new("Details", "Explains the current KPI")
+                .with_automation_id("wasm-tooltip")
+                .with_trigger_haspopup("dialog")
+                .with_surface_labelled_by("tooltip-heading");
+            tooltip::yew::render(&props, &state)
+        };
+
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                <span id="tooltip-heading" data-testid="tooltip-heading">Tooltip heading</span>
+                { Html::from_html_unchecked(AttrValue::from(markup)) }
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let trigger: web_sys::HtmlElement = mount
+        .query_selector("[data-component='mui-tooltip-trigger']")
+        .unwrap()
+        .expect("tooltip trigger rendered")
+        .dyn_into()
+        .unwrap();
+    assert_eq!(trigger.id(), "wasm-tooltip-trigger");
+    assert_eq!(
+        trigger.get_attribute("aria-describedby").unwrap(),
+        "wasm-tooltip-surface"
+    );
+    assert_eq!(trigger.get_attribute("type").unwrap(), "button");
+    assert_eq!(
+        trigger.get_attribute("data-automation-trigger").unwrap(),
+        "wasm-tooltip"
+    );
+    assert!(
+        !trigger.class_name().is_empty(),
+        "scoped class missing on trigger"
+    );
+
+    let surface = document
+        .get_element_by_id("wasm-tooltip-surface")
+        .expect("tooltip surface rendered");
+    assert_eq!(surface.get_attribute("role").unwrap(), "tooltip");
+    assert_eq!(surface.get_attribute("aria-hidden").unwrap(), "false");
+    assert_eq!(
+        surface.get_attribute("data-automation-surface").unwrap(),
+        "wasm-tooltip"
+    );
+    let surface_class = surface.get_attribute("class").unwrap_or_default();
+    assert!(!surface_class.is_empty(), "scoped class missing on surface");
+
+    let portal = document
+        .get_element_by_id("wasm-tooltip-portal")
+        .expect("portal container rendered");
+    assert_eq!(
+        portal.get_attribute("data-portal-root").unwrap(),
+        "wasm-tooltip"
+    );
+    let anchor = document
+        .get_element_by_id("wasm-tooltip-anchor")
+        .expect("portal anchor rendered");
+    assert_eq!(
+        anchor.get_attribute("data-portal-anchor").unwrap(),
+        "wasm-tooltip"
+    );
+
+    let keyboard_invoked = Rc::new(Cell::new(false));
+    {
+        let keyboard_invoked = keyboard_invoked.clone();
+        let handler = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(move |_event| {
+            keyboard_invoked.set(true);
+        });
+        trigger
+            .add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref())
+            .unwrap();
+        handler.forget();
+    }
+
+    trigger.focus().unwrap();
+    assert_eq!(document.active_element().unwrap().id(), trigger.id());
+
+    let key_event = web_sys::KeyboardEvent::new_with_keyboard_event_init_dict(
+        "keydown",
+        web_sys::KeyboardEventInit::new().key("Enter").bubbles(true),
+    )
+    .unwrap();
+    trigger.dispatch_event(&key_event).unwrap();
+    assert!(
+        keyboard_invoked.get(),
+        "Enter key should be observed by tooltip trigger listeners"
+    );
+
+    axe_check(&mount).await;
+}
+
+/// Render the chip SSR adapter and exercise focus/delete affordances to ensure
+/// hydration parity and accessibility semantics hold inside the browser.
+#[wasm_bindgen_test(async)]
+async fn chip_delete_button_activation_and_accessibility() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let markup = {
+            let mut config = ChipConfig::default();
+            config.show_delay = Duration::from_millis(0);
+            config.hide_delay = Duration::from_millis(0);
+            config.delete_delay = Duration::from_millis(0);
+            let mut state = ChipState::new(config);
+            state.focus();
+            let props = ChipProps::new("Error budget")
+                .with_automation_id("wasm-chip")
+                .with_delete_label("Remove chip");
+            chip::yew::render(&props, &state)
+        };
+
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                { Html::from_html_unchecked(AttrValue::from(markup)) }
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let chip_root: web_sys::HtmlElement = mount
+        .query_selector("[data-component='mui-chip']")
+        .unwrap()
+        .expect("chip root rendered")
+        .dyn_into()
+        .unwrap();
+    assert_eq!(chip_root.id(), "wasm-chip");
+    assert_eq!(chip_root.get_attribute("role").unwrap(), "button");
+    assert_eq!(chip_root.get_attribute("tabindex").unwrap(), "0");
+    assert_eq!(
+        chip_root.get_attribute("data-controls-visible").unwrap(),
+        "true"
+    );
+    assert_eq!(
+        chip_root.get_attribute("data-automation-id").unwrap(),
+        "wasm-chip"
+    );
+    assert_eq!(
+        chip_root.get_attribute("aria-labelledby").unwrap(),
+        "wasm-chip-label"
+    );
+    assert_eq!(
+        chip_root.get_attribute("aria-describedby").unwrap(),
+        "wasm-chip-delete"
+    );
+    assert!(
+        !chip_root.class_name().is_empty(),
+        "scoped class missing on chip"
+    );
+
+    chip_root.focus().unwrap();
+    assert_eq!(document.active_element().unwrap().id(), chip_root.id());
+
+    let label = document
+        .get_element_by_id("wasm-chip-label")
+        .expect("chip label rendered");
+    assert_eq!(label.text_content().unwrap(), "Error budget");
+
+    let delete_button: web_sys::HtmlButtonElement = mount
+        .query_selector("[data-chip-slot='delete']")
+        .unwrap()
+        .expect("delete button rendered")
+        .dyn_into()
+        .unwrap();
+    assert_eq!(delete_button.id(), "wasm-chip-delete");
+    assert_eq!(delete_button.get_attribute("type").unwrap(), "button");
+    assert_eq!(delete_button.get_attribute("aria-hidden").unwrap(), "false");
+    assert_eq!(
+        delete_button.get_attribute("aria-label").unwrap(),
+        "Remove chip"
+    );
+    assert_eq!(delete_button.get_attribute("data-visible").unwrap(), "true");
+    assert!(
+        !delete_button.class_name().is_empty(),
+        "scoped class missing on delete"
+    );
+
+    let delete_clicked = Rc::new(Cell::new(false));
+    {
+        let delete_clicked = delete_clicked.clone();
+        let handler = Closure::<dyn FnMut(web_sys::Event)>::new(move |_event| {
+            delete_clicked.set(true);
+        });
+        delete_button
+            .add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())
+            .unwrap();
+        handler.forget();
+    }
+
+    delete_button.click();
+    assert!(
+        delete_clicked.get(),
+        "clicking the delete affordance should trigger listeners"
+    );
 
     axe_check(&mount).await;
 }
