@@ -95,4 +95,23 @@ mod tests {
         let visible = state.panel(0).hidden();
         assert_eq!(visible, None);
     }
+
+    #[test]
+    fn builder_emits_label_and_identity_attributes() {
+        // Attribute builders must centralize ARIA wiring so frameworks do not
+        // duplicate knowledge about the correct IDs.
+        let state = TabsState::new(
+            2,
+            Some(1),
+            ActivationMode::Manual,
+            TabsOrientation::Horizontal,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        let attrs = state.panel(1).id("panel-1").labelled_by("tab-1");
+        assert_eq!(attrs.role(), "tabpanel");
+        assert_eq!(attrs.id_attr(), Some(("id", "panel-1")));
+        assert_eq!(attrs.aria_labelledby(), Some(("aria-labelledby", "tab-1")));
+        assert_eq!(attrs.hidden(), None);
+    }
 }
