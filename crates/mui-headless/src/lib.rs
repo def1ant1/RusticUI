@@ -14,6 +14,7 @@
 pub mod aria;
 pub mod button;
 pub mod checkbox;
+pub mod chip;
 pub mod drawer;
 pub mod interaction;
 pub mod list;
@@ -24,6 +25,8 @@ pub mod switch;
 pub mod tab;
 pub mod tab_panel;
 pub mod tabs;
+pub mod timing;
+pub mod tooltip;
 
 mod selection;
 mod toggle;

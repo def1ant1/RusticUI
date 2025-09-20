@@ -11,8 +11,8 @@ use mui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
 use mui_material::radio::{self, RadioGroupProps};
 use mui_material::switch::{self, SwitchProps};
 use mui_material::tab_panel;
-use mui_material::tabs::{self, TabListLayoutOptions, TabListProps};
 use mui_material::table::{self, TableColumn, TableProps, TableRow};
+use mui_material::tabs::{self, TabListLayoutOptions, TabListProps};
 use mui_material::{AppBar, Button, Snackbar, TextField};
 use mui_styled_engine::{Theme, ThemeProvider};
 use wasm_bindgen::{prelude::*, JsCast};
@@ -410,10 +410,7 @@ async fn tabs_orientation_and_accessibility() {
         let tabs_markup = vec![
             mui_material::tab::render_tab_html(
                 &state,
-                state
-                    .tab(0)
-                    .id("tab-overview")
-                    .controls("panel-overview"),
+                state.tab(0).id("tab-overview").controls("panel-overview"),
                 "Overview",
             ),
             mui_material::tab::render_tab_html(
@@ -479,7 +476,10 @@ async fn tabs_orientation_and_accessibility() {
         .query_selector("[role='tablist']")
         .unwrap()
         .expect("tablist rendered");
-    assert_eq!(tablist.get_attribute("data-orientation").unwrap(), "vertical");
+    assert_eq!(
+        tablist.get_attribute("data-orientation").unwrap(),
+        "vertical"
+    );
     assert_eq!(tablist.get_attribute("data-activation").unwrap(), "manual");
 
     let tabs = mount.query_selector_all("[role='tab']").unwrap();
@@ -489,10 +489,11 @@ async fn tabs_orientation_and_accessibility() {
         .query_selector("[role='tabpanel']")
         .unwrap()
         .expect("panel rendered");
-    assert_eq!(panel.get_attribute("aria-labelledby").unwrap(), "tab-overview");
-    assert!(panel
-        .inner_html()
-        .contains("data-testid=\"panel-body\""));
+    assert_eq!(
+        panel.get_attribute("aria-labelledby").unwrap(),
+        "tab-overview"
+    );
+    assert!(panel.inner_html().contains("data-testid=\"panel-body\""));
 
     axe_check(&mount).await;
 }
@@ -554,7 +555,10 @@ async fn drawer_modal_accessibility() {
         .expect("drawer surface rendered");
     assert_eq!(dialog.get_attribute("data-anchor").unwrap(), "top");
     assert_eq!(dialog.get_attribute("data-variant").unwrap(), "modal");
-    assert_eq!(dialog.get_attribute("data-on-toggle").unwrap(), "drawer-toggle");
+    assert_eq!(
+        dialog.get_attribute("data-on-toggle").unwrap(),
+        "drawer-toggle"
+    );
 
     let backdrop = mount
         .query_selector("[data-variant='modal'][aria-hidden]")
