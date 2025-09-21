@@ -289,9 +289,100 @@ pub use shared_state_handle::TextFieldStateHandle;
 #[cfg(feature = "yew")]
 mod yew_impl {
     use super::*;
+    use std::time::Duration;
     use wasm_bindgen::JsCast;
     use web_sys::{HtmlInputElement, KeyboardEvent};
     use yew::prelude::*;
+
+    #[cfg(target_arch = "wasm32")]
+    use mui_utils::debounce;
+
+    /// Internal helper that memoizes a debounced change dispatcher.
+    ///
+    /// The Yew adapter historically delegated debouncing to `mui_utils::debounce`
+    /// so consumers could throttle expensive validation or network operations.
+    /// When the state-driven refactor landed that wiring was accidentally dropped,
+    /// causing change callbacks to fire on every keystroke.  This struct stores
+    /// the active callback and debounce interval so that we only rebuild the
+    /// underlying timer when either input changes.  Each `emit` call forwards the
+    /// latest [`TextFieldChangeEvent`] to the cached handler, preserving the
+    /// original throttling semantics while still allowing the headless
+    /// [`TextFieldState`] to own the authoritative value/flag bookkeeping.
+    struct ChangeDispatcher {
+        active_debounce: Option<Duration>,
+        callback: Option<Callback<TextFieldChangeEvent>>,
+        handler: Box<dyn FnMut(TextFieldChangeEvent)>,
+    }
+
+    impl ChangeDispatcher {
+        /// Produce a dispatcher that performs no work until configured.
+        fn new() -> Self {
+            Self {
+                active_debounce: None,
+                callback: None,
+                handler: Box::new(|_| {}),
+            }
+        }
+
+        /// Ensure the dispatcher reflects the latest debounce metadata.
+        fn ensure(
+            &mut self,
+            debounce_window: Option<Duration>,
+            callback: Option<Callback<TextFieldChangeEvent>>,
+        ) {
+            let normalized = debounce_window.filter(|delay| !delay.is_zero());
+            if self.active_debounce == normalized && self.callback == callback {
+                return;
+            }
+            self.active_debounce = normalized;
+            self.callback = callback.clone();
+            self.handler = Self::build_handler(normalized, callback);
+        }
+
+        /// Forward the provided event through the cached handler.
+        fn emit(&mut self, event: TextFieldChangeEvent) {
+            (self.handler)(event);
+        }
+
+        /// Construct a concrete handler that optionally wraps the callback in a debounce timer.
+        fn build_handler(
+            debounce_window: Option<Duration>,
+            callback: Option<Callback<TextFieldChangeEvent>>,
+        ) -> Box<dyn FnMut(TextFieldChangeEvent)> {
+            match callback {
+                None => Box::new(|_| {}),
+                Some(cb) => {
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if let Some(delay) = debounce_window {
+                            let cb_inner = cb.clone();
+                            let mut debounced = debounce(
+                                move |event: TextFieldChangeEvent| {
+                                    cb_inner.emit(event);
+                                },
+                                delay,
+                            );
+                            Box::new(move |event: TextFieldChangeEvent| {
+                                debounced(event);
+                            })
+                        } else {
+                            let cb_inner = cb.clone();
+                            Box::new(move |event: TextFieldChangeEvent| {
+                                cb_inner.emit(event);
+                            })
+                        }
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        let cb_inner = cb.clone();
+                        Box::new(move |event: TextFieldChangeEvent| {
+                            cb_inner.emit(event);
+                        })
+                    }
+                }
+            }
+        }
+    }
 
     /// Properties consumed by the Yew text field component.
     #[derive(Properties, Clone, PartialEq)]
@@ -366,9 +457,11 @@ mod yew_impl {
         let data_analytics_id: Option<AttrValue> =
             snapshot.analytics_id.clone().map(AttrValue::from);
 
+        let change_dispatch = use_mut_ref(ChangeDispatcher::new);
         let on_change_cb = props.on_change.clone();
         let state_for_input = props.state.clone();
         let version_for_input = version.clone();
+        let change_dispatch_for_input = change_dispatch.clone();
         let oninput = Callback::from(move |event: InputEvent| {
             let value = event
                 .target()
@@ -379,9 +472,10 @@ mod yew_impl {
             {
                 let mut state = state_for_input.borrow_mut();
                 state.change(value, |snapshot| {
-                    if let Some(cb) = callback.clone() {
-                        cb.emit(TextFieldChangeEvent::from(snapshot));
-                    }
+                    let event = TextFieldChangeEvent::from(snapshot);
+                    let mut dispatcher = change_dispatch_for_input.borrow_mut();
+                    dispatcher.ensure(event.debounce, callback.clone());
+                    dispatcher.emit(event);
                 });
             }
             let next = (*version_for_input).wrapping_add(1);
