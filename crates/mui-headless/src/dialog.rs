@@ -74,7 +74,7 @@ impl DialogTransition {
 
 /// Aggregates dialog state including transition bookkeeping and accessibility
 /// metadata.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DialogState {
     phase: DialogPhase,
     control_mode: ControlStrategy,

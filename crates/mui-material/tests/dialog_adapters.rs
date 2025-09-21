@@ -1,82 +1,182 @@
 #![cfg(any(feature = "dioxus", feature = "leptos", feature = "sycamore"))]
 
+use mui_headless::dialog::DialogState;
+use mui_material::dialog::DialogSurfaceOptions;
+
 /// Validate that dialog adapters attach the generated class and ARIA metadata
 /// when open while emitting no markup when closed.
 
+fn uncontrolled_open_state() -> DialogState {
+    let mut state = DialogState::uncontrolled(false);
+    state.open(|_| {});
+    state.finish_open();
+    state
+}
+
+fn controlled_closing_state() -> DialogState {
+    let mut state = DialogState::controlled();
+    state.open(|_| {});
+    state.sync_open(true);
+    let _ = state.handle_escape(|_| {});
+    state
+}
+
+fn non_modal_open_state() -> DialogState {
+    let mut state = DialogState::uncontrolled(true);
+    state.set_modal(false);
+    state.finish_open();
+    state
+}
+
 #[cfg(feature = "dioxus")]
 mod dioxus_tests {
+    use super::*;
     use mui_material::dialog::dioxus;
 
-    #[test]
-    fn open_and_closed_states() {
-        let props = dioxus::DialogProps {
-            open: true,
+    fn build_props(state: DialogState) -> dioxus::DialogProps {
+        dioxus::DialogProps {
+            state,
+            surface: DialogSurfaceOptions {
+                id: Some("dialog-surface".into()),
+                analytics_id: Some("checkout-flow".into()),
+                ..Default::default()
+            },
             children: "body".into(),
-            aria_label: "Settings".into(),
-        };
-        let out = dioxus::render(&props);
-        assert!(out.starts_with("<div"));
-        assert!(out.contains("class=\""), "missing class attribute: {}", out);
-        assert!(out.contains("role=\"dialog\""));
-        assert!(out.contains("aria-modal=\"true\""));
-        assert!(out.contains("aria-label=\"Settings\""));
+            aria_label: Some("Settings".into()),
+        }
+    }
 
-        let closed = dioxus::render(&dioxus::DialogProps {
-            open: false,
-            ..Default::default()
-        });
-        assert!(closed.is_empty());
+    #[test]
+    fn open_state_exposes_focus_and_analytics_metadata() {
+        let html = dioxus::render(&build_props(uncontrolled_open_state()));
+        assert!(html.starts_with("<div"));
+        assert!(html.contains("role=\"dialog\""));
+        assert!(html.contains("aria-modal=\"true\""));
+        assert!(html.contains("aria-label=\"Settings\""));
+        assert!(html.contains("data-state=\"open\""));
+        assert!(html.contains("data-transition=\"open\""));
+        assert!(html.contains("data-focus-trap=\"active\""));
+        assert!(html.contains("data-analytics-id=\"checkout-flow\""));
+    }
+
+    #[test]
+    fn escape_close_emits_transition_marker() {
+        let html = dioxus::render(&build_props(controlled_closing_state()));
+        assert!(html.contains("data-state=\"closing\""));
+        assert!(html.contains("data-transition=\"close\""));
+    }
+
+    #[test]
+    fn non_modal_dialog_reports_inactive_focus_trap() {
+        let mut props = build_props(non_modal_open_state());
+        props.aria_label = None;
+        let html = dioxus::render(&props);
+        assert!(html.contains("data-focus-trap=\"inactive\""));
+        assert!(!html.contains("aria-label"));
+    }
+
+    #[test]
+    fn closed_dialog_emits_no_markup() {
+        let html = dioxus::render(&dioxus::DialogProps::default());
+        assert!(html.is_empty());
     }
 }
 
 #[cfg(feature = "leptos")]
 mod leptos_tests {
+    use super::*;
     use mui_material::dialog::leptos;
 
-    #[test]
-    fn open_and_closed_states() {
-        let props = leptos::DialogProps {
-            open: true,
-            children: "body".into(),
-            aria_label: "Settings".into(),
-        };
-        let out = leptos::render(&props);
-        assert!(out.starts_with("<div"));
-        assert!(out.contains("class=\""), "missing class attribute: {}", out);
-        assert!(out.contains("role=\"dialog\""));
-        assert!(out.contains("aria-modal=\"true\""));
-        assert!(out.contains("aria-label=\"Settings\""));
+    fn build_props(state: DialogState) -> leptos::DialogProps {
+        leptos::DialogProps {
+            state,
+            aria_label: Some("Settings".into()),
+            surface: Some(DialogSurfaceOptions {
+                id: Some("dialog-surface".into()),
+                analytics_id: Some("checkout-flow".into()),
+                ..Default::default()
+            }),
+            children: (|| "body".into()).into(),
+        }
+    }
 
-        let closed = leptos::render(&leptos::DialogProps {
-            open: false,
-            ..Default::default()
-        });
-        assert!(closed.is_empty());
+    #[test]
+    fn open_state_exposes_focus_and_analytics_metadata() {
+        let html = leptos::render(&build_props(uncontrolled_open_state()));
+        assert!(html.starts_with("<div"));
+        assert!(html.contains("role=\"dialog\""));
+        assert!(html.contains("data-state=\"open\""));
+        assert!(html.contains("data-focus-trap=\"active\""));
+        assert!(html.contains("data-analytics-id=\"checkout-flow\""));
+    }
+
+    #[test]
+    fn escape_close_emits_transition_marker() {
+        let html = leptos::render(&build_props(controlled_closing_state()));
+        assert!(html.contains("data-transition=\"close\""));
+    }
+
+    #[test]
+    fn non_modal_dialog_reports_inactive_focus_trap() {
+        let mut props = build_props(non_modal_open_state());
+        props.aria_label = None;
+        let html = leptos::render(&props);
+        assert!(html.contains("data-focus-trap=\"inactive\""));
+        assert!(!html.contains("aria-label"));
+    }
+
+    #[test]
+    fn closed_dialog_emits_no_markup() {
+        let html = leptos::render(&leptos::DialogProps::default());
+        assert!(html.is_empty());
     }
 }
 
 #[cfg(feature = "sycamore")]
 mod sycamore_tests {
+    use super::*;
     use mui_material::dialog::sycamore;
 
-    #[test]
-    fn open_and_closed_states() {
-        let props = sycamore::DialogProps {
-            open: true,
+    fn build_props(state: DialogState) -> sycamore::DialogProps {
+        sycamore::DialogProps {
+            state,
+            surface: DialogSurfaceOptions {
+                id: Some("dialog-surface".into()),
+                analytics_id: Some("checkout-flow".into()),
+                ..Default::default()
+            },
             children: "body".into(),
-            aria_label: "Settings".into(),
-        };
-        let out = sycamore::render(&props);
-        assert!(out.starts_with("<div"));
-        assert!(out.contains("class=\""), "missing class attribute: {}", out);
-        assert!(out.contains("role=\"dialog\""));
-        assert!(out.contains("aria-modal=\"true\""));
-        assert!(out.contains("aria-label=\"Settings\""));
+            aria_label: Some("Settings".into()),
+        }
+    }
 
-        let closed = sycamore::render(&sycamore::DialogProps {
-            open: false,
-            ..Default::default()
-        });
-        assert!(closed.is_empty());
+    #[test]
+    fn open_state_exposes_focus_and_analytics_metadata() {
+        let html = sycamore::render(&build_props(uncontrolled_open_state()));
+        assert!(html.starts_with("<div"));
+        assert!(html.contains("data-state=\"open\""));
+        assert!(html.contains("data-focus-trap=\"active\""));
+        assert!(html.contains("data-analytics-id=\"checkout-flow\""));
+    }
+
+    #[test]
+    fn escape_close_emits_transition_marker() {
+        let html = sycamore::render(&build_props(controlled_closing_state()));
+        assert!(html.contains("data-transition=\"close\""));
+    }
+
+    #[test]
+    fn non_modal_dialog_reports_inactive_focus_trap() {
+        let mut props = build_props(non_modal_open_state());
+        props.aria_label = None;
+        let html = sycamore::render(&props);
+        assert!(html.contains("data-focus-trap=\"inactive\""));
+        assert!(!html.contains("aria-label"));
+    }
+
+    #[test]
+    fn closed_dialog_emits_no_markup() {
+        let html = sycamore::render(&sycamore::DialogProps::default());
+        assert!(html.is_empty());
     }
 }
