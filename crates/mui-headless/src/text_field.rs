@@ -21,6 +21,17 @@ pub struct TextFieldChange<'a> {
     pub debounce: Option<Duration>,
 }
 
+/// Owned variant of [`TextFieldChange`] used by UI adapters that require `'static` lifetimes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TextFieldChangeEvent {
+    /// The latest value provided by the user.
+    pub value: String,
+    /// Whether the new value differs from the initial value.
+    pub dirty: bool,
+    /// Debounce interval configured for change notifications.
+    pub debounce: Option<Duration>,
+}
+
 /// Snapshot emitted when the text field commits (blur/enter).
 #[derive(Debug, Clone, Copy)]
 pub struct TextFieldCommit<'a> {
@@ -32,11 +43,31 @@ pub struct TextFieldCommit<'a> {
     pub previously_visited: bool,
 }
 
+/// Owned variant of [`TextFieldCommit`] for frameworks that require `'static` values.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TextFieldCommitEvent {
+    /// The value at the time of the commit event.
+    pub value: String,
+    /// Whether the field currently contains validation errors.
+    pub has_errors: bool,
+    /// Tracks whether the field has been visited prior to this commit.
+    pub previously_visited: bool,
+}
+
 /// Snapshot emitted when the text field resets back to its initial value.
 #[derive(Debug, Clone, Copy)]
 pub struct TextFieldReset<'a> {
     /// Value after the reset completed.
     pub value: &'a str,
+    /// Flag describing whether validation errors were present before the reset.
+    pub cleared_errors: bool,
+}
+
+/// Owned variant of [`TextFieldReset`] for stateful UI adapters.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TextFieldResetEvent {
+    /// Value after the reset completed.
+    pub value: String,
     /// Flag describing whether validation errors were present before the reset.
     pub cleared_errors: bool,
 }
@@ -223,6 +254,7 @@ impl TextFieldState {
 pub struct TextFieldAttributes<'a> {
     state: &'a TextFieldState,
     status_id: Option<&'a str>,
+    analytics_tag: Option<&'a str>,
 }
 
 impl<'a> TextFieldAttributes<'a> {
@@ -230,12 +262,19 @@ impl<'a> TextFieldAttributes<'a> {
         Self {
             state,
             status_id: None,
+            analytics_tag: None,
         }
     }
 
     /// Provide the identifier of an element that surfaces validation messages.
     pub fn status_id(mut self, id: &'a str) -> Self {
         self.status_id = Some(id);
+        self
+    }
+
+    /// Attach an analytics identifier used by SSR adapters to mirror hydrated output.
+    pub fn analytics_id(mut self, id: &'a str) -> Self {
+        self.analytics_tag = Some(id);
         self
     }
 
@@ -269,12 +308,47 @@ impl<'a> TextFieldAttributes<'a> {
         )
     }
 
+    /// Returns an analytics identifier tuple when configured.
+    #[inline]
+    pub fn data_analytics_id(&self) -> Option<(&'static str, &str)> {
+        self.analytics_tag.map(|value| ("data-analytics-id", value))
+    }
+
     /// Returns a condensed status message by joining validation errors.
     pub fn status_message(&self) -> Option<String> {
         if self.state.errors.is_empty() {
             None
         } else {
             Some(self.state.errors.join("\n"))
+        }
+    }
+}
+
+impl<'a> From<TextFieldChange<'a>> for TextFieldChangeEvent {
+    fn from(snapshot: TextFieldChange<'a>) -> Self {
+        Self {
+            value: snapshot.value.to_string(),
+            dirty: snapshot.dirty,
+            debounce: snapshot.debounce,
+        }
+    }
+}
+
+impl<'a> From<TextFieldCommit<'a>> for TextFieldCommitEvent {
+    fn from(snapshot: TextFieldCommit<'a>) -> Self {
+        Self {
+            value: snapshot.value.to_string(),
+            has_errors: snapshot.has_errors,
+            previously_visited: snapshot.previously_visited,
+        }
+    }
+}
+
+impl<'a> From<TextFieldReset<'a>> for TextFieldResetEvent {
+    fn from(snapshot: TextFieldReset<'a>) -> Self {
+        Self {
+            value: snapshot.value.to_string(),
+            cleared_errors: snapshot.cleared_errors,
         }
     }
 }
@@ -341,7 +415,10 @@ mod tests {
         let mut state = TextFieldState::uncontrolled("", None);
         state.set_errors(vec!["Required".to_string(), "Must be unique".to_string()]);
         state.commit(|_| {});
-        let attrs = state.attributes().status_id("field-status");
+        let attrs = state
+            .attributes()
+            .status_id("field-status")
+            .analytics_id("analytics-field-123");
         assert_eq!(attrs.aria_invalid(), Some(("aria-invalid", "true")));
         assert_eq!(
             attrs.aria_describedby(),
@@ -349,8 +426,52 @@ mod tests {
         );
         assert_eq!(attrs.data_dirty(), ("data-dirty", "false"));
         assert_eq!(attrs.data_visited(), ("data-visited", "true"));
+        assert_eq!(
+            attrs.data_analytics_id(),
+            Some(("data-analytics-id", "analytics-field-123"))
+        );
         let message = attrs.status_message().expect("status message");
         assert!(message.contains("Required"));
         assert!(message.contains("Must be unique"));
+    }
+
+    #[test]
+    fn owned_change_event_clones_value_and_debounce() {
+        let mut state = TextFieldState::uncontrolled("base", Some(Duration::from_millis(150)));
+        let mut last_event = None;
+        state.change("updated", |snapshot| {
+            last_event = Some(TextFieldChangeEvent::from(snapshot));
+        });
+        let event = last_event.expect("change event");
+        assert_eq!(event.value, "updated");
+        assert!(event.dirty);
+        assert_eq!(event.debounce, Some(Duration::from_millis(150)));
+    }
+
+    #[test]
+    fn owned_commit_event_preserves_flags() {
+        let mut state = TextFieldState::uncontrolled("value", None);
+        state.set_errors(vec!["Required".into()]);
+        let mut event = None;
+        state.commit(|snapshot| {
+            event = Some(TextFieldCommitEvent::from(snapshot));
+        });
+        let event = event.expect("commit event");
+        assert_eq!(event.value, "value");
+        assert!(event.has_errors);
+        assert!(!event.previously_visited);
+    }
+
+    #[test]
+    fn owned_reset_event_captures_cleared_errors() {
+        let mut state = TextFieldState::uncontrolled("value", None);
+        state.set_errors(vec!["Required".into()]);
+        let mut event = None;
+        state.reset(|snapshot| {
+            event = Some(TextFieldResetEvent::from(snapshot));
+        });
+        let event = event.expect("reset event");
+        assert_eq!(event.value, "value");
+        assert!(event.cleared_errors);
     }
 }

@@ -1,5 +1,6 @@
 #![cfg(any(feature = "dioxus", feature = "sycamore"))]
 
+use mui_headless::text_field::TextFieldState;
 use mui_material::text_field::{TextFieldColor, TextFieldSize, TextFieldVariant};
 
 /// The text field adapters render an `<input>` element with a themed class and
@@ -12,20 +13,33 @@ mod dioxus_tests {
     use mui_material::text_field::dioxus;
 
     #[test]
-    fn renders_input_with_class_and_label() {
+    fn renders_state_driven_metadata() {
+        let mut state = TextFieldState::uncontrolled("hello", None);
+        state.change("updated", |_| {});
+        state.set_errors(vec!["Required".into()]);
+        state.commit(|_| {});
+
         let props = dioxus::TextFieldProps {
-            value: "v".into(),
             placeholder: "p".into(),
             aria_label: "Email".into(),
             color: TextFieldColor::Primary,
             size: TextFieldSize::Medium,
             variant: TextFieldVariant::Outlined,
             style_overrides: None,
+            status_id: Some("status-node".into()),
+            analytics_id: Some("analytics-42".into()),
         };
-        let out = dioxus::render(&props);
+        let out = dioxus::render(&props, &state);
         assert!(out.starts_with("<input"));
         assert!(out.contains("class=\""), "missing class attribute: {}", out);
         assert!(out.contains("aria-label=\"Email\""));
+        assert!(out.contains("value=\"updated\""));
+        assert!(out.contains("data-dirty=\"true\""));
+        assert!(out.contains("data-visited=\"true\""));
+        assert!(out.contains("aria-invalid=\"true\""));
+        assert!(out.contains("aria-describedby=\"status-node\""));
+        assert!(out.contains("data-analytics-id=\"analytics-42\""));
+        assert!(out.contains("data-status-message"));
     }
 }
 
@@ -35,19 +49,32 @@ mod sycamore_tests {
     use mui_material::text_field::sycamore;
 
     #[test]
-    fn renders_input_with_class_and_label() {
+    fn renders_state_driven_metadata() {
+        let mut state = TextFieldState::uncontrolled("hello", None);
+        state.change("updated", |_| {});
+        state.set_errors(vec!["Required".into()]);
+        state.commit(|_| {});
+
         let props = sycamore::TextFieldProps {
-            value: "v".into(),
             placeholder: "p".into(),
             aria_label: "Email".into(),
             color: TextFieldColor::Primary,
             size: TextFieldSize::Medium,
             variant: TextFieldVariant::Outlined,
             style_overrides: None,
+            status_id: Some("status-node".into()),
+            analytics_id: Some("analytics-42".into()),
         };
-        let out = sycamore::render(&props);
+        let out = sycamore::render(&props, &state);
         assert!(out.starts_with("<input"));
         assert!(out.contains("class=\""), "missing class attribute: {}", out);
         assert!(out.contains("aria-label=\"Email\""));
+        assert!(out.contains("value=\"updated\""));
+        assert!(out.contains("data-dirty=\"true\""));
+        assert!(out.contains("data-visited=\"true\""));
+        assert!(out.contains("aria-invalid=\"true\""));
+        assert!(out.contains("aria-describedby=\"status-node\""));
+        assert!(out.contains("data-analytics-id=\"analytics-42\""));
+        assert!(out.contains("data-status-message"));
     }
 }
