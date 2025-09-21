@@ -1,0 +1,25 @@
+{
+  "typography": {
+    "font_family": "Corporate Sans, Arial, sans-serif",
+    "font_family_monospace": "Corporate Mono, Menlo, monospace",
+    "font_size": 16,
+    "html_font_size": 18,
+    "font_weight_bold": 910
+  },
+  "schemes": {
+    "light": {
+      "palette": {
+        "primary": "#0057b7",
+        "background_default": "#f4f6fb",
+        "text_primary": "#0f172a"
+      }
+    },
+    "dark": {
+      "palette": {
+        "primary": "#ffd700",
+        "background_default": "#020617",
+        "text_primary": "#e2e8f0"
+      }
+    }
+  }
+}
