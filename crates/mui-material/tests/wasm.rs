@@ -2,16 +2,20 @@
 
 use mui_headless::checkbox::CheckboxState;
 use mui_headless::chip::{ChipConfig, ChipState};
+use mui_headless::dialog::DialogState;
 use mui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
 use mui_headless::list::{ListState, SelectionMode};
 use mui_headless::menu::MenuState;
+use mui_headless::popover::{PopoverPlacement, PopoverState};
 use mui_headless::radio::{RadioGroupState, RadioOrientation};
 use mui_headless::selection::ControlStrategy;
 use mui_headless::switch::SwitchState;
 use mui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
+use mui_headless::text_field::TextFieldState;
 use mui_headless::tooltip::{TooltipConfig, TooltipState};
 use mui_material::checkbox::{self, CheckboxProps};
 use mui_material::chip::{self, ChipProps};
+use mui_material::dialog::{self as dialog_adapter, DialogSurfaceOptions};
 use mui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
 use mui_material::menu::{self, MenuItem, MenuProps};
 use mui_material::radio::{self, RadioGroupProps};
@@ -19,9 +23,11 @@ use mui_material::switch::{self, SwitchProps};
 use mui_material::tab_panel;
 use mui_material::table::{self, TableColumn, TableProps, TableRow};
 use mui_material::tabs::{self, TabListLayoutOptions, TabListProps};
+use mui_material::text_field::TextFieldStateHandle;
 use mui_material::tooltip::{self, TooltipProps};
 use mui_material::{AppBar, Button, Snackbar, TextField};
 use mui_styled_engine::{Theme, ThemeProvider};
+use std::rc::Rc;
 use std::time::Duration;
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_test::*;
@@ -863,5 +869,282 @@ async fn chip_delete_button_activation_and_accessibility() {
         "clicking the delete affordance should trigger listeners"
     );
 
+    axe_check(&mount).await;
+}
+
+#[function_component(DialogAuditApp)]
+fn dialog_audit_app() -> Html {
+    let theme = Theme::default();
+    let state = use_state(|| Rc::new(DialogState::controlled()));
+
+    let open = {
+        let state = state.clone();
+        Callback::from(move |_| {
+            let mut next = (**state).clone();
+            next.open(|_| {});
+            next.finish_open();
+            state.set(Rc::new(next));
+        })
+    };
+    let close = {
+        let state = state.clone();
+        Callback::from(move |_| {
+            let mut next = (**state).clone();
+            next.close(|_| {});
+            state.set(Rc::new(next));
+        })
+    };
+
+    let surface = DialogSurfaceOptions {
+        id: Some("browser-dialog".into()),
+        analytics_id: Some("wasm-dialog".into()),
+        labelled_by: Some("dialog-title".into()),
+        described_by: Some("dialog-description".into()),
+    };
+
+    html! {
+        <ThemeProvider theme={theme}>
+            <div id="dialog-harness">
+                <button id="dialog-open" onclick={open}>{"Open dialog"}</button>
+                <button id="dialog-close" onclick={close}>{"Close dialog"}</button>
+                <dialog_adapter::Dialog
+                    state={(*state).clone()}
+                    surface={surface}
+                    aria_label={Some("Team settings".into())}
+                >
+                    <h2 id="dialog-title">{"Team settings"}</h2>
+                    <p id="dialog-description">{"Accessible dialog body"}</p>
+                    <button type="button">{"Confirm"}</button>
+                </dialog_adapter::Dialog>
+            </div>
+        </ThemeProvider>
+    }
+}
+
+#[wasm_bindgen_test(async)]
+async fn dialog_focus_trap_accessibility_audit() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    Renderer::<DialogAuditApp>::with_root(mount.clone()).render();
+
+    let open_button: web_sys::HtmlElement = mount
+        .query_selector("#dialog-open")
+        .unwrap()
+        .unwrap()
+        .dyn_into()
+        .unwrap();
+    open_button.click();
+
+    let dialog_surface = document
+        .get_element_by_id("browser-dialog")
+        .expect("dialog should open");
+    assert_eq!(
+        dialog_surface.get_attribute("data-state").unwrap(),
+        "opening"
+    );
+    axe_check(&mount).await;
+
+    let close_button: web_sys::HtmlElement = mount
+        .query_selector("#dialog-close")
+        .unwrap()
+        .unwrap()
+        .dyn_into()
+        .unwrap();
+    close_button.click();
+    axe_check(&mount).await;
+}
+
+fn wasm_menu_state(count: usize) -> MenuState {
+    MenuState::new(count, false, unsafe { std::mem::transmute(1u8) }, unsafe {
+        std::mem::transmute(1u8)
+    })
+}
+
+fn wasm_popover_state(props: &MenuProps) -> PopoverState {
+    let mut popover = PopoverState::uncontrolled(false, PopoverPlacement::Bottom);
+    let base = format!(
+        "{}-popover",
+        props
+            .automation_id
+            .clone()
+            .unwrap_or_else(|| "mui-menu".into())
+    );
+    let portal = mui_system::portal::PortalMount::popover(base);
+    popover.set_anchor_metadata(Some(portal.anchor_id()), None);
+    popover
+}
+
+#[function_component(MenuPopoverHarness)]
+fn menu_popover_harness() -> Html {
+    let theme = Theme::default();
+    let props = Rc::new(
+        MenuProps::new(
+            "Menu",
+            vec![
+                MenuItem::new("Profile", "profile"),
+                MenuItem::new("Settings", "settings"),
+            ],
+        )
+        .with_automation_id("wasm-menu"),
+    );
+    let menu_state = {
+        let props = props.clone();
+        use_state(move || wasm_menu_state(props.items.len()))
+    };
+    let popover_state = {
+        let props = props.clone();
+        use_state(move || wasm_popover_state(props.as_ref()))
+    };
+
+    let open = {
+        let menu_state = menu_state.clone();
+        let popover_state = popover_state.clone();
+        Callback::from(move |_| {
+            let mut next_menu = (*menu_state).clone();
+            let mut next_popover = (*popover_state).clone();
+            next_menu.open(|_| {});
+            next_popover.open(|_| {});
+            menu_state.set(next_menu);
+            popover_state.set(next_popover);
+        })
+    };
+    let close = {
+        let menu_state = menu_state.clone();
+        let popover_state = popover_state.clone();
+        Callback::from(move |_| {
+            let mut next_menu = (*menu_state).clone();
+            let mut next_popover = (*popover_state).clone();
+            next_menu.close(|_| {});
+            next_popover.close(|_| {});
+            menu_state.set(next_menu);
+            popover_state.set(next_popover);
+        })
+    };
+
+    let html = menu::yew::render(props.as_ref(), &*menu_state, &*popover_state);
+    let markup = Html::from_html_unchecked(AttrValue::from(html));
+
+    html! {
+        <ThemeProvider theme={theme}>
+            <div id="menu-harness">
+                <button id="menu-open" onclick={open.clone()}>{"Open menu"}</button>
+                <button id="menu-close" onclick={close}>{"Close menu"}</button>
+                {markup}
+            </div>
+        </ThemeProvider>
+    }
+}
+
+#[wasm_bindgen_test(async)]
+async fn popover_portal_accessibility_audit() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    Renderer::<MenuPopoverHarness>::with_root(mount.clone()).render();
+
+    let open_button: web_sys::HtmlElement = mount
+        .query_selector("#menu-open")
+        .unwrap()
+        .unwrap()
+        .dyn_into()
+        .unwrap();
+    open_button.click();
+
+    let menu_root = mount
+        .query_selector("[data-component='mui-menu']")
+        .unwrap()
+        .expect("menu rendered");
+    assert_eq!(menu_root.get_attribute("data-open").unwrap(), "true");
+    axe_check(&mount).await;
+
+    let close_button: web_sys::HtmlElement = mount
+        .query_selector("#menu-close")
+        .unwrap()
+        .unwrap()
+        .dyn_into()
+        .unwrap();
+    close_button.click();
+    axe_check(&mount).await;
+}
+
+#[function_component(TextFieldAuditApp)]
+fn text_field_audit_app() -> Html {
+    let theme = Theme::default();
+    let state = use_state(|| {
+        TextFieldStateHandle::from(TextFieldState::controlled(
+            "",
+            Some(Duration::from_millis(120)),
+        ))
+    });
+
+    let mark_invalid = {
+        let state = state.clone();
+        Callback::from(move |_| {
+            let mut next = {
+                let borrowed = (*state).borrow();
+                borrowed.clone()
+            };
+            next.change("invalid", |_| {});
+            next.set_errors(vec!["Required".into()]);
+            next.commit(|_| {});
+            state.set(TextFieldStateHandle::from(next));
+        })
+    };
+    let clear = {
+        let state = state.clone();
+        Callback::from(move |_| {
+            let mut next = TextFieldState::controlled("", Some(Duration::from_millis(120)));
+            next.clear_errors();
+            state.set(TextFieldStateHandle::from(next));
+        })
+    };
+
+    html! {
+        <ThemeProvider theme={theme}>
+            <div id="text-field-harness">
+                <button id="text-field-invalid" onclick={mark_invalid.clone()}>{"Mark invalid"}</button>
+                <button id="text-field-reset" onclick={clear}>{"Reset"}</button>
+                <TextField
+                    state={(*state).clone()}
+                    placeholder={"Workspace name"}
+                    aria_label={"Workspace name"}
+                    status_id={Some("status-node".into())}
+                    analytics_id={Some("tf-analytics".into())}
+                />
+                <p id="status-node">{"Status message"}</p>
+            </div>
+        </ThemeProvider>
+    }
+}
+
+#[wasm_bindgen_test(async)]
+async fn text_field_validation_accessibility_audit() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    Renderer::<TextFieldAuditApp>::with_root(mount.clone()).render();
+
+    axe_check(&mount).await;
+
+    let error_button: web_sys::HtmlElement = mount
+        .query_selector("#text-field-invalid")
+        .unwrap()
+        .unwrap()
+        .dyn_into()
+        .unwrap();
+    error_button.click();
+    axe_check(&mount).await;
+
+    let reset_button: web_sys::HtmlElement = mount
+        .query_selector("#text-field-reset")
+        .unwrap()
+        .unwrap()
+        .dyn_into()
+        .unwrap();
+    reset_button.click();
     axe_check(&mount).await;
 }
