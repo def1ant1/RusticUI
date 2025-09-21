@@ -45,6 +45,7 @@ members = [
     "examples/feedback-tooltips",
     "examples/feedback-chips",
     "examples/data-display-avatar",
+    "examples/shared-dialog-state-core",
 ]
 
 # Use Cargo's second feature resolver so optional dependencies don't

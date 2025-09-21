@@ -140,3 +140,130 @@ cargo test -p mui-material --all-features
   return, making them safe to call from generated UI code.
 - Callbacks are invoked only for enabled options ensuring analytics pipelines
   do not log interactions end users never saw.
+
+## Dialog state machine deep dive
+
+`DialogState` coordinates open/close transitions, focus trap bookkeeping, and
+analytics metadata across SSR and hydration. The lifecycle phases map directly
+to automation hooks so QA suites can assert the same transitions across Yew,
+Leptos, Dioxus, Sycamore, or any custom renderer.
+
+```
+┌───────────────┐       open()        ┌──────────────┐
+│ DialogPhase:: │ ───────────────▶ │ DialogPhase:: │
+│ Closed        │                   │ Opening       │
+└──────┬────────┘ ◀─────────────── │ └────┬─────────┘
+       │        close()            │      │ finish_open()
+       │                           ▼      ▼
+       │                   ┌──────────────┐
+       └────────────────── │ DialogPhase::│
+                           │ Open         │
+                           └──────────────┘
+```
+
+- `DialogState::open` and `DialogState::close` emit intents without mutating the
+  internal phase when controlled. Call `sync_open` and `finish_open`/`finish_close`
+  after animations to keep analytics and focus trap metadata aligned with the
+  rendered output.
+- `DialogState::surface_attributes()` centralises `role`, `aria-modal`,
+  `data-state`, and `data-transition` tuples so adapters only append
+  framework-specific identifiers (for example automation IDs).
+- The shared [`ANCHOR_DIAGRAM`](../../examples/shared-dialog-state-core/src/lib.rs)
+  constant illustrates how dialogs coordinate with `PopoverState` to keep
+  floating surfaces anchored to deterministic DOM nodes.
+
+## Popover geometry and anchor orchestration
+
+`PopoverState` exposes deterministic anchor bookkeeping so SSR, hydration, and
+runtime collision detection all share the same placement data. Controlled
+popovers simply forward intents to parent controllers which then call
+`sync_open` and optionally `resolve_with` to run custom collision detection.
+
+```
+┌───────────────┐   set_anchor_metadata   ┌────────────────────────────┐
+│ Anchor id +   │ ─────────────────────▶ │ Analytics & portal helpers │
+│ geometry      │                        └──────────┬─────────────────┘
+└──────┬────────┘                                     │
+       │                  toggle/open/close           │ render with
+       ▼                                             ▼
+┌──────────────┐    resolve_with()    ┌────────────────────────────┐
+│ Popover open │ ───────────────────▶ │ data-preferred/resolved    │
+│ flag         │                      │ attributes                  │
+└──────────────┘                      └────────────────────────────┘
+```
+
+- Store anchor geometry via `set_anchor_metadata(Some(id), Some(AnchorGeometry))`
+  so collision detection has the same bounding box data on the server and the
+  client.
+- Use `surface_attributes().analytics_id("...")` to emit deterministic
+  `data-analytics-id` hooks that automation suites can reuse across frameworks.
+- `resolve_with` keeps the preferred placement unless the provided resolver
+  returns a different position. The returned `CollisionOutcome` is mirrored in
+  `data-resolved-placement`, simplifying screenshot and telemetry comparisons.
+
+## Text field validation lifecycle
+
+`TextFieldState` tracks value, dirty/visited flags, validation errors, and
+debounce windows in one place. The state machine works the same in every
+framework because controlled changes always flow through `change` →
+`sync_value` → `commit`/`reset`.
+
+```
+change(value) ──▶ dirty? ──▶ commit() ──▶ errors? ──▶ analytics/logging
+                               ▲                      │
+                               │                      ▼
+                            reset() ──────────────── clear
+```
+
+- `TextFieldState::change` emits a `TextFieldChange` snapshot that includes the
+  debounce interval so adapters can throttle expensive operations without
+  duplicating timers.
+- `TextFieldState::commit` marks the field as visited and returns whether
+  validation errors are currently applied. Call `set_errors` before `commit`
+  when performing synchronous validation so `has_errors` reflects the latest
+  status.
+- `TextFieldState::attributes()` returns reusable `aria-invalid`,
+  `aria-describedby`, `data-dirty`, and `data-visited` tuples. Feeding these into
+  markup helpers keeps automation selectors identical across frameworks.
+
+## Sample orchestration
+
+```rust
+use mui_headless::dialog::DialogState;
+use mui_headless::popover::{AnchorGeometry, PopoverPlacement, PopoverState};
+use mui_headless::text_field::TextFieldState;
+use std::time::Duration;
+
+let mut dialog = DialogState::controlled();
+let mut popover = PopoverState::controlled(PopoverPlacement::Bottom);
+popover.set_anchor_metadata(
+    Some("shared-popover-anchor"),
+    Some(AnchorGeometry { x: 320.0, y: 640.0, width: 240.0, height: 48.0 }),
+);
+let mut text_field = TextFieldState::controlled("Northwind Traders", Some(Duration::from_millis(250)));
+
+dialog.open(|open| assert!(open));
+dialog.sync_open(true);
+dialog.finish_open();
+
+popover.toggle(|open| assert!(open));
+popover.sync_open(true);
+popover.resolve_with(|geometry, preferred| {
+    if geometry.y + geometry.height > 600.0 {
+        PopoverPlacement::Top
+    } else {
+        preferred
+    }
+});
+
+text_field.change("Northwind Fabrics", |snapshot| {
+    assert!(snapshot.dirty);
+    assert_eq!(snapshot.debounce.map(|d| d.as_millis()), Some(250));
+});
+text_field.set_errors(vec!["Company name must be at least 3 characters.".into()]);
+text_field.commit(|snapshot| assert!(snapshot.has_errors));
+```
+
+The example mirrors the automation-centric blueprints in
+`examples/shared-dialog-state-*` by combining dialog transitions, popover
+geometry, and text-field validation into a single deterministic flow.

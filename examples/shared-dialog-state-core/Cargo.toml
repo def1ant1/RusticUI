@@ -1,0 +1,9 @@
+[package]
+name = "shared-dialog-state-core"
+version = "0.1.0"
+edition = "2021"
+description = "Shared dialog/popover/text field state orchestration for cross-framework demos"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+mui-headless = { path = "../../crates/mui-headless" }
