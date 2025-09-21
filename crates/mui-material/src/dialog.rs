@@ -200,11 +200,9 @@ pub fn dialog_backdrop_attributes(attrs: DialogBackdropAttributes<'_>) -> Vec<(S
     feature = "sycamore",
 ))]
 fn surface_attribute_pairs(
-    state: &DialogState,
-    options: &DialogSurfaceOptions,
+    attrs: DialogSurfaceAttributes<'_>,
     aria_label: Option<&str>,
 ) -> Vec<(String, String)> {
-    let attrs = apply_surface_options(state.surface_attributes(), options);
     dialog_surface_attributes(attrs, aria_label)
 }
 
@@ -216,15 +214,14 @@ fn surface_attribute_pairs(
 /// automation harnesses that reason about serialized HTML.
 #[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
 fn render_dialog_surface_html(
-    state: &DialogState,
-    options: &DialogSurfaceOptions,
+    attrs: DialogSurfaceAttributes<'_>,
     aria_label: Option<&str>,
     child: &str,
 ) -> String {
     crate::render_helpers::render_element_html(
         "div",
         resolve_style(),
-        surface_attribute_pairs(state, options, aria_label),
+        surface_attribute_pairs(attrs, aria_label),
         child,
     )
 }
@@ -290,7 +287,8 @@ mod yew_impl {
         }
         let class = crate::style_helpers::themed_class(resolve_style());
         let aria_label = props.aria_label.as_ref().map(|value| value.as_str());
-        let attrs = surface_attribute_pairs(props.state.as_ref(), &props.surface, aria_label);
+        let surface_attrs = apply_surface_options(props.state.surface_attributes(), &props.surface);
+        let attrs = surface_attribute_pairs(surface_attrs, aria_label);
         let mut node = html! {
             <div class={class}>
                 { for props.children.iter() }
@@ -346,7 +344,8 @@ mod leptos_impl {
         }
         let class = crate::style_helpers::themed_class(resolve_style());
         let surface = surface.unwrap_or_default();
-        let attrs = surface_attribute_pairs(&state, &surface, aria_label.as_deref());
+        let surface_attrs = apply_surface_options(state.surface_attributes(), &surface);
+        let attrs = surface_attribute_pairs(surface_attrs, aria_label.as_deref());
         let mut element = leptos::html::div().class(class);
         for (key, value) in attrs {
             element = element.attr(key, value);
@@ -399,9 +398,9 @@ pub mod leptos {
         if !props.state.is_open() {
             return String::new();
         }
+        let surface_attrs = apply_surface_options(props.state.surface_attributes(), &props.surface);
         super::render_dialog_surface_html(
-            &props.state,
-            &props.surface,
+            surface_attrs,
             props.aria_label.as_deref(),
             &props.children,
         )
@@ -449,9 +448,9 @@ pub mod dioxus {
         if !props.state.is_open() {
             return String::new();
         }
+        let surface_attrs = apply_surface_options(props.state.surface_attributes(), &props.surface);
         super::render_dialog_surface_html(
-            &props.state,
-            &props.surface,
+            surface_attrs,
             props.aria_label.as_deref(),
             &props.children,
         )
@@ -498,11 +497,62 @@ pub mod sycamore {
         if !props.state.is_open() {
             return String::new();
         }
+        let surface_attrs = apply_surface_options(props.state.surface_attributes(), &props.surface);
         super::render_dialog_surface_html(
-            &props.state,
-            &props.surface,
+            surface_attrs,
             props.aria_label.as_deref(),
             &props.children,
         )
+    }
+}
+
+#[cfg(all(
+    test,
+    any(
+        feature = "yew",
+        feature = "leptos",
+        feature = "dioxus",
+        feature = "sycamore"
+    )
+))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn surface_attribute_pairs_capture_state_metadata() {
+        let mut state = DialogState::uncontrolled(true);
+        state.open(|_| {});
+        let options = DialogSurfaceOptions::default();
+        let attrs = apply_surface_options(state.surface_attributes(), &options);
+        let pairs = surface_attribute_pairs(attrs, None);
+        let lookup = |key: &str| {
+            pairs
+                .iter()
+                .find(|(candidate, _)| candidate == key)
+                .map(|(_, value)| value.as_str())
+        };
+        assert_eq!(lookup("role"), Some("dialog"));
+        assert_eq!(lookup("aria-modal"), Some("true"));
+        assert_eq!(lookup("data-state"), Some("open"));
+        assert_eq!(lookup("data-focus-trap"), Some("active"));
+    }
+
+    #[test]
+    fn render_html_includes_custom_surface_overrides() {
+        let mut state = DialogState::uncontrolled(true);
+        state.open(|_| {});
+        let mut options = DialogSurfaceOptions::default();
+        options.id = Some("checkout-dialog".into());
+        options.labelled_by = Some("checkout-title".into());
+        options.described_by = Some("checkout-copy".into());
+        options.analytics_id = Some("dialog-analytics".into());
+        let label = Some("Review your order");
+        let builder = apply_surface_options(state.surface_attributes(), &options);
+        let pairs = surface_attribute_pairs(builder.clone(), label);
+        let html = render_dialog_surface_html(builder, label, "<p>Contents</p>");
+        for (key, value) in pairs {
+            let needle = format!("{key}=\"{value}\"");
+            assert!(html.contains(&needle), "missing `{needle}` in `{html}`");
+        }
     }
 }

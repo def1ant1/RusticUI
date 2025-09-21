@@ -72,17 +72,34 @@ impl MenuProps {
 /// reimplementing attribute composition.
 fn render_html(props: &MenuProps, menu_state: &MenuState, popover_state: &PopoverState) -> String {
     let portal = popover_mount(props);
+    let outcome = popover_state.last_outcome();
+    let anchor_meta = popover_state.anchor_attributes();
+    let surface_meta = popover_surface_metadata(props, popover_state);
     let root_attrs = crate::style_helpers::themed_attributes_html(
         themed_root_style(),
-        root_attributes(props, menu_state, popover_state, &portal),
+        root_attributes(props, menu_state, &surface_meta, outcome, &portal),
     );
     let trigger_attrs = crate::style_helpers::themed_attributes_html(
         themed_trigger_style(),
-        trigger_attributes(props, menu_state, popover_state, &portal),
+        trigger_attributes(
+            props,
+            menu_state,
+            &surface_meta,
+            &anchor_meta,
+            outcome,
+            &portal,
+        ),
     );
     let surface_attrs = crate::style_helpers::themed_attributes_html(
         themed_surface_style(),
-        surface_attributes(props, menu_state, popover_state, &portal),
+        surface_attributes(
+            props,
+            menu_state,
+            &surface_meta,
+            &anchor_meta,
+            outcome,
+            &portal,
+        ),
     );
 
     let mut items_html = String::new();
@@ -94,7 +111,7 @@ fn render_html(props: &MenuProps, menu_state: &MenuState, popover_state: &Popove
         items_html.push_str(&format!("<li {item_attrs}>{}</li>", item.label));
     }
 
-    let anchor_attrs = anchor_attributes(popover_state, &portal);
+    let anchor_attrs = anchor_attributes(&anchor_meta, &portal);
     let anchor_html = format!("<span {}></span>", attributes_to_html(&anchor_attrs));
     let portal_markup = portal.wrap(format!("<ul {surface_attrs}>{items_html}</ul>"));
 
@@ -124,12 +141,12 @@ fn item_id(props: &MenuProps, index: usize) -> String {
 fn root_attributes(
     props: &MenuProps,
     menu_state: &MenuState,
-    popover_state: &PopoverState,
+    surface_meta: &mui_headless::popover::PopoverSurfaceAttributes<'_>,
+    outcome: CollisionOutcome,
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("data-component".into(), "mui-menu".into()));
-    let surface_meta = popover_surface_metadata(props, popover_state);
     let (open_key, open_value) = surface_meta.data_open();
     attrs.push((open_key.into(), open_value.into()));
     let (preferred_key, preferred_value) = surface_meta.data_preferred();
@@ -138,7 +155,7 @@ fn root_attributes(
     attrs.push((resolved_key.into(), resolved_value.into()));
     attrs.push((
         "data-placement-outcome".into(),
-        collision_outcome(popover_state.last_outcome()).into(),
+        collision_outcome(outcome).into(),
     ));
     attrs.push(("data-open-menu".into(), menu_state.is_open().to_string()));
     attrs.push((
@@ -154,7 +171,9 @@ fn root_attributes(
 fn trigger_attributes(
     props: &MenuProps,
     menu_state: &MenuState,
-    popover_state: &PopoverState,
+    surface_meta: &mui_headless::popover::PopoverSurfaceAttributes<'_>,
+    anchor_meta: &mui_headless::popover::PopoverAnchorAttributes<'_>,
+    outcome: CollisionOutcome,
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
@@ -164,10 +183,8 @@ fn trigger_attributes(
     let (expanded_key, expanded_value) = menu_state.trigger_expanded();
     attrs.push((expanded_key.into(), expanded_value.into()));
     attrs.push(("aria-controls".into(), surface_id(props)));
-    let surface_meta = popover_surface_metadata(props, popover_state);
     let (open_key, open_value) = surface_meta.data_open();
     attrs.push((open_key.into(), open_value.into()));
-    let anchor_meta = popover_state.anchor_attributes();
     if let Some((_, anchor_id)) = anchor_meta.id() {
         attrs.push(("data-portal-anchor".into(), anchor_id.to_string()));
     } else {
@@ -178,7 +195,7 @@ fn trigger_attributes(
     attrs.push((placement_key.into(), placement_value.into()));
     attrs.push((
         "data-placement-outcome".into(),
-        collision_outcome(popover_state.last_outcome()).into(),
+        collision_outcome(outcome).into(),
     ));
     if let Some(id) = &props.automation_id {
         attrs.push(("data-automation-trigger".into(), id.clone()));
@@ -189,17 +206,21 @@ fn trigger_attributes(
 fn surface_attributes(
     props: &MenuProps,
     menu_state: &MenuState,
-    popover_state: &PopoverState,
+    surface_meta: &mui_headless::popover::PopoverSurfaceAttributes<'_>,
+    anchor_meta: &mui_headless::popover::PopoverAnchorAttributes<'_>,
+    outcome: CollisionOutcome,
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("id".into(), surface_id(props)));
     attrs.push(("role".into(), menu_state.menu_role().into()));
-    attrs.push(("aria-hidden".into(), (!popover_state.is_open()).to_string()));
+    attrs.push((
+        "aria-hidden".into(),
+        (surface_meta.data_open().1 != "true").to_string(),
+    ));
     if let Some(highlighted) = menu_state.highlighted() {
         attrs.push(("data-highlighted".into(), highlighted.to_string()));
     }
-    let surface_meta = popover_surface_metadata(props, popover_state);
     let (open_key, open_value) = surface_meta.data_open();
     attrs.push((open_key.into(), open_value.into()));
     let (preferred_key, preferred_value) = surface_meta.data_preferred();
@@ -209,7 +230,6 @@ fn surface_attributes(
     if let Some((analytics_key, analytics_value)) = surface_meta.data_analytics_id() {
         attrs.push((analytics_key.into(), analytics_value.into()));
     }
-    let anchor_meta = popover_state.anchor_attributes();
     if let Some((_, anchor_id)) = anchor_meta.id() {
         attrs.push(("data-portal-anchor".into(), anchor_id.to_string()));
     } else {
@@ -218,7 +238,7 @@ fn surface_attributes(
     attrs.push(("data-portal-root".into(), portal.container_id()));
     attrs.push((
         "data-placement-outcome".into(),
-        collision_outcome(popover_state.last_outcome()).into(),
+        collision_outcome(outcome).into(),
     ));
     if let Some(id) = &props.automation_id {
         attrs.push(("data-automation-surface".into(), id.clone()));
@@ -247,12 +267,14 @@ fn popover_mount(props: &MenuProps) -> PortalMount {
     PortalMount::popover(base)
 }
 
-fn anchor_attributes(popover_state: &PopoverState, portal: &PortalMount) -> Vec<(String, String)> {
+fn anchor_attributes(
+    anchor_meta: &mui_headless::popover::PopoverAnchorAttributes<'_>,
+    portal: &PortalMount,
+) -> Vec<(String, String)> {
     // Merge the static portal metadata with the runtime placement analytics so
     // automation tooling can target the anchor while design systems inspect the
     // resolved placement without querying state objects directly.
     let mut attrs = portal.anchor_attributes();
-    let anchor_meta = popover_state.anchor_attributes();
     if let Some((key, value)) = anchor_meta.id() {
         if let Some(existing) = attrs.iter_mut().find(|(k, _)| k == key) {
             existing.1 = value.to_string();
@@ -501,7 +523,16 @@ mod tests {
         let state = build_state(props.items.len());
         let popover = build_popover(&props);
         let portal = popover_mount(&props);
-        let attrs = trigger_attributes(&props, &state, &popover, &portal);
+        let surface_meta = popover_surface_metadata(&props, &popover);
+        let anchor_meta = popover.anchor_attributes();
+        let attrs = trigger_attributes(
+            &props,
+            &state,
+            &surface_meta,
+            &anchor_meta,
+            popover.last_outcome(),
+            &portal,
+        );
         assert!(attrs
             .iter()
             .any(|(k, v)| k == "aria-haspopup" && v == "menu"));
@@ -521,7 +552,14 @@ mod tests {
         let menu_state = build_state(props.items.len());
         let popover_state = build_popover(&props);
         let portal = popover_mount(&props);
-        let attrs = root_attributes(&props, &menu_state, &popover_state, &portal);
+        let surface_meta = popover_surface_metadata(&props, &popover_state);
+        let attrs = root_attributes(
+            &props,
+            &menu_state,
+            &surface_meta,
+            popover_state.last_outcome(),
+            &portal,
+        );
         assert!(attrs
             .iter()
             .any(|(k, v)| k == "data-preferred-placement" && v == "bottom"));
@@ -547,7 +585,16 @@ mod tests {
         let mut popover = build_popover(&props);
         popover.open(|_| {});
         let portal = popover_mount(&props);
-        let attrs = surface_attributes(&props, &state, &popover, &portal);
+        let surface_meta = popover_surface_metadata(&props, &popover);
+        let anchor_meta = popover.anchor_attributes();
+        let attrs = surface_attributes(
+            &props,
+            &state,
+            &surface_meta,
+            &anchor_meta,
+            popover.last_outcome(),
+            &portal,
+        );
         assert!(attrs.iter().any(|(k, v)| k == "data-open" && v == "true"));
         assert!(attrs
             .iter()
@@ -577,7 +624,16 @@ mod tests {
             }),
         );
         popover.resolve_with(|_, _| PopoverPlacement::Top);
-        let attrs = surface_attributes(&props, &state, &popover, &portal);
+        let surface_meta = popover_surface_metadata(&props, &popover);
+        let anchor_meta = popover.anchor_attributes();
+        let attrs = surface_attributes(
+            &props,
+            &state,
+            &surface_meta,
+            &anchor_meta,
+            popover.last_outcome(),
+            &portal,
+        );
         assert!(attrs
             .iter()
             .any(|(k, v)| k == "data-resolved-placement" && v == "top"));
