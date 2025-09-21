@@ -133,6 +133,38 @@ Leptos, Dioxus, and Sycamore renders all include the disabled metadata. When
 augmenting the component ensure any additional markup preserves these hooks so
 end-to-end automation continues to function.
 
+## Dialog, popover, and text field adapters
+
+The Material adapters for `Dialog`, `Popover`, and `TextField` lean directly on
+the new headless state machines documented in
+[`shared-dialog-state-core`](../../examples/shared-dialog-state-core). Each
+adapter mirrors the controlled workflow to keep SSR snapshots, hydration output,
+and client updates in lockstep.
+
+- **Dialog** – framework modules (`dialog::yew`, `dialog::leptos`,
+  `dialog::dioxus`, `dialog::sycamore`) accept a `DialogState` and call
+  `surface_attributes()` to emit `role`, `aria-modal`, `data-state`, and
+  `data-transition` markers. Portal/backdrop helpers rely on the same state
+  object so automation IDs stay consistent across renders.
+- **Popover** – the Material popover helpers (used by `Menu`, `Select`, and the
+  shared dialog state examples) forward anchor geometry, preferred placement,
+  and collision outcomes from `PopoverState`. The adapters emit
+  `data-preferred-placement`, `data-resolved-placement`, and
+  `data-open` attributes so SSR snapshots and hydrated DOM trees are identical.
+- **TextField** – the high-level `TextField` component wraps
+  `TextFieldStateHandle` which internally stores a `TextFieldState` inside an
+  `Rc<RefCell<_>>`. Change, commit, and reset handlers invoke the headless state
+  methods and surface the corresponding `TextFieldChangeEvent`,
+  `TextFieldCommitEvent`, and `TextFieldResetEvent` structs. Attribute builders
+  from `mui-headless` ensure analytics IDs and validation metadata stay
+  deterministic.
+
+The automation-focused examples under `examples/shared-dialog-state-*` reuse
+the Material adapters to prove that SSR and hydration output match the
+framework-agnostic state orchestration. When integrating the components into a
+product, defer to the state machine APIs for all intent handling rather than
+duplicating open/close or validation logic in UI code.
+
 ## Framework adapters & portal orchestration
 
 Every Material component exposes framework-specific adapter modules (`yew`,
