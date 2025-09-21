@@ -6,6 +6,12 @@ use crate::{
 use mui_utils::deep_merge;
 use serde_json::{Map, Value};
 
+fn insert_declaration(map: &mut Map<String, Value>, declaration: String) {
+    if let Some((prop, value)) = declaration.trim_end_matches(';').split_once(':') {
+        map.insert(prop.to_owned(), Value::String(value.to_owned()));
+    }
+}
+
 /// Shared descriptor passed into [`build_grid_style`].  The struct mirrors the
 /// ergonomics established by [`crate::r#box::BoxStyleInputs`], letting each
 /// adapter borrow responsive props without cloning.  Keeping this contract in
@@ -51,17 +57,19 @@ pub fn build_grid_style(
     let width_percent = grid_span_to_percent(resolved_span, resolved_columns);
 
     let mut style_map = Map::new();
-    style_map.insert("width".into(), Value::String(format!("{}%", width_percent)));
+    insert_declaration(&mut style_map, style::width(format!("{}%", width_percent)));
 
     if let Some(jc) = inputs.justify_content {
-        style_map.insert("justify-content".into(), Value::String(jc.to_owned()));
+        insert_declaration(&mut style_map, style::justify_content(jc));
     }
     if let Some(ai) = inputs.align_items {
-        style_map.insert("align-items".into(), Value::String(ai.to_owned()));
+        insert_declaration(&mut style_map, style::align_items(ai));
     }
 
     let mut style_value = Value::Object(style_map);
     if let Some(sx) = inputs.sx {
+        // Retain the deep merge behaviour so JSON overrides replace the
+        // generated declarations when keys collide.
         deep_merge(&mut style_value, sx.clone());
     }
 

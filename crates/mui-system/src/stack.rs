@@ -2,6 +2,12 @@ use crate::{responsive::Responsive, style, theme::Breakpoints};
 use mui_utils::deep_merge;
 use serde_json::{Map, Value};
 
+fn insert_declaration(map: &mut Map<String, Value>, declaration: String) {
+    if let Some((prop, value)) = declaration.trim_end_matches(';').split_once(':') {
+        map.insert(prop.to_owned(), Value::String(value.to_owned()));
+    }
+}
+
 /// Direction of children placement inside [`Stack`].
 #[derive(Clone, PartialEq)]
 pub enum StackDirection {
@@ -47,28 +53,28 @@ pub fn build_stack_style(
         .unwrap_or(StackDirection::Column)
         .as_css_value();
     let mut style_map = Map::new();
-    style_map.insert("display".into(), Value::String("flex".into()));
-    style_map.insert(
-        "flex-direction".into(),
-        Value::String(direction_value.into()),
-    );
+    insert_declaration(&mut style_map, style::display("flex"));
+    insert_declaration(&mut style_map, style::flex_direction(direction_value));
 
     if let Some(sp) = inputs.spacing {
         // Resolve the gap for the current viewport.  Using `gap` keeps both
         // horizontal and vertical spacing in sync, mirroring the ergonomic
         // defaults of the upstream Stack implementation.
         let resolved = sp.resolve(width, breakpoints);
-        style_map.insert("gap".into(), Value::String(resolved));
+        insert_declaration(&mut style_map, style::gap(resolved));
     }
     if let Some(ai) = inputs.align_items {
-        style_map.insert("align-items".into(), Value::String(ai.to_owned()));
+        insert_declaration(&mut style_map, style::align_items(ai));
     }
     if let Some(jc) = inputs.justify_content {
-        style_map.insert("justify-content".into(), Value::String(jc.to_owned()));
+        insert_declaration(&mut style_map, style::justify_content(jc));
     }
 
     let mut style_value = Value::Object(style_map);
     if let Some(sx) = inputs.sx {
+        // Merge JSON-driven overrides so duplicate properties replace the
+        // generated defaults, mirroring the automation-friendly behaviour from
+        // the JavaScript system package.
         deep_merge(&mut style_value, sx.clone());
     }
 

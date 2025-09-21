@@ -15,11 +15,16 @@ use serde_json::json;
 let theme = Theme::default();
 html! {
     <ThemeProvider theme={theme}>
-        <Stack spacing={Some("8px".into())} justify_content={Some("center".into())}>
+        <Stack
+            spacing={Some("8px".into())}
+            justify_content={Some("center".into())}
+            align_items={Some("center".into())}
+        >
             <Box sx={json!({
                 "padding": "4px",
                 "background-color": "#f5f5f5",
                 "border-radius": "4px",
+                "transition": "opacity 150ms ease-in-out",
             })}>{"Item"}</Box>
         </Stack>
     </ThemeProvider>
@@ -34,6 +39,39 @@ mui-system = { version = "0.1", features = ["yew"] }
 ```
 
 Available features include `yew`, `leptos`, `dioxus` and `sycamore`.
+
+## Automation-first style helpers
+
+The [`style`](./src/style.rs) module exposes a comprehensive suite of helper
+functions that emit canonical `prop:value;` declarations. They remove the need
+to hand-maintain ad-hoc strings across components while keeping everything
+friendly to automation. Each helper is thoroughly documented in code with the
+expected units or keywords.
+
+```rust
+use mui_system::{
+    animation, column_gap, display, grid_template_columns, row_gap, transform,
+};
+
+let css = vec![
+    display("grid"),
+    grid_template_columns("repeat(12, 1fr)"),
+    row_gap("16px"),
+    column_gap("24px"),
+    transform("scale(1.02)"),
+    animation("fade-in 500ms ease-in forwards"),
+]
+.into_iter()
+.collect::<String>();
+assert!(css.contains("grid-template-columns:repeat(12, 1fr);"));
+```
+
+The helpers can be composed manually as above or alongside the
+[`style_props!`](./src/macros.rs) macro for ad-hoc declarations. Layout
+builders such as [`Stack`](./src/stack.rs), [`Grid`](./src/grid.rs),
+[`Box`](./src/box.rs) and [`Container`](./src/container.rs) now exclusively rely
+on these helpers so the behaviour remains identical between component adapters
+and test harnesses.
 
 ## Portal orchestration
 
@@ -84,7 +122,7 @@ let grid_styles = build_grid_style(
         columns: Some(&columns),
         span: Some(&span),
         justify_content: None,
-        align_items: None,
+        align_items: Some("center"),
         sx: None,
     },
 );
@@ -109,10 +147,11 @@ let stack_styles = build_stack_style(
     StackStyleInputs {
         direction: Some(StackDirection::Row),
         spacing: Some(&spacing),
-        align_items: None,
+        align_items: Some("center"),
         justify_content: Some("space-between"),
         sx: Some(&serde_json::json!({
             "align-items": "center",
+            "gap": "24px",
         })),
     },
 );
@@ -150,14 +189,17 @@ let box_styles = build_box_style(
         sx: Some(&serde_json::json!({
             "border-radius": "8px",
             "background-color": "#fff",
+            "overflow": "hidden",
+            "transition": "opacity 150ms ease-in-out",
         })),
     },
 );
 
 assert!(grid_styles.contains("width:50%;"));
 assert!(container_styles.contains("max-width:1200px;"));
-assert!(stack_styles.contains("gap:16px;"));
+assert!(stack_styles.contains("gap:24px;"));
 assert!(box_styles.contains("font-size:18px;"));
+assert!(box_styles.contains("overflow:hidden;"));
 ```
 
 The helper builders accept lightweight `*StyleInputs` descriptors so framework
