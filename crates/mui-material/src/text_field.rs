@@ -130,110 +130,69 @@ fn resolve_style(
     feature = "dioxus",
     feature = "sycamore"
 ))]
-#[derive(Clone, Debug, PartialEq)]
-struct TextFieldRenderSnapshot {
-    value: String,
-    dirty: bool,
-    visited: bool,
-    aria_invalid: Option<String>,
-    aria_describedby: Option<String>,
-    analytics_id: Option<String>,
-    status_message: Option<String>,
-}
-
-#[cfg(any(
-    feature = "yew",
-    feature = "leptos",
-    feature = "dioxus",
-    feature = "sycamore"
-))]
-impl TextFieldRenderSnapshot {
-    /// Stringified representation of the dirty flag for attribute propagation.
-    fn dirty_attr(&self) -> &'static str {
-        if self.dirty {
-            "true"
-        } else {
-            "false"
-        }
-    }
-
-    /// Stringified representation of the visited flag for attribute propagation.
-    fn visited_attr(&self) -> &'static str {
-        if self.visited {
-            "true"
-        } else {
-            "false"
-        }
-    }
-}
-
-#[cfg(any(
-    feature = "yew",
-    feature = "leptos",
-    feature = "dioxus",
-    feature = "sycamore"
-))]
-fn snapshot_from_state(
-    state: &TextFieldState,
-    status_id: Option<&str>,
-    analytics_id: Option<&str>,
-) -> TextFieldRenderSnapshot {
+fn build_text_field_attributes<'a>(
+    state: &'a TextFieldState,
+    status_id: Option<&'a str>,
+    analytics_id: Option<&'a str>,
+) -> TextFieldAttributes<'a> {
     let builder = state.attributes();
     let builder = if let Some(id) = status_id {
         builder.status_id(id)
     } else {
         builder
     };
-    let builder = if let Some(id) = analytics_id {
+    if let Some(id) = analytics_id {
         builder.analytics_id(id)
     } else {
         builder
-    };
-    TextFieldRenderSnapshot {
-        value: state.value().to_string(),
-        dirty: state.dirty(),
-        visited: state.visited(),
-        aria_invalid: builder.aria_invalid().map(|(_, value)| value.to_string()),
-        aria_describedby: builder
-            .aria_describedby()
-            .map(|(_, value)| value.to_string()),
-        analytics_id: builder
-            .data_analytics_id()
-            .map(|(_, value)| value.to_string()),
-        status_message: builder.status_message(),
     }
+}
+
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore"
+))]
+fn input_attribute_pairs(
+    attrs: TextFieldAttributes<'_>,
+    value: &str,
+    placeholder: &str,
+    aria_label: &str,
+) -> Vec<(String, String)> {
+    let mut pairs = vec![
+        ("type".to_string(), "text".to_string()),
+        ("value".to_string(), value.to_string()),
+        ("placeholder".to_string(), placeholder.to_string()),
+        ("aria-label".to_string(), aria_label.to_string()),
+    ];
+    let (dirty_key, dirty_value) = attrs.data_dirty();
+    pairs.push((dirty_key.into(), dirty_value.into()));
+    let (visited_key, visited_value) = attrs.data_visited();
+    pairs.push((visited_key.into(), visited_value.into()));
+    if let Some((key, value)) = attrs.aria_invalid() {
+        pairs.push((key.into(), value.into()));
+    }
+    if let Some((key, value)) = attrs.aria_describedby() {
+        pairs.push((key.into(), value.into()));
+    }
+    if let Some((key, value)) = attrs.data_analytics_id() {
+        pairs.push((key.into(), value.into()));
+    }
+    if let Some(message) = attrs.status_message() {
+        pairs.push(("data-status-message".into(), message));
+    }
+    pairs
 }
 
 #[cfg(any(feature = "dioxus", feature = "sycamore"))]
 fn ssr_input_attributes(
-    snapshot: &TextFieldRenderSnapshot,
+    attrs: TextFieldAttributes<'_>,
+    value: &str,
     placeholder: &str,
     aria_label: &str,
 ) -> Vec<(String, String)> {
-    let mut attrs = vec![
-        ("type".to_string(), "text".to_string()),
-        ("value".to_string(), snapshot.value.clone()),
-        ("placeholder".to_string(), placeholder.to_string()),
-        ("aria-label".to_string(), aria_label.to_string()),
-        ("data-dirty".to_string(), snapshot.dirty_attr().to_string()),
-        (
-            "data-visited".to_string(),
-            snapshot.visited_attr().to_string(),
-        ),
-    ];
-    if let Some(value) = &snapshot.aria_invalid {
-        attrs.push(("aria-invalid".to_string(), value.clone()));
-    }
-    if let Some(value) = &snapshot.aria_describedby {
-        attrs.push(("aria-describedby".to_string(), value.clone()));
-    }
-    if let Some(value) = &snapshot.analytics_id {
-        attrs.push(("data-analytics-id".to_string(), value.clone()));
-    }
-    if let Some(value) = &snapshot.status_message {
-        attrs.push(("data-status-message".to_string(), value.clone()));
-    }
-    attrs
+    input_attribute_pairs(attrs, value, placeholder, aria_label)
 }
 
 #[cfg(any(feature = "yew", feature = "leptos"))]
@@ -292,10 +251,16 @@ mod yew_impl {
     use std::time::Duration;
     use wasm_bindgen::JsCast;
     use web_sys::{HtmlInputElement, KeyboardEvent};
-    use yew::prelude::*;
+    use yew::{prelude::*, virtual_dom::VNode};
 
     #[cfg(target_arch = "wasm32")]
     use mui_utils::debounce;
+
+    fn apply_input_attributes(tag: &mut yew::virtual_dom::VTag, attrs: Vec<(String, String)>) {
+        for (key, value) in attrs {
+            tag.add_attribute(key, value);
+        }
+    }
 
     /// Internal helper that memoizes a debounced change dispatcher.
     ///
@@ -439,23 +404,18 @@ mod yew_impl {
 
         let status_id = props.status_id.as_ref().map(|value| value.as_str());
         let analytics_id = props.analytics_id.as_ref().map(|value| value.as_str());
-        let snapshot = {
+        let placeholder = props.placeholder.clone();
+        let aria_label = props.aria_label.clone();
+        let attrs = {
             let state = props.state.borrow();
-            snapshot_from_state(&state, status_id, analytics_id)
+            let builder = build_text_field_attributes(&state, status_id, analytics_id);
+            input_attribute_pairs(
+                builder,
+                state.value(),
+                placeholder.as_str(),
+                aria_label.as_str(),
+            )
         };
-
-        let aria_invalid: Option<AttrValue> = snapshot
-            .aria_invalid
-            .clone()
-            .map(|value| AttrValue::from(value));
-        let aria_describedby: Option<AttrValue> = snapshot
-            .aria_describedby
-            .clone()
-            .map(|value| AttrValue::from(value));
-        let data_status_message: Option<AttrValue> =
-            snapshot.status_message.clone().map(AttrValue::from);
-        let data_analytics_id: Option<AttrValue> =
-            snapshot.analytics_id.clone().map(AttrValue::from);
 
         let change_dispatch = use_mut_ref(ChangeDispatcher::new);
         let on_change_cb = props.on_change.clone();
@@ -540,23 +500,18 @@ mod yew_impl {
             }
         });
 
-        html! {
+        let mut node = html! {
             <input
                 class={class}
-                value={AttrValue::from(snapshot.value.clone())}
-                placeholder={props.placeholder.clone()}
-                aria-label={props.aria_label.clone()}
-                aria-invalid={aria_invalid}
-                aria-describedby={aria_describedby}
-                data-dirty={AttrValue::from(snapshot.dirty_attr())}
-                data-visited={AttrValue::from(snapshot.visited_attr())}
-                data-status-message={data_status_message}
-                data-analytics-id={data_analytics_id}
                 oninput={oninput}
                 onblur={onblur}
                 onkeydown={onkeydown}
             />
+        };
+        if let VNode::VTag(ref mut tag) = node {
+            apply_input_attributes(tag, attrs);
         }
+        node
     }
 }
 
@@ -572,6 +527,13 @@ mod leptos_impl {
         event_target_value, view, IntoView, SignalGet, SignalSet, SignalUpdate,
     };
     use std::rc::Rc;
+
+    fn attr_lookup(attrs: &[(String, String)], key: &str) -> Option<String> {
+        attrs
+            .iter()
+            .find(|(candidate, _)| candidate == key)
+            .map(|(_, value)| value.clone())
+    }
 
     /// Properties consumed by the Leptos text field component.
     #[derive(leptos::Props, Clone, PartialEq)]
@@ -648,13 +610,21 @@ mod leptos_impl {
         let state_for_snapshot = state.clone();
         let status_id_for_snapshot = status_id.clone();
         let analytics_id_for_snapshot = analytics_id.clone();
-        let snapshot = create_memo(move |_| {
+        let placeholder_clone = placeholder.clone();
+        let aria_label_clone = aria_label.clone();
+        let attributes = create_memo(move |_| {
             version.get();
             let state = state_for_snapshot.borrow();
-            snapshot_from_state(
+            let builder = build_text_field_attributes(
                 &state,
                 status_id_for_snapshot.as_deref(),
                 analytics_id_for_snapshot.as_deref(),
+            );
+            input_attribute_pairs(
+                builder,
+                state.value(),
+                placeholder_clone.as_str(),
+                aria_label_clone.as_str(),
             )
         });
 
@@ -734,15 +704,21 @@ mod leptos_impl {
         view! {
             <input
                 class=class
-                prop:value=move || snapshot.get().value.clone()
-                placeholder=placeholder.clone()
-                aria-label=aria_label.clone()
-                attr:aria-invalid=move || snapshot.get().aria_invalid.clone()
-                attr:aria-describedby=move || snapshot.get().aria_describedby.clone()
-                attr:data-dirty=move || snapshot.get().dirty_attr().to_string()
-                attr:data-visited=move || snapshot.get().visited_attr().to_string()
-                attr:data-status-message=move || snapshot.get().status_message.clone()
-                attr:data-analytics-id=move || snapshot.get().analytics_id.clone()
+                prop:value=move || {
+                    attr_lookup(&attributes.get(), "value").unwrap_or_default()
+                }
+                attr:placeholder=move || attr_lookup(&attributes.get(), "placeholder")
+                attr:aria-label=move || attr_lookup(&attributes.get(), "aria-label")
+                attr:aria-invalid=move || attr_lookup(&attributes.get(), "aria-invalid")
+                attr:aria-describedby=move || attr_lookup(&attributes.get(), "aria-describedby")
+                attr:data-dirty=move || {
+                    attr_lookup(&attributes.get(), "data-dirty").unwrap_or_else(|| "false".into())
+                }
+                attr:data-visited=move || {
+                    attr_lookup(&attributes.get(), "data-visited").unwrap_or_else(|| "false".into())
+                }
+                attr:data-status-message=move || attr_lookup(&attributes.get(), "data-status-message")
+                attr:data-analytics-id=move || attr_lookup(&attributes.get(), "data-analytics-id")
                 on:input=on_input_handler
                 on:blur=on_blur_handler
                 on:keydown=on_keydown_handler
@@ -782,7 +758,7 @@ pub mod dioxus {
     /// Render the text field into an `<input>` tag with themed styling and
     /// state-driven metadata.
     pub fn render(props: &TextFieldProps, state: &TextFieldState) -> String {
-        let snapshot = snapshot_from_state(
+        let attrs = build_text_field_attributes(
             state,
             props.status_id.as_deref(),
             props.analytics_id.as_deref(),
@@ -794,7 +770,7 @@ pub mod dioxus {
                 props.variant.clone(),
                 props.style_overrides.clone(),
             ),
-            ssr_input_attributes(&snapshot, &props.placeholder, &props.aria_label),
+            ssr_input_attributes(attrs, state.value(), &props.placeholder, &props.aria_label),
         );
         format!("<input {attrs} />", attrs = attr_string)
     }
@@ -828,7 +804,7 @@ pub mod sycamore {
     /// Render the text field into plain HTML with theme-derived styling and
     /// state-driven metadata.
     pub fn render(props: &TextFieldProps, state: &TextFieldState) -> String {
-        let snapshot = snapshot_from_state(
+        let attrs = build_text_field_attributes(
             state,
             props.status_id.as_deref(),
             props.analytics_id.as_deref(),
@@ -840,7 +816,7 @@ pub mod sycamore {
                 props.variant.clone(),
                 props.style_overrides.clone(),
             ),
-            ssr_input_attributes(&snapshot, &props.placeholder, &props.aria_label),
+            ssr_input_attributes(attrs, state.value(), &props.placeholder, &props.aria_label),
         );
         format!("<input {attrs} />", attrs = attr_string)
     }
@@ -856,33 +832,54 @@ pub mod sycamore {
     )
 ))]
 mod tests {
-    use super::{snapshot_from_state, ssr_input_attributes};
+    use super::{build_text_field_attributes, input_attribute_pairs, ssr_input_attributes};
     use mui_headless::text_field::TextFieldState;
 
     #[test]
-    fn snapshot_reflects_dirty_and_visited_flags() {
+    fn input_pairs_reflect_dirty_and_visited_flags() {
         let mut state = TextFieldState::uncontrolled("seed", None);
-        let first = snapshot_from_state(&state, None, None);
-        assert_eq!(first.dirty_attr(), "false");
-        assert_eq!(first.visited_attr(), "false");
+        let attrs = build_text_field_attributes(&state, None, None);
+        let pairs = input_attribute_pairs(attrs, state.value(), "Placeholder", "Label");
+        let lookup = |key: &str| {
+            pairs
+                .iter()
+                .find(|(candidate, _)| candidate == key)
+                .map(|(_, value)| value.as_str())
+        };
+        assert_eq!(lookup("data-dirty"), Some("false"));
+        assert_eq!(lookup("data-visited"), Some("false"));
 
         state.change("updated", |_| {});
-        let after_change = snapshot_from_state(&state, None, None);
-        assert_eq!(after_change.dirty_attr(), "true");
-        assert_eq!(after_change.visited_attr(), "false");
+        let attrs = build_text_field_attributes(&state, None, None);
+        let pairs = input_attribute_pairs(attrs, state.value(), "Placeholder", "Label");
+        let lookup = |key: &str| {
+            pairs
+                .iter()
+                .find(|(candidate, _)| candidate == key)
+                .map(|(_, value)| value.as_str())
+        };
+        assert_eq!(lookup("data-dirty"), Some("true"));
+        assert_eq!(lookup("data-visited"), Some("false"));
 
         state.commit(|_| {});
-        let after_commit = snapshot_from_state(&state, None, None);
-        assert_eq!(after_commit.dirty_attr(), "true");
-        assert_eq!(after_commit.visited_attr(), "true");
+        let attrs = build_text_field_attributes(&state, None, None);
+        let pairs = input_attribute_pairs(attrs, state.value(), "Placeholder", "Label");
+        let lookup = |key: &str| {
+            pairs
+                .iter()
+                .find(|(candidate, _)| candidate == key)
+                .map(|(_, value)| value.as_str())
+        };
+        assert_eq!(lookup("data-dirty"), Some("true"));
+        assert_eq!(lookup("data-visited"), Some("true"));
     }
 
     #[test]
     fn ssr_attributes_include_error_status() {
         let mut state = TextFieldState::uncontrolled("", None);
         state.set_errors(vec!["Required".into()]);
-        let snapshot = snapshot_from_state(&state, Some("status"), Some("analytics-1"));
-        let attrs = ssr_input_attributes(&snapshot, "Placeholder", "Label");
+        let builder = build_text_field_attributes(&state, Some("status"), Some("analytics-1"));
+        let attrs = ssr_input_attributes(builder, state.value(), "Placeholder", "Label");
         assert!(attrs
             .iter()
             .any(|(k, v)| k == "aria-invalid" && v == "true"));
@@ -893,5 +890,19 @@ mod tests {
             .iter()
             .any(|(k, v)| k == "data-analytics-id" && v == "analytics-1"));
         assert!(attrs.iter().any(|(k, _)| k == "data-status-message"));
+    }
+
+    #[test]
+    fn input_pairs_toggle_analytics_metadata() {
+        let state = TextFieldState::uncontrolled("", None);
+        let with_id = build_text_field_attributes(&state, None, Some("field-1"));
+        let with_pairs = input_attribute_pairs(with_id, state.value(), "Hint", "Label");
+        assert!(with_pairs
+            .iter()
+            .any(|(k, v)| k == "data-analytics-id" && v == "field-1"));
+
+        let without_id = build_text_field_attributes(&state, None, None);
+        let without_pairs = input_attribute_pairs(without_id, state.value(), "Hint", "Label");
+        assert!(without_pairs.iter().all(|(k, _)| k != "data-analytics-id"));
     }
 }
