@@ -6,10 +6,12 @@
 //! ensuring that contributors invoke the exact same logic locally
 //! and in automation.
 
-use anyhow::{anyhow, Result};
-use clap::{Parser, Subcommand};
+use anyhow::{anyhow, Context, Result};
+use clap::{Parser, Subcommand, ValueEnum};
+use mui_system::theme::Theme;
+use serde_json::Value;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// Entry point for the `cargo xtask` command.
@@ -50,7 +52,15 @@ enum Commands {
     /// Build the JavaScript documentation site.
     BuildDocs,
     /// Regenerate serialized theme templates and CSS baselines.
-    GenerateTheme,
+    GenerateTheme {
+        /// Optional path to a JSON or TOML fixture that overrides
+        /// sections of the canonical Material theme before serialization.
+        #[arg(long)]
+        overrides: Option<PathBuf>,
+        /// Output format written to disk.
+        #[arg(long, value_enum, default_value_t = ThemeFormat::Json)]
+        format: ThemeFormat,
+    },
     /// Recompute the Material component parity dashboard.
     MaterialParity,
 }
@@ -69,9 +79,16 @@ fn main() -> Result<()> {
         Commands::UpdateComponents => update_components(),
         Commands::AccessibilityAudit => accessibility_audit(),
         Commands::BuildDocs => build_docs(),
-        Commands::GenerateTheme => generate_theme(),
+        Commands::GenerateTheme { overrides, format } => generate_theme(overrides, format),
         Commands::MaterialParity => material_parity(),
     }
+}
+
+/// Output encodings supported by the theme generator.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum ThemeFormat {
+    Json,
+    Toml,
 }
 
 /// Helper to execute an external command with verbose logging.
@@ -222,26 +239,96 @@ fn coverage() -> Result<()> {
     run(cmd)
 }
 
-fn generate_theme() -> Result<()> {
-    // Serialize the canonical Material theme so tooling and templates stay in
-    // sync with the Rust implementation.
-    let theme = mui_system::theme_provider::material_theme();
-    let json_path = PathBuf::from("crates/mui-system/templates/material_theme.json");
-    if let Some(parent) = json_path.parent() {
+fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat) -> Result<()> {
+    println!("[xtask] generating Material theme artifacts (format: {format:?})");
+
+    // Load the optional override fixture from disk.  We keep this logic verbose so CI logs
+    // clearly document which file was considered and how it was interpreted.
+    let overrides_value = match overrides {
+        Some(path) => {
+            println!("[xtask] loading overrides from {}", path.display());
+            let raw = fs::read_to_string(&path).with_context(|| {
+                format!("failed to read override fixture at {}", path.display())
+            })?;
+            let value = parse_overrides(&path, &raw)?;
+            println!("[xtask] successfully parsed overrides");
+            Some(value)
+        }
+        None => {
+            println!("[xtask] no overrides supplied; using canonical defaults");
+            None
+        }
+    };
+
+    // Always start from the canonical Material theme before layering user supplied overrides.
+    let base_theme = mui_system::theme_provider::material_theme();
+    let theme = if let Some(overrides_value) = overrides_value {
+        let mut merged_theme_value = serde_json::to_value(&base_theme)?;
+        // Perform a deep merge so nested objects (palette, typography, etc.) can be partially
+        // specified without requiring every field.  This mirrors the ergonomics of the JS tooling
+        // and keeps configuration files succinct.
+        merge_values(&mut merged_theme_value, &overrides_value);
+        let merged_theme: Theme = serde_json::from_value(merged_theme_value)
+            .with_context(|| "failed to convert merged theme representation into Theme struct")?;
+        mui_system::theme_provider::material_theme_with_optional_overrides(Some(merged_theme))
+    } else {
+        mui_system::theme_provider::material_theme_with_optional_overrides::<Theme>(None)
+    };
+
+    let output_path = match format {
+        ThemeFormat::Json => PathBuf::from("crates/mui-system/templates/material_theme.json"),
+        ThemeFormat::Toml => PathBuf::from("crates/mui-system/templates/material_theme.toml"),
+    };
+    if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let json = serde_json::to_string_pretty(&theme)?;
-    fs::write(&json_path, format!("{json}\n"))?;
-    println!("[xtask] wrote {}", json_path.display());
 
-    // Emit the baseline CSS used by `CssBaseline` so static hosting setups can
-    // include it without executing Rust code (e.g. SSR pipelines).
-    let css_path = json_path.with_file_name("material_css_baseline.css");
-    let css = mui_system::theme_provider::material_css_baseline();
+    let serialized = match format {
+        ThemeFormat::Json => serde_json::to_string_pretty(&theme)?,
+        ThemeFormat::Toml => toml::to_string_pretty(&theme)?,
+    };
+    fs::write(&output_path, format!("{serialized}\n"))?;
+    println!("[xtask] wrote {}", output_path.display());
+
+    let css_path = output_path.with_file_name("material_css_baseline.css");
+    let css = mui_system::theme_provider::material_css_baseline_from_theme(&theme);
     fs::write(&css_path, css)?;
     println!("[xtask] wrote {}", css_path.display());
 
     Ok(())
+}
+
+/// Parses an override fixture into a [`serde_json::Value`] so we can merge it with the default
+/// theme irrespective of the original file format.
+fn parse_overrides(path: &Path, raw: &str) -> Result<Value> {
+    let ext = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase())
+        .unwrap_or_else(|| "json".to_string());
+
+    let value: Value = if ext == "toml" {
+        toml::from_str(raw)
+            .with_context(|| format!("failed to parse TOML overrides from {}", path.display()))?
+    } else {
+        serde_json::from_str(raw)
+            .with_context(|| format!("failed to parse JSON overrides from {}", path.display()))?
+    };
+
+    Ok(value)
+}
+
+/// Recursively merges JSON values.  Objects are merged key-by-key while primitive values are
+/// replaced outright.  This mirrors how JavaScript `Object.assign` works and matches developer
+/// expectations when porting configurations from the upstream ecosystem.
+fn merge_values(base: &mut Value, overrides: &Value) {
+    if let (Some(base_map), Some(override_map)) = (base.as_object_mut(), overrides.as_object()) {
+        for (key, value) in override_map {
+            merge_values(base_map.entry(key.clone()).or_insert(Value::Null), value);
+        }
+    } else {
+        *base = overrides.clone();
+    }
 }
 
 fn material_parity() -> Result<()> {
