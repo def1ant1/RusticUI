@@ -262,38 +262,117 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat) -> Result<()>
 
     // Always start from the canonical Material theme before layering user supplied overrides.
     let base_theme = mui_system::theme_provider::material_theme();
-    let theme = if let Some(overrides_value) = overrides_value {
-        let mut merged_theme_value = serde_json::to_value(&base_theme)?;
-        // Perform a deep merge so nested objects (palette, typography, etc.) can be partially
-        // specified without requiring every field.  This mirrors the ergonomics of the JS tooling
-        // and keeps configuration files succinct.
-        merge_values(&mut merged_theme_value, &overrides_value);
-        let merged_theme: Theme = serde_json::from_value(merged_theme_value)
-            .with_context(|| "failed to convert merged theme representation into Theme struct")?;
-        mui_system::theme_provider::material_theme_with_optional_overrides(Some(merged_theme))
-    } else {
-        mui_system::theme_provider::material_theme_with_optional_overrides::<Theme>(None)
-    };
 
-    let output_path = match format {
-        ThemeFormat::Json => PathBuf::from("crates/mui-system/templates/material_theme.json"),
-        ThemeFormat::Toml => PathBuf::from("crates/mui-system/templates/material_theme.toml"),
-    };
-    if let Some(parent) = output_path.parent() {
-        fs::create_dir_all(parent)?;
+    // Split overrides into the portions that apply to all color schemes and the
+    // scheme-specific fragments.  We intentionally keep this logic explicit so
+    // that future scheme additions (e.g. high-contrast) can plug in without
+    // reworking the generator entrypoint.
+    let mut global_overrides: Option<Value> = None;
+    let mut scheme_overrides: std::collections::BTreeMap<String, Value> = Default::default();
+
+    if let Some(overrides_value) = overrides_value {
+        if let Some(map) = overrides_value.as_object() {
+            let mut shared = serde_json::Map::new();
+            for (key, value) in map {
+                match key.as_str() {
+                    // The `schemes` key allows authoring overrides as
+                    // `{ "schemes": { "light": {...}, "dark": {...} } }` while
+                    // keeping top-level keys reserved for shared values.
+                    "schemes" => {
+                        if let Some(entries) = value.as_object() {
+                            for (scheme, fragment) in entries {
+                                scheme_overrides.insert(scheme.clone(), fragment.clone());
+                            }
+                        } else {
+                            return Err(anyhow!(
+                                "expected `schemes` override section to be an object"
+                            ));
+                        }
+                    }
+                    // Allow direct `light`/`dark` keys for ergonomics so that
+                    // existing automation fixtures can migrate incrementally.
+                    "light" | "dark" => {
+                        scheme_overrides.insert(key.clone(), value.clone());
+                    }
+                    _ => {
+                        shared.insert(key.clone(), value.clone());
+                    }
+                }
+            }
+            if !shared.is_empty() {
+                global_overrides = Some(Value::Object(shared));
+            }
+        } else {
+            // Non-object overrides (e.g. legacy fixtures providing the entire
+            // theme structure) are treated as global so we maintain backwards
+            // compatibility with bespoke integrations.
+            global_overrides = Some(overrides_value);
+        }
     }
 
-    let serialized = match format {
-        ThemeFormat::Json => serde_json::to_string_pretty(&theme)?,
-        ThemeFormat::Toml => toml::to_string_pretty(&theme)?,
-    };
-    fs::write(&output_path, format!("{serialized}\n"))?;
-    println!("[xtask] wrote {}", output_path.display());
+    // Material defaults currently revolve around a light and dark experience.
+    // Keep those first for deterministic file ordering, then append any
+    // additional schemes discovered in the overrides map.
+    let mut schemes = vec!["light".to_string(), "dark".to_string()];
+    for scheme in scheme_overrides.keys() {
+        if !schemes.contains(scheme) {
+            schemes.push(scheme.clone());
+        }
+    }
 
-    let css_path = output_path.with_file_name("material_css_baseline.css");
-    let css = mui_system::theme_provider::material_css_baseline_from_theme(&theme);
-    fs::write(&css_path, css)?;
-    println!("[xtask] wrote {}", css_path.display());
+    // Prepare the templates directory and remove historical single-file
+    // artefacts so downstream tooling never accidentally consumes stale data.
+    let output_dir = PathBuf::from("crates/mui-system/templates");
+    fs::create_dir_all(&output_dir)?;
+    for legacy in [
+        output_dir.join("material_theme.json"),
+        output_dir.join("material_theme.toml"),
+        output_dir.join("material_css_baseline.css"),
+    ] {
+        if legacy.exists() {
+            fs::remove_file(&legacy)?;
+            println!("[xtask] removed legacy artefact {}", legacy.display());
+        }
+    }
+
+    // Serialize each scheme independently while funnelling the overrides
+    // through the same merge routine that powers the single theme output. The
+    // verbose logging doubles as living documentation for anyone reading CI
+    // logs to validate automation runs.
+    for scheme in schemes {
+        let mut merged_value = serde_json::to_value(&base_theme)?;
+        if let Some(global) = &global_overrides {
+            merge_values(&mut merged_value, global);
+        }
+        if let Some(specific) = scheme_overrides.get(&scheme) {
+            merge_values(&mut merged_value, specific);
+        }
+
+        let merged_theme: Theme = serde_json::from_value(merged_value).with_context(|| {
+            format!(
+                "failed to convert merged theme representation into Theme struct for `{scheme}`"
+            )
+        })?;
+        let theme =
+            mui_system::theme_provider::material_theme_with_optional_overrides(Some(merged_theme));
+
+        let output_path = match format {
+            ThemeFormat::Json => output_dir.join(format!("material_theme.{scheme}.json")),
+            ThemeFormat::Toml => output_dir.join(format!("material_theme.{scheme}.toml")),
+        };
+
+        let serialized = match format {
+            ThemeFormat::Json => serde_json::to_string_pretty(&theme)?,
+            ThemeFormat::Toml => toml::to_string_pretty(&theme)?,
+        };
+        fs::write(&output_path, format!("{serialized}\n"))?;
+        println!("[xtask] wrote {}", output_path.display());
+
+        let css_path = output_dir.join(format!("material_css_baseline.{scheme}.css"));
+        let css = mui_system::theme_provider::material_css_baseline_from_theme(&theme);
+        fs::write(&css_path, css)?;
+        println!("[xtask] wrote {}", css_path.display());
+    }
 
     Ok(())
 }
