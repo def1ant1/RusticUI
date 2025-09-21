@@ -2,6 +2,12 @@ use crate::{responsive::Responsive, style, theme::Breakpoints};
 use mui_utils::deep_merge;
 use serde_json::{Map, Value};
 
+fn insert_declaration(map: &mut Map<String, Value>, declaration: String) {
+    if let Some((prop, value)) = declaration.trim_end_matches(';').split_once(':') {
+        map.insert(prop.to_owned(), Value::String(value.to_owned()));
+    }
+}
+
 /// Lightweight descriptor mirroring the ergonomics of [`crate::r#box::BoxStyleInputs`].
 /// Enterprise applications frequently centralise layout rules, so allowing the
 /// adapters to pass borrowed responsive handles keeps cloning to a minimum and
@@ -23,17 +29,19 @@ pub fn build_container_style(
     inputs: ContainerStyleInputs<'_>,
 ) -> String {
     let mut style_map = Map::new();
-    style_map.insert("width".into(), Value::String("100%".into()));
+    insert_declaration(&mut style_map, style::width("100%"));
 
     if let Some(mw) = inputs.max_width {
         let resolved = mw.resolve(width, breakpoints);
-        style_map.insert("margin-left".into(), Value::String("auto".into()));
-        style_map.insert("margin-right".into(), Value::String("auto".into()));
-        style_map.insert("max-width".into(), Value::String(resolved));
+        insert_declaration(&mut style_map, style::margin_left("auto"));
+        insert_declaration(&mut style_map, style::margin_right("auto"));
+        insert_declaration(&mut style_map, style::max_width(resolved));
     }
 
     let mut style_value = Value::Object(style_map);
     if let Some(sx) = inputs.sx {
+        // Keep `sx` derived declarations authoritative by applying them via a
+        // deep merge just like the JavaScript system package.
         deep_merge(&mut style_value, sx.clone());
     }
 

@@ -31,16 +31,24 @@ pub struct BoxStyleInputs<'a> {
     pub sx: Option<&'a Value>,
 }
 
-fn apply_responsive_style(
+fn insert_declaration(map: &mut Map<String, Value>, declaration: String) {
+    if let Some((prop, value)) = declaration.trim_end_matches(';').split_once(':') {
+        map.insert(prop.to_owned(), Value::String(value.to_owned()));
+    }
+}
+
+fn apply_responsive_style<F>(
     styles: &mut Map<String, Value>,
     width: u32,
     breakpoints: &Breakpoints,
     value: Option<&Responsive<String>>,
-    property: &str,
-) {
+    builder: F,
+) where
+    F: Fn(String) -> String,
+{
     if let Some(responsive) = value {
         let resolved = responsive.resolve(width, breakpoints);
-        styles.insert(property.to_owned(), Value::String(resolved));
+        insert_declaration(styles, builder(resolved));
     }
 }
 
@@ -59,13 +67,15 @@ pub fn build_box_style(
     let mut style_map = Map::new();
 
     // Spacing ----------------------------------------------------------------
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.margin, "margin");
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.margin, |value| {
+        style::margin(value)
+    });
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.padding,
-        "padding",
+        |value| style::padding(value),
     );
 
     // Typography -------------------------------------------------------------
@@ -74,70 +84,76 @@ pub fn build_box_style(
         width,
         breakpoints,
         inputs.font_size,
-        "font-size",
+        |value| style::font_size(value),
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.font_weight,
-        "font-weight",
+        |value| style::font_weight(value),
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.line_height,
-        "line-height",
+        |value| style::line_height(value),
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.letter_spacing,
-        "letter-spacing",
+        |value| style::letter_spacing(value),
     );
 
     // Sizing -----------------------------------------------------------------
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.width, "width");
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.height, "height");
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.width, |value| {
+        style::width(value)
+    });
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.height, |value| {
+        style::height(value)
+    });
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.min_width,
-        "min-width",
+        |value| style::min_width(value),
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.max_width,
-        "max-width",
+        |value| style::max_width(value),
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.min_height,
-        "min-height",
+        |value| style::min_height(value),
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.max_height,
-        "max-height",
+        |value| style::max_height(value),
     );
 
     // Color ------------------------------------------------------------------
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.color, "color");
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.color, |value| {
+        style::color(value)
+    });
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.background_color,
-        "background-color",
+        |value| style::background_color(value),
     );
 
     // Positioning ------------------------------------------------------------
@@ -146,26 +162,36 @@ pub fn build_box_style(
         width,
         breakpoints,
         inputs.position,
-        "position",
+        |value| style::position(value),
     );
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.top, "top");
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.right, "right");
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.bottom, "bottom");
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.left, "left");
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.top, |value| {
+        style::top(value)
+    });
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.right, |value| {
+        style::right(value)
+    });
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.bottom, |value| {
+        style::bottom(value)
+    });
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.left, |value| {
+        style::left(value)
+    });
 
     // Layout toggles that remain non-responsive for now ----------------------
     if let Some(display) = inputs.display {
-        style_map.insert("display".into(), Value::String(display.to_owned()));
+        insert_declaration(&mut style_map, style::display(display));
     }
     if let Some(ai) = inputs.align_items {
-        style_map.insert("align-items".into(), Value::String(ai.to_owned()));
+        insert_declaration(&mut style_map, style::align_items(ai));
     }
     if let Some(jc) = inputs.justify_content {
-        style_map.insert("justify-content".into(), Value::String(jc.to_owned()));
+        insert_declaration(&mut style_map, style::justify_content(jc));
     }
 
     let mut style_value = Value::Object(style_map);
     if let Some(sx) = inputs.sx {
+        // Merge JSON overrides after the generated declarations so caller
+        // provided automation remains authoritative when conflicts appear.
         deep_merge(&mut style_value, sx.clone());
     }
 

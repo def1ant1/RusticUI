@@ -40,8 +40,8 @@ macro_rules! style_props {
 /// ```
 #[macro_export]
 macro_rules! define_style_prop {
-    ($func:ident, $prop:expr) => {
-        /// Macro generated style helper.
+    ($(#[$meta:meta])* $func:ident, $prop:expr) => {
+        $(#[$meta])*
         pub fn $func<V: Into<String>>(value: V) -> String {
             format!("{}:{};", $prop, value.into())
         }
@@ -65,8 +65,9 @@ macro_rules! define_style_prop {
 /// ```
 #[macro_export]
 macro_rules! define_style_props {
-    ( $( $func:ident => $prop:expr ),* $(,)? ) => {
+    ( $( $(#[$meta:meta])* $func:ident => $prop:expr ),* $(,)? ) => {
         $(
+            $(#[$meta])*
             pub fn $func<V: Into<String>>(value: V) -> String {
                 format!("{}:{};", $prop, value.into())
             }
