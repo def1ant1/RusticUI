@@ -20,6 +20,7 @@ yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 dioxus = { workspace = true, optional = true }
 sycamore = { workspace = true, optional = true }
+gloo-timers = { version = "0.2", optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true
@@ -28,7 +29,7 @@ web-sys = { workspace = true, features = ["HtmlElement", "Event", "EventTarget"]
 
 [features]
 default = []
-yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew"]
+yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew", "dep:gloo-timers"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "mui-system/leptos"]
 dioxus = ["dep:dioxus", "dep:wasm-bindgen", "mui-system/dioxus"]
 sycamore = ["dep:sycamore", "dep:wasm-bindgen", "mui-system/sycamore"]
