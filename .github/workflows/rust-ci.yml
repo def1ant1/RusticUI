@@ -143,6 +143,20 @@ jobs:
       - run: cargo xtask update-components
       # Refresh icon bindings from upstream Material icons
       - run: cargo xtask refresh-icons
+      # Capture the Joy UI component inventory so regressions surface quickly in diffs
+      - name: Generate Joy component parity report
+        run: cargo xtask joy-inventory
+      # Persist the generated markdown so subsequent jobs (and workflow runs) can diff it cheaply
+      - name: Cache Joy parity report
+        uses: actions/cache@v4
+        with:
+          path: docs/joy-component-parity.md
+          key: joy-parity-${{ github.sha }}
+          restore-keys: |
+            joy-parity-
+      # Fail fast when the inventory drifts to force contributors to commit the refreshed snapshot
+      - name: Ensure Joy parity report committed
+        run: git diff --exit-code docs/joy-component-parity.md
       # Run accessibility audits for the documentation site
       - run: cargo xtask accessibility-audit
       # Build the JavaScript documentation site for validation

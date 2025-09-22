@@ -43,6 +43,23 @@ report at `docs/material-component-parity.md`. Keep this artifact up to date in
 pull requests that add or remove components so downstream teams have a reliable
 signal when planning migrations.
 
+### Joy UI inventory guardrail
+
+Joy UI follows the same automation-first strategy. Rebuild the Joy coverage
+report whenever a pull request touches Joy components or headless primitives:
+
+```bash
+cargo xtask joy-inventory
+```
+
+The xtask delegates to `tools/joy-parity`, a standalone Rust binary that walks
+`packages/mui-joy/src/**/index.ts` via SWC, normalizes aliases, and compares the
+exports with the Rust crates (`crates/mui-joy` and `crates/mui-headless`). The
+command rewrites `docs/joy-component-parity.md` with a markdown dashboard plus a
+machine-readable JSON blob embedded in the same file. Commit the refreshed
+artifact so CI stays clean and enterprise adopters can spot parity gaps without
+replicating the analysis locally.
+
 ### Theme artifact regeneration
 
 Regenerating the serialized Material theme is a fully automated flow powered by
