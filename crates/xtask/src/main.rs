@@ -157,21 +157,36 @@ fn test() -> Result<()> {
 }
 
 fn wasm_test() -> Result<()> {
-    // Crates with WebAssembly tests. Extend this list as needed.
+    // Each UI crate exposes multiple renderer integrations behind feature
+    // flags. Exercising them independently ensures we never ship a breaking
+    // change for a specific framework while the others still pass. Running the
+    // suites serially keeps logging deterministic for CI while still providing
+    // actionable context to developers when a specific adapter fails.
     let wasm_crates = ["crates/mui-joy", "crates/mui-material"];
+    let frameworks = ["yew", "leptos", "dioxus", "sycamore"];
+
     for krate in &wasm_crates {
-        let mut cmd = Command::new("wasm-pack");
-        cmd.arg("test")
-            .arg("--headless")
-            .arg("--chrome")
-            // All interactive components currently rely on the `yew` feature for
-            // rendering. By enabling it here we exercise the same code paths in
-            // CI and local development.
-            .arg("--features")
-            .arg("yew")
-            .current_dir(krate);
-        run(cmd)?;
+        for framework in &frameworks {
+            println!(
+                "[xtask] wasm tests for crate `{}` using `{}` feature",
+                krate, framework
+            );
+
+            let mut cmd = Command::new("wasm-pack");
+            cmd.arg("test")
+                .arg("--headless")
+                .arg("--chrome")
+                .arg("--")
+                // Explicitly disable defaults so we only compile the target
+                // renderer, catching missing optional dependencies or cfgs.
+                .arg("--no-default-features")
+                .arg("--features")
+                .arg(framework)
+                .current_dir(krate);
+            run(cmd)?;
+        }
     }
+
     Ok(())
 }
 
