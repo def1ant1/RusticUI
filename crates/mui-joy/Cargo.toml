@@ -18,6 +18,8 @@ mui-system = { path = "../mui-system" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
+dioxus = { workspace = true, optional = true }
+sycamore = { workspace = true, optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true
@@ -28,3 +30,5 @@ web-sys = { workspace = true, features = ["HtmlElement", "Event", "EventTarget"]
 default = []
 yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "mui-system/leptos"]
+dioxus = ["dep:dioxus", "dep:wasm-bindgen", "mui-system/dioxus"]
+sycamore = ["dep:sycamore", "dep:wasm-bindgen", "mui-system/sycamore"]
