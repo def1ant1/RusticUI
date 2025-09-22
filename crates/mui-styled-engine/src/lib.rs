@@ -19,10 +19,10 @@
 
 pub use mui_system::theme::{Breakpoints, Palette, Theme, TypographyScheme};
 pub use mui_system::theme_provider::use_theme;
+#[cfg(all(not(feature = "yew"), feature = "leptos"))]
+pub use mui_system::theme_provider::ThemeProviderLeptos as ThemeProvider;
 #[cfg(feature = "yew")]
-pub use mui_system::theme_provider::ThemeProvider;
-#[cfg(feature = "leptos")]
-pub use mui_system::theme_provider::ThemeProvider;
+pub use mui_system::theme_provider::ThemeProviderYew as ThemeProvider;
 // Re-export procedural macros so crate users only depend on one package.
 pub use mui_styled_engine_macros::{css_with_theme, styled_component, Theme};
 // Ensure procedural macros can reference this crate as `mui_styled_engine` even

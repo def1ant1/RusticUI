@@ -79,8 +79,14 @@ pub fn enterprise_story() -> ChipStory {
 
 fn enterprise_theme() -> Theme {
     let mut theme = Theme::default();
-    theme.palette.primary = "#334155".into();
-    theme.palette.neutral = "#1E293B".into();
+    for scheme in [
+        mui_system::theme::ColorScheme::Light,
+        mui_system::theme::ColorScheme::Dark,
+    ] {
+        let palette = theme.palette.scheme_mut(scheme);
+        palette.primary = "#334155".into();
+        palette.neutral = "#1E293B".into();
+    }
     theme.typography.body2 = 0.875;
     theme
 }

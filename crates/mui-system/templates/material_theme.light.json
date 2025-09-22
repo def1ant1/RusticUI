@@ -8,14 +8,27 @@
     "xl": 1536
   },
   "palette": {
-    "primary": "#1976d2",
-    "secondary": "#dc004e",
-    "neutral": "#64748b",
-    "danger": "#d32f2f",
-    "background_default": "#fafafa",
-    "background_paper": "#ffffff",
-    "text_primary": "#1f2933",
-    "text_secondary": "#52606d"
+    "light": {
+      "primary": "#1976d2",
+      "secondary": "#dc004e",
+      "neutral": "#64748b",
+      "danger": "#d32f2f",
+      "background_default": "#fafafa",
+      "background_paper": "#ffffff",
+      "text_primary": "#1f2933",
+      "text_secondary": "#52606d"
+    },
+    "dark": {
+      "primary": "#90caf9",
+      "secondary": "#f48fb1",
+      "neutral": "#94a3b8",
+      "danger": "#f44336",
+      "background_default": "#121212",
+      "background_paper": "#1e1e1e",
+      "text_primary": "#ffffff",
+      "text_secondary": "#cbd5f5"
+    },
+    "initial_color_scheme": "light"
   },
   "typography": {
     "font_family": "Roboto, Helvetica, Arial, sans-serif",

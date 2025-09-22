@@ -84,6 +84,7 @@ pub fn build_stack_style(
 #[cfg(feature = "yew")]
 mod yew_impl {
     use super::*;
+    use crate::theme_provider::use_theme_yew as use_theme;
     use yew::prelude::*;
 
     /// Properties for the [`Stack`] component.
@@ -112,7 +113,7 @@ mod yew_impl {
     /// Minimal flexbox based stack layout.
     #[function_component(Stack)]
     pub fn stack(props: &StackProps) -> Html {
-        let theme = crate::theme_provider::use_theme();
+        let theme = use_theme();
         let width = crate::responsive::viewport_width();
         let style_rules = build_stack_style(
             width,
@@ -141,6 +142,7 @@ pub use yew_impl::{Stack, StackProps};
 #[cfg(feature = "leptos")]
 mod leptos_impl {
     use super::*;
+    use crate::theme_provider::use_theme_leptos as use_theme;
     use leptos::*;
 
     /// Leptos implementation of [`Stack`].
@@ -153,7 +155,7 @@ mod leptos_impl {
         #[prop(optional)] sx: Option<Value>,
         children: Children,
     ) -> impl IntoView {
-        let theme = crate::theme_provider::use_theme();
+        let theme = use_theme();
         let width = crate::responsive::viewport_width();
         let style_rules = build_stack_style(
             width,

@@ -56,8 +56,14 @@ pub fn enterprise_story() -> TooltipStory {
 
 fn enterprise_theme() -> Theme {
     let mut theme = Theme::default();
-    theme.palette.primary = "#0057B7".into();
-    theme.palette.secondary = "#F59E0B".into();
+    for scheme in [
+        mui_system::theme::ColorScheme::Light,
+        mui_system::theme::ColorScheme::Dark,
+    ] {
+        let palette = theme.palette.scheme_mut(scheme);
+        palette.primary = "#0057B7".into();
+        palette.secondary = "#F59E0B".into();
+    }
     theme.typography.caption = 0.8125;
     theme
 }

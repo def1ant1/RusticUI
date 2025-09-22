@@ -45,10 +45,10 @@ pub use style::*;
 pub use stylist::{css, Style};
 pub use theme::{Breakpoints, Palette, Theme};
 extern crate self as mui_styled_engine;
+#[cfg(all(not(feature = "yew"), feature = "leptos"))]
+pub use theme_provider::ThemeProviderLeptos as ThemeProvider;
 #[cfg(feature = "yew")]
-pub use theme_provider::ThemeProvider;
-#[cfg(all(feature = "leptos", not(feature = "yew")))]
-pub use theme_provider::ThemeProvider;
+pub use theme_provider::ThemeProviderYew as ThemeProvider;
 pub use themed_element::{ThemedProps, Variant};
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub use typography::{Typography, TypographyVariant};

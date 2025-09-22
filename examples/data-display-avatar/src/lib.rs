@@ -101,8 +101,14 @@ fn wrap_markup(automation_id: &str, chip_html: &str, tooltip_html: &str) -> Stri
 
 fn enterprise_theme() -> Theme {
     let mut theme = Theme::default();
-    theme.palette.background_paper = "#0F172A".into();
-    theme.palette.text_primary = "#E2E8F0".into();
+    for scheme in [
+        mui_system::theme::ColorScheme::Light,
+        mui_system::theme::ColorScheme::Dark,
+    ] {
+        let palette = theme.palette.scheme_mut(scheme);
+        palette.background_paper = "#0F172A".into();
+        palette.text_primary = "#E2E8F0".into();
+    }
     theme.typography.body1 = 0.9375;
     theme
 }

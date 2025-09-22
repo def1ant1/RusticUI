@@ -278,15 +278,24 @@ declarative `data-debounce-ms` attribute for instrumentation.
 ## Theming and global styles
 
 Material Design defaults are baked directly into the crate so that a working
-experience is available out-of-the-box:
+experience is available out-of-the-box. The palette exposes explicit light and
+dark schemes which can be targeted individually by automation:
 
 ```rust
-use mui_system::theme_provider::{material_theme, material_theme_with_optional_overrides};
+use mui_system::theme_provider::{
+    material_theme, material_theme_dark, material_theme_light, material_theme_with_optional_overrides,
+};
 
 let theme = material_theme();
 assert_eq!(theme.spacing(2), 16);
-assert_eq!(theme.palette.background_default, "#fafafa");
+assert_eq!(theme.palette.light.background_default, "#fafafa");
+assert_eq!(theme.palette.dark.background_default, "#121212");
 assert_eq!(theme.typography.font_family, "Roboto, Helvetica, Arial, sans-serif");
+
+let light = material_theme_light();
+let dark = material_theme_dark();
+assert_eq!(light.palette.initial_color_scheme, mui_system::theme::ColorScheme::Light);
+assert_eq!(dark.palette.initial_color_scheme, mui_system::theme::ColorScheme::Dark);
 
 // Optional overrides generated via `#[derive(Theme)]` merge with the defaults.
 #[derive(mui_styled_engine::Theme)]
@@ -300,36 +309,52 @@ struct PaletteOverride {
 
 impl From<PaletteOverride> for mui_system::theme::Palette {
     fn from(value: PaletteOverride) -> Self {
-        Self { primary: value.primary, ..Self::default() }
+        let mut palette = Self::default();
+        palette.light.primary = value.primary.clone();
+        palette.dark.primary = value.primary;
+        palette
     }
 }
 
 let merged = material_theme_with_optional_overrides(Some(PaletteOnly {
     palette: Some(PaletteOverride { primary: "#123456".into() }),
 }));
-assert_eq!(merged.palette.primary, "#123456");
+assert_eq!(merged.palette.light.primary, "#123456");
 // Unspecified fields inherit the canonical Material tokens.
 assert_eq!(merged.typography.font_family, theme.typography.font_family);
 ```
 
 Framework adapters expose a [`CssBaseline`](./src/theme_provider.rs) component
 that injects the canonical Material reset using `css_with_theme!` so palette and
-typography overrides flow into the global styles automatically:
+typography overrides flow into the global styles automatically. The baseline now
+declares both `color-scheme` and `data-mui-color-scheme` selectors so dark mode
+is available even before JavaScript hydrates:
 
 ```rust
 # #[cfg(feature = "yew")]
-use mui_system::theme_provider::{CssBaseline, ThemeProvider, material_theme};
+use mui_system::theme_provider::{
+    CssBaseline, ThemeProvider, material_css_baseline_from_theme, material_theme_light,
+};
 
 # #[cfg(feature = "yew")]
 # fn render() -> yew::Html {
+let theme = material_theme_light();
+let mut css = material_css_baseline_from_theme(&theme);
+css.push_str("/* append enterprise global overrides here */");
 html! {
-    <ThemeProvider theme={material_theme()}>
-        <CssBaseline />
+    <ThemeProvider theme={theme}>
+        <CssBaseline additional_css={Some(css)} />
         // application...
     </ThemeProvider>
 }
 # }
 ```
+
+For runtime toggles call the `use_material_color_scheme` hook (Yew/Leptos) which
+returns a handle exposing `set`, `toggle` and `apply_to` helpers. The hook keeps
+the `<html data-mui-color-scheme>` attribute aligned with application state and
+automatically honours `prefers-color-scheme: dark` on first render so server
+rendered pages and static exports match user expectations without extra code.
 
 To keep documentation, code samples and automation in sync run the helper task
 whenever defaults change:
