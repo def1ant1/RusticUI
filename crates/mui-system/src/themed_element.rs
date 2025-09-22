@@ -45,23 +45,20 @@
 //! it easy to audit which metadata ships with the control in server rendered
 //! output.
 
-#[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
+#[cfg(all(not(feature = "leptos"), any(feature = "dioxus", feature = "sycamore")))]
 use crate::theme_provider::use_theme;
+#[cfg(feature = "leptos")]
+use crate::theme_provider::use_theme_leptos as use_theme;
 use mui_utils::{attributes_to_html, collect_attributes, extend_attributes};
 
 /// Available visual variants for the themed element.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Variant {
     /// Minimal styling with no border.
+    #[default]
     Plain,
     /// Outlined style often used for emphasis.
     Outlined,
-}
-
-impl Default for Variant {
-    fn default() -> Self {
-        Variant::Plain
-    }
 }
 
 impl Variant {
@@ -133,12 +130,13 @@ struct ScopedStyle {
 #[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
 fn resolve_visual_tokens(props: &ThemedProps) -> VisualTokens {
     let theme = use_theme();
+    let palette = theme.palette.active();
     // Default to the primary body colour so the control mirrors Material text
     // fields when no overrides are provided.
     let text_color = props
         .color
         .clone()
-        .unwrap_or_else(|| theme.palette.text_primary.clone());
+        .unwrap_or_else(|| palette.text_primary.clone());
     // Provide a predictable padding default based on the spacing scale so the
     // layout feels harmonious even without explicit configuration.
     let padding = props
@@ -147,23 +145,23 @@ fn resolve_visual_tokens(props: &ThemedProps) -> VisualTokens {
         .unwrap_or_else(|| format!("{}px", theme.spacing(1)));
     let (background, border) = match props.variant {
         Variant::Plain => (
-            theme.palette.background_paper.clone(),
+            palette.background_paper.clone(),
             String::from("1px solid transparent"),
         ),
         Variant::Outlined => (
-            theme.palette.background_default.clone(),
-            format!("1px solid {}", theme.palette.text_secondary.clone()),
+            palette.background_default.clone(),
+            format!("1px solid {}", palette.text_secondary.clone()),
         ),
     };
     let border_radius = format!("{}px", theme.joy.radius);
     let font_family = theme.typography.font_family.clone();
     let font_size = format!("{}px", theme.typography.font_size);
-    let placeholder_color = theme.palette.text_secondary.clone();
-    let focus_border = theme.palette.primary.clone();
+    let placeholder_color = palette.text_secondary.clone();
+    let focus_border = palette.primary.clone();
     let focus_shadow = format!(
         "0 0 0 {}px {}",
         theme.joy.focus_thickness,
-        theme.palette.primary.clone()
+        palette.primary.clone()
     );
     VisualTokens {
         text_color,
@@ -299,12 +297,6 @@ fn render_input(props: &ThemedProps, classes: String, stylesheet: Option<String>
     }
 }
 
-/// Adapter targeting the [`leptos`](https://docs.rs/leptos) framework.
-///
-/// The implementation relies on [`css_with_theme!`](mui_styled_engine::css_with_theme)
-/// so colour, typography and focus feedback automatically track the active
-/// [`Theme`].  A scoped style block is emitted alongside the `<input>` markup
-/// ensuring SSR output remains deterministic even without a live style registry.
 #[cfg(feature = "leptos")]
 pub mod leptos {
     //! Leptos adapter that renders a themed `<input>` while exercising the
@@ -330,13 +322,6 @@ pub mod leptos {
     }
 }
 
-/// Adapter targeting the [`dioxus`](https://dioxuslabs.com) framework.
-///
-/// Delegates styling to [`resolve_visual_tokens`] ensuring the scoped stylesheet
-/// and BEM modifier class mirror the Leptos variant.  The adapter also wires the
-/// optional `aria-label` attribute and debounce metadata into the rendered
-/// `<input>` so server rendered output remains accessible without additional
-/// plumbing.
 #[cfg(feature = "dioxus")]
 pub mod dioxus {
     //! Dioxus adapter that renders the themed input markup as a plain string.
@@ -357,13 +342,6 @@ pub mod dioxus {
     }
 }
 
-/// Adapter targeting the [`sycamore`](https://sycamore-rs.netlify.app) framework.
-///
-/// Delegates to the shared helper functions so that Sycamore's SSR adapter emits
-/// the same scoped styling, BEM modifier classes and ARIA metadata as the other
-/// frameworks.  Keeping the logic central makes future automation (for example
-/// generating documentation snippets) straightforward while still emitting a
-/// semantic text input by default.
 #[cfg(feature = "sycamore")]
 pub mod sycamore {
     //! Sycamore adapter that outputs a semantic text input string.

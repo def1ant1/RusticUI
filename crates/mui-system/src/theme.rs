@@ -1,5 +1,44 @@
 use serde::{Deserialize, Serialize};
 
+/// Enumerates the supported Material color schemes.
+///
+/// The default mirrors the upstream JavaScript implementation which starts in
+/// light mode.  The enum serializes as lowercase strings so automation tooling
+/// can share fixtures with the TypeScript ecosystem without translation.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ColorScheme {
+    /// High luminance surfaces with dark foreground content.
+    Light,
+    /// Darker backgrounds paired with lighter foreground content.
+    Dark,
+}
+
+impl Default for ColorScheme {
+    fn default() -> Self {
+        Self::Light
+    }
+}
+
+impl ColorScheme {
+    /// Returns the lowercase identifier used by `color-scheme` CSS declarations
+    /// and HTML `data` attributes.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Light => "light",
+            Self::Dark => "dark",
+        }
+    }
+
+    /// Convenience helper used by toggling hooks.
+    pub fn toggled(self) -> Self {
+        match self {
+            Self::Light => Self::Dark,
+            Self::Dark => Self::Light,
+        }
+    }
+}
+
 /// Typed representation of the design system theme.
 ///
 /// The struct mirrors the JS theme object but leverages Rust's strong
@@ -68,7 +107,7 @@ impl Default for Breakpoints {
 
 /// Minimal color palette capturing primary and secondary accents.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Palette {
+pub struct PaletteScheme {
     pub primary: String,
     pub secondary: String,
     /// Neutral color used by Joy components.
@@ -85,7 +124,7 @@ pub struct Palette {
     pub text_secondary: String,
 }
 
-impl Default for Palette {
+impl Default for PaletteScheme {
     fn default() -> Self {
         Self {
             primary: "#1976d2".to_string(),
@@ -96,6 +135,87 @@ impl Default for Palette {
             background_paper: "#ffffff".to_string(),
             text_primary: "#1f2933".to_string(),
             text_secondary: "#52606d".to_string(),
+        }
+    }
+}
+
+/// Material color palette definitions for each supported color scheme.
+///
+/// The struct stores separate [`PaletteScheme`] instances for light and dark
+/// operation so enterprise operators can vend both sets of tokens from a
+/// single configuration file.  Framework adapters are expected to honour the
+/// `initial_color_scheme` flag when emitting global styles or instantiating
+/// providers and expose hooks/state that allow flipping the active scheme at
+/// runtime without rebuilding the entire theme object.  This mirrors the
+/// ergonomics of the JavaScript `createTheme` helper while remaining explicit
+/// enough for large organisations to audit and automate.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Palette {
+    /// Light mode tokens align with `@mui/material` defaults.
+    pub light: PaletteScheme,
+    /// Dark mode tokens aligned to Material Design guidance.
+    pub dark: PaletteScheme,
+    /// Scheme that should be considered active when building CSS resets.
+    #[serde(default)]
+    pub initial_color_scheme: ColorScheme,
+}
+
+impl Palette {
+    /// Returns the [`PaletteScheme`] declared as the initial/active scheme.
+    pub fn active(&self) -> &PaletteScheme {
+        match self.initial_color_scheme {
+            ColorScheme::Light => &self.light,
+            ColorScheme::Dark => &self.dark,
+        }
+    }
+
+    /// Mutable variant of [`Palette::active`] used by helper utilities to
+    /// update tokens in-place while maintaining the currently selected scheme.
+    pub fn active_mut(&mut self) -> &mut PaletteScheme {
+        match self.initial_color_scheme {
+            ColorScheme::Light => &mut self.light,
+            ColorScheme::Dark => &mut self.dark,
+        }
+    }
+
+    /// Returns a reference to a specific [`ColorScheme`] regardless of the
+    /// configured active mode.  This keeps automation pipelines explicit when
+    /// generating per-scheme artefacts.
+    pub fn scheme(&self, scheme: ColorScheme) -> &PaletteScheme {
+        match scheme {
+            ColorScheme::Light => &self.light,
+            ColorScheme::Dark => &self.dark,
+        }
+    }
+
+    /// Mutable accessor for [`Palette::scheme`].
+    pub fn scheme_mut(&mut self, scheme: ColorScheme) -> &mut PaletteScheme {
+        match scheme {
+            ColorScheme::Light => &mut self.light,
+            ColorScheme::Dark => &mut self.dark,
+        }
+    }
+}
+
+fn default_dark_palette() -> PaletteScheme {
+    PaletteScheme {
+        primary: "#90caf9".to_string(),
+        secondary: "#f48fb1".to_string(),
+        neutral: "#94a3b8".to_string(),
+        danger: "#f44336".to_string(),
+        background_default: "#121212".to_string(),
+        background_paper: "#1e1e1e".to_string(),
+        text_primary: "#ffffff".to_string(),
+        text_secondary: "#cbd5f5".to_string(),
+    }
+}
+
+impl Default for Palette {
+    fn default() -> Self {
+        Self {
+            light: PaletteScheme::default(),
+            dark: default_dark_palette(),
+            initial_color_scheme: ColorScheme::Light,
         }
     }
 }
@@ -207,7 +327,7 @@ mod tests {
         // Joy tokens available
         assert_eq!(theme.joy.radius, 4);
         assert_eq!(theme.joy.focus_thickness, 2);
-        assert_eq!(theme.palette.neutral, "#64748b");
+        assert_eq!(theme.palette.light.neutral, "#64748b");
         assert_eq!(theme.breakpoints.xs, 0);
 
         // Round trip through JSON to ensure `serde` wiring is correct

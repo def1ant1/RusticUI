@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use mui_headless::dialog::{DialogPhase, DialogState, DialogTransition};
 use mui_headless::popover::{AnchorGeometry, CollisionOutcome, PopoverPlacement, PopoverState};
-use mui_headless::text_field::{TextFieldState};
+use mui_headless::text_field::TextFieldState;
 
 /// ASCII anchor/floating surface illustration rendered in each example README
 /// to explain how the shared state tracks geometry between SSR and hydration.
@@ -141,7 +141,7 @@ impl SharedOverlayState {
         );
 
         let text_field = TextFieldState::controlled(
-            "Automation ready company", 
+            "Automation ready company",
             Some(Duration::from_millis(250)),
         );
 
@@ -241,7 +241,10 @@ impl SharedOverlayState {
         let mut desired = None;
         self.popover.toggle(|next| {
             desired = Some(next);
-            log.record(format!("popover requested {}", if next { "open" } else { "close" }));
+            log.record(format!(
+                "popover requested {}",
+                if next { "open" } else { "close" }
+            ));
         });
         if let Some(open) = desired {
             self.popover.sync_open(open);
@@ -303,9 +306,7 @@ impl SharedOverlayState {
         self.text_field.commit(|snapshot| {
             log.record(format!(
                 "text commit -> '{}' (visited before: {}, errors present: {})",
-                snapshot.value,
-                snapshot.previously_visited,
-                snapshot.has_errors
+                snapshot.value, snapshot.previously_visited, snapshot.has_errors
             ));
         });
         if let Some(message) = validation {
@@ -322,8 +323,7 @@ impl SharedOverlayState {
         self.text_field.reset(|snapshot| {
             log.record(format!(
                 "text reset -> '{}' (cleared errors: {})",
-                snapshot.value,
-                snapshot.cleared_errors
+                snapshot.value, snapshot.cleared_errors
             ));
         });
         (self, log)
@@ -385,7 +385,10 @@ mod tests {
         let (state, _) = state.toggle_popover();
         let snapshot = state.snapshot();
         assert!(snapshot.popover_open);
-        assert_eq!(snapshot.popover_anchor_id.as_deref(), Some(POPOVER_ANCHOR_ID));
+        assert_eq!(
+            snapshot.popover_anchor_id.as_deref(),
+            Some(POPOVER_ANCHOR_ID)
+        );
     }
 
     #[test]

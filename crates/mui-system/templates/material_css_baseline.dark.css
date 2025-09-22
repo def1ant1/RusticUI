@@ -1,15 +1,22 @@
+/* Global baseline generated from the strongly typed Material theme.
+   Enterprise operators: adjust the `data-mui-color-scheme` attribute on the document element to flip between modes without rebuilding CSS. */
 html {
     box-sizing: border-box;
     font-family: Roboto, Helvetica, Arial, sans-serif;
     font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #fafafa;
-    color: #1f2933;
+    color-scheme: dark;
+    background-color: #121212;
+    color: #ffffff;
 }
 
 *, *::before, *::after {
     box-sizing: inherit;
+}
+
+:root {
+    color-scheme: dark;
 }
 
 body {
@@ -18,8 +25,8 @@ body {
     font-family: Roboto, Helvetica, Arial, sans-serif;
     font-size: 14px;
     line-height: 1.5;
-    background-color: #fafafa;
-    color: #1f2933;
+    background-color: #121212;
+    color: #ffffff;
 }
 
 strong, b {
@@ -28,4 +35,48 @@ strong, b {
 
 code, pre {
     font-family: Roboto Mono, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+/* Data attribute selectors keep automated deployments deterministic by allowing infrastructure to force a mode before JS boots. */
+[data-mui-color-scheme='light'] html,
+[data-mui-color-scheme='light'] body {
+    background-color: #fafafa;
+    color: #1f2933;
+}
+
+[data-mui-color-scheme='light'] :root {
+    color-scheme: light;
+}
+
+[data-mui-color-scheme='dark'] html,
+[data-mui-color-scheme='dark'] body {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+[data-mui-color-scheme='dark'] :root {
+    color-scheme: dark;
+}
+
+/* Respect end-user preference media queries so SSR output automatically matches OS settings even before hydration. */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+    }
+
+    html, body {
+        background-color: #121212;
+        color: #ffffff;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        color-scheme: light;
+    }
+
+    html, body {
+        background-color: #fafafa;
+        color: #1f2933;
+    }
 }

@@ -67,15 +67,19 @@ pub fn build_box_style(
     let mut style_map = Map::new();
 
     // Spacing ----------------------------------------------------------------
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.margin, |value| {
-        style::margin(value)
-    });
+    apply_responsive_style(
+        &mut style_map,
+        width,
+        breakpoints,
+        inputs.margin,
+        style::margin,
+    );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.padding,
-        |value| style::padding(value),
+        style::padding,
     );
 
     // Typography -------------------------------------------------------------
@@ -84,76 +88,88 @@ pub fn build_box_style(
         width,
         breakpoints,
         inputs.font_size,
-        |value| style::font_size(value),
+        style::font_size,
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.font_weight,
-        |value| style::font_weight(value),
+        style::font_weight,
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.line_height,
-        |value| style::line_height(value),
+        style::line_height,
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.letter_spacing,
-        |value| style::letter_spacing(value),
+        style::letter_spacing,
     );
 
     // Sizing -----------------------------------------------------------------
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.width, |value| {
-        style::width(value)
-    });
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.height, |value| {
-        style::height(value)
-    });
+    apply_responsive_style(
+        &mut style_map,
+        width,
+        breakpoints,
+        inputs.width,
+        style::width,
+    );
+    apply_responsive_style(
+        &mut style_map,
+        width,
+        breakpoints,
+        inputs.height,
+        style::height,
+    );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.min_width,
-        |value| style::min_width(value),
+        style::min_width,
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.max_width,
-        |value| style::max_width(value),
+        style::max_width,
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.min_height,
-        |value| style::min_height(value),
+        style::min_height,
     );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.max_height,
-        |value| style::max_height(value),
+        style::max_height,
     );
 
     // Color ------------------------------------------------------------------
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.color, |value| {
-        style::color(value)
-    });
+    apply_responsive_style(
+        &mut style_map,
+        width,
+        breakpoints,
+        inputs.color,
+        style::color,
+    );
     apply_responsive_style(
         &mut style_map,
         width,
         breakpoints,
         inputs.background_color,
-        |value| style::background_color(value),
+        style::background_color,
     );
 
     // Positioning ------------------------------------------------------------
@@ -162,20 +178,24 @@ pub fn build_box_style(
         width,
         breakpoints,
         inputs.position,
-        |value| style::position(value),
+        style::position,
     );
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.top, |value| {
-        style::top(value)
-    });
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.right, |value| {
-        style::right(value)
-    });
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.bottom, |value| {
-        style::bottom(value)
-    });
-    apply_responsive_style(&mut style_map, width, breakpoints, inputs.left, |value| {
-        style::left(value)
-    });
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.top, style::top);
+    apply_responsive_style(
+        &mut style_map,
+        width,
+        breakpoints,
+        inputs.right,
+        style::right,
+    );
+    apply_responsive_style(
+        &mut style_map,
+        width,
+        breakpoints,
+        inputs.bottom,
+        style::bottom,
+    );
+    apply_responsive_style(&mut style_map, width, breakpoints, inputs.left, style::left);
 
     // Layout toggles that remain non-responsive for now ----------------------
     if let Some(display) = inputs.display {
@@ -201,7 +221,7 @@ pub fn build_box_style(
 #[cfg(feature = "yew")]
 mod yew_impl {
     use super::*;
-    use crate::theme_provider::use_theme;
+    use crate::theme_provider::use_theme_yew as use_theme;
     use yew::prelude::*;
 
     /// Properties for the [`Box`] component when targeting Yew.
@@ -330,7 +350,7 @@ pub use yew_impl::{Box, BoxProps};
 #[cfg(feature = "leptos")]
 mod leptos_impl {
     use super::*;
-    use crate::theme_provider::use_theme;
+    use crate::theme_provider::use_theme_leptos as use_theme;
     use leptos::*;
 
     /// Leptos version of [`Box`] sharing the same responsive props as the Yew variant.

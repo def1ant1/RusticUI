@@ -13,18 +13,19 @@ use select_menu_shared::ssr_shell;
 #[component]
 pub fn App() -> impl IntoView {
     let theme = enterprise_theme();
+    let palette = theme.palette.active().clone();
     let container_style = move || {
         format!(
             "min-height:100vh;display:flex;align-items:center;justify-content:center;background:{};padding:32px;",
-            theme.palette.background_default
+            palette.background_default
         )
     };
     let panel_style = move || {
         format!(
             "max-width:720px;display:flex;flex-direction:column;gap:16px;background:{};padding:24px;border-radius:{}px;box-shadow:0 18px 60px rgba(0,0,0,0.35);color:{};",
-            theme.palette.background_paper,
+            palette.background_paper,
             theme.joy.radius,
-            theme.palette.text_primary
+            palette.text_primary
         )
     };
     let options = create_rw_signal::<Vec<SelectOption>>(Vec::new());

@@ -7,7 +7,7 @@
 //! enterprises can share core behaviour across SSR and CSR entry points.
 
 use mui_material::select::{SelectOption, SelectProps};
-use mui_system::theme::Theme;
+use mui_system::theme::{ColorScheme, Theme};
 
 /// Stable automation identifier applied to every DOM node we render.
 ///
@@ -54,12 +54,16 @@ pub fn props_from_options(label: &str, automation_id: &str, options: &[SelectOpt
 /// Produce a high contrast enterprise theme used across the demos.
 pub fn enterprise_theme() -> Theme {
     let mut theme = Theme::default();
-    theme.palette.primary = "#003366".into();
-    theme.palette.secondary = "#f97316".into();
-    theme.palette.background_default = "#0b1120".into();
-    theme.palette.background_paper = "#111c3a".into();
-    theme.palette.text_primary = "#f8fafc".into();
-    theme.palette.text_secondary = "#cbd5f5".into();
+    for scheme in [ColorScheme::Light, ColorScheme::Dark] {
+        let palette = theme.palette.scheme_mut(scheme);
+        palette.primary = "#003366".into();
+        palette.secondary = "#f97316".into();
+        palette.background_default = "#0b1120".into();
+        palette.background_paper = "#111c3a".into();
+        palette.text_primary = "#f8fafc".into();
+        palette.text_secondary = "#cbd5f5".into();
+    }
+    theme.palette.initial_color_scheme = ColorScheme::Dark;
     theme.typography.font_family = "'IBM Plex Sans', 'Segoe UI', sans-serif".into();
     theme.joy.radius = 8;
     theme
@@ -131,10 +135,11 @@ pub fn selection_summary(props: &SelectProps, selected: Option<usize>) -> String
 /// The wrapper injects basic typography and background colours so the
 /// pre-rendered output mirrors the client experience even before hydration.
 pub fn ssr_shell(select_markup: &str, theme: &Theme) -> String {
+    let palette = theme.palette.active();
     format!(
         "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title>RusticUI Select Menu</title></head><body style=\"margin:0;background:{};color:{};font-family:{};min-height:100vh;display:flex;align-items:center;justify-content:center;\"><main data-automation=\"{}-shell\" style=\"padding:32px;max-width:720px;\"><h1 style=\"margin-top:0;font-size:1.75rem;\">RusticUI Select Menu</h1>{}</main></body></html>",
-        theme.palette.background_default,
-        theme.palette.text_primary,
+        palette.background_default,
+        palette.text_primary,
         theme.typography.font_family,
         AUTOMATION_ID,
         select_markup

@@ -51,6 +51,7 @@ pub fn build_container_style(
 #[cfg(feature = "yew")]
 mod yew_impl {
     use super::*;
+    use crate::theme_provider::use_theme_yew as use_theme;
     use yew::prelude::*;
 
     /// Properties for the [`Container`] component.
@@ -70,7 +71,7 @@ mod yew_impl {
     /// Centers content with an optional maximum width.
     #[function_component(Container)]
     pub fn container(props: &ContainerProps) -> Html {
-        let theme = crate::theme_provider::use_theme();
+        let theme = use_theme();
         let width = crate::responsive::viewport_width();
         let style_rules = build_container_style(
             width,
@@ -99,6 +100,7 @@ pub use yew_impl::{Container, ContainerProps};
 #[cfg(feature = "leptos")]
 mod leptos_impl {
     use super::*;
+    use crate::theme_provider::use_theme_leptos as use_theme;
     use leptos::*;
 
     /// Leptos variant of [`Container`].
@@ -108,7 +110,7 @@ mod leptos_impl {
         #[prop(optional)] sx: Option<Value>,
         children: Children,
     ) -> impl IntoView {
-        let theme = crate::theme_provider::use_theme();
+        let theme = use_theme();
         let width = crate::responsive::viewport_width();
         let style_rules = build_container_style(
             width,

@@ -8,7 +8,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use mui_system::theme::Theme;
+use mui_system::theme::{ColorScheme, Theme};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -353,8 +353,15 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat) -> Result<()>
                 "failed to convert merged theme representation into Theme struct for `{scheme}`"
             )
         })?;
-        let theme =
+        let mut theme =
             mui_system::theme_provider::material_theme_with_optional_overrides(Some(merged_theme));
+        if let Some(color_scheme) = match scheme.as_str() {
+            "light" => Some(ColorScheme::Light),
+            "dark" => Some(ColorScheme::Dark),
+            _ => None,
+        } {
+            theme.palette.initial_color_scheme = color_scheme;
+        }
 
         let output_path = match format {
             ThemeFormat::Json => output_dir.join(format!("material_theme.{scheme}.json")),

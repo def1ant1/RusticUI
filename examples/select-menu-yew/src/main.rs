@@ -89,15 +89,16 @@ fn app() -> Html {
 
     let theme = enterprise_theme();
     let summary_text = summary_handle.clone();
+    let palette = theme.palette.active();
     let container_style = format!(
         "min-height:100vh;display:flex;align-items:center;justify-content:center;background:{};padding:32px;",
-        theme.palette.background_default
+        palette.background_default
     );
     let panel_style = format!(
         "max-width:720px;display:flex;flex-direction:column;gap:16px;background:{};padding:24px;border-radius:{}px;box-shadow:0 12px 40px rgba(0,0,0,0.35);color:{};",
-        theme.palette.background_paper,
+        palette.background_paper,
         theme.joy.radius,
-        theme.palette.text_primary
+        palette.text_primary
     );
 
     html! {

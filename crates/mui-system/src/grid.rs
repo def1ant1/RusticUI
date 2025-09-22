@@ -79,6 +79,7 @@ pub fn build_grid_style(
 #[cfg(feature = "yew")]
 mod yew_impl {
     use super::*;
+    use crate::theme_provider::use_theme_yew as use_theme;
     use yew::prelude::*;
 
     /// Simple grid item that computes its own width based on `span` and `columns`.
@@ -108,7 +109,7 @@ mod yew_impl {
     /// Render a grid item as a `<div>` with a calculated percentage width.
     #[function_component(Grid)]
     pub fn grid(props: &GridProps) -> Html {
-        let theme = crate::theme_provider::use_theme();
+        let theme = use_theme();
         let width = crate::responsive::viewport_width();
         let style_rules = build_grid_style(
             width,
@@ -137,6 +138,7 @@ pub use yew_impl::{Grid, GridProps};
 #[cfg(feature = "leptos")]
 mod leptos_impl {
     use super::*;
+    use crate::theme_provider::use_theme_leptos as use_theme;
     use leptos::*;
 
     /// Leptos implementation of [`Grid`].
@@ -149,7 +151,7 @@ mod leptos_impl {
         #[prop(optional)] sx: Option<Value>,
         children: Children,
     ) -> impl IntoView {
-        let theme = crate::theme_provider::use_theme();
+        let theme = use_theme();
         let width_px = crate::responsive::viewport_width();
         let style_rules = build_grid_style(
             width_px,
