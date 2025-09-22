@@ -1,4 +1,4 @@
-#![cfg(feature = "yew")]
+// Module included from tests/mod.rs when the Yew feature is enabled.
 //! Browser integration tests exercising the Yew adapters.
 //!
 //! The suite is compiled conditionally so that enabling Leptos, Dioxus or
