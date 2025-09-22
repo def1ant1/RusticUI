@@ -9,7 +9,10 @@
 //! includes [`tab`] and [`tab_panel`] attribute builders.  Layout driven
 //! components such as [`drawer`] also reuse the centralized accessibility
 //! primitives.  The [`interaction`] primitives expose keyboard orchestration
-//! shared across each state machine.
+//! shared across each state machine.  New Joy focused primitives including
+//! [`accordion`], [`autocomplete`], [`slider`], [`snackbar`], [`stepper`] and
+//! [`toggle_button_group`] build on the same deterministic rules so Material
+//! and Joy stay aligned.
 //!
 //! The Material layer (`mui-material`) documents how these headless states are
 //! rendered with shared theming, automation identifiers, and SSR safe markup.
@@ -18,7 +21,9 @@
 //! `examples/feedback-*` blueprints that exercise them across Yew, Leptos,
 //! Dioxus, and Sycamore adapters.
 
+pub mod accordion;
 pub mod aria;
+pub mod autocomplete;
 pub mod button;
 pub mod checkbox;
 pub mod chip;
@@ -30,12 +35,16 @@ pub mod menu;
 pub mod popover;
 pub mod radio;
 pub mod select;
+pub mod slider;
+pub mod snackbar;
+pub mod stepper;
 pub mod switch;
 pub mod tab;
 pub mod tab_panel;
 pub mod tabs;
 pub mod text_field;
 pub mod timing;
+pub mod toggle_button_group;
 pub mod tooltip;
 
 mod selection;
