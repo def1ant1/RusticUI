@@ -100,6 +100,21 @@ cargo xtask build-docs            # build the documentation site
 
 Each task emits verbose logs and returns a non-zero exit code on failure so it can be safely wired into CI pipelines.
 
+### Rust CI quick reference
+
+The Rust workspace CI expects every pull request to validate the full adapter matrix locally. Install Chrome/Chromium plus `wasm-pack` (see [`docs/rust-ci.md`](docs/rust-ci.md) for setup) and run:
+
+```bash
+cargo test --workspace --all-features
+cargo xtask wasm-test
+cargo test -p mui-material --test joy_yew --features yew
+cargo test -p mui-material --test joy_leptos --features leptos
+cargo test -p mui-material --test joy_dioxus --features dioxus
+cargo test -p mui-material --test joy_sycamore --features sycamore
+```
+
+Use the parity suites above to chase snapshot mismatches: rerun the failing test with `-- --nocapture --exact` to inspect the React versus adapter markup before refreshing fixtures or renderers. The [Rust CI guide](docs/rust-ci.md) documents deeper troubleshooting steps, snapshot refresh flows, and coverage tooling so teams can keep automation green without guesswork.
+
 ## Select and menu reference implementations
 
 The `examples/select-menu-*` packages provide production-ready blueprints for
