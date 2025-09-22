@@ -29,6 +29,7 @@
 //! primitives behave consistently across frameworks. This design avoids manual repetitive
 //! glue code and ensures future adapters reuse the exact same prop contracts.
 
+pub mod helpers;
 #[cfg(feature = "yew")]
 pub mod accordion;
 #[cfg(feature = "yew")]
