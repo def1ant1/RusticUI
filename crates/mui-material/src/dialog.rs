@@ -227,6 +227,52 @@ fn render_dialog_surface_html(
 }
 
 // ---------------------------------------------------------------------------
+// React SSR adapter
+// ---------------------------------------------------------------------------
+
+/// React integrations lean on the serialized markup for parity checks and
+/// hydration validation. Exposing a thin adapter that mirrors the server-side
+/// renderers keeps framework comparisons straightforward without duplicating
+/// style or accessibility wiring.
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore"
+))]
+pub mod react {
+    use super::*;
+
+    /// Properties accepted by the React oriented renderer. The struct mirrors
+    /// the SSR adapters to keep orchestration consistent across frameworks.
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct DialogProps {
+        /// Dialog state machine controlling visibility and analytics hooks.
+        pub state: DialogState,
+        /// Optional attribute overrides applied to the dialog surface.
+        pub surface: DialogSurfaceOptions,
+        /// Serialized child markup rendered inside the dialog.
+        pub children: String,
+        /// Optional accessible label announced by assistive technologies.
+        pub aria_label: Option<String>,
+    }
+
+    /// Render the dialog surface using the shared SSR helper so React output
+    /// matches the strings produced by Leptos/Dioxus/Sycamore adapters.
+    pub fn render(props: &DialogProps) -> String {
+        if !props.state.is_open() {
+            return String::new();
+        }
+        let surface_attrs = apply_surface_options(props.state.surface_attributes(), &props.surface);
+        super::render_dialog_surface_html(
+            surface_attrs,
+            props.aria_label.as_deref(),
+            &props.children,
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Yew adapter
 // ---------------------------------------------------------------------------
 

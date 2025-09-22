@@ -127,6 +127,24 @@ fn themed_button_attributes(state: &ButtonState) -> Vec<(String, String)> {
 // Adapter implementations
 // ---------------------------------------------------------------------------
 
+/// Adapter targeting server rendered React experiences.
+///
+/// React environments typically reuse the SSR string as a golden baseline for
+/// hydration verification. Exposing a lightweight adapter that simply forwards
+/// to the shared [`render_html`] routine keeps parity tests trivial while
+/// allowing automation to diff the generated markup across frameworks.
+pub mod react {
+    use super::*;
+
+    /// Render the Material button into a HTML string identical to other
+    /// adapters. The helper intentionally mirrors the existing framework
+    /// adapters so integration tests can compare React output against Rust
+    /// renderers without reimplementing styling logic.
+    pub fn render(props: &ButtonProps, state: &ButtonState) -> String {
+        super::render_html(props, state)
+    }
+}
+
 /// Adapter targeting the [`yew`] framework.
 pub mod yew {
     use super::*;

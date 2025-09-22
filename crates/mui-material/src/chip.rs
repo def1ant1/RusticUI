@@ -358,6 +358,24 @@ fn themed_delete_style() -> Style {
 // Adapter implementations
 // ---------------------------------------------------------------------------
 
+/// Adapter targeting server rendered React environments.
+///
+/// Server driven React stacks often diff SSR output against client renders to
+/// guarantee hydration fidelity. Providing a dedicated adapter that reuses the
+/// shared [`render_html`] helper keeps those comparisons simple and avoids
+/// duplicating style orchestration in automation harnesses.
+pub mod react {
+    use super::*;
+
+    /// Render the chip into a HTML string that mirrors the other framework
+    /// adapters. Keeping the implementation as a thin wrapper over
+    /// [`super::render_html`] ensures every integration emits identical markup
+    /// and scoped class names.
+    pub fn render(props: &ChipProps, state: &ChipState) -> String {
+        super::render_html(props, state)
+    }
+}
+
 /// Adapter targeting the [`yew`] framework.
 pub mod yew {
     use super::*;
