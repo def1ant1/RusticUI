@@ -42,6 +42,7 @@ members = [
     "crates/mui-utils",
     "crates/xtask",
     "tools/material-parity",
+    "tools/joy-parity",
     "examples/feedback-tooltips",
     "examples/feedback-chips",
     "examples/data-display-avatar",

@@ -63,6 +63,9 @@ enum Commands {
     },
     /// Recompute the Material component parity dashboard.
     MaterialParity,
+    /// Recompute the Joy UI inventory to highlight missing Rust bindings.
+    #[command(name = "joy-inventory", alias = "joy-parity")]
+    JoyParity,
 }
 
 fn main() -> Result<()> {
@@ -81,6 +84,7 @@ fn main() -> Result<()> {
         Commands::BuildDocs => build_docs(),
         Commands::GenerateTheme { overrides, format } => generate_theme(overrides, format),
         Commands::MaterialParity => material_parity(),
+        Commands::JoyParity => joy_parity(),
     }
 }
 
@@ -427,6 +431,20 @@ fn material_parity() -> Result<()> {
         .arg("--")
         .arg("--report")
         .arg("docs/material-component-parity.md");
+    run(cmd)
+}
+
+fn joy_parity() -> Result<()> {
+    // Delegate to the dedicated Joy parity binary so the TypeScript parsing logic stays
+    // encapsulated and independently testable. Keeping xtask thin ensures we can reuse the
+    // scanner from CI, local development, or other automation entry points without code drift.
+    let mut cmd = Command::new("cargo");
+    cmd.arg("run")
+        .arg("-p")
+        .arg("joy-parity")
+        .arg("--")
+        .arg("--report")
+        .arg("docs/joy-component-parity.md");
     run(cmd)
 }
 
