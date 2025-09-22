@@ -43,6 +43,35 @@ report at `docs/material-component-parity.md`. Keep this artifact up to date in
 pull requests that add or remove components so downstream teams have a reliable
 signal when planning migrations.
 
+### Theme artifact regeneration
+
+Regenerating the serialized Material theme is a fully automated flow powered by
+`cargo xtask generate-theme`. Always prefer this command over hand-editing the
+files under `crates/mui-system/templates`:
+
+```bash
+cargo xtask generate-theme --overrides crates/xtask/tests/fixtures/material_overrides.json --format json
+```
+
+- **Local + CI parity** – Invoke the same command in local workflows and CI to
+  eliminate drift. The task wipes legacy single-file artifacts, merges optional
+  JSON/TOML overrides (shared plus per-scheme), then writes
+  `material_theme.<scheme>.<ext>` alongside `material_css_baseline.<scheme>.css`.
+- **Fixture-driven overrides** – Check fixtures such as
+  `crates/xtask/tests/fixtures/material_overrides.json` into the repo and point
+  the command at them. This keeps bespoke palettes and typography centralized
+  and makes the job trivially reproducible in automation.
+- **Repeatable validation** – The integration test in
+  [`crates/xtask/tests/generate_theme.rs`](crates/xtask/tests/generate_theme.rs)
+  exercises the full pipeline (override parsing, multi-scheme output, CSS
+  generation). Add new fixtures or schemes via the test so enterprise teams can
+  depend on a green build before promoting artefacts.
+
+Contributors must rerun the generator and commit the refreshed artifacts any
+time `material_theme()` defaults, override fixtures, or CSS baselines change.
+This expectation keeps documentation samples, binary integrations, and SDKs in
+lockstep without manual editing.
+
 ## Branching and pull requests
 
 - Fork the repository and branch from `main`.

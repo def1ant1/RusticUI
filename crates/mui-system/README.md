@@ -335,11 +335,34 @@ To keep documentation, code samples and automation in sync run the helper task
 whenever defaults change:
 
 ```bash
-cargo xtask generate-theme
+cargo xtask generate-theme [--overrides fixtures/material_overrides.json] [--format json|toml]
 ```
 
-The command serialises `material_theme()` into `crates/mui-system/templates`
-which downstream tooling can consume as a golden template.
+Key behaviours to rely on in enterprise automation pipelines:
+
+* **Deterministic multi-scheme output** – The task emits one theme file per
+  scheme (`material_theme.light.json`, `material_theme.dark.json`, etc.) and
+  a matching CSS baseline (`material_css_baseline.<scheme>.css`). Additional
+  schemes declared in override fixtures are appended automatically so teams can
+  introduce high-contrast or brand-specific palettes without custom scripts.
+* **Format negotiation** – The default output is prettified JSON. Pass
+  `--format toml` to generate TOML templates for tooling that prefers
+  configuration files, or keep the default for downstream bundlers that consume
+  JSON.
+* **Layered overrides** – Supply a JSON or TOML fixture via `--overrides` to
+  merge shared tokens (`typography`, spacing, etc.) and per-scheme deltas under
+  `schemes.light`, `schemes.dark`, and additional keys. The command removes the
+  historical single-file artefacts before writing the new set so stale files
+  never linger in CI workspaces.
+
+Downstream tooling should treat the generated artifacts in
+`crates/mui-system/templates` as the golden source of truth. Load the theme file
+that matches the active colour scheme and pair it with the corresponding CSS
+baseline during application startup or static site builds. Integration tests in
+[`crates/xtask/tests/generate_theme.rs`](../../crates/xtask/tests/generate_theme.rs)
+exercise the end-to-end pipeline—including override parsing and per-scheme
+serialization—so enterprise teams can rely on the command in repeatable
+deployment workflows without hand-tuned steps.
 
 ## Legacy JavaScript Package
 
