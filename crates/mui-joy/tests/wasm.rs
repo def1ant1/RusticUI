@@ -1,3 +1,10 @@
+#![cfg(feature = "yew")]
+//! Browser integration tests exercising the Yew adapters.
+//!
+//! The suite is compiled conditionally so that enabling Leptos, Dioxus or
+//! Sycamore without the Yew feature still produces a clean build focussed on
+//! the framework-neutral prop definitions.
+
 use mui_joy::{AspectRatio, Button, Chip, Color, Variant};
 use mui_system::theme_provider::ThemeProvider;
 use mui_system::Theme;
