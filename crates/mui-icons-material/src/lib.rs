@@ -18,6 +18,13 @@
 // Include the generated icon functions and the `material_icon!` macro.
 include!(concat!(env!("OUT_DIR"), "/icons.rs"));
 
+// Expose the maintenance helpers only when the optional `update-icons` feature
+// is enabled. This keeps the production build lean while still allowing the
+// binary and its tests to share rich logic for caching, HTTP retrieval and
+// manifest updates.
+#[cfg(feature = "update-icons")]
+pub mod icon_update;
+
 #[cfg(test)]
 mod tests {
     use super::*;

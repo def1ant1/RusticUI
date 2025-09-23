@@ -100,6 +100,15 @@ cargo xtask build-docs            # build the documentation site
 
 Each task emits verbose logs and returns a non-zero exit code on failure so it can be safely wired into CI pipelines.
 
+The Material icon updater persists ETag/Last-Modified metadata in
+`target/.icon-cache` so repeated runs skip unnecessary downloads. To bypass the
+cache or test alternate archives, call the binary directly:
+
+```bash
+cargo run -p mui-icons-material --features update-icons --bin update_icons -- \
+  --force-refresh --source-url https://internal.example/icons.zip
+```
+
 ### Rust CI quick reference
 
 The Rust workspace CI expects every pull request to validate the full adapter matrix locally. Install Chrome/Chromium plus `wasm-pack` (see [`docs/rust-ci.md`](docs/rust-ci.md) for setup) and run:

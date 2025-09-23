@@ -49,5 +49,20 @@ make icons
 
 The `update_icons` utility downloads Google's latest SVGs, refreshes the
 `material-icons/` directory and rewrites the crate's feature flags so each icon
-can be enabled individually. Subsequent `cargo build` or `cargo test` invocations
-will regenerate the Rust bindings automatically.
+can be enabled individually. Subsequent `cargo build` or `cargo test`
+invocations will regenerate the Rust bindings automatically.
+
+To keep the workflow fast on CI and local machines, HTTP metadata is cached in
+`target/.icon-cache`. The cache stores the most recent ETag/Last-Modified values
+and the archive checksum so repeated runs can skip downloading or rewriting
+identical SVGs. When testing unreleased drops or debugging stale assets you can
+invoke the binary directly and opt out of the cache layer:
+
+```bash
+cargo run -p mui-icons-material --features update-icons --bin update_icons -- \
+  --force-refresh
+```
+
+The updater also accepts `--source-url <URL>` so enterprises can point at
+mirrored archives or pre-approved artifact repositories without editing source
+files.
