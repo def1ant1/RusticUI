@@ -111,6 +111,19 @@ enum ThemeFormat {
     Toml,
 }
 
+/// Returns the workspace root so automation can run from a stable location.
+///
+/// Commands like `cargo run -p mui-icons` expect relative paths that are rooted
+/// at the repository top-level. Computing it once keeps subsequent helpers
+/// compact and avoids repeating the ancestor traversal logic.
+fn workspace_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("xtask is nested two levels below the workspace root")
+        .to_path_buf()
+}
+
 /// Helper to execute an external command with verbose logging.
 ///
 /// By centralizing the spawning logic we ensure that every task
@@ -216,17 +229,36 @@ fn doc() -> Result<()> {
 }
 
 fn refresh_icons() -> Result<()> {
-    // Delegate to the existing Rust binary that fetches the latest
-    // Material Design SVGs and regenerates the strongly typed bindings.
-    let mut cmd = Command::new("cargo");
-    cmd.arg("run")
+    let workspace = workspace_root();
+
+    println!("[xtask] refreshing upstream Material icons via the managed download utility");
+    // Delegate to the existing Rust binary that fetches the latest Material
+    // Design SVGs and rewrites the `mui-icons-material` feature manifest.
+    let mut material = Command::new("cargo");
+    material
+        .current_dir(&workspace)
+        .arg("run")
         .arg("-p")
         .arg("mui-icons-material")
         .arg("--bin")
         .arg("update_icons")
         .arg("--features")
         .arg("update-icons");
-    run(cmd)
+    run(material)?;
+
+    println!("[xtask] regenerating the consolidated mui-icons feature manifest from local assets");
+    // Ensure the top-level `mui-icons` crate mirrors whatever assets are now on
+    // disk. This keeps the multi-set workflow deterministic across CI and
+    // contributor machines.
+    let mut features = Command::new("cargo");
+    features
+        .current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("mui-icons")
+        .arg("--bin")
+        .arg("update_features");
+    run(features)
 }
 
 fn update_components() -> Result<()> {

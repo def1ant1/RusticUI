@@ -89,6 +89,32 @@ time `material_theme()` defaults, override fixtures, or CSS baselines change.
 This expectation keeps documentation samples, binary integrations, and SDKs in
 lockstep without manual editing.
 
+### Icon library maintenance
+
+Multi-set icon support is fully automated. Always run the consolidated pipeline
+after adding or removing SVGs in `crates/mui-icons/icons/**` or when pulling a
+fresh drop from upstream Material sources:
+
+```bash
+cargo xtask icon-update
+```
+
+The task performs two coordinated steps:
+
+1. `mui-icons-material` downloads and unpacks the official Material Design
+   archive, pruning obsolete files so the crate mirrors the upstream source of
+   truth.
+2. `mui-icons` executes its `update_features` helper, scanning every icon set on
+   disk and regenerating the `[features]` manifest with `set-<set>` and
+   `icon-<set>-<name>` entries sorted alphabetically. Guard comments in
+   `Cargo.toml` mark the generated section so reviews immediately recognize the
+   automated edits.
+
+Because both crates are updated by the same command, enterprise adopters can
+depend on deterministic feature wiring regardless of how many icon families are
+checked into the repository. Commit the refreshed manifest alongside any SVG
+changes so CI stays green and local developers avoid manual cleanup.
+
 ## Branching and pull requests
 
 - Fork the repository and branch from `main`.
