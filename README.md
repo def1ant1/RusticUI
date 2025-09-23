@@ -93,7 +93,7 @@ binary:
 
 ```bash
 cargo xtask scaffold-component    # scaffold a fully-instrumented component package
-cargo xtask refresh-icons         # pull the latest Rustic icon sets
+cargo xtask icon-update           # pull the latest Rustic icon sets
 cargo xtask accessibility-audit   # run Playwright accessibility tests
 cargo xtask build-docs            # build the documentation site
 ```
