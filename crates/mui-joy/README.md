@@ -1,10 +1,10 @@
 # mui-joy
 
 Rust-first bindings for the Joy UI design language. The crate mirrors the
-structure of Material UI while exposing Joy-specific tokens such as neutral and
-danger palettes, radius controls, and focus outlines. Every prop definition is
-framework agnostic so Yew, Leptos, Dioxus, and Sycamore adapters share the same
-API surface and analytics hooks.
+structure of Material UI while exposing Joy-specific tokens such as neutral,
+danger, success, warning, and info palettes plus radius controls and focus
+outlines. Every prop definition is framework agnostic so Yew, Leptos, Dioxus,
+and Sycamore adapters share the same API surface and analytics hooks.
 
 ## Installation
 
@@ -102,6 +102,34 @@ fn AlertBadge<G: Html>(cx: Scope) -> View<G> {
 Each snippet is a distilled version of the [cross-framework Joy workflow
 examples](../../examples) which demonstrate full automation pipelines and shared
 state management.
+
+## Automated color selection
+
+`Color::ALL` and [`Color::as_str`](./src/macros.rs) expose the complete Joy
+palette so enterprise teams can drive documentation, visual regression tests,
+and configuration UIs from a single source of truth. The helper works across all
+renderers because the inline styles are produced by
+[`helpers::resolve_surface_tokens`](./src/helpers/mod.rs):
+
+```rust
+use mui_joy::helpers::resolve_surface_tokens;
+use mui_joy::{Color, Variant};
+use mui_system::Theme;
+
+fn surface_swatches(theme: &Theme) -> Vec<String> {
+    Color::ALL
+        .iter()
+        .map(|color| {
+            let tokens = resolve_surface_tokens(theme, *color, Variant::Soft);
+            format!("{} => {:?}", color.as_str(), tokens.background)
+        })
+        .collect()
+}
+```
+
+Downstream adapters (Yew, Leptos, Dioxus, Sycamore) rely on the same helper, so
+tests can assert that background and border styles shift for every color without
+duplicated lookup tables.
 
 ## Examples
 

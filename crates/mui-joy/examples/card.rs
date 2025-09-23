@@ -15,12 +15,12 @@ fn app() -> Html {
     };
     html! {
         <ThemeProvider theme={Theme::default()}>
-            <Card color={Color::Neutral} variant={Variant::Soft}>
+            <Card color={Color::Info} variant={Variant::Soft}>
                 <AspectRatio ratio={16.0 / 9.0}>
                     <img src="https://via.placeholder.com/300" alt="placeholder" />
                 </AspectRatio>
                 { if !*deleted {
-                    html! { <Chip label="Deletable" on_delete={Some(on_delete)} /> }
+                    html! { <Chip label="Deletable" color={Color::Success} on_delete={Some(on_delete)} /> }
                 } else {
                     html! { <span>{"Deleted"}</span> }
                 }}

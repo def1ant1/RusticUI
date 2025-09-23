@@ -87,12 +87,21 @@ where
 }
 
 /// Resolve the active palette entry for the requested Joy color.
+///
+/// Keeping the mapping centralised guarantees that every framework adapter,
+/// documentation example, and automated test references the same palette
+/// wiring.  When upstream Joy introduces an additional color (for example the
+/// `Info` accent) we only need to extend this match arm and regenerate the
+/// theme templates.
 fn palette_color(theme: &Theme, color: Color) -> String {
     let palette: &PaletteScheme = theme.palette.active();
     match color {
         Color::Primary => palette.primary.clone(),
         Color::Neutral => palette.neutral.clone(),
         Color::Danger => palette.danger.clone(),
+        Color::Success => palette.success.clone(),
+        Color::Warning => palette.warning.clone(),
+        Color::Info => palette.info.clone(),
     }
 }
 
@@ -268,19 +277,10 @@ mod yew_adapters {
     use super::{aria, ChipAria};
 
     /// Configuration passed into [`use_button_adapter`].
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Debug, Default, PartialEq)]
     pub struct ButtonAdapterConfig {
         pub disabled: bool,
         pub throttle: Option<Duration>,
-    }
-
-    impl Default for ButtonAdapterConfig {
-        fn default() -> Self {
-            Self {
-                disabled: false,
-                throttle: None,
-            }
-        }
     }
 
     /// Aggregated adapter output returned from [`use_button_adapter`].
@@ -565,12 +565,52 @@ mod tests {
     use crate::{Color, Variant};
     use mui_system::theme::Theme;
 
+    /// Ensure every color variant maps to a palette entry. All framework adapters rely on this
+    /// helper so keeping the assertion here prevents drift between Yew, Leptos, Dioxus and
+    /// Sycamore integrations.
+    #[test]
+    fn palette_color_covers_all_variants() {
+        let theme = Theme::default();
+        let palette = theme.palette.active();
+
+        for color in Color::ALL {
+            let resolved = palette_color(&theme, color);
+            let expected = match color {
+                Color::Primary => &palette.primary,
+                Color::Neutral => &palette.neutral,
+                Color::Danger => &palette.danger,
+                Color::Success => &palette.success,
+                Color::Warning => &palette.warning,
+                Color::Info => &palette.info,
+            };
+            assert_eq!(resolved, *expected, "palette mismatch for {:?}", color);
+        }
+    }
+
     #[test]
     fn surface_tokens_resolve() {
         let theme = Theme::default();
         let tokens = resolve_surface_tokens(&theme, Color::Primary, Variant::Soft);
         assert_eq!(tokens.radius_px, theme.joy.radius);
         assert!(tokens.background.unwrap().ends_with("33"));
+    }
+
+    /// Regression test guaranteeing that the soft variant keeps its translucent background aligned
+    /// with the base palette color for every Joy accent.
+    #[test]
+    fn soft_variant_applies_alpha_suffix_for_all_colors() {
+        let theme = Theme::default();
+        for color in Color::ALL {
+            let tokens = resolve_surface_tokens(&theme, color, Variant::Soft);
+            let base = palette_color(&theme, color);
+            let expected = format!("{}33", base);
+            assert_eq!(
+                tokens.background.as_deref(),
+                Some(expected.as_str()),
+                "soft background should inherit {base} with alpha for {:?}",
+                color
+            );
+        }
     }
 
     #[test]

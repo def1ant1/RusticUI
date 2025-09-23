@@ -24,8 +24,7 @@ joy_component_props!(CardProps {
 pub fn card(props: &CardProps) -> Html {
     let theme = use_theme();
 
-    let surface: SurfaceTokens =
-        resolve_surface_tokens(&theme, props.color.clone(), props.variant.clone());
+    let surface: SurfaceTokens = resolve_surface_tokens(&theme, props.color, props.variant);
     let padding = format!("{}px", theme.spacing(2));
     let style = surface.compose([
         ("padding", padding),

@@ -38,8 +38,7 @@ pub fn button(props: &ButtonProps) -> Html {
     let theme = use_theme();
 
     // Resolve design tokens once so we can build the final inline styles declaratively.
-    let surface: SurfaceTokens =
-        resolve_surface_tokens(&theme, props.color.clone(), props.variant.clone());
+    let surface: SurfaceTokens = resolve_surface_tokens(&theme, props.color, props.variant);
     let padding = format!("{}px {}px", theme.spacing(1), theme.spacing(2));
 
     let adapter = use_button_adapter(

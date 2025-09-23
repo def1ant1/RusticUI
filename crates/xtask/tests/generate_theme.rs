@@ -159,20 +159,32 @@ fn generates_light_and_dark_artifacts_with_fixtures() -> Result<()> {
     );
 
     // Scheme-specific palette overrides should only affect their respective outputs.
+    let light_palette = light_value
+        .get("palette")
+        .and_then(|p| p.get("light"))
+        .expect("light scheme palette should exist");
     assert_eq!(
-        light_value
-            .get("palette")
-            .and_then(|p| p.get("primary"))
-            .and_then(Value::as_str),
+        light_palette.get("primary").and_then(Value::as_str),
         Some("#0057b7")
     );
+    let dark_palette = dark_value
+        .get("palette")
+        .and_then(|p| p.get("dark"))
+        .expect("dark scheme palette should exist");
     assert_eq!(
-        dark_value
-            .get("palette")
-            .and_then(|p| p.get("primary"))
-            .and_then(Value::as_str),
+        dark_palette.get("primary").and_then(Value::as_str),
         Some("#ffd700")
     );
+    for key in ["success", "warning", "info"] {
+        assert!(
+            light_palette.get(key).is_some(),
+            "light palette should expose `{key}`"
+        );
+        assert!(
+            dark_palette.get(key).is_some(),
+            "dark palette should expose `{key}`"
+        );
+    }
 
     // CSS baselines should capture typography + palette overrides so applications render correctly.
     let light_css = fs::read_to_string(&expected_outputs[2])?;

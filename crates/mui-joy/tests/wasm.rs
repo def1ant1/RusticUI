@@ -8,9 +8,11 @@
 mod axe;
 
 use axe::axe_check;
+use mui_joy::helpers::resolve_surface_tokens;
 use mui_joy::{AspectRatio, Button, Chip, Color, Variant};
 use mui_system::theme_provider::ThemeProvider;
 use mui_system::Theme;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
 use yew::prelude::*;
 use yew::Renderer;
@@ -164,6 +166,66 @@ async fn chip_is_accessible() {
 
     Renderer::<App>::with_root(mount.clone()).render();
     axe_check(&mount).await;
+    teardown_host(&mount);
+}
+
+#[wasm_bindgen_test]
+fn button_color_swatches_match_palette() {
+    use std::collections::HashMap;
+
+    let mount = mount_host();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                { for Color::ALL.iter().map(|color| {
+                    let label = format!("{} solid", color.as_str());
+                    html! {
+                        <Button
+                            label={label}
+                            color={*color}
+                            variant={Variant::Solid}
+                            onclick={Callback::from(|_| ())}
+                        />
+                    }
+                }) }
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let theme = Theme::default();
+    let mut expected: HashMap<String, String> = HashMap::new();
+    for color in Color::ALL {
+        let label = format!("{} solid", color.as_str());
+        let tokens = resolve_surface_tokens(&theme, color, Variant::Solid);
+        let background = tokens
+            .background
+            .expect("solid variant should emit a background color");
+        expected.insert(label, background);
+    }
+
+    let buttons = mount
+        .query_selector_all("button")
+        .expect("query should succeed");
+    for idx in 0..buttons.length() {
+        let node = buttons.item(idx).expect("button should exist");
+        let button: web_sys::Element = node.dyn_into().expect("node should be an element");
+        let label = button.text_content().expect("button should contain text");
+        let style = button
+            .get_attribute("style")
+            .expect("button should expose inline styles");
+        let background = expected
+            .get(&label)
+            .expect("expected palette entry missing");
+        assert!(
+            style.contains(&format!("background:{};", background)),
+            "style `{style}` should contain background:{background}; for {label}"
+        );
+    }
+
     teardown_host(&mount);
 }
 
