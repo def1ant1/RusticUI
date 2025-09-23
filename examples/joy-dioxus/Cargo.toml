@@ -1,0 +1,20 @@
+[package]
+name = "joy-dioxus"
+version = "0.1.0"
+edition = "2021"
+description = "Joy UI workflow demo rendered with Dioxus"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+dioxus = { workspace = true, features = ["macro", "hooks", "html"] }
+dioxus-web = { workspace = true, features = ["file_engine"] }
+joy-workflows-core = { path = "../joy-workflows-core" }
+mui-joy = { path = "../../crates/mui-joy", default-features = false, features = ["dioxus"] }
+mui-system = { path = "../../crates/mui-system", features = ["dioxus"] }
+mui-headless = { path = "../../crates/mui-headless" }
+dioxus-ssr = { workspace = true, optional = true }
+
+[features]
+default = ["csr"]
+csr = []
+ssr = ["dioxus-ssr"]

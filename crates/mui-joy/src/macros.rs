@@ -42,7 +42,7 @@ macro_rules! joy_props {
         pub struct $name {
             $(
                 $(#[$meta])*
-                #[cfg_attr(feature = "yew", yew::prop_or_default)]
+                #[cfg_attr(feature = "yew", prop_or_default)]
                 pub $field: $ty,
             )*
         }

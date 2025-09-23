@@ -5,9 +5,7 @@
 //! controller simply wraps the reusable [`SliderState`] so state transitions stay
 //! centralised.
 
-pub use mui_headless::slider::{
-    SliderChange, SliderConfig, SliderOrientation, SliderState,
-};
+pub use mui_headless::slider::{SliderChange, SliderConfig, SliderOrientation, SliderState};
 
 /// Wrapper owning a [`SliderState`] for Joy renderers.
 #[derive(Debug, Clone)]

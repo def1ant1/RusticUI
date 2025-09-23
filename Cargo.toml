@@ -48,6 +48,11 @@ members = [
     "examples/feedback-chips",
     "examples/data-display-avatar",
     "examples/shared-dialog-state-core",
+    "examples/joy-workflows-core",
+    "examples/joy-yew",
+    "examples/joy-leptos",
+    "examples/joy-dioxus",
+    "examples/joy-sycamore",
 ]
 
 # Use Cargo's second feature resolver so optional dependencies don't

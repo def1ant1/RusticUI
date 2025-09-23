@@ -5,7 +5,8 @@ use yew::prelude::*;
 use yew::virtual_dom::AttrValue;
 
 use crate::helpers::{
-    compose_inline_style, resolve_surface_tokens, use_chip_adapter, ChipAdapterConfig, SurfaceTokens,
+    compose_inline_style, resolve_surface_tokens, use_chip_adapter, ChipAdapterConfig,
+    SurfaceTokens,
 };
 use crate::{joy_component_props, Color, Variant};
 
@@ -48,8 +49,11 @@ joy_component_props!(ChipProps {
 pub fn chip(props: &ChipProps) -> Html {
     let theme = use_theme();
 
-    let surface: SurfaceTokens = resolve_surface_tokens(&theme, props.color.clone(), props.variant.clone());
-    let dismissible = props.dismissible.unwrap_or_else(|| props.on_delete.is_some());
+    let surface: SurfaceTokens =
+        resolve_surface_tokens(&theme, props.color.clone(), props.variant.clone());
+    let dismissible = props
+        .dismissible
+        .unwrap_or_else(|| props.on_delete.is_some());
     let config = ChipAdapterConfig {
         dismissible: dismissible && props.on_delete.is_some(),
         disabled: props.disabled,
@@ -101,39 +105,38 @@ pub fn chip(props: &ChipProps) -> Html {
         AttrValue::from("0")
     };
 
-    let delete_button = if (adapter.controls_visible || adapter.deleting)
-        && adapter.on_delete_click.is_some()
-    {
-        let mut delete_style = vec![
-            ("background", "transparent".to_string()),
-            ("border", "none".to_string()),
-            ("padding", "0".to_string()),
-            ("margin-left", "4px".to_string()),
-        ];
-        delete_style.push((
-            "cursor",
-            if adapter.disabled {
-                "not-allowed".to_string()
-            } else {
-                "pointer".to_string()
-            },
-        ));
-        let delete_style = compose_inline_style(delete_style);
-        let onclick = adapter.on_delete_click.as_ref().unwrap().clone();
-        html! {
-            <button
-                type="button"
-                style={delete_style}
-                aria-label="Remove chip"
-                disabled={adapter.disabled}
-                onclick={onclick}
-            >
-                {"×"}
-            </button>
-        }
-    } else {
-        Html::default()
-    };
+    let delete_button =
+        if (adapter.controls_visible || adapter.deleting) && adapter.on_delete_click.is_some() {
+            let mut delete_style = vec![
+                ("background", "transparent".to_string()),
+                ("border", "none".to_string()),
+                ("padding", "0".to_string()),
+                ("margin-left", "4px".to_string()),
+            ];
+            delete_style.push((
+                "cursor",
+                if adapter.disabled {
+                    "not-allowed".to_string()
+                } else {
+                    "pointer".to_string()
+                },
+            ));
+            let delete_style = compose_inline_style(delete_style);
+            let onclick = adapter.on_delete_click.as_ref().unwrap().clone();
+            html! {
+                <button
+                    type="button"
+                    style={delete_style}
+                    aria-label="Remove chip"
+                    disabled={adapter.disabled}
+                    onclick={onclick}
+                >
+                    {"×"}
+                </button>
+            }
+        } else {
+            Html::default()
+        };
 
     html! {
         <span

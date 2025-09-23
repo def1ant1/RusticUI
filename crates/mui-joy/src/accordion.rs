@@ -5,9 +5,7 @@
 //! component templates.  Centralising the boilerplate here keeps future Joy
 //! components focused on styling rather than state orchestration.
 
-pub use mui_headless::accordion::{
-    AccordionGroupState, AccordionItemChange,
-};
+pub use mui_headless::accordion::{AccordionGroupState, AccordionItemChange};
 
 /// Convenience wrapper around [`AccordionGroupState`] so Joy renderers can
 /// instantiate accordions without touching the headless crate directly.

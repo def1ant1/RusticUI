@@ -1,0 +1,21 @@
+[package]
+name = "joy-leptos"
+version = "0.1.0"
+edition = "2021"
+description = "Joy UI workflow demo rendered with Leptos"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+leptos = { workspace = true, default-features = false }
+wasm-bindgen.workspace = true
+joy-workflows-core = { path = "../joy-workflows-core" }
+mui-headless = { path = "../../crates/mui-headless" }
+mui-joy = { path = "../../crates/mui-joy", default-features = false, features = ["leptos"] }
+mui-system = { path = "../../crates/mui-system", features = ["leptos"] }
+tokio = { workspace = true, optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
+
+[features]
+default = ["csr"]
+csr = ["leptos/csr", "console_error_panic_hook"]
+ssr = ["leptos/ssr", "tokio"]

@@ -105,7 +105,10 @@ fn with_alpha(color: &str, alpha: &str) -> String {
 pub fn resolve_surface_tokens(theme: &Theme, color: Color, variant: Variant) -> SurfaceTokens {
     let palette_color = palette_color(theme, color);
     let radius = theme.joy.radius;
-    let focus_outline = Some(format!("{}px solid {}", theme.joy.focus_thickness, palette_color));
+    let focus_outline = Some(format!(
+        "{}px solid {}",
+        theme.joy.focus_thickness, palette_color
+    ));
 
     match variant {
         Variant::Solid => SurfaceTokens {
@@ -220,19 +223,19 @@ mod aria {
             let role = AttrValue::from(builder.role());
             let hidden = builder.hidden();
             let aria_hidden = AttrValue::from(hidden.1);
-            let aria_disabled = builder
-                .disabled()
-                .map(|(_, value)| AttrValue::from(value));
+            let aria_disabled = builder.disabled().map(|(_, value)| AttrValue::from(value));
             let data_disabled = builder
                 .data_disabled()
                 .map(|(_, value)| AttrValue::from(value));
-            let id = builder.id_attr().map(|(_, value)| AttrValue::from(value));
+            let id = builder
+                .id_attr()
+                .map(|(_, value)| AttrValue::from(value.to_string()));
             let aria_labelledby = builder
                 .labelledby()
-                .map(|(_, value)| AttrValue::from(value));
+                .map(|(_, value)| AttrValue::from(value.to_string()));
             let aria_describedby = builder
                 .describedby()
-                .map(|(_, value)| AttrValue::from(value));
+                .map(|(_, value)| AttrValue::from(value.to_string()));
 
             Self {
                 role,
@@ -259,7 +262,7 @@ mod yew_adapters {
 
     use gloo_timers::callback::Interval;
     use mui_headless::button::ButtonState;
-    use mui_headless::chip::{ChipChange, ChipConfig, ChipState};
+    use mui_headless::chip::{ChipChange, ChipConfig as HeadlessChipConfig, ChipState};
     use yew::prelude::*;
 
     use super::{aria, ChipAria};
@@ -287,7 +290,13 @@ mod yew_adapters {
         pub disabled: bool,
     }
 
+    fn bump_counter(handle: &UseStateHandle<u64>) {
+        let next = **handle + 1;
+        handle.set(next);
+    }
+
     /// Hook exposing the [`mui_headless::button::ButtonState`] state machine to Yew.
+    #[hook]
     pub fn use_button_adapter(
         config: ButtonAdapterConfig,
         on_press: Callback<MouseEvent>,
@@ -298,14 +307,11 @@ mod yew_adapters {
         {
             let state = state.clone();
             let rerender = rerender.clone();
-            use_effect_with_deps(
-                move |config: &ButtonAdapterConfig| {
-                    *state.borrow_mut() = ButtonState::new(config.disabled, config.throttle);
-                    rerender.set(*rerender + 1);
-                    || ()
-                },
-                config.clone(),
-            );
+            use_effect_with(config.clone(), move |config: &ButtonAdapterConfig| {
+                *state.borrow_mut() = ButtonState::new(config.disabled, config.throttle);
+                bump_counter(&rerender);
+                || ()
+            });
         }
 
         let onclick = {
@@ -320,7 +326,7 @@ mod yew_adapters {
                     on_press.emit(event_clone);
                 });
                 if triggered {
-                    rerender.set(*rerender + 1);
+                    bump_counter(&rerender);
                 }
             })
         };
@@ -351,8 +357,8 @@ mod yew_adapters {
     }
 
     impl ChipAdapterConfig {
-        pub fn headless_config(&self) -> ChipConfig {
-            ChipConfig {
+        pub fn headless_config(&self) -> HeadlessChipConfig {
+            HeadlessChipConfig {
                 show_delay: self.show_delay,
                 hide_delay: self.hide_delay,
                 delete_delay: self.delete_delay,
@@ -409,11 +415,12 @@ mod yew_adapters {
             }
         }
         if needs_render {
-            rerender.set(*rerender + 1);
+            bump_counter(rerender);
         }
     }
 
     /// Hook exposing the [`mui_headless::chip::ChipState`] state machine to Yew.
+    #[hook]
     pub fn use_chip_adapter(
         config: ChipAdapterConfig,
         on_delete: Option<Callback<MouseEvent>>,
@@ -424,14 +431,11 @@ mod yew_adapters {
         {
             let state = state.clone();
             let rerender = rerender.clone();
-            use_effect_with_deps(
-                move |config: &ChipAdapterConfig| {
-                    *state.borrow_mut() = ChipState::new(config.headless_config());
-                    rerender.set(*rerender + 1);
-                    || ()
-                },
-                config.clone(),
-            );
+            use_effect_with(config.clone(), move |config: &ChipAdapterConfig| {
+                *state.borrow_mut() = ChipState::new(config.headless_config());
+                bump_counter(&rerender);
+                || ()
+            });
         }
 
         {
@@ -550,7 +554,10 @@ mod yew_adapters {
 }
 
 #[cfg(feature = "yew")]
-pub use yew_adapters::{use_button_adapter, use_chip_adapter, Button as ButtonAdapter, ButtonConfig as ButtonAdapterConfig, Chip as ChipAdapter, ChipConfig as ChipAdapterConfig};
+pub use yew_adapters::{
+    use_button_adapter, use_chip_adapter, Button as ButtonAdapter,
+    ButtonConfig as ButtonAdapterConfig, Chip as ChipAdapter, ChipConfig as ChipAdapterConfig,
+};
 
 #[cfg(test)]
 mod tests {
