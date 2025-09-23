@@ -89,6 +89,9 @@ fn generates_light_and_dark_artifacts_with_fixtures() -> Result<()> {
         templates_dir.join("material_theme.dark.json"),
         templates_dir.join("material_css_baseline.light.css"),
         templates_dir.join("material_css_baseline.dark.css"),
+        templates_dir.join("joy_theme.light.json"),
+        templates_dir.join("joy_theme.dark.json"),
+        templates_dir.join("joy_theme.template.json"),
     ];
 
     // Snapshot existing artifacts so the repository stays clean for local developers.
@@ -104,7 +107,8 @@ fn generates_light_and_dark_artifacts_with_fixtures() -> Result<()> {
         .arg("xtask")
         .arg("generate-theme")
         .arg("--overrides")
-        .arg(&overrides);
+        .arg(&overrides)
+        .arg("--joy");
 
     let assertion = cmd
         .assert()
@@ -120,10 +124,20 @@ fn generates_light_and_dark_artifacts_with_fixtures() -> Result<()> {
         stdout.contains("[xtask] wrote crates/mui-system/templates/material_theme.light.json"),
         "xtask output should mention the light theme artifact"
     );
-    assert!(
-        stdout.contains("[xtask] wrote crates/mui-system/templates/material_theme.dark.json"),
-        "xtask output should mention the dark theme artifact"
-    );
+    for artifact in [
+        "material_theme.light.json",
+        "material_theme.dark.json",
+        "joy_theme.light.json",
+        "joy_theme.dark.json",
+        "joy_theme.template.json",
+    ] {
+        assert!(
+            stdout.contains(&format!(
+                "[xtask] wrote crates/mui-system/templates/{artifact}"
+            )),
+            "xtask output should mention the {artifact} artifact"
+        );
+    }
 
     // Confirm that every artifact exists so downstream tooling can consume it.
     for path in &expected_outputs {
@@ -208,6 +222,40 @@ fn generates_light_and_dark_artifacts_with_fixtures() -> Result<()> {
     assert!(
         dark_css.contains("color: #e2e8f0"),
         "Dark CSS baseline should include the dark scheme text color"
+    );
+
+    let joy_light = fs::read_to_string(&expected_outputs[4])?;
+    let joy_dark = fs::read_to_string(&expected_outputs[5])?;
+    let joy_template = fs::read_to_string(&expected_outputs[6])?;
+    let joy_light_value: Value = serde_json::from_str(&joy_light)?;
+    let joy_dark_value: Value = serde_json::from_str(&joy_dark)?;
+    let joy_template_value: Value = serde_json::from_str(&joy_template)?;
+
+    for value in [&joy_light_value, &joy_dark_value] {
+        assert_eq!(
+            value
+                .get("joy")
+                .and_then(|joy| joy.get("focus"))
+                .and_then(|focus| focus.get("thickness"))
+                .and_then(Value::as_u64),
+            Some(2),
+            "Joy fixtures should honour default focus thickness"
+        );
+        assert!(
+            value
+                .get("automation")
+                .and_then(|meta| meta.get("comments"))
+                .is_some(),
+            "Joy fixtures should embed automation comments"
+        );
+    }
+
+    assert!(
+        joy_template_value
+            .get("joy")
+            .and_then(Value::as_object)
+            .is_some(),
+        "Template should expose Joy defaults"
     );
 
     Ok(())

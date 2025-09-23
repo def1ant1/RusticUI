@@ -105,7 +105,7 @@ fn themed_button_style() -> Style {
         font_family = theme.typography.font_family.clone(),
         font_weight = theme.typography.font_weight_medium.to_string(),
         letter_spacing = format!("{:.3}rem", theme.typography.button_letter_spacing),
-        focus_outline_width = format!("{}px", theme.joy.focus_thickness),
+        focus_outline_width = format!("{}px", theme.joy.focus.thickness),
         focus_outline_color = theme.palette.text_primary.clone()
     )
 }

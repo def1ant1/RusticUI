@@ -41,6 +41,8 @@ pub struct SurfaceTokens {
     pub border: Option<String>,
     /// Outline declaration driven by the Joy focus tokens.
     pub focus_outline: Option<String>,
+    /// Optional offset applied to the outline when rendered.
+    pub focus_outline_offset: Option<String>,
     /// Corner radius pulled from [`Theme::joy`].
     pub radius_px: u8,
 }
@@ -65,9 +67,11 @@ impl SurfaceTokens {
         segments.push(("border-radius", format!("{}px", self.radius_px)));
         if let Some(outline) = &self.focus_outline {
             segments.push(("outline", outline.clone()));
-            // Align focus outlines with Joy defaults so we get a subtle inset
-            // shadow instead of the browser default thick blue ring.
-            segments.push(("outline-offset", format!("-{}px", self.radius_px.min(4))));
+            if let Some(offset) = &self.focus_outline_offset {
+                // Align focus outlines with Joy defaults so we get a subtle inset
+                // shadow instead of the browser default thick blue ring.
+                segments.push(("outline-offset", offset.clone()));
+            }
         }
         segments.extend(extra);
         compose_inline_style(segments)
@@ -114,9 +118,10 @@ fn with_alpha(color: &str, alpha: &str) -> String {
 pub fn resolve_surface_tokens(theme: &Theme, color: Color, variant: Variant) -> SurfaceTokens {
     let palette_color = palette_color(theme, color);
     let radius = theme.joy.radius;
-    let focus_outline = Some(format!(
-        "{}px solid {}",
-        theme.joy.focus_thickness, palette_color
+    let focus_outline = Some(theme.joy.focus_outline_for_color(&palette_color));
+    let focus_outline_offset = Some(format!(
+        "-{}px",
+        theme.joy.focus.thickness.min(theme.joy.radius.max(1))
     ));
 
     match variant {
@@ -125,6 +130,7 @@ pub fn resolve_surface_tokens(theme: &Theme, color: Color, variant: Variant) -> 
             foreground: Some("#fff".to_string()),
             border: Some("none".to_string()),
             focus_outline,
+            focus_outline_offset: focus_outline_offset.clone(),
             radius_px: radius,
         },
         Variant::Soft => SurfaceTokens {
@@ -132,6 +138,7 @@ pub fn resolve_surface_tokens(theme: &Theme, color: Color, variant: Variant) -> 
             foreground: Some(palette_color.clone()),
             border: Some("none".to_string()),
             focus_outline,
+            focus_outline_offset: focus_outline_offset.clone(),
             radius_px: radius,
         },
         Variant::Outlined => SurfaceTokens {
@@ -139,6 +146,7 @@ pub fn resolve_surface_tokens(theme: &Theme, color: Color, variant: Variant) -> 
             foreground: Some(palette_color.clone()),
             border: Some(format!("1px solid {}", palette_color)),
             focus_outline,
+            focus_outline_offset: focus_outline_offset.clone(),
             radius_px: radius,
         },
         Variant::Plain => SurfaceTokens {
@@ -146,6 +154,7 @@ pub fn resolve_surface_tokens(theme: &Theme, color: Color, variant: Variant) -> 
             foreground: Some(palette_color.clone()),
             border: Some("none".to_string()),
             focus_outline,
+            focus_outline_offset,
             radius_px: radius,
         },
     }

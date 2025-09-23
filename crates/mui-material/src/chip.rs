@@ -295,7 +295,7 @@ fn themed_root_style() -> Style {
         font_family = theme.typography.font_family.clone(),
         font_size = format!("{:.3}rem", theme.typography.body2),
         line_height = format!("{:.2}", theme.typography.line_height),
-        focus_width = format!("{:.1}px", (theme.joy.focus_thickness as f32).max(1.0)),
+        focus_width = format!("{:.1}px", (theme.joy.focus.thickness as f32).max(1.0)),
         focus_color = theme.palette.primary.clone(),
     )
 }
@@ -349,7 +349,7 @@ fn themed_delete_style() -> Style {
         icon_color = theme.palette.text_secondary.clone(),
         font_family = theme.typography.font_family.clone(),
         font_size = format!("{:.3}rem", theme.typography.caption),
-        focus_width = format!("{:.1}px", (theme.joy.focus_thickness as f32).max(1.0)),
+        focus_width = format!("{:.1}px", (theme.joy.focus.thickness as f32).max(1.0)),
         focus_color = theme.palette.primary.clone(),
     )
 }

@@ -59,7 +59,7 @@ pub struct Theme {
     /// Material typography ramp expressed in rems and point sizes.
     pub typography: TypographyScheme,
     /// Joy specific design tokens such as corner radius and focus outlines.
-    pub joy: JoyTokens,
+    pub joy: JoyTheme,
 }
 
 impl Default for Theme {
@@ -69,7 +69,7 @@ impl Default for Theme {
             breakpoints: Breakpoints::default(),
             palette: Palette::default(),
             typography: TypographyScheme::default(),
-            joy: JoyTokens::default(),
+            joy: JoyTheme::default(),
         }
     }
 }
@@ -79,6 +79,26 @@ impl Theme {
     /// provided factor. This mirrors the JS `theme.spacing` utility.
     pub fn spacing(&self, factor: u16) -> u16 {
         self.spacing * factor
+    }
+
+    /// Returns a [`Theme`] with Joy overrides applied on top of the canonical
+    /// defaults. This keeps builder style ergonomics for automation pipelines
+    /// that want to emit customised templates.
+    pub fn with_joy_overrides<O>(overrides: O) -> Self
+    where
+        O: Into<JoyThemeOverrides>,
+    {
+        let mut theme = Self::default();
+        theme.apply_joy_overrides(overrides);
+        theme
+    }
+
+    /// Merges the supplied Joy overrides into the current theme instance.
+    pub fn apply_joy_overrides<O>(&mut self, overrides: O)
+    where
+        O: Into<JoyThemeOverrides>,
+    {
+        self.joy.merge_overrides(overrides);
     }
 }
 
@@ -324,21 +344,404 @@ impl Default for TypographyScheme {
 
 /// Joy specific design tokens that do not exist in the core Material theme.
 ///
-/// They capture stylistic elements unique to Joy such as rounded corners and
-/// the thickness of focus indicators.
+/// The metadata drives Joy component styling across frameworks, enables
+/// automation tooling to emit comments/templates, and allows enterprise
+/// override pipelines to tweak focus affordances without rewriting CSS.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct JoyTokens {
+#[serde(default)]
+pub struct JoyTheme {
     /// Default corner radius applied to Joy components.
     pub radius: u8,
-    /// Thickness in pixels of the default focus ring used for accessibility.
-    pub focus_thickness: u8,
+    /// Focus specific configuration (thickness, palette hooks, formatting
+    /// templates).
+    pub focus: JoyFocus,
+    /// Box-shadow presets aligned with Joy design guidance.
+    pub shadow: JoyShadow,
+    /// Metadata describing which palette keys the Joy workflow expects. The
+    /// field doubles as inline documentation for automation pipelines.
+    pub color_system: JoyColorSystemMetadata,
 }
 
-impl Default for JoyTokens {
+impl JoyTheme {
+    /// Returns a builder used by automation scripts and tests.
+    pub fn builder() -> JoyThemeBuilder {
+        JoyThemeBuilder::default()
+    }
+
+    /// Applies the provided overrides to the current Joy token set.
+    pub fn merge_overrides<O>(&mut self, overrides: O)
+    where
+        O: Into<JoyThemeOverrides>,
+    {
+        overrides.into().apply(self);
+    }
+
+    /// Convenience helper for building a Joy theme from overrides while
+    /// starting from the canonical defaults.
+    pub fn with_overrides<O>(overrides: O) -> Self
+    where
+        O: Into<JoyThemeOverrides>,
+    {
+        let mut base = Self::default();
+        base.merge_overrides(overrides);
+        base
+    }
+
+    /// Returns the outline declaration used by Joy components when a surface
+    /// receives keyboard focus.
+    pub fn focus_outline_for_color(&self, color: &str) -> String {
+        self.focus.outline_for_color(color)
+    }
+
+    /// Returns the focus shadow (box-shadow) used by Joy components.
+    pub fn focus_shadow_for_color(&self, color: &str) -> String {
+        self.shadow
+            .focus_ring_for_color(color, self.focus.thickness)
+    }
+
+    /// Resolves the palette colour referenced by the Joy focus configuration.
+    pub fn focus_color_from_palette(&self, palette: &PaletteScheme) -> String {
+        match self.focus.palette_reference.as_str() {
+            "neutral" => palette.neutral.clone(),
+            "danger" => palette.danger.clone(),
+            "success" => palette.success.clone(),
+            "warning" => palette.warning.clone(),
+            "info" => palette.info.clone(),
+            _ => palette.primary.clone(),
+        }
+    }
+
+    /// Exposes automation-friendly comments so downstream tooling can embed the
+    /// Joy metadata in generated configuration files without duplicating copy.
+    pub fn automation_comments() -> Vec<&'static str> {
+        vec![
+            "radius – shared corner rounding applied to Joy surfaces.",
+            "focus.thickness – pixel width of the focus outline + shadow.",
+            "focus.palette_reference – palette key resolved for focus rings.",
+            "focus.outline_template – string template used for outline CSS.",
+            "shadow.focus_ring_template – format string for Joy focus shadows.",
+            "shadow.surface – ambient elevation shadow used by Joy surfaces.",
+            "color_system.palette_slots – expected palette keys for automation.",
+            "color_system.automation_note – human readable explanation of the Joy palette contract.",
+        ]
+    }
+
+    /// Serialises the Joy theme into a JSON object that doubles as a template
+    /// for automation pipelines. The payload mirrors `serde_json::to_value` but
+    /// stays stable across releases.
+    pub fn json_template() -> serde_json::Value {
+        let default = Self::default();
+        serde_json::json!({
+            "radius": default.radius,
+            "focus": {
+                "thickness": default.focus.thickness,
+                "palette_reference": default.focus.palette_reference,
+                "outline_template": default.focus.outline_template,
+            },
+            "shadow": {
+                "focus_ring_template": default.shadow.focus_ring_template,
+                "surface": default.shadow.surface,
+            },
+            "color_system": {
+                "palette_slots": default.color_system.palette_slots,
+                "automation_note": default.color_system.automation_note,
+            }
+        })
+    }
+}
+
+impl Default for JoyTheme {
     fn default() -> Self {
         Self {
             radius: 4,
-            focus_thickness: 2,
+            focus: JoyFocus::default(),
+            shadow: JoyShadow::default(),
+            color_system: JoyColorSystemMetadata::default(),
+        }
+    }
+}
+
+/// Focus styling metadata used by Joy components.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct JoyFocus {
+    /// Thickness in pixels of the default focus ring used for accessibility.
+    pub thickness: u8,
+    /// Palette key resolved to produce the focus colour. Defaults to the Joy
+    /// primary colour so focus affordances align with brand accents.
+    pub palette_reference: String,
+    /// Format string applied to the resolved colour. The template understands
+    /// `{thickness}` and `{color}` placeholders.
+    pub outline_template: String,
+}
+
+impl JoyFocus {
+    /// Formats the outline declaration using the provided colour.
+    pub fn outline_for_color(&self, color: &str) -> String {
+        self.outline_template
+            .replace("{thickness}", &self.thickness.to_string())
+            .replace("{color}", color)
+    }
+}
+
+impl Default for JoyFocus {
+    fn default() -> Self {
+        Self {
+            thickness: 2,
+            palette_reference: "primary".to_string(),
+            outline_template: "{thickness}px solid {color}".to_string(),
+        }
+    }
+}
+
+/// Shadow presets surfaced to Joy components.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct JoyShadow {
+    /// Format string used to generate the focus shadow. The template understands
+    /// `{thickness}` and `{color}` placeholders.
+    pub focus_ring_template: String,
+    /// Ambient elevation shadow applied to surfaces such as cards.
+    pub surface: String,
+}
+
+impl JoyShadow {
+    /// Formats the focus ring shadow using the provided colour and thickness.
+    pub fn focus_ring_for_color(&self, color: &str, thickness: u8) -> String {
+        self.focus_ring_template
+            .replace("{thickness}", &thickness.to_string())
+            .replace("{color}", color)
+    }
+}
+
+impl Default for JoyShadow {
+    fn default() -> Self {
+        Self {
+            focus_ring_template: "0 0 0 {thickness}px {color}".to_string(),
+            surface: "0 8px 24px rgba(15, 23, 42, 0.18)".to_string(),
+        }
+    }
+}
+
+/// Captures the palette expectations for Joy automation pipelines.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct JoyColorSystemMetadata {
+    /// Palette keys (mirroring [`PaletteScheme`]) that Joy helpers depend on.
+    pub palette_slots: Vec<String>,
+    /// Human readable hint emitted into generated templates so downstream teams
+    /// understand how Joy resolves colours.
+    pub automation_note: String,
+}
+
+impl Default for JoyColorSystemMetadata {
+    fn default() -> Self {
+        Self {
+            palette_slots: vec![
+                "primary".to_string(),
+                "neutral".to_string(),
+                "danger".to_string(),
+                "success".to_string(),
+                "warning".to_string(),
+                "info".to_string(),
+            ],
+            automation_note: "Joy helpers resolve palette colours via Theme::palette.active() and the slots declared above.".to_string(),
+        }
+    }
+}
+
+/// Partial overrides applied to [`JoyTheme`].
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct JoyThemeOverrides {
+    pub radius: Option<u8>,
+    pub focus: Option<JoyFocusOverrides>,
+    pub shadow: Option<JoyShadowOverrides>,
+    pub color_system: Option<JoyColorSystemOverrides>,
+}
+
+impl JoyThemeOverrides {
+    /// Applies the overrides to the provided [`JoyTheme`].
+    pub fn apply(self, theme: &mut JoyTheme) {
+        if let Some(radius) = self.radius {
+            theme.radius = radius;
+        }
+        if let Some(focus) = self.focus {
+            focus.apply(&mut theme.focus);
+        }
+        if let Some(shadow) = self.shadow {
+            shadow.apply(&mut theme.shadow);
+        }
+        if let Some(color_system) = self.color_system {
+            color_system.apply(&mut theme.color_system);
+        }
+    }
+}
+
+impl From<JoyThemeBuilder> for JoyThemeOverrides {
+    fn from(builder: JoyThemeBuilder) -> Self {
+        builder.overrides
+    }
+}
+
+/// Builder style helper for constructing [`JoyThemeOverrides`].
+#[derive(Clone, Debug, Default)]
+pub struct JoyThemeBuilder {
+    overrides: JoyThemeOverrides,
+}
+
+impl JoyThemeBuilder {
+    /// Override the shared Joy radius.
+    pub fn radius(mut self, radius: u8) -> Self {
+        self.overrides.radius = Some(radius);
+        self
+    }
+
+    /// Override the focus thickness (in pixels).
+    pub fn focus_thickness(mut self, thickness: u8) -> Self {
+        self.overrides
+            .focus
+            .get_or_insert_with(Default::default)
+            .thickness = Some(thickness);
+        self
+    }
+
+    /// Update the palette slot powering focus indicators.
+    pub fn focus_palette_reference<S>(mut self, slot: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.overrides
+            .focus
+            .get_or_insert_with(Default::default)
+            .palette_reference = Some(slot.into());
+        self
+    }
+
+    /// Replace the focus outline formatting template.
+    pub fn focus_outline_template<S>(mut self, template: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.overrides
+            .focus
+            .get_or_insert_with(Default::default)
+            .outline_template = Some(template.into());
+        self
+    }
+
+    /// Override the focus ring shadow template.
+    pub fn shadow_focus_ring_template<S>(mut self, template: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.overrides
+            .shadow
+            .get_or_insert_with(Default::default)
+            .focus_ring_template = Some(template.into());
+        self
+    }
+
+    /// Override the Joy surface elevation shadow.
+    pub fn shadow_surface<S>(mut self, surface: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.overrides
+            .shadow
+            .get_or_insert_with(Default::default)
+            .surface = Some(surface.into());
+        self
+    }
+
+    /// Replace the list of palette slots documented for automation.
+    pub fn color_system_palette_slots<I, S>(mut self, slots: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.overrides
+            .color_system
+            .get_or_insert_with(Default::default)
+            .palette_slots = Some(slots.into_iter().map(Into::into).collect());
+        self
+    }
+
+    /// Provide a custom automation note for downstream tooling.
+    pub fn color_system_note<S>(mut self, note: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.overrides
+            .color_system
+            .get_or_insert_with(Default::default)
+            .automation_note = Some(note.into());
+        self
+    }
+
+    /// Finalises the builder into a [`JoyThemeOverrides`] object.
+    pub fn build(self) -> JoyThemeOverrides {
+        self.into()
+    }
+}
+
+/// Partial overrides for [`JoyFocus`].
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct JoyFocusOverrides {
+    pub thickness: Option<u8>,
+    pub palette_reference: Option<String>,
+    pub outline_template: Option<String>,
+}
+
+impl JoyFocusOverrides {
+    fn apply(self, focus: &mut JoyFocus) {
+        if let Some(thickness) = self.thickness {
+            focus.thickness = thickness;
+        }
+        if let Some(reference) = self.palette_reference {
+            focus.palette_reference = reference;
+        }
+        if let Some(template) = self.outline_template {
+            focus.outline_template = template;
+        }
+    }
+}
+
+/// Partial overrides for [`JoyShadow`].
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct JoyShadowOverrides {
+    pub focus_ring_template: Option<String>,
+    pub surface: Option<String>,
+}
+
+impl JoyShadowOverrides {
+    fn apply(self, shadow: &mut JoyShadow) {
+        if let Some(template) = self.focus_ring_template {
+            shadow.focus_ring_template = template;
+        }
+        if let Some(surface) = self.surface {
+            shadow.surface = surface;
+        }
+    }
+}
+
+/// Partial overrides for [`JoyColorSystemMetadata`].
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct JoyColorSystemOverrides {
+    pub palette_slots: Option<Vec<String>>,
+    pub automation_note: Option<String>,
+}
+
+impl JoyColorSystemOverrides {
+    fn apply(self, metadata: &mut JoyColorSystemMetadata) {
+        if let Some(slots) = self.palette_slots {
+            metadata.palette_slots = slots;
+        }
+        if let Some(note) = self.automation_note {
+            metadata.automation_note = note;
         }
     }
 }
@@ -354,7 +757,11 @@ mod tests {
         assert_eq!(theme.spacing(2), 16);
         // Joy tokens available
         assert_eq!(theme.joy.radius, 4);
-        assert_eq!(theme.joy.focus_thickness, 2);
+        assert_eq!(theme.joy.focus.thickness, 2);
+        assert_eq!(
+            theme.joy.focus.outline_for_color("#ffffff"),
+            "2px solid #ffffff"
+        );
         assert_eq!(theme.palette.light.neutral, "#64748b");
         assert_eq!(theme.palette.light.success, "#2e7d32");
         assert_eq!(theme.palette.light.warning, "#ed6c02");
@@ -365,5 +772,93 @@ mod tests {
         let json = serde_json::to_string(&theme).expect("serialize");
         let de: Theme = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(theme, de);
+    }
+
+    #[test]
+    fn palette_defaults_cover_light_and_dark_joy_colors() {
+        let palette = Palette::default();
+        for (scheme, tokens) in [
+            (ColorScheme::Light, &palette.light),
+            (ColorScheme::Dark, &palette.dark),
+        ] {
+            assert!(
+                !tokens.success.is_empty(),
+                "success token should exist for {:?}",
+                scheme
+            );
+            assert!(
+                !tokens.warning.is_empty(),
+                "warning token should exist for {:?}",
+                scheme
+            );
+            assert!(
+                !tokens.info.is_empty(),
+                "info token should exist for {:?}",
+                scheme
+            );
+        }
+    }
+
+    #[test]
+    fn joy_theme_builder_applies_overrides() {
+        let overrides = JoyTheme::builder()
+            .radius(8)
+            .focus_thickness(4)
+            .focus_palette_reference("neutral")
+            .focus_outline_template("{thickness}px dotted {color}")
+            .shadow_focus_ring_template("0 0 0 {thickness}px rgba(0,0,0,0.4)")
+            .shadow_surface("0 2px 12px rgba(0,0,0,0.2)")
+            .color_system_palette_slots(["primary", "neutral", "success"])
+            .color_system_note("custom note")
+            .build();
+
+        let mut joy = JoyTheme::default();
+        joy.merge_overrides(overrides.clone());
+
+        assert_eq!(joy.radius, 8);
+        assert_eq!(joy.focus.thickness, 4);
+        assert_eq!(joy.focus.palette_reference, "neutral");
+        assert_eq!(joy.focus.outline_template, "{thickness}px dotted {color}");
+        assert_eq!(
+            joy.shadow.focus_ring_template,
+            "0 0 0 {thickness}px rgba(0,0,0,0.4)"
+        );
+        assert_eq!(joy.shadow.surface, "0 2px 12px rgba(0,0,0,0.2)");
+        assert_eq!(
+            joy.color_system.palette_slots,
+            vec!["primary", "neutral", "success"]
+        );
+        assert_eq!(joy.color_system.automation_note, "custom note");
+
+        let rebuilt = JoyTheme::with_overrides(overrides);
+        assert_eq!(joy, rebuilt);
+    }
+
+    #[test]
+    fn theme_with_joy_overrides_injects_updates() {
+        let theme = Theme::with_joy_overrides(
+            JoyTheme::builder()
+                .focus_thickness(5)
+                .color_system_note("automation")
+                .build(),
+        );
+        assert_eq!(theme.joy.focus.thickness, 5);
+        assert_eq!(theme.joy.color_system.automation_note, "automation");
+    }
+
+    #[test]
+    fn joy_template_emits_commentary() {
+        let comments = JoyTheme::automation_comments();
+        assert!(comments.len() >= 6);
+        assert!(comments.iter().any(|c| c.contains("radius")));
+
+        let template = JoyTheme::json_template();
+        assert_eq!(
+            template
+                .get("focus")
+                .and_then(|focus| focus.get("thickness"))
+                .and_then(|value| value.as_u64()),
+            Some(2)
+        );
     }
 }

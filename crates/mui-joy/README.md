@@ -131,6 +131,26 @@ Downstream adapters (Yew, Leptos, Dioxus, Sycamore) rely on the same helper, so
 tests can assert that background and border styles shift for every color without
 duplicated lookup tables.
 
+## Joy theme automation
+
+The Joy design tokens surfaced via [`Theme::joy`](../mui-system/src/theme.rs)
+now expose a dedicated automation API. Use
+[`JoyTheme::builder`](../mui-system/src/theme.rs) to customise radius, focus, or
+shadow tokens and serialize the result with `Theme::with_joy_overrides`.
+
+When generating fixtures, pass `--joy` to the Material theming task:
+
+```bash
+cargo xtask generate-theme --joy
+```
+
+The command emits `joy_theme.<scheme>.json` and `joy_theme.template.json`
+alongside the Material outputs. Each JSON blob includes the `joy` namespace,
+the automation comments returned by `JoyTheme::automation_comments()`, and the
+canonical template from `JoyTheme::json_template()`. These metadata fields make
+it trivial to hydrate CMS systems or downstream SDKs without duplicating
+documentation.
+
 ## Examples
 
 The repository hosts comprehensive workflow demos under `examples/`:

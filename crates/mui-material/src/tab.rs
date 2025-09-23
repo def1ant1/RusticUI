@@ -123,11 +123,11 @@ fn tab_style(_orientation: TabsOrientation) -> Style {
         font_weight_bold = theme.typography.font_weight_bold.to_string(),
         line_height = format!("{:.3}", theme.typography.line_height),
         radius = format!("{}px", theme.joy.radius),
-        indicator_thickness = format!("{}px", theme.joy.focus_thickness.max(2)),
+        indicator_thickness = format!("{}px", theme.joy.focus.thickness.max(2)),
         indicator_color = theme.palette.primary.clone(),
-        indicator_radius = format!("{}px", theme.joy.focus_thickness.max(2)),
-        focus_width = format!("{}px", theme.joy.focus_thickness),
-        focus_color = theme.palette.primary.clone(),
+        indicator_radius = format!("{}px", theme.joy.focus.thickness.max(2)),
+        focus_width = format!("{}px", theme.joy.focus.thickness),
+        focus_color = theme.joy.focus_color_from_palette(theme.palette.active()),
         hover_background = format!(
             "color-mix(in srgb, {} 12%, transparent)",
             theme.palette.primary.clone()

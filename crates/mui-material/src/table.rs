@@ -491,8 +491,8 @@ fn table_row_style() -> Style {
         ),
         selected_color = theme.palette.primary.clone(),
         focus_color = theme.palette.primary.clone(),
-        focus_width = format!("{}px", theme.joy.focus_thickness.max(1)),
-        focus_offset = format!("{:.1}px", (theme.joy.focus_thickness as f32) / 2.0),
+        focus_width = format!("{}px", theme.joy.focus.thickness.max(1)),
+        focus_offset = format!("{:.1}px", (theme.joy.focus.thickness as f32) / 2.0),
     )
 }
 
