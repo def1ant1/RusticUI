@@ -281,7 +281,7 @@ fn themed_trigger_style() -> Style {
         font_family = theme.typography.font_family.clone(),
         font_size = format!("{:.3}rem", theme.typography.body1),
         focus_outline_color = theme.palette.primary.clone(),
-        focus_outline_width = format!("{:.1}px", (theme.joy.focus_thickness as f32).max(1.0) / 2.0),
+        focus_outline_width = format!("{:.1}px", (theme.joy.focus.thickness as f32).max(1.0) / 2.0),
         focus_outline_color_transparent = format!(
             "color-mix(in srgb, {} 24%, transparent)",
             theme.palette.primary.clone()

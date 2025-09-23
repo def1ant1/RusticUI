@@ -263,7 +263,7 @@ injects additional declarations driven by the active theme:
 * **Padding and radius** fall back to `theme.spacing(1)` and
   `theme.joy.radius`, providing comfortable spacing alongside familiar rounded
   corners.
-* **Focus feedback** uses `theme.joy.focus_thickness` and the primary palette to
+* **Focus feedback** uses `theme.joy.focus.thickness` and the primary palette to
   paint an accessible focus ring that still respects corporate colour palettes.
 * **Overrides** can be appended via `style_overrides`, letting consumers inject
   bespoke CSS for unique situations while the theme-synchronised defaults remain
@@ -379,6 +379,40 @@ Key behaviours to rely on in enterprise automation pipelines:
   `schemes.light`, `schemes.dark`, and additional keys. The command removes the
   historical single-file artefacts before writing the new set so stale files
   never linger in CI workspaces.
+
+### Joy override workflow
+
+Joy UI specific tokens live under [`Theme::joy`](./src/theme.rs) and are exposed
+via the strongly typed [`JoyTheme`](./src/theme.rs) struct. Enterprises can
+override these values without rewriting CSS by using the new builder helpers:
+
+```rust
+use mui_system::theme::{JoyTheme, Theme};
+
+let theme = Theme::with_joy_overrides(
+    JoyTheme::builder()
+        .radius(10)
+        .focus_thickness(3)
+        .focus_palette_reference("success")
+        .shadow_surface("0 12px 32px rgba(15, 23, 42, 0.25)")
+        .build(),
+);
+
+// The same overrides can be layered onto an existing theme instance.
+let mut runtime_theme = Theme::default();
+runtime_theme.apply_joy_overrides(
+    JoyTheme::builder().focus_outline_template("{thickness}px dashed {color}").build(),
+);
+```
+
+The automation helpers surfaced on [`JoyTheme`](./src/theme.rs) expose
+`automation_comments` and `json_template` so tooling can document the tokens
+inline. Running `cargo xtask generate-theme --joy` now produces dedicated Joy
+fixtures (`joy_theme.light.json`, `joy_theme.dark.json`, and a
+`joy_theme.template.json` snapshot) alongside the Material outputs. Each fixture
+carries the `joy` namespace plus an `automation` block containing structured
+comments and the canonical JSON template so centralised configuration systems can
+stay in lockstep with the Rust defaults.
 
 Downstream tooling should treat the generated artifacts in
 `crates/mui-system/templates` as the golden source of truth. Load the theme file

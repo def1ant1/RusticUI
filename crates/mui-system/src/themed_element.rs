@@ -157,12 +157,9 @@ fn resolve_visual_tokens(props: &ThemedProps) -> VisualTokens {
     let font_family = theme.typography.font_family.clone();
     let font_size = format!("{}px", theme.typography.font_size);
     let placeholder_color = palette.text_secondary.clone();
-    let focus_border = palette.primary.clone();
-    let focus_shadow = format!(
-        "0 0 0 {}px {}",
-        theme.joy.focus_thickness,
-        palette.primary.clone()
-    );
+    let focus_color = theme.joy.focus_color_from_palette(palette);
+    let focus_border = focus_color.clone();
+    let focus_shadow = theme.joy.focus_shadow_for_color(&focus_color);
     VisualTokens {
         text_color,
         padding,

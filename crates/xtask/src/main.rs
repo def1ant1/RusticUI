@@ -8,7 +8,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use mui_system::theme::{ColorScheme, Theme};
+use mui_system::theme::{ColorScheme, JoyTheme, Theme};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -60,6 +60,9 @@ enum Commands {
         /// Output format written to disk.
         #[arg(long, value_enum, default_value_t = ThemeFormat::Json)]
         format: ThemeFormat,
+        /// Emit Joy specific fixtures alongside the Material outputs.
+        #[arg(long)]
+        joy: bool,
     },
     /// Recompute the Material component parity dashboard.
     MaterialParity,
@@ -82,7 +85,11 @@ fn main() -> Result<()> {
         Commands::UpdateComponents => update_components(),
         Commands::AccessibilityAudit => accessibility_audit(),
         Commands::BuildDocs => build_docs(),
-        Commands::GenerateTheme { overrides, format } => generate_theme(overrides, format),
+        Commands::GenerateTheme {
+            overrides,
+            format,
+            joy,
+        } => generate_theme(overrides, format, joy),
         Commands::MaterialParity => material_parity(),
         Commands::JoyParity => joy_parity(),
     }
@@ -258,8 +265,10 @@ fn coverage() -> Result<()> {
     run(cmd)
 }
 
-fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat) -> Result<()> {
-    println!("[xtask] generating Material theme artifacts (format: {format:?})");
+fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) -> Result<()> {
+    println!(
+        "[xtask] generating Material theme artifacts (format: {format:?}, joy fixtures: {joy})"
+    );
 
     // Load the optional override fixture from disk.  We keep this logic verbose so CI logs
     // clearly document which file was considered and how it was interpreted.
@@ -398,6 +407,36 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat) -> Result<()>
         let css = mui_system::theme_provider::material_css_baseline_from_theme(&theme);
         fs::write(&css_path, css)?;
         println!("[xtask] wrote {}", css_path.display());
+
+        if joy {
+            let joy_payload = serde_json::json!({
+                "scheme": scheme,
+                "joy": &theme.joy,
+                "automation": {
+                    "comments": JoyTheme::automation_comments(),
+                    "template": JoyTheme::json_template(),
+                }
+            });
+            let joy_path = output_dir.join(format!("joy_theme.{scheme}.json"));
+            fs::write(
+                &joy_path,
+                format!("{}\n", serde_json::to_string_pretty(&joy_payload)?),
+            )?;
+            println!("[xtask] wrote {}", joy_path.display());
+
+            if scheme == "light" {
+                let template_path = output_dir.join("joy_theme.template.json");
+                let template_payload = serde_json::json!({
+                    "comments": JoyTheme::automation_comments(),
+                    "joy": JoyTheme::json_template(),
+                });
+                fs::write(
+                    &template_path,
+                    format!("{}\n", serde_json::to_string_pretty(&template_payload)?),
+                )?;
+                println!("[xtask] wrote {}", template_path.display());
+            }
+        }
     }
 
     Ok(())

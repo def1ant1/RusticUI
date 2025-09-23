@@ -17,6 +17,10 @@ html {
 
 :root {
     color-scheme: dark;
+    /* Joy automation hook: the custom properties below stay in sync with `cargo xtask generate-theme --joy`. */
+    --joy-radius: 4px;
+    --joy-focus-outline: 2px solid #90caf9;
+    --joy-focus-shadow: 0 0 0 2px #90caf9;
 }
 
 body {

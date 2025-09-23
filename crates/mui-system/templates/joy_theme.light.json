@@ -1,0 +1,61 @@
+{
+  "automation": {
+    "comments": [
+      "radius – shared corner rounding applied to Joy surfaces.",
+      "focus.thickness – pixel width of the focus outline + shadow.",
+      "focus.palette_reference – palette key resolved for focus rings.",
+      "focus.outline_template – string template used for outline CSS.",
+      "shadow.focus_ring_template – format string for Joy focus shadows.",
+      "shadow.surface – ambient elevation shadow used by Joy surfaces.",
+      "color_system.palette_slots – expected palette keys for automation.",
+      "color_system.automation_note – human readable explanation of the Joy palette contract."
+    ],
+    "template": {
+      "color_system": {
+        "automation_note": "Joy helpers resolve palette colours via Theme::palette.active() and the slots declared above.",
+        "palette_slots": [
+          "primary",
+          "neutral",
+          "danger",
+          "success",
+          "warning",
+          "info"
+        ]
+      },
+      "focus": {
+        "outline_template": "{thickness}px solid {color}",
+        "palette_reference": "primary",
+        "thickness": 2
+      },
+      "radius": 4,
+      "shadow": {
+        "focus_ring_template": "0 0 0 {thickness}px {color}",
+        "surface": "0 8px 24px rgba(15, 23, 42, 0.18)"
+      }
+    }
+  },
+  "joy": {
+    "color_system": {
+      "automation_note": "Joy helpers resolve palette colours via Theme::palette.active() and the slots declared above.",
+      "palette_slots": [
+        "primary",
+        "neutral",
+        "danger",
+        "success",
+        "warning",
+        "info"
+      ]
+    },
+    "focus": {
+      "outline_template": "{thickness}px solid {color}",
+      "palette_reference": "primary",
+      "thickness": 2
+    },
+    "radius": 4,
+    "shadow": {
+      "focus_ring_template": "0 0 0 {thickness}px {color}",
+      "surface": "0 8px 24px rgba(15, 23, 42, 0.18)"
+    }
+  },
+  "scheme": "light"
+}

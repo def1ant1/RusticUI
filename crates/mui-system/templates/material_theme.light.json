@@ -63,6 +63,25 @@
   },
   "joy": {
     "radius": 4,
-    "focus_thickness": 2
+    "focus": {
+      "thickness": 2,
+      "palette_reference": "primary",
+      "outline_template": "{thickness}px solid {color}"
+    },
+    "shadow": {
+      "focus_ring_template": "0 0 0 {thickness}px {color}",
+      "surface": "0 8px 24px rgba(15, 23, 42, 0.18)"
+    },
+    "color_system": {
+      "palette_slots": [
+        "primary",
+        "neutral",
+        "danger",
+        "success",
+        "warning",
+        "info"
+      ],
+      "automation_note": "Joy helpers resolve palette colours via Theme::palette.active() and the slots declared above."
+    }
   }
 }

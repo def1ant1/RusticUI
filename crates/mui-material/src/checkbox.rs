@@ -92,7 +92,7 @@ fn themed_checkbox_style() -> Style {
         border_color = theme.palette.text_secondary.clone(),
         box_background = theme.palette.background_paper.clone(),
         checked_background = theme.palette.primary.clone(),
-        focus_outline_width = format!("{}px", theme.joy.focus_thickness),
+        focus_outline_width = format!("{}px", theme.joy.focus.thickness),
         focus_outline_color = theme.palette.primary.clone()
     )
 }

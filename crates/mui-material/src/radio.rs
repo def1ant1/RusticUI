@@ -138,7 +138,7 @@ fn themed_radio_option_style() -> Style {
         dot_size = format!("{}px", theme.spacing(1)),
         border_color = theme.palette.text_secondary.clone(),
         checked_background = theme.palette.primary.clone(),
-        focus_outline_width = format!("{}px", theme.joy.focus_thickness),
+        focus_outline_width = format!("{}px", theme.joy.focus.thickness),
         focus_outline_color = theme.palette.primary.clone()
     )
 }

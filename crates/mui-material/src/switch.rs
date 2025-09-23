@@ -102,7 +102,7 @@ fn themed_switch_style() -> Style {
         thumb_color = theme.palette.background_paper.clone(),
         thumb_offset = format!("{}px", theme.spacing(0)),
         thumb_translate = format!("{}px", theme.spacing(2)),
-        focus_outline_width = format!("{}px", theme.joy.focus_thickness),
+        focus_outline_width = format!("{}px", theme.joy.focus.thickness),
         focus_outline_color = theme.palette.primary.clone()
     )
 }
