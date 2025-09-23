@@ -29,7 +29,6 @@
 //! primitives behave consistently across frameworks. This design avoids manual repetitive
 //! glue code and ensures future adapters reuse the exact same prop contracts.
 
-pub mod helpers;
 #[cfg(feature = "yew")]
 pub mod accordion;
 #[cfg(feature = "yew")]
@@ -42,6 +41,8 @@ pub mod button;
 pub mod card;
 #[cfg(feature = "yew")]
 pub mod chip;
+pub mod helpers;
+pub mod macros;
 #[cfg(feature = "yew")]
 pub mod slider;
 #[cfg(feature = "yew")]
@@ -50,7 +51,6 @@ pub mod snackbar;
 pub mod stepper;
 #[cfg(feature = "yew")]
 pub mod toggle_button_group;
-pub mod macros;
 
 #[cfg(feature = "yew")]
 pub use accordion::{AccordionController, AccordionGroupState, AccordionItemChange};
@@ -58,7 +58,7 @@ pub use accordion::{AccordionController, AccordionGroupState, AccordionItemChang
 pub use aspect_ratio::{AspectRatio, AspectRatioProps};
 #[cfg(feature = "yew")]
 pub use autocomplete::{
-    AutocompleteChange, AutocompleteConfig, AutocompleteController, AutocompleteControlStrategy,
+    AutocompleteChange, AutocompleteConfig, AutocompleteControlStrategy, AutocompleteController,
     AutocompleteState,
 };
 #[cfg(feature = "yew")]
@@ -69,15 +69,13 @@ pub use card::{Card, CardProps};
 pub use chip::{Chip, ChipProps};
 pub use macros::{Color, Variant};
 #[cfg(feature = "yew")]
-pub use slider::{
-    SliderChange, SliderConfig, SliderController, SliderOrientation, SliderState,
-};
+pub use slider::{SliderChange, SliderConfig, SliderController, SliderOrientation, SliderState};
 #[cfg(feature = "yew")]
 pub use snackbar::{
     SnackbarChange, SnackbarConfig, SnackbarController, SnackbarMessage, SnackbarState,
 };
 #[cfg(feature = "yew")]
-pub use stepper::{StepStatus, StepperChange, StepperController, StepperConfig, StepperState};
+pub use stepper::{StepStatus, StepperChange, StepperConfig, StepperController, StepperState};
 #[cfg(feature = "yew")]
 pub use toggle_button_group::{
     ToggleButtonGroupChange, ToggleButtonGroupConfig, ToggleButtonGroupController,

@@ -4,9 +4,7 @@
 //! teams can consolidate automation and analytics.  Once visual components are
 //! added they simply render according to the controller’s change stream.
 
-pub use mui_headless::stepper::{
-    StepStatus, StepperChange, StepperConfig, StepperState,
-};
+pub use mui_headless::stepper::{StepStatus, StepperChange, StepperConfig, StepperState};
 
 /// Wrapper around [`StepperState`] prepared for Joy adapters.
 #[derive(Debug, Clone)]

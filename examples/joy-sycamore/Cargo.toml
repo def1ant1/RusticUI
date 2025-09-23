@@ -1,0 +1,21 @@
+[package]
+name = "joy-sycamore"
+version = "0.1.0"
+edition = "2021"
+description = "Joy UI workflow demo rendered with Sycamore"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+sycamore.workspace = true
+wasm-bindgen.workspace = true
+joy-workflows-core = { path = "../joy-workflows-core" }
+mui-headless = { path = "../../crates/mui-headless" }
+mui-joy = { path = "../../crates/mui-joy", default-features = false, features = ["sycamore"] }
+mui-system = { path = "../../crates/mui-system", features = ["sycamore"] }
+tokio = { workspace = true, optional = true }
+web-sys = { workspace = true, optional = true, features = ["HtmlInputElement"] }
+
+[features]
+default = ["csr"]
+csr = ["web-sys"]
+ssr = ["tokio"]

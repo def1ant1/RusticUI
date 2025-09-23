@@ -6,8 +6,7 @@
 //! business logic.
 
 pub use mui_headless::autocomplete::{
-    AutocompleteChange, AutocompleteConfig, AutocompleteControlStrategy,
-    AutocompleteState,
+    AutocompleteChange, AutocompleteConfig, AutocompleteControlStrategy, AutocompleteState,
 };
 
 /// Wrapper that owns an [`AutocompleteState`] ready to be plugged into Joy
