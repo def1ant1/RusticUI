@@ -48,21 +48,39 @@ macro_rules! joy_props {
         }
 
         #[cfg(feature = "leptos")]
-        impl crate::macros::LeptosPropsAdapter for $name {}
+        impl $crate::macros::LeptosPropsAdapter for $name {}
     };
 }
 
 /// Declares a simple enum and implements `Default` for the first variant.
+///
+/// The macro accepts optional attributes (including documentation comments) per
+/// variant so call sites can describe the semantics of each option without
+/// having to hand-roll the enum definition.  This keeps the `Color` palette and
+/// other Joy enums heavily documented, aligning with the repository goal of
+/// enabling enterprise teams to self-serve details directly from the code.
 #[macro_export]
 macro_rules! joy_enum {
-    ($name:ident { $first:ident $(, $rest:ident)* $(,)? }) => {
-        #[derive(Clone, PartialEq)]
+    (
+        $name:ident {
+            $(#[$first_meta:meta])* $first:ident
+            $(,
+                $(#[$rest_meta:meta])* $rest:ident
+            )*
+            $(,)?
+        }
+    ) => {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         pub enum $name {
-            $first,
-            $( $rest, )*
+            $(#[$first_meta])* $first,
+            $(
+                $(#[$rest_meta])* $rest,
+            )*
         }
         impl Default for $name {
-            fn default() -> Self { Self::$first }
+            fn default() -> Self {
+                Self::$first
+            }
         }
     };
 }
@@ -70,10 +88,48 @@ macro_rules! joy_enum {
 // Reusable enums shared across Joy components. Keeping them here ensures
 // a single source of truth so every component follows the same patterns.
 joy_enum!(Color {
+    /// Primary brand tint used for high-emphasis actions and the default Joy accent.
     Primary,
+    /// Neutral tone that keeps surfaces understated while still harmonising with the theme.
     Neutral,
-    Danger
+    /// Danger color reserved for destructive flows and critical alerts.
+    Danger,
+    /// Success feedback color reinforcing positive outcomes across dashboards and forms.
+    Success,
+    /// Warning hue signalling cautionary states that require user attention without implying failure.
+    Warning,
+    /// Informational accent balancing the palette for notification banners and secondary emphasis.
+    Info,
 });
+
+impl Color {
+    /// Stable list of every Joy palette color.  Framework adapters iterate this
+    /// constant to generate colour pickers, documentation tables, or exhaustive
+    /// tests without re-stating the palette in multiple locations.
+    pub const ALL: [Self; 6] = [
+        Self::Primary,
+        Self::Neutral,
+        Self::Danger,
+        Self::Success,
+        Self::Warning,
+        Self::Info,
+    ];
+
+    /// Lowercase identifier mirroring the class name suffixes used by the
+    /// upstream MUI libraries.  Keeping the mapping centralised guarantees that
+    /// future adapters (Leptos, Dioxus, Sycamore) can emit consistent `data-*`
+    /// hooks or CSS module keys without bespoke lookup tables.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Primary => "primary",
+            Self::Neutral => "neutral",
+            Self::Danger => "danger",
+            Self::Success => "success",
+            Self::Warning => "warning",
+            Self::Info => "info",
+        }
+    }
+}
 
 joy_enum!(Variant {
     Solid,
@@ -88,8 +144,14 @@ joy_enum!(Variant {
 #[macro_export]
 macro_rules! joy_component_props {
     ($name:ident { $( $(#[$meta:meta])* $field:ident : $ty:ty ),* $(,)? }) => {
-        crate::joy_props!($name {
+        $crate::joy_props!($name {
             /// Visual color scheme of the component.
+            ///
+            /// Supported palette entries: [`Color::Primary`], [`Color::Neutral`],
+            /// [`Color::Danger`], [`Color::Success`], [`Color::Warning`], and
+            /// [`Color::Info`].  The enum derives [`Copy`] so adapters can store
+            /// the selected value in signals or contexts without additional
+            /// allocations.
             color: Color,
             /// Variant controlling background and border styles.
             variant: Variant,

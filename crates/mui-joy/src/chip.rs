@@ -49,8 +49,7 @@ joy_component_props!(ChipProps {
 pub fn chip(props: &ChipProps) -> Html {
     let theme = use_theme();
 
-    let surface: SurfaceTokens =
-        resolve_surface_tokens(&theme, props.color.clone(), props.variant.clone());
+    let surface: SurfaceTokens = resolve_surface_tokens(&theme, props.color, props.variant);
     let dismissible = props
         .dismissible
         .unwrap_or_else(|| props.on_delete.is_some());

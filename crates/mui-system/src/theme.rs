@@ -107,6 +107,7 @@ impl Default for Breakpoints {
 
 /// Minimal color palette capturing primary and secondary accents.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 pub struct PaletteScheme {
     pub primary: String,
     pub secondary: String,
@@ -114,6 +115,15 @@ pub struct PaletteScheme {
     pub neutral: String,
     /// Danger color used by Joy components.
     pub danger: String,
+    /// Success color surfaced by Joy primitives for positive feedback states.
+    #[serde(default = "default_palette_success")]
+    pub success: String,
+    /// Warning color mapped to Joy cautionary components.
+    #[serde(default = "default_palette_warning")]
+    pub warning: String,
+    /// Informational accent rounding out the Joy palette.
+    #[serde(default = "default_palette_info")]
+    pub info: String,
     /// Background color used for the app shell.
     pub background_default: String,
     /// Background color for elevated surfaces like cards.
@@ -124,6 +134,18 @@ pub struct PaletteScheme {
     pub text_secondary: String,
 }
 
+fn default_palette_success() -> String {
+    "#2e7d32".to_string()
+}
+
+fn default_palette_warning() -> String {
+    "#ed6c02".to_string()
+}
+
+fn default_palette_info() -> String {
+    "#0288d1".to_string()
+}
+
 impl Default for PaletteScheme {
     fn default() -> Self {
         Self {
@@ -131,6 +153,9 @@ impl Default for PaletteScheme {
             secondary: "#dc004e".to_string(),
             neutral: "#64748b".to_string(),
             danger: "#d32f2f".to_string(),
+            success: default_palette_success(),
+            warning: default_palette_warning(),
+            info: default_palette_info(),
             background_default: "#fafafa".to_string(),
             background_paper: "#ffffff".to_string(),
             text_primary: "#1f2933".to_string(),
@@ -203,6 +228,9 @@ fn default_dark_palette() -> PaletteScheme {
         secondary: "#f48fb1".to_string(),
         neutral: "#94a3b8".to_string(),
         danger: "#f44336".to_string(),
+        success: "#66bb6a".to_string(),
+        warning: "#ffb74d".to_string(),
+        info: "#29b6f6".to_string(),
         background_default: "#121212".to_string(),
         background_paper: "#1e1e1e".to_string(),
         text_primary: "#ffffff".to_string(),
@@ -328,6 +356,9 @@ mod tests {
         assert_eq!(theme.joy.radius, 4);
         assert_eq!(theme.joy.focus_thickness, 2);
         assert_eq!(theme.palette.light.neutral, "#64748b");
+        assert_eq!(theme.palette.light.success, "#2e7d32");
+        assert_eq!(theme.palette.light.warning, "#ed6c02");
+        assert_eq!(theme.palette.light.info, "#0288d1");
         assert_eq!(theme.breakpoints.xs, 0);
 
         // Round trip through JSON to ensure `serde` wiring is correct
