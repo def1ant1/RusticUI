@@ -142,7 +142,7 @@ jobs:
       # Regenerate component scaffolding
       - run: cargo xtask update-components
       # Refresh icon bindings from upstream Material icons
-      - run: cargo xtask refresh-icons
+      - run: cargo xtask icon-update
       # Capture the Joy UI component inventory so regressions surface quickly in diffs
       - name: Generate Joy component parity report
         run: cargo xtask joy-inventory

@@ -40,6 +40,15 @@ enum Commands {
     /// Build API documentation for the entire workspace.
     Doc,
     /// Refresh the Material Design icon bindings.
+    ///
+    /// Historically this task shipped under the `refresh-icons` name. We
+    /// preserve that alias so automation and bespoke scripts keep working while
+    /// providing the canonical `icon-update` entrypoint surfaced in `--help`
+    /// output for new contributors.
+    #[command(
+        name = "icon-update",
+        aliases = ["refresh-icons", "refresh_icons"]
+    )]
     RefreshIcons,
     /// Generate an `lcov.info` report using grcov.
     Coverage,
