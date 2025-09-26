@@ -3,6 +3,24 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-03-18 – Rustic crate rename docs complete
+
+### Highlights
+
+- Updated the top-level README, migration guide, and changelog to reference the
+  published `rustic-ui-*` crates directly, replacing the temporary aliasing
+  instructions.
+- Documented the `compat-mui` feature flag alongside the new
+  `scripts/migrate-crate-prefix.sh` helper so downstream workspaces can automate
+  import rewrites and lint verification.
+- Verified that documentation examples compile against the renamed crates via
+  `cargo doc --no-deps`.
+
+### Backlog
+
+- [ ] Expand the migration automation script to toggle crate features per
+  framework (Leptos, Sycamore, Dioxus) automatically.
+
 ## 2025-03-11 – Navigation orchestration blueprint
 
 ### Highlights

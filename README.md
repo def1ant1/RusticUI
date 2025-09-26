@@ -18,27 +18,31 @@ project governance lives fully in the open under the Apache-2.0/MIT dual license
 
 ## Quick start
 
-Ensure you have [Rust](https://www.rust-lang.org/tools/install) installed. Alias the current crates to the new RusticUI namespace:
+Ensure you have [Rust](https://www.rust-lang.org/tools/install) installed, then depend on the published crates directly:
 
 ```bash
-cargo add mui-material --rename rustic_ui
+cargo add rustic-ui-material --features yew
+cargo add rustic-ui-styled-engine
 ```
 
-Render a button with Leptos using the RusticUI alias:
+Render a button using the React-compatible HTML adapter and headless state machine:
 
 ```rust
-use leptos::*;
-use rustic_ui::Button;
+use rustic_ui_headless::button::ButtonState;
+use rustic_ui_material::button::{self, ButtonProps};
 
 fn main() {
-    leptos::mount_to_body(|cx| view! { cx, <Button>"Welcome to RusticUI"</Button> })
+    let props = ButtonProps::new("Welcome to RusticUI");
+    let state = ButtonState::new(false, None);
+    let html = button::react::render(&props, &state);
+    println!("{html}");
 }
 ```
 
-Run an example with the Yew adapter:
+Run the Yew starter to confirm the crates integrate with framework tooling:
 
 ```bash
-cargo run --package mui-yew --example hello_world
+cargo run --manifest-path examples/mui-yew/Cargo.toml --features csr
 ```
 
 ## Legacy MUI compatibility shims
@@ -47,8 +51,16 @@ The crates now ship under the `rustic_ui_*` namespace. To keep migrations predic
 `compat-mui` Cargo feature that re-exports the legacy `mui_*` identifiers as deprecated aliases. Enable the feature
 while you update imports, watch the compiler warnings it emits, and disable it once your workspace is clean.
 
-See [`docs/mui-compatibility.md`](docs/mui-compatibility.md) for a step-by-step migration playbook covering dependency
-updates, automation-friendly `cargo fix` flows, and the planned removal timeline for the shims.
+Use the automation-first migration routine to avoid hand editing thousands of call sites:
+
+1. Flip dependencies to the new crate names and temporarily enable `compat-mui`.
+2. Run `scripts/migrate-crate-prefix.sh --with-compat` so the compiler rewrites imports automatically.
+3. Remove the compatibility features from `Cargo.toml`.
+4. Run `scripts/migrate-crate-prefix.sh --verify-clean` to deny warnings and surface any lingering aliases.
+5. Rerun your CI entrypoints (see [Rust CI quick reference](#rust-ci-quick-reference)).
+
+The [`docs/mui-compatibility.md`](docs/mui-compatibility.md) guide expands on the workflow and documents
+automation-friendly guardrails for large-scale migrations.
 
 ## Design system automation with `css_with_theme!`
 
