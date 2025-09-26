@@ -54,7 +54,7 @@ cargo xtask joy-inventory
 
 The xtask delegates to `tools/joy-parity`, a standalone Rust binary that walks
 `packages/mui-joy/src/**/index.ts` via SWC, normalizes aliases, and compares the
-exports with the Rust crates (`crates/mui-joy` and `crates/mui-headless`). The
+exports with the Rust crates (`crates/rustic-ui-joy` and `crates/rustic-ui-headless`). The
 command rewrites `docs/joy-component-parity.md` with a markdown dashboard plus a
 machine-readable JSON blob embedded in the same file. Commit the refreshed
 artifact so CI stays clean and enterprise adopters can spot parity gaps without
@@ -64,7 +64,7 @@ replicating the analysis locally.
 
 Regenerating the serialized Material theme is a fully automated flow powered by
 `cargo xtask generate-theme`. Always prefer this command over hand-editing the
-files under `crates/mui-system/templates`:
+files under `crates/rustic-ui-system/templates`:
 
 ```bash
 cargo xtask generate-theme --overrides crates/xtask/tests/fixtures/material_overrides.json --format json
@@ -92,7 +92,7 @@ lockstep without manual editing.
 ### Icon library maintenance
 
 Multi-set icon support is fully automated. Always run the consolidated pipeline
-after adding or removing SVGs in `crates/mui-icons/icons/**` or when pulling a
+after adding or removing SVGs in `crates/rustic-ui-icons/icons/**` or when pulling a
 fresh drop from upstream Material sources:
 
 ```bash

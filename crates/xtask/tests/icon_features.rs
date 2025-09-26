@@ -107,8 +107,8 @@ fn feature_block(manifest: &str) -> &str {
 #[test]
 fn new_icon_sets_update_the_manifest_deterministically() -> Result<()> {
     let workspace = workspace_root();
-    let manifest_path = workspace.join("crates/mui-icons/Cargo.toml");
-    let icons_root = workspace.join("crates/mui-icons/icons");
+    let manifest_path = workspace.join("crates/rustic-ui-icons/Cargo.toml");
+    let icons_root = workspace.join("crates/rustic-ui-icons/icons");
     let fixture_set = icons_root.join("__xtask_fixture");
 
     assert!(

@@ -35,7 +35,7 @@ Running `cargo xtask fmt --check` mirrors the CI lint job by wrapping the two co
 cargo test --workspace --all-features
 ```
 
-This is the quickest way to surface failures in the shared headless state machines, Material adapter suites, and the Joy headless unit tests under `crates/mui-joy/tests/headless_state_tests.rs`. CI calls the same entrypoint via `cargo xtask test`, which additionally checks that each example still compiles for `wasm32-unknown-unknown`.
+This is the quickest way to surface failures in the shared headless state machines, Material adapter suites, and the Joy headless unit tests under `crates/rustic-ui-joy/tests/headless_state_tests.rs`. CI calls the same entrypoint via `cargo xtask test`, which additionally checks that each example still compiles for `wasm32-unknown-unknown`.
 
 ### Joy snapshot parity suites
 Joy UI ships SSR renderers for every supported framework. The parity suites compare each adapter to the canonical React output so teams can guarantee hydration-safe markup whenever Joy tokens evolve. Target a single framework or run the whole matrix:
@@ -54,7 +54,7 @@ cargo test -p mui-material --test joy_dioxus --features dioxus
 cargo test -p mui-material --test joy_sycamore --features sycamore
 ```
 
-Each suite consumes the shared fixtures in `crates/mui-material/tests/common/fixtures.rs` so updating the canonical props or Joy analytics hooks automatically propagates across frameworks.
+Each suite consumes the shared fixtures in `crates/rustic-ui-material/tests/common/fixtures.rs` so updating the canonical props or Joy analytics hooks automatically propagates across frameworks.
 
 ### WebAssembly integration tests
 Interactive components execute inside a headless Chrome instance using the `wasm-bindgen-test` harness. Install Chrome/Chromium locally so `wasm-pack test --headless --chrome` can launch the browser. The fastest way to exercise every crate/feature pair is:
@@ -67,16 +67,16 @@ CI relies on this command to build and run WebAssembly tests for both `mui-joy` 
 
 ```bash
 # Joy UI adapters
-(cd crates/mui-joy && wasm-pack test --headless --chrome -- --no-default-features --features yew)
-(cd crates/mui-joy && wasm-pack test --headless --chrome -- --no-default-features --features leptos)
-(cd crates/mui-joy && wasm-pack test --headless --chrome -- --no-default-features --features dioxus)
-(cd crates/mui-joy && wasm-pack test --headless --chrome -- --no-default-features --features sycamore)
+(cd crates/rustic-ui-joy && wasm-pack test --headless --chrome -- --no-default-features --features yew)
+(cd crates/rustic-ui-joy && wasm-pack test --headless --chrome -- --no-default-features --features leptos)
+(cd crates/rustic-ui-joy && wasm-pack test --headless --chrome -- --no-default-features --features dioxus)
+(cd crates/rustic-ui-joy && wasm-pack test --headless --chrome -- --no-default-features --features sycamore)
 
 # Material adapters
-(cd crates/mui-material && wasm-pack test --headless --chrome -- --no-default-features --features yew)
-(cd crates/mui-material && wasm-pack test --headless --chrome -- --no-default-features --features leptos)
-(cd crates/mui-material && wasm-pack test --headless --chrome -- --no-default-features --features dioxus)
-(cd crates/mui-material && wasm-pack test --headless --chrome -- --no-default-features --features sycamore)
+(cd crates/rustic-ui-material && wasm-pack test --headless --chrome -- --no-default-features --features yew)
+(cd crates/rustic-ui-material && wasm-pack test --headless --chrome -- --no-default-features --features leptos)
+(cd crates/rustic-ui-material && wasm-pack test --headless --chrome -- --no-default-features --features dioxus)
+(cd crates/rustic-ui-material && wasm-pack test --headless --chrome -- --no-default-features --features sycamore)
 ```
 
 The `--no-default-features` flag mirrors CI by ensuring optional adapters declare their dependencies explicitly. When a run fails because Chrome cannot be located, set `CHROME` or `CHROMIUM` to the browser executable path. Browser console output is captured automatically, so rerun with `-- --nocapture` to view detailed logs.
@@ -91,7 +91,7 @@ cargo test -p mui-material yew_button_matches_react_baseline --features yew -- -
 Typical remediation steps:
 
 1. Confirm whether the React renderer (`mui_material::button::react`, `mui_material::chip::react`, etc.) changed intentionally. If so, update the corresponding framework adapter module so it emits the new markup.
-2. If analytics hooks or accessibility IDs changed globally, adjust the shared fixtures in `crates/mui-material/tests/common/fixtures.rs` so every parity suite receives the same canonical data.
+2. If analytics hooks or accessibility IDs changed globally, adjust the shared fixtures in `crates/rustic-ui-material/tests/common/fixtures.rs` so every parity suite receives the same canonical data.
 3. Re-run the targeted test, then `cargo test --workspace --all-features` to ensure no other suites regressed.
 
 This approach keeps the parity harness self-healing—updating either the fixtures or adapter renderers refreshes the "snapshot" without maintaining external files.

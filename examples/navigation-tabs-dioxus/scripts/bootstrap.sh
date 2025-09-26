@@ -15,9 +15,9 @@ cat > "$EXAMPLE_ROOT/README.md" <<'MD'
   dioxus = { version = "0.5", features = ["web"] }
   dioxus-router = "0.5"
   wasm-bindgen = "0.2"
-  mui-material = { path = "../../crates/mui-material", features = ["dioxus"] }
-  mui-headless = { path = "../../crates/mui-headless" }
-  mui-styled-engine = { path = "../../crates/mui-styled-engine", features = ["dioxus"] }
+  mui-material = { path = "../../crates/rustic-ui-material", features = ["dioxus"] }
+  mui-headless = { path = "../../crates/rustic-ui-headless" }
+  mui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["dioxus"] }
   ```
 - Render markup via `tabs::dioxus::render_tab_list` and insert it using
   `rsx!` with `dangerous_inner_html`.

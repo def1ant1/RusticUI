@@ -22,7 +22,7 @@ The command creates `target/feedback-tooltips/<framework>/` folders containing:
 
 Each hydration stub keeps the markup intact so automated QA suites can hydrate
 the same document while toggling tooltip visibility through the shared
-[`TooltipState`](../../crates/mui-headless/src/tooltip.rs).
+[`TooltipState`](../../crates/rustic-ui-headless/src/tooltip.rs).
 
 ## Theme overrides & automation ids
 

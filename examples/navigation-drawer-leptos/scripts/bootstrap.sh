@@ -18,9 +18,9 @@ edition = "2021"
 leptos = { version = "0.6", features = ["csr"] }
 leptos_router = { version = "0.6", features = ["csr"] }
 wasm-bindgen = "0.2"
-mui-material = { path = "../../crates/mui-material", features = ["leptos"] }
-mui-headless = { path = "../../crates/mui-headless" }
-mui-styled-engine = { path = "../../crates/mui-styled-engine", features = ["leptos"] }
+mui-material = { path = "../../crates/rustic-ui-material", features = ["leptos"] }
+mui-headless = { path = "../../crates/rustic-ui-headless" }
+mui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["leptos"] }
 TOML
 
 cat > "$EXAMPLE_ROOT/Trunk.toml" <<'TOML'

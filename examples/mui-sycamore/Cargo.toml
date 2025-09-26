@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 sycamore.workspace = true
-mui-system = { path = "../../crates/mui-system", features = ["sycamore"] }
+mui-system = { path = "../../crates/rustic-ui-system", features = ["sycamore"] }
 tokio = { workspace = true, optional = true }
 
 [features]

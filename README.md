@@ -44,7 +44,7 @@ cargo run --package mui-yew --example hello_world
 ## Design system automation with `css_with_theme!`
 
 Enterprise teams demand consistent design tokens without repetitive wiring. The RusticUI theming macros automatically inject the
-active [`Theme`](crates/mui-styled-engine/src/theme.rs) into scoped CSS blocks, keeping palettes, spacing, and elevation centralized.
+active [`Theme`](crates/rustic-ui-styled-engine/src/theme.rs) into scoped CSS blocks, keeping palettes, spacing, and elevation centralized.
 
 ```rust
 use leptos::*;
@@ -157,11 +157,11 @@ stay in sync across environments.【F:examples/select-menu-yew/src/main.rs†L13
 ## Data display blueprints
 
 Material themed data display components ship alongside the interactive widgets.
-The [`list`](crates/mui-material/src/list.rs) renderer exposes density and
+The [`list`](crates/rustic-ui-material/src/list.rs) renderer exposes density and
 typography variants while emitting deterministic automation hooks for every
-item.【F:crates/mui-material/src/list.rs†L1-L355】 The [`table`](crates/mui-material/src/table.rs) module layers column
+item.【F:crates/rustic-ui-material/src/list.rs†L1-L355】 The [`table`](crates/rustic-ui-material/src/table.rs) module layers column
 metadata, zebra striping, and numeric alignment on top of the same headless
-state machine so selectable rows behave consistently.【F:crates/mui-material/src/table.rs†L1-L356】 Cookbook examples for
+state machine so selectable rows behave consistently.【F:crates/rustic-ui-material/src/table.rs†L1-L356】 Cookbook examples for
 Yew and Leptos live under `examples/data-display-*` and can be run with
 `cargo run --package data-display-yew` or
 `cargo run --package data-display-leptos --features csr` respectively.【F:examples/data-display-yew/README.md†L1-L21】【F:examples/data-display-leptos/README.md†L1-L21】 The

@@ -14,7 +14,7 @@ accessible.
 | AccordionGroup | ✅ | **New:** `mui_headless::accordion` | Group manager that enforces single/multi expansion policies. |
 | AccordionSummary | ✅ | **New:** `mui_headless::accordion` | Trigger surface wired into the accordion change stream. |
 | Alert | ⚠️ | Not yet modelled | Mostly presentational; dismissal will reuse snackbar queueing later. |
-| AspectRatio | ❌ | Available (`crates/mui-joy::aspect_ratio`) | Layout helper without interactivity. |
+| AspectRatio | ❌ | Available (`crates/rustic-ui-joy::aspect_ratio`) | Layout helper without interactivity. |
 | Autocomplete | ✅ | **New:** `mui_headless::autocomplete` | Hybrid text input + listbox that reuses select patterns. |
 | AutocompleteListbox | ✅ | **New:** `mui_headless::autocomplete` | Popover list that mirrors Joy’s listbox styling. |
 | AutocompleteOption | ✅ | **New:** `mui_headless::autocomplete` | Option level helpers for automation IDs and ARIA wiring. |
@@ -25,7 +25,7 @@ accessible.
 | Breadcrumbs | ❌ | Pending Joy port | Navigation aid without local state. |
 | Button | ✅ | Available (`mui_headless::button`) | Button state is already centralised and consumed by Joy. |
 | ButtonGroup | ✅ | **New:** `mui_headless::toggle_button_group` | Shared toggle orchestration for grouped buttons. |
-| Card | ❌ | Available (`crates/mui-joy::card`) | Presentational Joy component. |
+| Card | ❌ | Available (`crates/rustic-ui-joy::card`) | Presentational Joy component. |
 | CardActions | ❌ | Pending Joy port | Layout helper. |
 | CardContent | ❌ | Pending Joy port | Layout helper. |
 | CardCover | ❌ | Pending Joy port | Layout helper. |
@@ -96,7 +96,7 @@ accessible.
 
 The newly introduced headless modules (`accordion`, `autocomplete`, `slider`,
 `snackbar`, `stepper`, `toggle_button_group`) unlock Joy specific wrappers in
-`crates/mui-joy`.  Remaining non-interactive components can be brought across
+`crates/rustic-ui-joy`.  Remaining non-interactive components can be brought across
 iteratively without headless changes, while future interactive widgets (e.g.
 Alert dismissal, advanced tables) should follow the same headless-first
 pattern.
