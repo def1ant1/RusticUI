@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use mui_system::use_theme;
+use rustic_ui_system::use_theme;
 
 /// Basic Dioxus component demonstrating integration with `mui-system`.
 fn App(cx: Scope) -> Element {

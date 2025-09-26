@@ -8,7 +8,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use mui_system::theme::{ColorScheme, JoyTheme, Theme};
+use rustic_ui_system::theme::{ColorScheme, JoyTheme, Theme};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -113,7 +113,7 @@ enum ThemeFormat {
 
 /// Returns the workspace root so automation can run from a stable location.
 ///
-/// Commands like `cargo run -p mui-icons` expect relative paths that are rooted
+/// Commands like `cargo run -p rustic-ui-icons` expect relative paths that are rooted
 /// at the repository top-level. Computing it once keeps subsequent helpers
 /// compact and avoids repeating the ancestor traversal logic.
 fn workspace_root() -> PathBuf {
@@ -233,21 +233,23 @@ fn refresh_icons() -> Result<()> {
 
     println!("[xtask] refreshing upstream Material icons via the managed download utility");
     // Delegate to the existing Rust binary that fetches the latest Material
-    // Design SVGs and rewrites the `mui-icons-material` feature manifest.
+    // Design SVGs and rewrites the `rustic-ui-icons-material` feature manifest.
     let mut material = Command::new("cargo");
     material
         .current_dir(&workspace)
         .arg("run")
         .arg("-p")
-        .arg("mui-icons-material")
+        .arg("rustic-ui-icons-material")
         .arg("--bin")
         .arg("update_icons")
         .arg("--features")
         .arg("update-icons");
     run(material)?;
 
-    println!("[xtask] regenerating the consolidated mui-icons feature manifest from local assets");
-    // Ensure the top-level `mui-icons` crate mirrors whatever assets are now on
+    println!(
+        "[xtask] regenerating the consolidated rustic-ui-icons feature manifest from local assets"
+    );
+    // Ensure the top-level `rustic-ui-icons` crate mirrors whatever assets are now on
     // disk. This keeps the multi-set workflow deterministic across CI and
     // contributor machines.
     let mut features = Command::new("cargo");
@@ -255,7 +257,7 @@ fn refresh_icons() -> Result<()> {
         .current_dir(&workspace)
         .arg("run")
         .arg("-p")
-        .arg("mui-icons")
+        .arg("rustic-ui-icons")
         .arg("--bin")
         .arg("update_features");
     run(features)
@@ -330,7 +332,7 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
     };
 
     // Always start from the canonical Material theme before layering user supplied overrides.
-    let base_theme = mui_system::theme_provider::material_theme();
+    let base_theme = rustic_ui_system::theme_provider::material_theme();
 
     // Split overrides into the portions that apply to all color schemes and the
     // scheme-specific fragments.  We intentionally keep this logic explicit so
@@ -423,7 +425,7 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
             )
         })?;
         let mut theme =
-            mui_system::theme_provider::material_theme_with_optional_overrides(Some(merged_theme));
+            rustic_ui_system::theme_provider::material_theme_with_optional_overrides(Some(merged_theme));
         if let Some(color_scheme) = match scheme.as_str() {
             "light" => Some(ColorScheme::Light),
             "dark" => Some(ColorScheme::Dark),
@@ -445,7 +447,7 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
         println!("[xtask] wrote {}", output_path.display());
 
         let css_path = output_dir.join(format!("material_css_baseline.{scheme}.css"));
-        let css = mui_system::theme_provider::material_css_baseline_from_theme(&theme);
+        let css = rustic_ui_system::theme_provider::material_css_baseline_from_theme(&theme);
         fs::write(&css_path, css)?;
         println!("[xtask] wrote {}", css_path.display());
 

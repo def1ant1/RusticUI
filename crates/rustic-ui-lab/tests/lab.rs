@@ -1,14 +1,14 @@
-use mui_lab::adapters::{AdapterChrono, AdapterTime, DateAdapter, TimeAdapter};
-use mui_lab::autocomplete::Autocomplete;
-use mui_lab::data_grid::DataGrid;
-use mui_lab::date_picker::{DatePicker, Key};
-use mui_lab::localization::{
+use rustic_ui_lab::adapters::{AdapterChrono, AdapterTime, DateAdapter, TimeAdapter};
+use rustic_ui_lab::autocomplete::Autocomplete;
+use rustic_ui_lab::data_grid::DataGrid;
+use rustic_ui_lab::date_picker::{DatePicker, Key};
+use rustic_ui_lab::localization::{
     init_default_locales, register_locale, LocalePack, LocalizationProvider,
 };
-use mui_lab::masonry::Masonry;
-use mui_lab::time_picker::TimePicker;
-use mui_lab::timeline::{Timeline, TimelineEvent};
-use mui_lab::tree_view::TreeNode;
+use rustic_ui_lab::masonry::Masonry;
+use rustic_ui_lab::time_picker::TimePicker;
+use rustic_ui_lab::timeline::{Timeline, TimelineEvent};
+use rustic_ui_lab::tree_view::TreeNode;
 
 /// Custom locale used to prove that the provider can be extended at
 /// runtime by the community.
@@ -73,7 +73,7 @@ fn masonry_distributes_items_round_robin() {
 
 #[test]
 fn locale_pack_serializes_to_json() {
-    let en = mui_lab::localization::EnUs::default();
+    let en = rustic_ui_lab::localization::EnUs::default();
     let json = serde_json::to_string(&en).expect("serialize locale");
     assert!(json.contains("date_format"));
 }

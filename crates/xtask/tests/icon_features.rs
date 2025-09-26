@@ -132,7 +132,7 @@ fn new_icon_sets_update_the_manifest_deterministically() -> Result<()> {
         .current_dir(&workspace)
         .arg("run")
         .arg("-p")
-        .arg("mui-icons")
+        .arg("rustic-ui-icons")
         .arg("--bin")
         .arg("update_features")
         .assert()
@@ -144,7 +144,7 @@ fn new_icon_sets_update_the_manifest_deterministically() -> Result<()> {
 
     let stdout = String::from_utf8_lossy(&assertion.get_output().stdout);
     assert!(
-        stdout.contains("[mui-icons] regenerating feature manifest"),
+        stdout.contains("[rustic-ui-icons] regenerating feature manifest"),
         "generator output should provide context for maintainers"
     );
 
@@ -176,7 +176,7 @@ fn new_icon_sets_update_the_manifest_deterministically() -> Result<()> {
         .current_dir(&workspace)
         .arg("run")
         .arg("-p")
-        .arg("mui-icons")
+        .arg("rustic-ui-icons")
         .arg("--bin")
         .arg("update_features")
         .assert()

@@ -5,7 +5,7 @@
 //! ready we simply plug the controller into the adapter without re-threading
 //! business logic.
 
-pub use mui_headless::autocomplete::{
+pub use rustic_ui_headless::autocomplete::{
     AutocompleteChange, AutocompleteConfig, AutocompleteControlStrategy, AutocompleteState,
 };
 

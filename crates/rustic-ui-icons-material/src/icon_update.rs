@@ -57,7 +57,7 @@ impl Default for UpdateOptions {
         let workspace_root = crate_dir
             .ancestors()
             .nth(2)
-            .expect("mui-icons-material lives two levels below the workspace root")
+            .expect("rustic-ui-icons-material lives two levels below the workspace root")
             .to_path_buf();
         Self {
             source_url: DEFAULT_ZIP_URL.to_string(),

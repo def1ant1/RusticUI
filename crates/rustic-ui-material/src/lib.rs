@@ -8,8 +8,8 @@
 //!
 //! # Example
 //! ```rust,ignore
-//! use mui_material::{Button, ButtonProps};
-//! use mui_styled_engine::{ThemeProvider, Theme};
+//! use rustic_ui_material::{Button, ButtonProps};
+//! use rustic_ui_styled_engine::{ThemeProvider, Theme};
 //! use yew::prelude::*;
 //!
 //! #[function_component(App)]
@@ -46,11 +46,11 @@ pub mod tabs;
 pub mod text_field;
 pub mod tooltip;
 
-pub use mui_styled_engine::Theme;
+pub use rustic_ui_styled_engine::Theme;
 
 /// Confirms that the crate links to `mui-styled-engine` and compiles.
 pub fn placeholder() {
-    mui_styled_engine::placeholder();
+    rustic_ui_styled_engine::placeholder();
 }
 
 #[cfg(test)]

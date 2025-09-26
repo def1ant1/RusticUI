@@ -1,4 +1,4 @@
-use mui_system::{
+use rustic_ui_system::{
     responsive::Responsive,
     stack::{build_stack_style, StackDirection, StackStyleInputs},
     Theme,

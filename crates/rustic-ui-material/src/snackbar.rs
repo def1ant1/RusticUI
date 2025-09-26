@@ -1,9 +1,9 @@
 //! Snackbar component that surfaces transient feedback with theme aware styling
 //! and ARIA metadata.
 //!
-//! [`css_with_theme!`](mui_styled_engine::css_with_theme) drives color,
+//! [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme) drives color,
 //! spacing and border decisions from the active
-//! [`Theme`](mui_styled_engine::Theme). The
+//! [`Theme`](rustic_ui_styled_engine::Theme). The
 //! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
 //! converts generated styles into scoped classes that every adapter consumes
 //! while [`style_helpers::themed_attributes_html`](crate::style_helpers::themed_attributes_html)
@@ -12,7 +12,7 @@
 //! technologies.
 
 #[cfg(any(feature = "yew", feature = "dioxus", feature = "sycamore"))]
-use mui_styled_engine::{css_with_theme, use_theme, Style, Theme};
+use rustic_ui_styled_engine::{css_with_theme, use_theme, Style, Theme};
 
 #[cfg(feature = "yew")]
 use yew::prelude::*;

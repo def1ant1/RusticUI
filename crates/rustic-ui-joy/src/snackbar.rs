@@ -5,7 +5,7 @@
 //! simply forward events into the controller and map the emitted
 //! [`SnackbarChange`] into UI updates.
 
-pub use mui_headless::snackbar::{SnackbarChange, SnackbarConfig, SnackbarMessage, SnackbarState};
+pub use rustic_ui_headless::snackbar::{SnackbarChange, SnackbarConfig, SnackbarMessage, SnackbarState};
 
 /// Wrapper around [`SnackbarState`] that keeps the clock generic for tests.
 #[derive(Debug, Clone)]

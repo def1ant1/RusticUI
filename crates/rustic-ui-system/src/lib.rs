@@ -44,7 +44,7 @@ pub use style::*;
 #[doc(hidden)]
 pub use stylist::{css, Style};
 pub use theme::{Breakpoints, Palette, Theme};
-extern crate self as mui_styled_engine;
+extern crate self as rustic_ui_styled_engine;
 #[cfg(all(not(feature = "yew"), feature = "leptos"))]
 pub use theme_provider::ThemeProviderLeptos as ThemeProvider;
 #[cfg(feature = "yew")]

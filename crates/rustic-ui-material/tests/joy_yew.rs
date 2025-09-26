@@ -11,7 +11,7 @@
 mod fixtures;
 
 use fixtures::{button_props, button_state_default, chip_props, chip_state_focused};
-use mui_material::{button, chip};
+use rustic_ui_material::{button, chip};
 
 #[test]
 fn yew_button_matches_react_baseline() {

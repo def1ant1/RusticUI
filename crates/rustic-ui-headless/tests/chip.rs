@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use mui_headless::chip::{ChipAttributes, ChipConfig, ChipDeleteAttributes, ChipState};
-use mui_headless::timing::MockClock;
+use rustic_ui_headless::chip::{ChipAttributes, ChipConfig, ChipDeleteAttributes, ChipState};
+use rustic_ui_headless::timing::MockClock;
 
 fn bootstrap_state(clock: MockClock) -> ChipState<MockClock> {
     ChipState::with_clock(clock, ChipConfig::default())

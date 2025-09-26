@@ -1,9 +1,9 @@
 //! Demonstrates Card, Chip and AspectRatio components working together.
 //! Run with `cargo run -p mui-joy --example card --features yew`.
 
-use mui_joy::{AspectRatio, Card, Chip, Color, Variant};
-use mui_system::theme_provider::ThemeProvider;
-use mui_system::Theme;
+use rustic_ui_joy::{AspectRatio, Card, Chip, Color, Variant};
+use rustic_ui_system::theme_provider::ThemeProvider;
+use rustic_ui_system::Theme;
 use yew::prelude::*;
 
 #[function_component(App)]

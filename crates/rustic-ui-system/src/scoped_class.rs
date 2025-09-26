@@ -5,7 +5,7 @@
 //! reusing Material UI's styling engine which expects CSS rules to be registered
 //! globally and referenced via deterministic class names.  This module provides
 //! a small wrapper around the [`Style`] handle returned by
-//! [`css_with_theme!`](mui_styled_engine::css_with_theme) so adapters can convert
+//! [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme) so adapters can convert
 //! raw CSS declarations into a class while keeping the underlying style alive
 //! for as long as the component is mounted.
 //!
@@ -16,7 +16,7 @@
 //! exposes accessors for the generated class name and stylesheet which keeps our
 //! integration tests and documentation snippets straightforward.
 
-use mui_styled_engine::Style;
+use rustic_ui_styled_engine::Style;
 
 /// Wrapper storing the scoped class produced by the styled engine alongside the
 /// [`Style`] handle that keeps the rules mounted in the document.

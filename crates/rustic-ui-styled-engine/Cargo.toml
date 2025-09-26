@@ -1,12 +1,11 @@
 [package]
-name = "mui-styled-engine"
+name = "rustic-ui-styled-engine"
 version = "0.1.0"
 edition = "2021"
 description = "Styling engine for Material UI Rust components providing theme primitives."
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/m../rustic-ui-rust"
-homepage = "https://github.com/m../rustic-ui-rust"
-documentation = "https://docs.../rustic-ui-styled-engine"
+repository = "https://github.com/apotheon-ai/rusticui"
+homepage = "https://apotheon.ai/rusticui"
+documentation = "https://docs.rs/rustic-ui-styled-engine"
 keywords = ["material", "ui", "web"]
 categories = ["gui"]
 
@@ -14,18 +13,18 @@ categories = ["gui"]
 maintenance = { status = "experimental" }
 
 [dependencies]
-mui-system = { path = "../rustic-ui-system" }
+rustic-ui-system = { path = "../rustic-ui-system" }
 stylist = { version = "0.13", default-features = false, features = ["macros", "parser", "yew_integration", "ssr"] }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
-mui-styled-engine-macros = { path = "../rustic-ui-styled-engine-macros" }
+rustic-ui-styled-engine-macros = { path = "../rustic-ui-styled-engine-macros" }
 
 [features]
 default = []
-yew = ["mui-system/yew", "dep:yew", "dep:wasm-bindgen", "stylist/yew_integration"]
-leptos = ["mui-system/leptos"]
-dioxus = ["mui-system/dioxus"]
-sycamore = ["mui-system/sycamore"]
+yew = ["rustic-ui-system/yew", "dep:yew", "dep:wasm-bindgen", "stylist/yew_integration"]
+leptos = ["rustic-ui-system/leptos"]
+dioxus = ["rustic-ui-system/dioxus"]
+sycamore = ["rustic-ui-system/sycamore"]
 
 [dev-dependencies]
 criterion = "0.5"

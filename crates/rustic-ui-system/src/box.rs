@@ -1,5 +1,5 @@
 use crate::{responsive::Responsive, style, theme::Breakpoints};
-use mui_utils::deep_merge;
+use rustic_ui_utils::deep_merge;
 use serde_json::{Map, Value};
 
 /// Lightweight descriptor passed into [`build_box_style`].  The struct keeps the

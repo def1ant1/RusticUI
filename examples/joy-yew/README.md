@@ -11,7 +11,7 @@ the shared crate so every framework emits identical automation hooks.
   checklist are all described in `joy-workflows-core`. The Yew component simply
   maps callbacks to `JoyWorkflowMachine::apply` and re-renders the snapshot.
 - **Joy design tokens** – The example resolves surface tokens via
-  `mui_joy::helpers::resolve_surface_tokens` to keep styling consistent with the
+  `rustic_ui_joy::helpers::resolve_surface_tokens` to keep styling consistent with the
   Joy design language.
 - **Analytics ready** – Every button, chip, and snackbar exposes data/analytics
   identifiers from the blueprint so CI can assert SSR + hydration parity.

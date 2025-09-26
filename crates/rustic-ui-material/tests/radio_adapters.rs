@@ -5,8 +5,8 @@
     feature = "sycamore"
 ))]
 
-use mui_headless::radio::{RadioGroupState, RadioOrientation};
-use mui_material::radio::{self, RadioGroupProps};
+use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+use rustic_ui_material::radio::{self, RadioGroupProps};
 
 fn sample_state() -> RadioGroupState {
     RadioGroupState::uncontrolled(

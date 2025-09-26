@@ -4,7 +4,7 @@
     feature = "dioxus",
     feature = "sycamore",
 ))]
-use mui_headless::list::{ListState, SelectionMode};
+use rustic_ui_headless::list::{ListState, SelectionMode};
 
 #[cfg(any(
     feature = "yew",
@@ -12,7 +12,7 @@ use mui_headless::list::{ListState, SelectionMode};
     feature = "dioxus",
     feature = "sycamore",
 ))]
-use mui_material::list::{self, ListDensity, ListItem, ListProps, ListTypography};
+use rustic_ui_material::list::{self, ListDensity, ListItem, ListProps, ListTypography};
 
 #[cfg(any(
     feature = "yew",

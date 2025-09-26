@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use feedback_tooltips::enterprise_story;
-use mui_system::theme_provider::material_css_baseline_from_theme;
+use rustic_ui_system::theme_provider::material_css_baseline_from_theme;
 
 fn main() -> std::io::Result<()> {
     let story = enterprise_story();
@@ -41,7 +41,7 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
-fn ssr_document(theme: &mui_styled_engine::Theme, body: &str, automation_id: &str) -> String {
+fn ssr_document(theme: &rustic_ui_styled_engine::Theme, body: &str, automation_id: &str) -> String {
     let baseline = material_css_baseline_from_theme(theme);
     format!(
         "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>Tooltip SSR snapshot</title>\n    <style>{baseline}</style>\n  </head>\n  <body data-automation-root=\"{automation_id}\">\n    <div id=\"app\">{body}</div>\n    <!-- Hydration scripts mount into #app using the framework specific stub. -->\n  </body>\n</html>\n",
@@ -54,11 +54,11 @@ fn ssr_document(theme: &mui_styled_engine::Theme, body: &str, automation_id: &st
 fn hydration_stub(framework: &str, automation_id: &str) -> String {
     match framework {
         "yew" => format!(
-            "use mui_material::tooltip::yew;\nuse mui_styled_engine::ThemeProvider;\nuse yew::prelude::*;\n\n#[function_component(App)]\nfn app() -> Html {{\n    let story = feedback_tooltips::enterprise_story();\n    let markup = story.markup[\"yew\"].clone();\n    html! {{\n        <ThemeProvider theme={{story.theme.clone()}}>\n            {{ Html::from_html_unchecked(AttrValue::from(markup)) }}\n        </ThemeProvider>\n    }}\n}}\n\nfn main() {{\n    // Attach any analytics listeners to `{automation_id}` before rendering.\n    yew::Renderer::<App>::new().render();\n}}\n",
+            "use rustic_ui_material::tooltip::yew;\nuse rustic_ui_styled_engine::ThemeProvider;\nuse yew::prelude::*;\n\n#[function_component(App)]\nfn app() -> Html {{\n    let story = feedback_tooltips::enterprise_story();\n    let markup = story.markup[\"yew\"].clone();\n    html! {{\n        <ThemeProvider theme={{story.theme.clone()}}>\n            {{ Html::from_html_unchecked(AttrValue::from(markup)) }}\n        </ThemeProvider>\n    }}\n}}\n\nfn main() {{\n    // Attach any analytics listeners to `{automation_id}` before rendering.\n    yew::Renderer::<App>::new().render();\n}}\n",
             automation_id = automation_id
         ),
         "leptos" => format!(
-            "use leptos::*;\n\n#[component]\nfn App(cx: Scope) -> impl IntoView {{\n    let story = feedback_tooltips::enterprise_story();\n    let markup = story.markup[\"leptos\"].clone();\n    view! {{ cx,\n        <mui_styled_engine::ThemeProvider theme=story.theme.clone()>\n            <div inner_html=markup></div>\n        </mui_styled_engine::ThemeProvider>\n    }}\n}}\n\nfn main() {{\n    leptos::mount_to_body(App);\n}}\n"
+            "use leptos::*;\n\n#[component]\nfn App(cx: Scope) -> impl IntoView {{\n    let story = feedback_tooltips::enterprise_story();\n    let markup = story.markup[\"leptos\"].clone();\n    view! {{ cx,\n        <rustic_ui_styled_engine::ThemeProvider theme=story.theme.clone()>\n            <div inner_html=markup></div>\n        </rustic_ui_styled_engine::ThemeProvider>\n    }}\n}}\n\nfn main() {{\n    leptos::mount_to_body(App);\n}}\n"
         ),
         "dioxus" => format!(
             "use dioxus::prelude::*;\n\nfn main() {{\n    let story = feedback_tooltips::enterprise_story();\n    let markup = story.markup[\"dioxus\"].clone();\n    LaunchBuilder::new(move || VirtualDom::new(|cx| render! {{ rsx! {{\n        div {{ dangerous_inner_html: markup }}\n    }} }}))\n        .launch();\n}}\n"

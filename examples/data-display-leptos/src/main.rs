@@ -1,10 +1,10 @@
 //! Minimal Leptos example wiring RusticUI data display renderers into a CSR app.
 
 use leptos::*;
-use mui_headless::list::{ListState, SelectionMode};
-use mui_material::list::{self, ListDensity, ListItem, ListProps, ListTypography};
-use mui_material::table::{self, TableColumn, TableProps, TableRow};
-use mui_styled_engine::{Theme, ThemeProvider};
+use rustic_ui_headless::list::{ListState, SelectionMode};
+use rustic_ui_material::list::{self, ListDensity, ListItem, ListProps, ListTypography};
+use rustic_ui_material::table::{self, TableColumn, TableProps, TableRow};
+use rustic_ui_styled_engine::{Theme, ThemeProvider};
 
 #[component]
 fn App() -> impl IntoView {

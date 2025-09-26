@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use mui_styled_engine::{css, Style};
+use rustic_ui_styled_engine::{css, Style};
 
 fn rust_style() {
     Style::new(css!("color: red;")).unwrap();

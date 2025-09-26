@@ -12,8 +12,8 @@
 //! Joy tokens so enterprise overrides automatically cascade.
 
 use crate::list::{ListDensity, ListTypography};
-use mui_headless::list::{ListState, SelectionMode};
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_headless::list::{ListState, SelectionMode};
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 /// Describes a column rendered in the table header.
 #[derive(Clone, Debug, PartialEq)]

@@ -6,17 +6,17 @@
 
 use std::collections::BTreeMap;
 
-use mui_headless::chip::{ChipConfig, ChipState};
-use mui_headless::tooltip::{TooltipConfig, TooltipState};
-use mui_material::chip::{
+use rustic_ui_headless::chip::{ChipConfig, ChipState};
+use rustic_ui_headless::tooltip::{TooltipConfig, TooltipState};
+use rustic_ui_material::chip::{
     dioxus as chip_dioxus, leptos as chip_leptos, sycamore as chip_sycamore, yew as chip_yew,
     ChipProps,
 };
-use mui_material::tooltip::{
+use rustic_ui_material::tooltip::{
     dioxus as tooltip_dioxus, leptos as tooltip_leptos, sycamore as tooltip_sycamore,
     yew as tooltip_yew, TooltipProps,
 };
-use mui_styled_engine::Theme;
+use rustic_ui_styled_engine::Theme;
 
 /// Combined avatar story output.
 #[derive(Debug, Clone)]
@@ -102,8 +102,8 @@ fn wrap_markup(automation_id: &str, chip_html: &str, tooltip_html: &str) -> Stri
 fn enterprise_theme() -> Theme {
     let mut theme = Theme::default();
     for scheme in [
-        mui_system::theme::ColorScheme::Light,
-        mui_system::theme::ColorScheme::Dark,
+        rustic_ui_system::theme::ColorScheme::Light,
+        rustic_ui_system::theme::ColorScheme::Dark,
     ] {
         let palette = theme.palette.scheme_mut(scheme);
         palette.background_paper = "#0F172A".into();

@@ -8,10 +8,10 @@
 mod axe;
 
 use axe::axe_check;
-use mui_joy::helpers::resolve_surface_tokens;
-use mui_joy::{AspectRatio, Button, Chip, Color, Variant};
-use mui_system::theme_provider::ThemeProvider;
-use mui_system::Theme;
+use rustic_ui_joy::helpers::resolve_surface_tokens;
+use rustic_ui_joy::{AspectRatio, Button, Chip, Color, Variant};
+use rustic_ui_system::theme_provider::ThemeProvider;
+use rustic_ui_system::Theme;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
 use yew::prelude::*;

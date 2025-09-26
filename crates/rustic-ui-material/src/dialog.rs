@@ -1,21 +1,21 @@
 //! Minimal dialog container demonstrating theme-aware styling and accessibility.
 //!
 //! ## State driven rendering
-//! * Every adapter consumes a [`DialogState`](mui_headless::dialog::DialogState)
+//! * Every adapter consumes a [`DialogState`](rustic_ui_headless::dialog::DialogState)
 //!   so the surface/backdrop visibility, focus trap analytics and escape key
 //!   telemetry remain authoritative. Passing the state object keeps server-side
 //!   rendering (SSR) and client-side rendering (CSR) perfectly aligned because
 //!   both environments observe the same lifecycle phases and transition
 //!   metadata.
 //! * Attribute builders returned by `mui-headless` – such as
-//!   [`DialogSurfaceAttributes`](mui_headless::dialog::DialogSurfaceAttributes)
-//!   and [`DialogBackdropAttributes`](mui_headless::dialog::DialogBackdropAttributes)
+//!   [`DialogSurfaceAttributes`](rustic_ui_headless::dialog::DialogSurfaceAttributes)
+//!   and [`DialogBackdropAttributes`](rustic_ui_headless::dialog::DialogBackdropAttributes)
 //!   – feed into shared helpers that produce automation friendly `data-*`
 //!   tuples. This ensures analytics pipelines and integration tests receive the
 //!   focus-trap and transition markers that enterprise deployments rely on.
 //!
 //! ## Style composition
-//! * [`css_with_theme!`](mui_styled_engine::css_with_theme) powers every
+//! * [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme) powers every
 //!   adapter. The macro exposes a `theme` binding so border colours pull from
 //!   `theme.palette.secondary` while padding respects `theme.spacing(3)`.
 //!   Wrapping the declaration inside
@@ -38,14 +38,14 @@
     feature = "dioxus",
     feature = "sycamore",
 ))]
-use mui_headless::dialog::{DialogBackdropAttributes, DialogState, DialogSurfaceAttributes};
+use rustic_ui_headless::dialog::{DialogBackdropAttributes, DialogState, DialogSurfaceAttributes};
 #[cfg(any(
     feature = "yew",
     feature = "leptos",
     feature = "dioxus",
     feature = "sycamore",
 ))]
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 #[cfg(feature = "leptos")]
 use leptos::children::Children;

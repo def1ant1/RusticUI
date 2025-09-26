@@ -4,7 +4,7 @@
 //! themed styles.  Centralizing the rendering logic keeps the individual
 //! component modules focused on data flow rather than DOM string assembly.
 
-use mui_styled_engine::Style;
+use rustic_ui_styled_engine::Style;
 
 /// Render a single toggle style control such as a checkbox or switch.
 pub(crate) fn render_toggle(label: &str, style: Style, attrs: Vec<(String, String)>) -> String {

@@ -1,13 +1,13 @@
-//! Material flavored chip renderer derived from the headless [`ChipState`](mui_headless::chip::ChipState).
+//! Material flavored chip renderer derived from the headless [`ChipState`](rustic_ui_headless::chip::ChipState).
 //!
 //! Similar to [`tooltip`](crate::tooltip) and [`button`](crate::button) the
 //! component centralizes markup, ARIA wiring and CSS so that every framework
 //! adapter simply forwards props/state into the shared helpers.  This eliminates
 //! the need for Yew/Leptos/Dioxus/Sycamore integrations to replicate styling or
 //! automation hooks, ensuring SSR output remains deterministic regardless of the
-//! runtime.  All visual decisions flow through [`css_with_theme!`](mui_styled_engine::css_with_theme)
+//! runtime.  All visual decisions flow through [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
 //! which means palette, typography and density overrides propagate automatically
-//! from the active [`Theme`](mui_styled_engine::Theme).
+//! from the active [`Theme`](rustic_ui_styled_engine::Theme).
 //!
 //! The module emits a single `<div>` representing the chip root and (optionally)
 //! a trailing delete button when the configuration is dismissible.  Both share
@@ -19,9 +19,9 @@
 //! ## Examples
 //!
 //! ```rust,no_run
-//! use mui_headless::chip::{ChipConfig, ChipState};
-//! use mui_material::chip::{yew as chip_yew, ChipProps};
-//! use mui_styled_engine::{StyleRegistry, Theme};
+//! use rustic_ui_headless::chip::{ChipConfig, ChipState};
+//! use rustic_ui_material::chip::{yew as chip_yew, ChipProps};
+//! use rustic_ui_styled_engine::{StyleRegistry, Theme};
 //!
 //! let mut theme = Theme::default();
 //! theme.palette.secondary = "#D81B60".into();
@@ -48,8 +48,8 @@
 //! multi-framework bootstrapper that renders dismissible and read-only chips
 //! with automation hooks pre-wired for analytics pipelines.
 
-use mui_headless::chip::{ChipAttributes, ChipDeleteAttributes, ChipState};
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_headless::chip::{ChipAttributes, ChipDeleteAttributes, ChipState};
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 /// Shared properties consumed by every chip adapter.
 #[derive(Clone, Debug)]
@@ -423,7 +423,7 @@ pub mod sycamore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mui_headless::chip::ChipConfig;
+    use rustic_ui_headless::chip::ChipConfig;
 
     #[test]
     fn render_html_includes_delete_affordance() {

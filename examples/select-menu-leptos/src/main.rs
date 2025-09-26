@@ -1,5 +1,5 @@
 use leptos::*;
-use mui_material::select::SelectOption;
+use rustic_ui_material::select::SelectOption;
 use select_menu_shared::{
     enterprise_theme, fetch_regions, props_from_options, render_select_markup, selection_summary,
     to_select_options, AUTOMATION_ID,

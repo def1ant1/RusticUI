@@ -8,7 +8,7 @@
 //!
 //! # Examples
 //! ```
-//! use mui_utils::debounce;
+//! use rustic_ui_utils::debounce;
 //! use std::time::Duration;
 //!
 //! let counter = std::sync::Arc::new(std::sync::Mutex::new(0));
@@ -25,7 +25,7 @@
 //!
 //! Supplying a zero delay forwards calls immediately:
 //! ```
-//! use mui_utils::debounce;
+//! use rustic_ui_utils::debounce;
 //! use std::sync::{Arc, Mutex};
 //! use std::time::Duration;
 //!

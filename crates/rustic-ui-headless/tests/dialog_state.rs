@@ -1,4 +1,4 @@
-use mui_headless::dialog::{DialogPhase, DialogState, DialogTransition};
+use rustic_ui_headless::dialog::{DialogPhase, DialogState, DialogTransition};
 use proptest::prelude::*;
 
 fn bool_actions() -> impl Strategy<Value = Vec<bool>> {

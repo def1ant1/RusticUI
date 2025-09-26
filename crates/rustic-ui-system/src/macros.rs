@@ -10,7 +10,7 @@
 /// Generates a style string from `key: value` pairs.
 ///
 /// ```rust
-/// use mui_system::style_props;
+/// use rustic_ui_system::style_props;
 /// let style = style_props! { width: "100%", margin_top: "8px" };
 /// assert_eq!(style, "width:100%;margin-top:8px;");
 /// ```
@@ -33,7 +33,7 @@ macro_rules! style_props {
 /// Declares a helper function for a single CSS property.
 ///
 /// ```rust
-/// use mui_system::define_style_prop;
+/// use rustic_ui_system::define_style_prop;
 /// define_style_prop!(margin_top, "margin-top");
 /// let style = margin_top("8px");
 /// assert_eq!(style, "margin-top:8px;");
@@ -55,7 +55,7 @@ macro_rules! define_style_prop {
 /// strings are assembled.
 ///
 /// ```rust
-/// use mui_system::define_style_props;
+/// use rustic_ui_system::define_style_props;
 /// define_style_props! {
 ///     margin_top => "margin-top",
 ///     margin_bottom => "margin-bottom",
@@ -78,7 +78,7 @@ macro_rules! define_style_props {
 /// Quickly generate a style string for a single property.
 ///
 /// ```rust
-/// use mui_system::style_prop;
+/// use rustic_ui_system::style_prop;
 /// let style = style_prop!(width = "100px");
 /// assert_eq!(style, "width:100px;");
 /// ```

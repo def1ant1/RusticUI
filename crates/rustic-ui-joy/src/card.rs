@@ -1,4 +1,4 @@
-use mui_system::theme_provider::use_theme;
+use rustic_ui_system::theme_provider::use_theme;
 use yew::prelude::*;
 
 use crate::helpers::{resolve_surface_tokens, SurfaceTokens};
@@ -14,7 +14,7 @@ joy_component_props!(CardProps {
 /// # Design tokens
 /// * [`helpers::resolve_surface_tokens`](crate::helpers::resolve_surface_tokens) aligns the
 ///   background/border styling with Joy variants.
-/// * [`Theme::spacing`](mui_system::theme::Theme::spacing) drives the padding rhythm.
+/// * [`Theme::spacing`](rustic_ui_system::theme::Theme::spacing) drives the padding rhythm.
 ///
 /// # Headless state contract
 /// Cards are purely presentational today and therefore do not bind to a headless state machine.

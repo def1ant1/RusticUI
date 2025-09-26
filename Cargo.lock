@@ -659,10 +659,10 @@ dependencies = [
 name = "data-display-avatar"
 version = "0.1.0"
 dependencies = [
- "mui-headless",
- "mui-material",
- "mui-styled-engine",
- "mui-system",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "rustic-ui-system",
 ]
 
 [[package]]
@@ -939,20 +939,20 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 name = "feedback-chips"
 version = "0.1.0"
 dependencies = [
- "mui-headless",
- "mui-material",
- "mui-styled-engine",
- "mui-system",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "rustic-ui-system",
 ]
 
 [[package]]
 name = "feedback-tooltips"
 version = "0.1.0"
 dependencies = [
- "mui-headless",
- "mui-material",
- "mui-styled-engine",
- "mui-system",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "rustic-ui-system",
 ]
 
 [[package]]
@@ -1903,9 +1903,9 @@ dependencies = [
  "dioxus-ssr",
  "dioxus-web",
  "joy-workflows-core",
- "mui-headless",
- "mui-joy",
- "mui-system",
+ "rustic-ui-headless",
+ "rustic-ui-joy",
+ "rustic-ui-system",
 ]
 
 [[package]]
@@ -1915,9 +1915,9 @@ dependencies = [
  "console_error_panic_hook",
  "joy-workflows-core",
  "leptos",
- "mui-headless",
- "mui-joy",
- "mui-system",
+ "rustic-ui-headless",
+ "rustic-ui-joy",
+ "rustic-ui-system",
  "tokio",
  "wasm-bindgen",
 ]
@@ -1943,9 +1943,9 @@ name = "joy-sycamore"
 version = "0.1.0"
 dependencies = [
  "joy-workflows-core",
- "mui-headless",
- "mui-joy",
- "mui-system",
+ "rustic-ui-headless",
+ "rustic-ui-joy",
+ "rustic-ui-system",
  "sycamore",
  "tokio",
  "wasm-bindgen",
@@ -1956,9 +1956,9 @@ dependencies = [
 name = "joy-workflows-core"
 version = "0.1.0"
 dependencies = [
- "mui-headless",
- "mui-joy",
- "mui-system",
+ "rustic-ui-headless",
+ "rustic-ui-joy",
+ "rustic-ui-system",
 ]
 
 [[package]]
@@ -1966,8 +1966,8 @@ name = "joy-yew"
 version = "0.1.0"
 dependencies = [
  "joy-workflows-core",
- "mui-joy",
- "mui-system",
+ "rustic-ui-joy",
+ "rustic-ui-system",
  "tokio",
  "wasm-bindgen",
  "web-sys",
@@ -2321,130 +2321,6 @@ dependencies = [
  "libc",
  "wasi 0.11.1+wasi-snapshot-preview1",
  "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "mui-headless"
-version = "0.1.0"
-dependencies = [
- "proptest",
-]
-
-[[package]]
-name = "mui-icons"
-version = "0.1.0"
-dependencies = [
- "once_cell",
- "proc-macro2",
- "quote",
- "ureq",
- "usvg",
- "zip",
-]
-
-[[package]]
-name = "mui-icons-material"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "once_cell",
- "proc-macro2",
- "quote",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "ureq",
- "usvg",
- "zip",
-]
-
-[[package]]
-name = "mui-joy"
-version = "0.1.0"
-dependencies = [
- "dioxus",
- "gloo-timers 0.2.6",
- "gloo-utils 0.2.0",
- "leptos",
- "mui-headless",
- "mui-system",
- "sycamore",
- "wasm-bindgen",
- "wasm-bindgen-test",
- "web-sys",
- "yew",
-]
-
-[[package]]
-name = "mui-material"
-version = "0.1.0"
-dependencies = [
- "gloo-utils 0.2.0",
- "leptos",
- "mui-headless",
- "mui-styled-engine",
- "mui-system",
- "mui-utils",
- "stylist",
- "wasm-bindgen",
- "wasm-bindgen-test",
- "web-sys",
- "yew",
-]
-
-[[package]]
-name = "mui-styled-engine"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "mui-styled-engine-macros",
- "mui-system",
- "proptest",
- "stylist",
- "trybuild",
- "wasm-bindgen",
- "yew",
-]
-
-[[package]]
-name = "mui-styled-engine-macros"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "mui-system"
-version = "0.1.0"
-dependencies = [
- "dioxus",
- "leptos",
- "mui-styled-engine-macros",
- "mui-utils",
- "serde",
- "serde_json",
- "stylist",
- "sycamore",
- "wasm-bindgen",
- "wasm-bindgen-test",
- "web-sys",
- "yew",
-]
-
-[[package]]
-name = "mui-utils"
-version = "0.1.0"
-dependencies = [
- "js-sys",
- "proptest",
- "serde",
- "serde_json",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -3139,6 +3015,130 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
 
 [[package]]
+name = "rustic-ui-headless"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+]
+
+[[package]]
+name = "rustic-ui-icons"
+version = "0.1.0"
+dependencies = [
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "ureq",
+ "usvg",
+ "zip",
+]
+
+[[package]]
+name = "rustic-ui-icons-material"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "ureq",
+ "usvg",
+ "zip",
+]
+
+[[package]]
+name = "rustic-ui-joy"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "gloo-timers 0.2.6",
+ "gloo-utils 0.2.0",
+ "leptos",
+ "rustic-ui-headless",
+ "rustic-ui-system",
+ "sycamore",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "web-sys",
+ "yew",
+]
+
+[[package]]
+name = "rustic-ui-material"
+version = "0.1.0"
+dependencies = [
+ "gloo-utils 0.2.0",
+ "leptos",
+ "rustic-ui-headless",
+ "rustic-ui-styled-engine",
+ "rustic-ui-system",
+ "rustic-ui-utils",
+ "stylist",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "web-sys",
+ "yew",
+]
+
+[[package]]
+name = "rustic-ui-styled-engine"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "proptest",
+ "rustic-ui-styled-engine-macros",
+ "rustic-ui-system",
+ "stylist",
+ "trybuild",
+ "wasm-bindgen",
+ "yew",
+]
+
+[[package]]
+name = "rustic-ui-styled-engine-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
+name = "rustic-ui-system"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "leptos",
+ "rustic-ui-styled-engine-macros",
+ "rustic-ui-utils",
+ "serde",
+ "serde_json",
+ "stylist",
+ "sycamore",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "web-sys",
+ "yew",
+]
+
+[[package]]
+name = "rustic-ui-utils"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "proptest",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "rustix"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3465,7 +3465,7 @@ dependencies = [
 name = "shared-dialog-state-core"
 version = "0.1.0"
 dependencies = [
- "mui-headless",
+ "rustic-ui-headless",
 ]
 
 [[package]]
@@ -4780,8 +4780,8 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "clap",
- "mui-system",
  "predicates",
+ "rustic-ui-system",
  "serde_json",
  "toml 0.8.23",
 ]

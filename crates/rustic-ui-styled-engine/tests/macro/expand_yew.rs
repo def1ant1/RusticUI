@@ -1,4 +1,4 @@
-use mui_styled_engine::css_with_theme;
+use rustic_ui_styled_engine::css_with_theme;
 use yew::prelude::*;
 
 #[function_component(Test)]

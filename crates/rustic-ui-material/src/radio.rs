@@ -3,8 +3,8 @@
 //! Rendering logic is intentionally centralized so Yew, Leptos, Dioxus and
 //! Sycamore integrations share identical markup.
 
-use mui_headless::radio::{RadioGroupState, RadioOrientation};
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 use crate::selection_control;
 

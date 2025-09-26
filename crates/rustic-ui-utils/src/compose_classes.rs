@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 /// Basic composition with user provided overrides:
 /// ```
 /// use std::collections::HashMap;
-/// use mui_utils::compose_classes;
+/// use rustic_ui_utils::compose_classes;
 ///
 /// let slots = HashMap::from([
 ///     ("root".to_string(), vec![Some("root".into()), Some("primary".into())])
@@ -26,7 +26,7 @@ use std::collections::{HashMap, HashSet};
 /// Duplicate and empty entries are skipped automatically:
 /// ```
 /// use std::collections::HashMap;
-/// use mui_utils::compose_classes;
+/// use rustic_ui_utils::compose_classes;
 ///
 /// let slots = HashMap::from([
 ///     ("root".to_string(), vec![Some("root".into()), Some("root".into()), Some("".into())])

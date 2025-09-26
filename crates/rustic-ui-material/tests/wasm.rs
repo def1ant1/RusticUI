@@ -1,32 +1,32 @@
 #![cfg(feature = "yew")]
 
-use mui_headless::checkbox::CheckboxState;
-use mui_headless::chip::{ChipConfig, ChipState};
-use mui_headless::dialog::DialogState;
-use mui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
-use mui_headless::list::{ListState, SelectionMode};
-use mui_headless::menu::MenuState;
-use mui_headless::popover::{PopoverPlacement, PopoverState};
-use mui_headless::radio::{RadioGroupState, RadioOrientation};
-use mui_headless::selection::ControlStrategy;
-use mui_headless::switch::SwitchState;
-use mui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
-use mui_headless::text_field::TextFieldState;
-use mui_headless::tooltip::{TooltipConfig, TooltipState};
-use mui_material::checkbox::{self, CheckboxProps};
-use mui_material::chip::{self, ChipProps};
-use mui_material::dialog::{self as dialog_adapter, DialogSurfaceOptions};
-use mui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
-use mui_material::menu::{self, MenuItem, MenuProps};
-use mui_material::radio::{self, RadioGroupProps};
-use mui_material::switch::{self, SwitchProps};
-use mui_material::tab_panel;
-use mui_material::table::{self, TableColumn, TableProps, TableRow};
-use mui_material::tabs::{self, TabListLayoutOptions, TabListProps};
-use mui_material::text_field::TextFieldStateHandle;
-use mui_material::tooltip::{self, TooltipProps};
-use mui_material::{AppBar, Button, Snackbar, TextField};
-use mui_styled_engine::{Theme, ThemeProvider};
+use rustic_ui_headless::checkbox::CheckboxState;
+use rustic_ui_headless::chip::{ChipConfig, ChipState};
+use rustic_ui_headless::dialog::DialogState;
+use rustic_ui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
+use rustic_ui_headless::list::{ListState, SelectionMode};
+use rustic_ui_headless::menu::MenuState;
+use rustic_ui_headless::popover::{PopoverPlacement, PopoverState};
+use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+use rustic_ui_headless::selection::ControlStrategy;
+use rustic_ui_headless::switch::SwitchState;
+use rustic_ui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
+use rustic_ui_headless::text_field::TextFieldState;
+use rustic_ui_headless::tooltip::{TooltipConfig, TooltipState};
+use rustic_ui_material::checkbox::{self, CheckboxProps};
+use rustic_ui_material::chip::{self, ChipProps};
+use rustic_ui_material::dialog::{self as dialog_adapter, DialogSurfaceOptions};
+use rustic_ui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
+use rustic_ui_material::menu::{self, MenuItem, MenuProps};
+use rustic_ui_material::radio::{self, RadioGroupProps};
+use rustic_ui_material::switch::{self, SwitchProps};
+use rustic_ui_material::tab_panel;
+use rustic_ui_material::table::{self, TableColumn, TableProps, TableRow};
+use rustic_ui_material::tabs::{self, TabListLayoutOptions, TabListProps};
+use rustic_ui_material::text_field::TextFieldStateHandle;
+use rustic_ui_material::tooltip::{self, TooltipProps};
+use rustic_ui_material::{AppBar, Button, Snackbar, TextField};
+use rustic_ui_styled_engine::{Theme, ThemeProvider};
 use std::rc::Rc;
 use std::time::Duration;
 use wasm_bindgen::{prelude::*, JsCast};
@@ -422,12 +422,12 @@ async fn tabs_orientation_and_accessibility() {
         );
 
         let tabs_markup = vec![
-            mui_material::tab::render_tab_html(
+            rustic_ui_material::tab::render_tab_html(
                 &state,
                 state.tab(0).id("tab-overview").controls("panel-overview"),
                 "Overview",
             ),
-            mui_material::tab::render_tab_html(
+            rustic_ui_material::tab::render_tab_html(
                 &state,
                 state.tab(1).id("tab-reports").controls("panel-reports"),
                 "Reports",
@@ -971,7 +971,7 @@ fn wasm_popover_state(props: &MenuProps) -> PopoverState {
             .clone()
             .unwrap_or_else(|| "mui-menu".into())
     );
-    let portal = mui_system::portal::PortalMount::popover(base);
+    let portal = rustic_ui_system::portal::PortalMount::popover(base);
     popover.set_anchor_metadata(Some(portal.anchor_id()), None);
     popover
 }

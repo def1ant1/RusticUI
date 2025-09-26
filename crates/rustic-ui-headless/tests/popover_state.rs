@@ -1,4 +1,4 @@
-use mui_headless::popover::{AnchorGeometry, CollisionOutcome, PopoverPlacement, PopoverState};
+use rustic_ui_headless::popover::{AnchorGeometry, CollisionOutcome, PopoverPlacement, PopoverState};
 use proptest::prelude::*;
 
 fn placement_strategy() -> impl Strategy<Value = PopoverPlacement> {

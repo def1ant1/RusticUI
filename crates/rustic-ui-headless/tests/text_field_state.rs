@@ -1,4 +1,4 @@
-use mui_headless::text_field::TextFieldState;
+use rustic_ui_headless::text_field::TextFieldState;
 use proptest::prelude::*;
 use std::time::Duration;
 

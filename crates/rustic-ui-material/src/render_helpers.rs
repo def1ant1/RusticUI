@@ -1,4 +1,4 @@
-//! Shared rendering helpers that convert theme-aware [`Style`](mui_styled_engine::Style)
+//! Shared rendering helpers that convert theme-aware [`Style`](rustic_ui_styled_engine::Style)
 //! handles into serialized HTML fragments.
 //!
 //! The module complements [`style_helpers`](crate::style_helpers) by layering in
@@ -9,13 +9,13 @@
 //! adapters and enables downstream automation to stitch together UX flows
 //! without rewriting presentation logic for every target runtime.
 
-use mui_styled_engine::Style;
+use rustic_ui_styled_engine::Style;
 
 /// Render an element with the provided tag, [`Style`] and attribute pairs.
 ///
 /// * [`Style`] is converted to a scoped class via
 ///   [`style_helpers::themed_attributes_html`](crate::style_helpers::themed_attributes_html)
-///   so the CSS emitted by [`css_with_theme!`](mui_styled_engine::css_with_theme)
+///   so the CSS emitted by [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
 ///   automatically attaches to the element.
 /// * `attrs` accepts any iterator of `(key, value)` pairs making it ergonomic to
 ///   feed attribute builders from `mui-headless` without additional
@@ -67,7 +67,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mui_styled_engine::css;
+    use rustic_ui_styled_engine::css;
 
     #[test]
     fn render_element_generates_wrapped_markup() {

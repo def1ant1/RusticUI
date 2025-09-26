@@ -6,8 +6,8 @@
 //! stable is critical for enterprise QA suites that diff SSR and hydrated output
 //! across frameworks.
 
-use mui_headless::chip::{ChipConfig, ChipState};
-use mui_material::chip::{self, ChipProps};
+use rustic_ui_headless::chip::{ChipConfig, ChipState};
+use rustic_ui_material::chip::{self, ChipProps};
 use std::time::Duration;
 
 /// Construct representative chip props mirroring the automated selectors used in

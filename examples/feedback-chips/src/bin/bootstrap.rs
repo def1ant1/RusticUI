@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use feedback_chips::enterprise_story;
-use mui_system::theme_provider::material_css_baseline_from_theme;
+use rustic_ui_system::theme_provider::material_css_baseline_from_theme;
 
 fn main() -> std::io::Result<()> {
     let story = enterprise_story();
@@ -49,7 +49,7 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
-fn ssr_document(theme: &mui_styled_engine::Theme, body: &str, automation_id: &str) -> String {
+fn ssr_document(theme: &rustic_ui_styled_engine::Theme, body: &str, automation_id: &str) -> String {
     let baseline = material_css_baseline_from_theme(theme);
     format!(
         "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>Chip SSR snapshot</title>\n    <style>{baseline}</style>\n  </head>\n  <body data-automation-root=\"{automation_id}\">\n    <div id=\"app\">{body}</div>\n  </body>\n</html>\n",
@@ -64,8 +64,8 @@ fn hydration_stub(framework: &str, automation_id: &str) -> String {
         "yew" => {
             let mut stub = String::new();
             stub.push_str(
-                r#"use mui_material::chip::yew;
-use mui_styled_engine::ThemeProvider;
+                r#"use rustic_ui_material::chip::yew;
+use rustic_ui_styled_engine::ThemeProvider;
 use yew::prelude::*;
 
 #[function_component(App)]
@@ -103,10 +103,10 @@ fn App(cx: Scope) -> impl IntoView {
     let dismissible = story.dismissible["leptos"].clone();
     let read_only = story.read_only["leptos"].clone();
     view! { cx,
-        <mui_styled_engine::ThemeProvider theme=story.theme.clone()>
+        <rustic_ui_styled_engine::ThemeProvider theme=story.theme.clone()>
             <section id="dismissible" inner_html=dismissible></section>
             <section id="read-only" inner_html=read_only></section>
-        </mui_styled_engine::ThemeProvider>
+        </rustic_ui_styled_engine::ThemeProvider>
     }
 }
 

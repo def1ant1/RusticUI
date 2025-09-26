@@ -6,9 +6,9 @@
 
 use std::collections::BTreeMap;
 
-use mui_headless::chip::{ChipConfig, ChipState};
-use mui_material::chip::{dioxus, leptos, sycamore, yew, ChipProps};
-use mui_styled_engine::Theme;
+use rustic_ui_headless::chip::{ChipConfig, ChipState};
+use rustic_ui_material::chip::{dioxus, leptos, sycamore, yew, ChipProps};
+use rustic_ui_styled_engine::Theme;
 
 /// Aggregates multi-framework chip markup for QA automation and SSR bootstraps.
 #[derive(Debug, Clone)]
@@ -80,8 +80,8 @@ pub fn enterprise_story() -> ChipStory {
 fn enterprise_theme() -> Theme {
     let mut theme = Theme::default();
     for scheme in [
-        mui_system::theme::ColorScheme::Light,
-        mui_system::theme::ColorScheme::Dark,
+        rustic_ui_system::theme::ColorScheme::Light,
+        rustic_ui_system::theme::ColorScheme::Dark,
     ] {
         let palette = theme.palette.scheme_mut(scheme);
         palette.primary = "#334155".into();

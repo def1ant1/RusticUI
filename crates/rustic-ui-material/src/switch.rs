@@ -3,8 +3,8 @@
 //! Switches reuse the shared selection control renderer ensuring identical
 //! markup across frameworks while leveraging theme tokens for styling.
 
-use mui_headless::switch::SwitchState;
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_headless::switch::SwitchState;
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 use crate::selection_control;
 

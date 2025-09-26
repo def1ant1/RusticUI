@@ -13,7 +13,7 @@ use fixtures::{
     button_props, button_state_default, chip_props, chip_state_focused, dialog_aria_label,
     dialog_body_markup, dialog_state_open, dialog_surface_options,
 };
-use mui_material::{button, chip, dialog};
+use rustic_ui_material::{button, chip, dialog};
 
 #[test]
 fn sycamore_button_parity() {

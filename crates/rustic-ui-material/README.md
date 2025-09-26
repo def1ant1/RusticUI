@@ -174,7 +174,7 @@ careful to reuse the central markup helpers so hydration is deterministic across
 frameworks.
 
 Floating surfaces such as `Select` and `Menu` now leverage
-[`mui_system::PortalMount`](../rustic-ui-system/src/portal.rs) to emit deterministic
+[`rustic_ui_system::PortalMount`](../rustic-ui-system/src/portal.rs) to emit deterministic
 `data-portal-*` anchors during SSR. Each adapter renders the trigger, appends a
 hidden anchor placeholder, and then emits a detached container that client
 frameworks attach to `document.body` once lifecycle hooks fire (`Component::view`
@@ -192,8 +192,8 @@ lock-step and eliminates duplicate popover markup.
 ## Example
 
 ```rust
-use mui_material::{Button, AppBar, TextField};
-use mui_styled_engine::{ThemeProvider, Theme};
+use rustic_ui_material::{Button, AppBar, TextField};
+use rustic_ui_styled_engine::{ThemeProvider, Theme};
 use yew::prelude::*;
 
 #[function_component(App)]

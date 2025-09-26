@@ -11,16 +11,16 @@
 //! * **Single source of truth** – the [`JoyWorkflowMachine`] struct orchestrates
 //!   progress tracking, snackbar messaging, and lifecycle logging without any
 //!   framework specific code.
-//! * **Design token aware** – descriptors expose [`mui_joy::Color`] and
-//!   [`mui_joy::Variant`] enums so renderers can map directly onto Joy surface
+//! * **Design token aware** – descriptors expose [`rustic_ui_joy::Color`] and
+//!   [`rustic_ui_joy::Variant`] enums so renderers can map directly onto Joy surface
 //!   helpers (`resolve_surface_tokens`) without duplicating constants.
 //! * **Automation ready** – every piece of UI state carries analytics IDs and
 //!   data attribute helpers so QA pipelines can assert parity across SSR and
 //!   hydrated runs.
 
-use mui_headless::stepper::StepStatus;
-use mui_joy::{Color, Variant};
-use mui_system::theme::Theme;
+use rustic_ui_headless::stepper::StepStatus;
+use rustic_ui_joy::{Color, Variant};
+use rustic_ui_system::theme::Theme;
 
 /// Maximum number of lifecycle entries retained by the machine.
 const MAX_LOG_ENTRIES: usize = 32;

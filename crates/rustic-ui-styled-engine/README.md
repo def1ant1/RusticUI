@@ -11,7 +11,7 @@ To minimize repetitive boilerplate when working with themes, the crate ships
 with several procedural macros:
 
 * `#[derive(Theme)]` - converts a user defined struct into a full
-  [`Theme`](https://docs.../rustic-ui-styled-engine/latest/mui_styled_engine/struct.Theme.html)
+  [`Theme`](https://docs.../rustic-ui-styled-engine/latest/rustic_ui_styled_engine/struct.Theme.html)
   by merging the provided fields with `Theme::default()`. Nested structs and
   `Option<T>` fields are recursively merged which keeps custom themes compact.
 * `css_with_theme!` - wraps the [`stylist::css!`] macro and automatically
@@ -32,7 +32,7 @@ or `sycamore`.
 ## Usage
 
 ```rust
-use mui_styled_engine::{css_with_theme, GlobalStyles, StyledEngineProvider};
+use rustic_ui_styled_engine::{css_with_theme, GlobalStyles, StyledEngineProvider};
 
 // `css_with_theme!` exposes a `theme` variable in the CSS block
 let style = css_with_theme!(r#"color: ${p};"#, p = theme.palette.primary.clone());
@@ -55,7 +55,7 @@ The derive macro now understands nested structs and optional fields so theme
 overrides can be expressed succinctly:
 
 ```rust
-use mui_styled_engine::{Theme, Palette};
+use rustic_ui_styled_engine::{Theme, Palette};
 
 #[derive(Theme)]
 struct MyTheme {
@@ -65,7 +65,7 @@ struct MyTheme {
 
 ## Server Side Rendering
 
-The [`ssr` module](https://docs.../rustic-ui-styled-engine/latest/mui_styled_engine/ssr/index.html)
+The [`ssr` module](https://docs.../rustic-ui-styled-engine/latest/rustic_ui_styled_engine/ssr/index.html)
 provides helpers that run a render closure inside an isolated style manager and
 return both the generated HTML and the associated style tags. The
 `render_to_string` convenience function produces a complete HTML document ready
@@ -82,7 +82,7 @@ request should instantiate its own registry to avoid cross-request leakage.  The
 registry implements `flush_styles()` which drains and returns `<style>` blocks:
 
 ```rust
-use mui_styled_engine::{StyleRegistry, StyledEngineProvider, Theme};
+use rustic_ui_styled_engine::{StyleRegistry, StyledEngineProvider, Theme};
 use yew::ServerRenderer;
 
 let registry = StyleRegistry::new(Theme::default());

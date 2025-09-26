@@ -1,12 +1,12 @@
 //! Material flavored checkbox built on the headless [`CheckboxState`].
 //!
-//! The module orchestrates styling through [`css_with_theme!`](mui_styled_engine::css_with_theme)
+//! The module orchestrates styling through [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
 //! and delegates markup generation to [`selection_control::render_toggle`]
 //! keeping adapters tiny. Extensive inline documentation is provided to help
 //! enterprise teams adapt the component to their own design systems.
 
-use mui_headless::checkbox::CheckboxState;
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_headless::checkbox::CheckboxState;
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 use crate::selection_control;
 
@@ -37,7 +37,7 @@ fn render_html(props: &CheckboxProps, state: &CheckboxState) -> String {
 
 /// Generates the themed style for the checkbox container. The macro pulls
 /// palette colors, typography metrics and spacing tokens from the active
-/// [`Theme`](mui_styled_engine::Theme) so enterprise teams can rely on global
+/// [`Theme`](rustic_ui_styled_engine::Theme) so enterprise teams can rely on global
 /// design governance rather than tweaking individual components.
 fn themed_checkbox_style() -> Style {
     css_with_theme!(

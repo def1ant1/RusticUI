@@ -1,6 +1,6 @@
 use crate::theme::{ColorScheme, Theme};
 #[cfg(any(feature = "yew", feature = "leptos"))]
-use mui_styled_engine_macros::css_with_theme;
+use rustic_ui_styled_engine_macros::css_with_theme;
 
 /// Returns the canonical Material Design theme used across the workspace.
 ///

@@ -1,5 +1,5 @@
 use sycamore::prelude::*;
-use mui_system::use_theme;
+use rustic_ui_system::use_theme;
 
 /// Demonstrates obtaining theme values within a Sycamore view.
 #[component]

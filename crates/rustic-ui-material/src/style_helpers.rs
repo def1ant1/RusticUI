@@ -1,12 +1,12 @@
 //! Internal helpers for converting theme driven styles into scoped class names.
 //!
-//! Components frequently invoke [`css_with_theme!`](mui_styled_engine::css_with_theme)
+//! Components frequently invoke [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
 //! and only require the generated CSS class. Centralizing the class name
 //! extraction avoids repetitive `.get_class_name().to_string()` calls while
 //! documenting the intended lifecycle of stylist [`Style`] handles.
 
-use mui_styled_engine::Style;
-use mui_utils::{attributes_to_html, collect_attributes};
+use rustic_ui_styled_engine::Style;
+use rustic_ui_utils::{attributes_to_html, collect_attributes};
 
 /// Consumes a [`Style`] and returns the scoped class name produced by the
 /// styled engine.
@@ -57,7 +57,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mui_styled_engine::css;
+    use rustic_ui_styled_engine::css;
 
     #[test]
     fn extracts_class_name() {

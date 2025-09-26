@@ -2,13 +2,13 @@
 //!
 //! The example keeps all domain data inline and focuses on wiring the headless
 //! state machines into the Material themed render functions. Both widgets reuse
-//! the HTML string returned by `mui_material` which guarantees parity between
+//! the HTML string returned by `rustic_ui_material` which guarantees parity between
 //! SSR and CSR flows.
 
-use mui_headless::list::{ListState, SelectionMode};
-use mui_material::list::{self, ListDensity, ListItem, ListProps, ListTypography};
-use mui_material::table::{self, TableColumn, TableProps, TableRow};
-use mui_styled_engine::{Theme, ThemeProvider};
+use rustic_ui_headless::list::{ListState, SelectionMode};
+use rustic_ui_material::list::{self, ListDensity, ListItem, ListProps, ListTypography};
+use rustic_ui_material::table::{self, TableColumn, TableProps, TableRow};
+use rustic_ui_styled_engine::{Theme, ThemeProvider};
 use yew::prelude::*;
 
 #[function_component(App)]

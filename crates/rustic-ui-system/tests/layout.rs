@@ -1,4 +1,4 @@
-use mui_system::grid_span_to_percent;
+use rustic_ui_system::grid_span_to_percent;
 
 /// Ensure the grid math matches expected percentages.
 #[test]

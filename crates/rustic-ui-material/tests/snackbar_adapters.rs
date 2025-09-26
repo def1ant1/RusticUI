@@ -5,7 +5,7 @@
 //! render functions guards against regressions in the scoped class generation
 //! and ARIA wiring shared across frameworks.
 
-use mui_material::snackbar::{SnackbarColor, SnackbarSize, SnackbarVariant};
+use rustic_ui_material::snackbar::{SnackbarColor, SnackbarSize, SnackbarVariant};
 
 /// Dioxus adapter coverage ensures the SSR-focused `render` helper attaches
 /// the theme-derived class and politely announces updates with
@@ -15,7 +15,7 @@ use mui_material::snackbar::{SnackbarColor, SnackbarSize, SnackbarVariant};
 #[cfg(feature = "dioxus")]
 mod dioxus_tests {
     use super::*;
-    use mui_material::snackbar::dioxus;
+    use rustic_ui_material::snackbar::dioxus;
 
     #[test]
     fn renders_status_snackbar_with_class() {
@@ -44,7 +44,7 @@ mod dioxus_tests {
 #[cfg(feature = "sycamore")]
 mod sycamore_tests {
     use super::*;
-    use mui_material::snackbar::sycamore;
+    use rustic_ui_material::snackbar::sycamore;
 
     #[test]
     fn renders_status_snackbar_with_class() {

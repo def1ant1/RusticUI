@@ -1,5 +1,5 @@
-use mui_system::theme::JoyTheme;
-use mui_system::Theme;
+use rustic_ui_system::theme::JoyTheme;
+use rustic_ui_system::Theme;
 
 /// Validate spacing helper and default palette values.
 #[test]
@@ -9,7 +9,7 @@ fn theme_defaults() {
     assert_eq!(theme.palette.light.primary, "#1976d2");
     assert_eq!(
         theme.palette.initial_color_scheme,
-        mui_system::theme::ColorScheme::Light
+        rustic_ui_system::theme::ColorScheme::Light
     );
     assert_eq!(theme.palette.dark.background_default, "#121212");
 }

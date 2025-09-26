@@ -6,8 +6,8 @@
 //! hooks, ARIA wiring and scoped class names which keeps SSR and client renders
 //! aligned for enterprise automation suites.
 
-use mui_headless::tooltip::{TooltipConfig, TooltipState};
-use mui_material::tooltip::{self, TooltipProps};
+use rustic_ui_headless::tooltip::{TooltipConfig, TooltipState};
+use rustic_ui_material::tooltip::{self, TooltipProps};
 
 /// Construct tooltip props with deterministic automation identifiers so the
 /// generated IDs and `data-*` attributes can be asserted without brittle

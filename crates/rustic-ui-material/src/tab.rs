@@ -1,17 +1,17 @@
 //! Presentation helpers for individual tabs layered on top of the
-//! headless [`TabAttributes`](mui_headless::tab::TabAttributes).
+//! headless [`TabAttributes`](rustic_ui_headless::tab::TabAttributes).
 //!
 //! Each helper returns automation-friendly attribute collections and HTML
 //! snippets so adapters can stay declarative. The styling leans on
-//! [`css_with_theme!`](mui_styled_engine::css_with_theme) to translate design
+//! [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme) to translate design
 //! tokens (typography ramp, Joy radius, palette colors) into scoped CSS without
 //! duplicating literals across applications.  Responsive breakpoints are baked
 //! into the style so padding and typography scale seamlessly from mobile to
 //! desktop layouts.
 
-use mui_headless::tab::TabAttributes;
-use mui_headless::tabs::{TabsOrientation, TabsState};
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_headless::tab::TabAttributes;
+use rustic_ui_headless::tabs::{TabsOrientation, TabsState};
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 /// Collect the attributes required to render a tab element.
 ///
@@ -139,7 +139,7 @@ fn tab_style(_orientation: TabsOrientation) -> Style {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mui_headless::tabs::{ActivationMode, TabsOrientation};
+    use rustic_ui_headless::tabs::{ActivationMode, TabsOrientation};
 
     fn sample_state(selected: usize) -> TabsState {
         TabsState::new(

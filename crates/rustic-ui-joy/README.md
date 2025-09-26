@@ -33,7 +33,7 @@ keeps CI fast and eliminates manual duplication when new adapters are added.
 ### Yew
 
 ```rust
-use mui_joy::{Button, ButtonProps, Color, Variant};
+use rustic_ui_joy::{Button, ButtonProps, Color, Variant};
 use yew::prelude::*;
 
 #[function_component(SaveButton)]
@@ -57,9 +57,9 @@ fn save_button() -> Html {
 
 ```rust
 use leptos::*;
-use mui_joy::helpers::resolve_surface_tokens;
-use mui_joy::{Color, Variant};
-use mui_system::theme::Theme;
+use rustic_ui_joy::helpers::resolve_surface_tokens;
+use rustic_ui_joy::{Color, Variant};
+use rustic_ui_system::theme::Theme;
 
 #[component]
 pub fn JoyTag(theme: Theme) -> impl IntoView {
@@ -73,9 +73,9 @@ pub fn JoyTag(theme: Theme) -> impl IntoView {
 
 ```rust
 use dioxus::prelude::*;
-use mui_joy::helpers::resolve_surface_tokens;
-use mui_joy::{Color, Variant};
-use mui_system::theme::Theme;
+use rustic_ui_joy::helpers::resolve_surface_tokens;
+use rustic_ui_joy::{Color, Variant};
+use rustic_ui_system::theme::Theme;
 
 fn Chip(theme: &Theme) -> String {
     resolve_surface_tokens(theme, Color::Danger, Variant::Soft)
@@ -86,13 +86,13 @@ fn Chip(theme: &Theme) -> String {
 ### Sycamore
 
 ```rust
-use mui_joy::helpers::resolve_surface_tokens;
-use mui_joy::{Color, Variant};
+use rustic_ui_joy::helpers::resolve_surface_tokens;
+use rustic_ui_joy::{Color, Variant};
 use sycamore::prelude::*;
 
 #[component]
 fn AlertBadge<G: Html>(cx: Scope) -> View<G> {
-    let theme = mui_system::theme::Theme::default();
+    let theme = rustic_ui_system::theme::Theme::default();
     let style = resolve_surface_tokens(&theme, Color::Primary, Variant::Solid)
         .compose([("padding", "8px 16px".to_string())]);
     view! { cx, span(style=style) { "Joy automation green" } }
@@ -112,9 +112,9 @@ renderers because the inline styles are produced by
 [`helpers::resolve_surface_tokens`](./src/helpers/mod.rs):
 
 ```rust
-use mui_joy::helpers::resolve_surface_tokens;
-use mui_joy::{Color, Variant};
-use mui_system::Theme;
+use rustic_ui_joy::helpers::resolve_surface_tokens;
+use rustic_ui_joy::{Color, Variant};
+use rustic_ui_system::Theme;
 
 fn surface_swatches(theme: &Theme) -> Vec<String> {
     Color::ALL

@@ -1,11 +1,11 @@
 //! Material flavored tab list utilities that layer presentation on top of the
-//! headless [`TabsState`](mui_headless::tabs::TabsState).
+//! headless [`TabsState`](rustic_ui_headless::tabs::TabsState).
 //!
 //! The functions here intentionally avoid framework specifics. Instead, they
 //! expose reusable attribute collections and HTML renderers that adapters can
 //! forward directly into Yew, Leptos, Dioxus, Sycamore or any server-side
 //! runtime. Styling is centralized through [`css_with_theme!`]
-//! (mui_styled_engine::css_with_theme) so palette updates, typography tweaks and
+//! (rustic_ui_styled_engine::css_with_theme) so palette updates, typography tweaks and
 //! responsive breakpoints propagate automatically across all integrations.
 //!
 //! Downstream teams can lean on the documented helpers to assemble enterprise
@@ -14,9 +14,9 @@
 //! and enables automated scaffolding tools to stitch together consistent tab
 //! shells for large product portfolios.
 
-use mui_headless::tabs::{TabListAttributes, TabsOrientation, TabsState};
-use mui_styled_engine::{css_with_theme, Style};
-use mui_system::{
+use rustic_ui_headless::tabs::{TabListAttributes, TabsOrientation, TabsState};
+use rustic_ui_styled_engine::{css_with_theme, Style};
+use rustic_ui_system::{
     responsive::{viewport_width, Responsive},
     stack::{StackDirection, StackStyleInputs},
     theme::Theme,
@@ -145,8 +145,8 @@ pub fn tab_list_attributes(
     pairs.push((
         "data-activation".into(),
         match state.activation_mode() {
-            mui_headless::tabs::ActivationMode::Automatic => "automatic",
-            mui_headless::tabs::ActivationMode::Manual => "manual",
+            rustic_ui_headless::tabs::ActivationMode::Automatic => "automatic",
+            rustic_ui_headless::tabs::ActivationMode::Manual => "manual",
         }
         .to_string(),
     ));
@@ -265,7 +265,7 @@ fn render_tab_list_with_layout(params: TabListRenderParams<'_>) -> String {
     );
 
     let spacing = params.layout.resolve_spacing(params.theme);
-    let stack_css = mui_system::stack::build_stack_style(
+    let stack_css = rustic_ui_system::stack::build_stack_style(
         params.viewport,
         &params.theme.breakpoints,
         StackStyleInputs {
@@ -353,7 +353,7 @@ pub mod dioxus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mui_headless::tabs::{ActivationMode, TabsOrientation};
+    use rustic_ui_headless::tabs::{ActivationMode, TabsOrientation};
 
     fn sample_state(orientation: TabsOrientation) -> TabsState {
         TabsState::new(

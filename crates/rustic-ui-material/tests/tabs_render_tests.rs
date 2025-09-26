@@ -1,6 +1,6 @@
-use mui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
-use mui_material::tabs::{self, TabListLayoutOptions, TabListProps};
-use mui_material::Theme;
+use rustic_ui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
+use rustic_ui_material::tabs::{self, TabListLayoutOptions, TabListProps};
+use rustic_ui_material::Theme;
 
 /// Helper that constructs an uncontrolled [`TabsState`] with the provided
 /// orientation and activation mode. The `ControlStrategy` type lives in a

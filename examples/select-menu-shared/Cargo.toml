@@ -9,9 +9,9 @@ license = "MIT OR Apache-2.0"
 members = []
 
 [dependencies]
-mui-headless = { path = "../../crates/rustic-ui-headless" }
-mui-material = { path = "../../crates/rustic-ui-material" }
-mui-system = { path = "../../crates/rustic-ui-system" }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-material = { path = "../../crates/rustic-ui-material" }
+rustic-ui-system = { path = "../../crates/rustic-ui-system" }
 tokio = { version = "1.37", default-features = false, features = ["time"], optional = true }
 gloo-timers = { version = "0.2", features = ["futures"], optional = true }
 

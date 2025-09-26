@@ -1,15 +1,15 @@
 //! Material themed tab panel helpers that enrich the headless
-//! [`TabPanelAttributes`](mui_headless::tab_panel::TabPanelAttributes).
+//! [`TabPanelAttributes`](rustic_ui_headless::tab_panel::TabPanelAttributes).
 //!
 //! Panels inherit typography, spacing and color tokens from the active
-//! [`Theme`](mui_styled_engine::Theme) via [`css_with_theme!`](mui_styled_engine::css_with_theme).
+//! [`Theme`](rustic_ui_styled_engine::Theme) via [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme).
 //! Automation-focused data attributes are emitted alongside ARIA metadata so
 //! downstream adapters can orchestrate transitions or analytics without custom
 //! bookkeeping.
 
-use mui_headless::tab_panel::TabPanelAttributes;
-use mui_headless::tabs::{TabsOrientation, TabsState};
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_headless::tab_panel::TabPanelAttributes;
+use rustic_ui_headless::tabs::{TabsOrientation, TabsState};
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 /// Collect attributes for a tab panel including automation-friendly flags.
 #[must_use]
@@ -94,7 +94,7 @@ fn tab_panel_style(_orientation: TabsOrientation) -> Style {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mui_headless::tabs::{ActivationMode, TabsOrientation};
+    use rustic_ui_headless::tabs::{ActivationMode, TabsOrientation};
 
     fn sample_state(selected: usize) -> TabsState {
         TabsState::new(

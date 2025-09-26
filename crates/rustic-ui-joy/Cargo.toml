@@ -1,12 +1,11 @@
 [package]
-name = "mui-joy"
+name = "rustic-ui-joy"
 version = "0.1.0"
 edition = "2021"
-description = "Joy UI components implemented in Rust leveraging mui-system."
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/m../rustic-ui-rust"
-homepage = "https://github.com/m../rustic-ui-rust"
-documentation = "https://docs.../rustic-ui-joy"
+description = "Joy UI components implemented in Rust leveraging rustic-ui-system."
+repository = "https://github.com/apotheon-ai/rusticui"
+homepage = "https://apotheon.ai/rusticui"
+documentation = "https://docs.rs/rustic-ui-joy"
 keywords = ["material", "ui", "web"]
 categories = ["gui"]
 
@@ -14,8 +13,8 @@ categories = ["gui"]
 maintenance = { status = "experimental" }
 
 [dependencies]
-mui-system = { path = "../rustic-ui-system" }
-mui-headless = { path = "../rustic-ui-headless" }
+rustic-ui-system = { path = "../rustic-ui-system" }
+rustic-ui-headless = { path = "../rustic-ui-headless" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
@@ -30,7 +29,7 @@ web-sys = { workspace = true, features = ["HtmlElement", "Event", "EventTarget"]
 
 [features]
 default = []
-yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew", "dep:gloo-timers"]
-leptos = ["dep:leptos", "dep:wasm-bindgen", "mui-system/leptos"]
-dioxus = ["dep:dioxus", "dep:wasm-bindgen", "mui-system/dioxus"]
-sycamore = ["dep:sycamore", "dep:wasm-bindgen", "mui-system/sycamore"]
+yew = ["dep:yew", "dep:wasm-bindgen", "rustic-ui-system/yew", "dep:gloo-timers"]
+leptos = ["dep:leptos", "dep:wasm-bindgen", "rustic-ui-system/leptos"]
+dioxus = ["dep:dioxus", "dep:wasm-bindgen", "rustic-ui-system/dioxus"]
+sycamore = ["dep:sycamore", "dep:wasm-bindgen", "rustic-ui-system/sycamore"]

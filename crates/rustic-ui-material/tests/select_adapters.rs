@@ -1,5 +1,5 @@
-use mui_headless::select::SelectState;
-use mui_material::select::{self, SelectOption, SelectProps};
+use rustic_ui_headless::select::SelectState;
+use rustic_ui_material::select::{self, SelectOption, SelectProps};
 
 fn sample_props() -> SelectProps {
     SelectProps::new(

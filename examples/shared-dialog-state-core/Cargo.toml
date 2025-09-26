@@ -6,4 +6,4 @@ description = "Shared dialog/popover/text field state orchestration for cross-fr
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-mui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }

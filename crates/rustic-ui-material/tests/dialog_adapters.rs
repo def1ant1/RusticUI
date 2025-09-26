@@ -1,7 +1,7 @@
 #![cfg(any(feature = "dioxus", feature = "leptos", feature = "sycamore"))]
 
-use mui_headless::dialog::DialogState;
-use mui_material::dialog::DialogSurfaceOptions;
+use rustic_ui_headless::dialog::DialogState;
+use rustic_ui_material::dialog::DialogSurfaceOptions;
 
 /// Validate that dialog adapters attach the generated class and ARIA metadata
 /// when open while emitting no markup when closed.
@@ -31,7 +31,7 @@ fn non_modal_open_state() -> DialogState {
 #[cfg(feature = "dioxus")]
 mod dioxus_tests {
     use super::*;
-    use mui_material::dialog::dioxus;
+    use rustic_ui_material::dialog::dioxus;
 
     fn build_props(state: DialogState) -> dioxus::DialogProps {
         dioxus::DialogProps {
@@ -85,7 +85,7 @@ mod dioxus_tests {
 #[cfg(feature = "leptos")]
 mod leptos_tests {
     use super::*;
-    use mui_material::dialog::leptos;
+    use rustic_ui_material::dialog::leptos;
 
     fn build_props(state: DialogState) -> leptos::DialogProps {
         leptos::DialogProps {
@@ -135,7 +135,7 @@ mod leptos_tests {
 #[cfg(feature = "sycamore")]
 mod sycamore_tests {
     use super::*;
-    use mui_material::dialog::sycamore;
+    use rustic_ui_material::dialog::sycamore;
 
     fn build_props(state: DialogState) -> sycamore::DialogProps {
         sycamore::DialogProps {

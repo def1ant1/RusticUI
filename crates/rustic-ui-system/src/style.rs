@@ -255,5 +255,5 @@ fn value_to_string(value: &Value) -> String {
 }
 
 // The module intentionally re-exports all generated helpers so callers can do
-// `use mui_system::style::*` or simply `use mui_system::*` when `lib.rs`
+// `use rustic_ui_system::style::*` or simply `use rustic_ui_system::*` when `lib.rs`
 // re-exports this module.

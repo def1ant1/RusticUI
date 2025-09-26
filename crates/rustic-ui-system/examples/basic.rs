@@ -2,7 +2,7 @@
 //!
 //! Run with `cargo run --example basic --features yew` targeting `wasm32`.
 
-use mui_system::{style_props, Box, Grid, Theme, ThemeProvider};
+use rustic_ui_system::{style_props, Box, Grid, Theme, ThemeProvider};
 use yew::prelude::*;
 
 #[function_component(App)]

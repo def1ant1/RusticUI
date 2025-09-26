@@ -1,4 +1,4 @@
-//! Material flavored tooltip renderer building on the headless [`TooltipState`](mui_headless::tooltip::TooltipState).
+//! Material flavored tooltip renderer building on the headless [`TooltipState`](rustic_ui_headless::tooltip::TooltipState).
 //!
 //! The implementation mirrors [`button`](crate::button) by centralizing the
 //! HTML + CSS assembly so that every framework adapter (Yew, Leptos, Dioxus and
@@ -8,9 +8,9 @@
 //! * **SSR parity** – the exact markup (including scoped classes) is emitted no
 //!   matter which framework triggers the render.  This keeps automated diffing
 //!   and streaming pipelines deterministic.
-//! * **Theme awareness** – [`css_with_theme!`](mui_styled_engine::css_with_theme)
+//! * **Theme awareness** – [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
 //!   pulls palette/typography/density tokens from the active
-//!   [`Theme`](mui_styled_engine::Theme) so enterprise overrides cascade without
+//!   [`Theme`](rustic_ui_styled_engine::Theme) so enterprise overrides cascade without
 //!   touching this module.
 //! * **Automation hooks** – consistent `data-*` attributes and ARIA metadata
 //!   (`aria-describedby`, `aria-hidden`, etc.) are produced for QA suites and
@@ -29,9 +29,9 @@
 //! for hydration across multiple frameworks:
 //!
 //! ```rust,no_run
-//! use mui_headless::tooltip::{TooltipConfig, TooltipState};
-//! use mui_material::tooltip::{yew, TooltipProps};
-//! use mui_styled_engine::{StyleRegistry, Theme};
+//! use rustic_ui_headless::tooltip::{TooltipConfig, TooltipState};
+//! use rustic_ui_material::tooltip::{yew, TooltipProps};
+//! use rustic_ui_styled_engine::{StyleRegistry, Theme};
 //!
 //! let mut theme = Theme::default();
 //! theme.palette.primary = "#0057B7".into();
@@ -60,9 +60,9 @@
 //! emitting SSR snapshots, hydration entry points, and automation ids with a
 //! single `cargo run --bin bootstrap` invocation.
 
-use mui_headless::tooltip::{TooltipState, TooltipSurfaceAttributes, TooltipTriggerAttributes};
-use mui_styled_engine::{css_with_theme, Style};
-use mui_system::portal::PortalMount;
+use rustic_ui_headless::tooltip::{TooltipState, TooltipSurfaceAttributes, TooltipTriggerAttributes};
+use rustic_ui_styled_engine::{css_with_theme, Style};
+use rustic_ui_system::portal::PortalMount;
 
 /// Shared tooltip properties consumed by every adapter.
 #[derive(Clone, Debug)]
@@ -451,7 +451,7 @@ pub mod sycamore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mui_headless::tooltip::TooltipConfig;
+    use rustic_ui_headless::tooltip::TooltipConfig;
 
     #[test]
     fn render_html_includes_aria_and_portal_metadata() {

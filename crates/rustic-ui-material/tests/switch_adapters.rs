@@ -5,8 +5,8 @@
     feature = "sycamore"
 ))]
 
-use mui_headless::switch::SwitchState;
-use mui_material::switch::{self, SwitchProps};
+use rustic_ui_headless::switch::SwitchState;
+use rustic_ui_material::switch::{self, SwitchProps};
 
 #[cfg(feature = "yew")]
 mod yew_tests {

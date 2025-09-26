@@ -2,8 +2,8 @@
 //! accessibility metadata.
 //!
 //! All adapters derive their visual appearance from
-//! [`css_with_theme!`](mui_styled_engine::css_with_theme) so palette and sizing
-//! decisions track the active [`Theme`](mui_styled_engine::Theme). The shared
+//! [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme) so palette and sizing
+//! decisions track the active [`Theme`](rustic_ui_styled_engine::Theme). The shared
 //! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
 //! converts those styles into scoped class names while
 //! [`style_helpers::themed_attributes_html`](crate::style_helpers::themed_attributes_html)
@@ -18,7 +18,7 @@
     feature = "dioxus",
     feature = "sycamore"
 ))]
-use mui_styled_engine::{css_with_theme, use_theme, Style, Theme};
+use rustic_ui_styled_engine::{css_with_theme, use_theme, Style, Theme};
 
 #[cfg(feature = "yew")]
 use yew::prelude::*;

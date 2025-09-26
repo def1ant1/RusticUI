@@ -13,7 +13,7 @@
 //! expose which makes it trivial for QA suites to target the rendered popovers
 //! regardless of the framework powering the page.
 
-use mui_utils::attributes_to_html;
+use rustic_ui_utils::attributes_to_html;
 
 /// Distinguishes the type of surface being rendered.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

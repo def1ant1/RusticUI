@@ -1,18 +1,18 @@
 //! Material flavored drawer utilities that decorate the headless
-//! [`DrawerState`](mui_headless::drawer::DrawerState).
+//! [`DrawerState`](rustic_ui_headless::drawer::DrawerState).
 //!
 //! The helpers expose automation-ready attribute vectors and HTML renderers so
 //! framework adapters can stay lean. Styling is centralized through
-//! [`css_with_theme!`](mui_styled_engine::css_with_theme) which pulls palette,
+//! [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme) which pulls palette,
 //! spacing, breakpoints and Joy token values from the active theme. The
 //! resulting API keeps modal and persistent drawers visually aligned across
 //! Yew/Leptos/Dioxus/Sycamore without forcing each team to juggle bespoke CSS.
 
-use mui_headless::drawer::{
+use rustic_ui_headless::drawer::{
     DrawerAnchor, DrawerBackdropAttributes, DrawerState, DrawerSurfaceAttributes, DrawerVariant,
 };
-use mui_styled_engine::{css_with_theme, Style};
-use mui_system::{
+use rustic_ui_styled_engine::{css_with_theme, Style};
+use rustic_ui_system::{
     r#box::{build_box_style, BoxStyleInputs},
     responsive::{viewport_width, Responsive},
     theme::Theme,
@@ -498,7 +498,7 @@ pub mod dioxus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mui_headless::drawer::{DrawerAnchor, DrawerVariant};
+    use rustic_ui_headless::drawer::{DrawerAnchor, DrawerVariant};
 
     fn sample_state(open: bool, variant: DrawerVariant) -> DrawerState {
         DrawerState::new(

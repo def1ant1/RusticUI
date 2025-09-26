@@ -4,7 +4,7 @@
 //! The module purposely centralizes HTML generation for every supported
 //! framework so that Yew, Leptos, Dioxus and Sycamore adapters can simply call
 //! [`render_html`] and attach the returned markup.  Styling flows through the
-//! [`css_with_theme!`](mui_styled_engine::css_with_theme) macro which extracts
+//! [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme) macro which extracts
 //! spacing, palette and typography values from the active [`Theme`].  The
 //! resulting CSS classes mirror Material's density knobs and typography ramp,
 //! ensuring parity with upstream designs without duplicating constants across
@@ -20,8 +20,8 @@
 //!   `data-highlighted` attributes so adapters can scroll the active row into
 //!   view without reimplementing business logic.
 
-use mui_headless::list::{ListState, SelectionMode};
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_headless::list::{ListState, SelectionMode};
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 /// Density options mirroring Material UI's list spacing presets.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -82,7 +82,7 @@ impl Default for ListTypography {
 }
 
 impl ListTypography {
-    pub(crate) fn font_size(self, theme: &mui_styled_engine::Theme) -> f32 {
+    pub(crate) fn font_size(self, theme: &rustic_ui_styled_engine::Theme) -> f32 {
         match self {
             Self::Body1 => theme.typography.body1,
             Self::Body2 => theme.typography.body2,
@@ -90,7 +90,7 @@ impl ListTypography {
         }
     }
 
-    pub(crate) fn font_weight(self, theme: &mui_styled_engine::Theme) -> u16 {
+    pub(crate) fn font_weight(self, theme: &rustic_ui_styled_engine::Theme) -> u16 {
         match self {
             Self::Subtitle1 => theme.typography.font_weight_medium,
             _ => theme.typography.font_weight_regular,

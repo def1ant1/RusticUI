@@ -1,7 +1,7 @@
 macro_rules! assert_css {
     ($value:expr => $( $func:ident => $prop:expr ),+ $(,)?) => {{
         $(
-            let actual = mui_system::$func($value);
+            let actual = rustic_ui_system::$func($value);
             let expected = format!("{}:{};", $prop, $value);
             assert_eq!(actual, expected, "helper {} should emit {}", stringify!($func), expected);
         )*

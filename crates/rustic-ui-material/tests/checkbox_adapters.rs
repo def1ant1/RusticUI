@@ -5,8 +5,8 @@
     feature = "sycamore"
 ))]
 
-use mui_headless::checkbox::CheckboxState;
-use mui_material::checkbox::{self, CheckboxProps};
+use rustic_ui_headless::checkbox::CheckboxState;
+use rustic_ui_material::checkbox::{self, CheckboxProps};
 
 #[cfg(feature = "yew")]
 mod yew_tests {

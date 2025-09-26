@@ -1,12 +1,12 @@
 //! Simple container with a themed border and padding.
 //!
 //! ## Style generation & theme integration
-//! * [`css_with_theme!`](mui_styled_engine::css_with_theme) centralizes styling.
+//! * [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme) centralizes styling.
 //!   Both the border color and interior spacing are pulled from the active
-//!   [`Theme`](mui_styled_engine::Theme) so applications remain visually
+//!   [`Theme`](rustic_ui_styled_engine::Theme) so applications remain visually
 //!   consistent.
 //! * [`style_helpers::themed_class`](crate::style_helpers::themed_class) wraps
-//!   the generated [`Style`](mui_styled_engine::Style) and hands back the scoped
+//!   the generated [`Style`](rustic_ui_styled_engine::Style) and hands back the scoped
 //!   class each adapter applies. Documenting the helper here keeps future
 //!   modules aligned with the established lifecycle for styled engine handles.
 //!
@@ -24,7 +24,7 @@
     feature = "dioxus",
     feature = "sycamore",
 ))]
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 #[cfg(feature = "leptos")]
 use leptos::Children;

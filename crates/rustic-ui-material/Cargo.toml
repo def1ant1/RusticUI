@@ -1,12 +1,11 @@
 [package]
-name = "mui-material"
+name = "rustic-ui-material"
 version = "0.1.0"
 edition = "2021"
 description = "Material Design components implemented in Rust leveraging mui-system."
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/m../rustic-ui-rust"
-homepage = "https://github.com/m../rustic-ui-rust"
-documentation = "https://docs.../rustic-ui-material"
+repository = "https://github.com/apotheon-ai/rusticui"
+homepage = "https://apotheon.ai/rusticui"
+documentation = "https://docs.rs/rustic-ui-material"
 keywords = ["material", "ui", "web"]
 categories = ["gui"]
 
@@ -14,14 +13,14 @@ categories = ["gui"]
 maintenance = { status = "experimental" }
 
 [dependencies]
-mui-styled-engine = { path = "../rustic-ui-styled-engine" }
-mui-system = { path = "../rustic-ui-system" }
-mui-headless = { path = "../rustic-ui-headless" }
+rustic-ui-styled-engine = { path = "../rustic-ui-styled-engine" }
+rustic-ui-system = { path = "../rustic-ui-system" }
+rustic-ui-headless = { path = "../rustic-ui-headless" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 stylist = { version = "0.13", default-features = false, features = ["macros", "parser"] }
-mui-utils = { path = "../rustic-ui-utils" }
+rustic-ui-utils = { path = "../rustic-ui-utils" }
 web-sys = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -30,7 +29,7 @@ gloo-utils = "0.2"
 
 [features]
 default = []
-yew = ["dep:yew", "dep:wasm-bindgen", "mui-system/yew", "mui-styled-engine/yew", "dep:web-sys"]
-leptos = ["dep:leptos", "dep:wasm-bindgen", "mui-system/leptos"]
-dioxus = ["mui-system/dioxus", "mui-styled-engine/dioxus"]
-sycamore = ["mui-system/sycamore", "mui-styled-engine/sycamore"]
+yew = ["dep:yew", "dep:wasm-bindgen", "rustic-ui-system/yew", "rustic-ui-styled-engine/yew", "dep:web-sys"]
+leptos = ["dep:leptos", "dep:wasm-bindgen", "rustic-ui-system/leptos"]
+dioxus = ["rustic-ui-system/dioxus", "rustic-ui-styled-engine/dioxus"]
+sycamore = ["rustic-ui-system/sycamore", "rustic-ui-styled-engine/sycamore"]
