@@ -1,8 +1,8 @@
 use leptos::*;
 use rustic_ui_material::select::SelectOption;
 use select_menu_shared::{
-    enterprise_theme, fetch_regions, props_from_options, render_select_markup, selection_summary,
-    to_select_options, AUTOMATION_ID,
+    enterprise_theme, example_automation_value, fetch_regions, props_from_options, render_select_markup,
+    selection_summary, to_select_options, AUTOMATION_ID,
 };
 #[cfg(feature = "ssr")]
 use select_menu_shared::ssr_shell;
@@ -62,7 +62,12 @@ pub fn App() -> impl IntoView {
 
     let rendered_select = move || {
         if options.with(|opts| opts.is_empty()) {
-            view! { <p data-automation="select-menu-loading">"Loading datacenters…"</p> }.into_view()
+            view! {
+                <p data-rustic-select-loading=example_automation_value(["loading"])>
+                    "Loading datacenters…"
+                </p>
+            }
+            .into_view()
         } else {
             let snapshot = options.get();
             let props = props_from_options(
@@ -76,7 +81,10 @@ pub fn App() -> impl IntoView {
     };
 
     view! {
-        <div style={container_style} data-automation="select-menu-leptos-shell">
+        <div
+            style={container_style}
+            data-rustic-select-shell=example_automation_value(["shell", "leptos"])
+        >
             <div style={panel_style}>
                 <header>
                     <h1 style="margin:0;font-size:1.75rem;">{"RusticUI Select Menu — Leptos"}</h1>
@@ -88,7 +96,7 @@ pub fn App() -> impl IntoView {
                     <button
                         type="button"
                         on:click=move |_| open.update(|value| *value = !*value)
-                        data-automation="select-menu-toggle-open"
+                        data-rustic-select-toggle=example_automation_value(["toggle", "open"])
                     >
                         {move || if open.get() { "Close menu" } else { "Open menu" }}
                     </button>
@@ -105,19 +113,19 @@ pub fn App() -> impl IntoView {
                                 .unwrap_or(0);
                             selected.set(Some(next));
                         }
-                        data-automation="select-menu-cycle"
+                        data-rustic-select-cycle=example_automation_value(["cycle"])
                     >
                         {"Cycle selection"}
                     </button>
                 </section>
                 <p
                     aria-live="polite"
-                    data-automation="select-menu-selection"
+                    data-rustic-select-selection=example_automation_value(["selection"])
                     style="margin:0;font-weight:500;"
                 >
                     {move || summary.get()}
                 </p>
-                <section data-automation="select-menu-rendered">
+                <section data-rustic-select-rendered=example_automation_value(["rendered"])>
                     {rendered_select}
                 </section>
             </div>

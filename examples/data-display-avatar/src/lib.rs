@@ -92,7 +92,7 @@ pub fn enterprise_story() -> AvatarStory {
 
 fn wrap_markup(automation_id: &str, chip_html: &str, tooltip_html: &str) -> String {
     format!(
-        "<article class=\"avatar-card\" data-automation-avatar=\"{automation_id}\">\n  {chip}\n  <div class=\"avatar-presence\">{tooltip}</div>\n</article>",
+        "<article class=\"avatar-card\" data-rustic-avatar-id=\"rustic-avatar-{automation_id}\">\n  {chip}\n  <div class=\"avatar-presence\">{tooltip}</div>\n</article>",
         automation_id = automation_id,
         chip = chip_html,
         tooltip = tooltip_html
@@ -123,15 +123,15 @@ mod tests {
         assert_eq!(story.markup.len(), 4);
         for (framework, html) in &story.markup {
             assert!(
-                html.contains("data-automation-avatar=\"avatar-alex\""),
+                html.contains("data-rustic-avatar-id=\"rustic-avatar-avatar-alex\""),
                 "wrapper automation hook missing for {framework}: {html}"
             );
             assert!(
-                html.contains("data-automation-id=\"avatar-alex\""),
+                html.contains("data-rustic-chip-id=\"rustic-chip-avatar-alex\""),
                 "chip automation id missing for {framework}: {html}"
             );
             assert!(
-                html.contains("data-automation-id=\"avatar-alex-tooltip\""),
+                html.contains("data-rustic-tooltip-id=\"rustic-tooltip-avatar-alex-tooltip\""),
                 "tooltip automation id missing for {framework}: {html}"
             );
         }

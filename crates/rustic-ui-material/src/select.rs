@@ -114,20 +114,21 @@ fn render_html(props: &SelectProps, state: &SelectState) -> String {
 
 /// Resolve the automation identifier used for data hooks and DOM ids.
 fn automation_base(props: &SelectProps) -> String {
-    props
-        .automation_id
-        .clone()
-        .unwrap_or_else(|| "rustic_ui_select".into())
+    crate::style_helpers::automation_id("select", props.automation_id.as_deref(), [])
 }
 
 /// Compute the DOM id for the option list.
 fn list_id(props: &SelectProps) -> String {
-    format!("{}-list", automation_base(props))
+    crate::style_helpers::automation_id("select", props.automation_id.as_deref(), ["list"])
 }
 
 /// Compute the DOM id for a given option.
 fn option_id(props: &SelectProps, index: usize) -> String {
-    format!("{}-option-{index}", automation_base(props))
+    crate::style_helpers::automation_id(
+        "select",
+        props.automation_id.as_deref(),
+        [format!("option-{index}")],
+    )
 }
 
 /// Build the attribute map for the root container.
@@ -137,15 +138,27 @@ fn root_attributes(
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
-    attrs.push(("data-component".into(), "rustic_ui_select".into()));
+    let base_id = automation_base(props);
+    let user_id = props.automation_id.as_deref();
+    // Automation: every root container exposes deterministic selectors so QA
+    // suites can target the select without relying on framework wrappers.
+    attrs.push((
+        crate::style_helpers::automation_data_attr("select", ["id"]),
+        base_id.clone(),
+    ));
+    attrs.push((
+        crate::style_helpers::automation_data_attr("select", ["root"]),
+        crate::style_helpers::automation_id("select", user_id, ["root"]),
+    ));
+    attrs.push((
+        "data-component".into(),
+        crate::style_helpers::automation_id("select", None, []),
+    ));
     attrs.push(("data-open".into(), state.is_open().to_string()));
     attrs.push((
         "data-portal-layer".into(),
         portal.layer().as_str().to_string(),
     ));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-id".into(), id.clone()));
-    }
     attrs
 }
 
@@ -165,9 +178,12 @@ fn trigger_attributes(
     attrs.push(("data-open".into(), state.is_open().to_string()));
     attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
     attrs.push(("data-portal-root".into(), portal.container_id()));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-trigger".into(), id.clone()))
-    }
+    // Automation: triggers mirror the root id to keep click targets predictable
+    // across SSR and client renders.
+    attrs.push((
+        crate::style_helpers::automation_data_attr("select", ["trigger"]),
+        crate::style_helpers::automation_id("select", props.automation_id.as_deref(), ["trigger"]),
+    ));
     attrs
 }
 
@@ -190,9 +206,10 @@ fn list_attributes(
     attrs.push(("data-open".into(), state.is_open().to_string()));
     attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
     attrs.push(("data-portal-root".into(), portal.container_id()));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-list".into(), id.clone()));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("select", ["list"]),
+        crate::style_helpers::automation_id("select", props.automation_id.as_deref(), ["list"]),
+    ));
     attrs
 }
 
@@ -214,15 +231,23 @@ fn option_attributes(
     attrs.push(("data-highlighted".into(), is_highlighted.to_string()));
     attrs.push(("data-index".into(), index.to_string()));
     attrs.push(("data-value".into(), props.options[index].value.clone()));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-option".into(), format!("{id}-{index}")));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("select", ["option"]),
+        crate::style_helpers::automation_id(
+            "select",
+            props.automation_id.as_deref(),
+            [format!("option-{index}")],
+        ),
+    ));
     attrs
 }
 
 fn popover_mount(props: &SelectProps) -> PortalMount {
-    let base = format!("{}-popover", automation_base(props));
-    PortalMount::popover(base)
+    PortalMount::popover(crate::style_helpers::automation_id(
+        "select",
+        props.automation_id.as_deref(),
+        ["popover"],
+    ))
 }
 
 /// Baseline wrapper style ensuring the select trigger and list share consistent
@@ -472,7 +497,7 @@ mod tests {
         let props = sample_props();
         let state = build_state(props.options.len());
         let html = render_html(&props, &state);
-        assert!(html.contains("data-automation-id=\"sample\""));
+        assert!(html.contains("data-rustic-select-id=\"rustic-select-sample\"",));
         assert!(html.contains("data-value=\"1\""));
         assert!(html.contains("data-portal-root"));
         assert!(html.contains("data-portal-anchor"));

@@ -37,7 +37,7 @@
 //!
 //! let html = chip_yew::render(&props, &state);
 //! assert!(html.contains("data-component=\"rustic_ui_chip\""));
-//! assert!(html.contains("data-automation-id=\"feedback-chip\""));
+//! assert!(html.contains("data-rustic-chip-id=\"rustic-chip-feedback-chip\""));
 //!
 //! // Style collection mirrors the tooltip story so SSR snapshots remain themed.
 //! let _ = registry.style_manager();
@@ -106,8 +106,8 @@ impl ChipProps {
 /// Shared rendering routine used by SSR and hydration aware adapters.
 fn render_html(props: &ChipProps, state: &ChipState) -> String {
     let base_id = automation_base(props);
-    let label_id = label_id(&base_id);
-    let delete_id = delete_id(&base_id);
+    let label_id = label_id(props);
+    let delete_id = delete_id(props);
 
     let root_attrs = crate::style_helpers::themed_attributes_html(
         themed_root_style(),
@@ -142,20 +142,17 @@ fn render_html(props: &ChipProps, state: &ChipState) -> String {
 
 /// Resolve the automation identifier base.
 fn automation_base(props: &ChipProps) -> String {
-    props
-        .automation_id
-        .clone()
-        .unwrap_or_else(|| "rustic_ui_chip".into())
+    crate::style_helpers::automation_id("chip", props.automation_id.as_deref(), [])
 }
 
 /// DOM id for the label span.
-fn label_id(base: &str) -> String {
-    format!("{base}-label")
+fn label_id(props: &ChipProps) -> String {
+    crate::style_helpers::automation_id("chip", props.automation_id.as_deref(), ["label"])
 }
 
 /// DOM id for the delete button.
-fn delete_id(base: &str) -> String {
-    format!("{base}-delete")
+fn delete_id(props: &ChipProps) -> String {
+    crate::style_helpers::automation_id("chip", props.automation_id.as_deref(), ["delete"])
 }
 
 /// Attribute map for the chip root element.
@@ -191,7 +188,18 @@ fn root_attributes(
         "tabindex".into(),
         if state.disabled() { "-1" } else { "0" }.into(),
     ));
-    attrs.push(("data-component".into(), "rustic_ui_chip".into()));
+    attrs.push((
+        crate::style_helpers::automation_data_attr("chip", ["id"]),
+        base_id.to_string(),
+    ));
+    attrs.push((
+        crate::style_helpers::automation_data_attr("chip", ["root"]),
+        crate::style_helpers::automation_id("chip", props.automation_id.as_deref(), ["root"]),
+    ));
+    attrs.push((
+        "data-component".into(),
+        crate::style_helpers::automation_id("chip", None, []),
+    ));
     attrs.push(("data-visible".into(), state.is_visible().to_string()));
     attrs.push((
         "data-controls-visible".into(),
@@ -207,9 +215,14 @@ fn root_attributes(
     attrs.push(("data-dismissible".into(), props.dismissible.to_string()));
     attrs.push(("data-label-id".into(), label_id.to_string()));
     attrs.push(("data-delete-id".into(), delete_id.to_string()));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-id".into(), id.clone()));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("chip", ["label"]),
+        label_id.to_string(),
+    ));
+    attrs.push((
+        crate::style_helpers::automation_data_attr("chip", ["delete"]),
+        delete_id.to_string(),
+    ));
     attrs
 }
 

@@ -8,6 +8,15 @@
 use rustic_ui_styled_engine::Style;
 use rustic_ui_utils::{attributes_to_html, collect_attributes};
 
+/// Global prefix applied to every automation selector emitted by Material components.
+///
+/// All DOM ids and `data-*` attributes intended for QA automation or accessibility
+/// smoke tests should begin with this prefix. Centralising the prefix (and the
+/// accompanying formatting helpers) keeps selectors stable across SSR and client
+/// renders while dramatically reducing the risk of typos when new components are
+/// introduced.
+pub(crate) const COMPONENT_PREFIX: &str = "rustic";
+
 /// Consumes a [`Style`] and returns the scoped class name produced by the
 /// styled engine.
 ///
@@ -54,6 +63,96 @@ where
     attributes_to_html(&attrs)
 }
 
+/// Compose a deterministic automation DOM id that adheres to the workspace contract.
+///
+/// # Automation contract
+///
+/// * Every automation selector must start with [`COMPONENT_PREFIX`] so QA suites can
+///   glob on `rustic-*` without worrying about historical aliases.
+/// * Component adapters pass the logical `component` name (e.g. `"select"`,
+///   `"table"`) along with the optional user provided identifier and any additional
+///   `segments` describing the element (such as `"trigger"`, `"row-3"`).
+/// * All inputs are sanitised to `kebab-case` so the same selector is produced
+///   regardless of whether the caller provided `snake_case`, spaces or uppercase
+///   values. Invalid characters collapse to hyphens which keeps CSS and testing
+///   tooling happy.
+///
+/// The resulting id is safe to use both as a DOM `id` and as the value for
+/// automation-focused `data-*` attributes. By funnelling every component through
+/// this helper we minimise the amount of manual string formatting and guarantee
+/// that SSR snapshots, client renders, and integration tests share the same
+/// selectors.
+#[must_use]
+pub(crate) fn automation_id<I, S>(component: &str, user_id: Option<&str>, segments: I) -> String
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    let mut parts = Vec::new();
+    parts.push(sanitise(component));
+
+    if let Some(id) = user_id {
+        let sanitised = sanitise(id);
+        if !sanitised.is_empty() {
+            parts.push(sanitised);
+        }
+    }
+
+    for segment in segments {
+        let sanitised = sanitise(segment.as_ref());
+        if !sanitised.is_empty() {
+            parts.push(sanitised);
+        }
+    }
+
+    format!("{COMPONENT_PREFIX}-{}", parts.join("-"))
+}
+
+/// Compose the attribute name for automation-focused `data-*` hooks.
+///
+/// Unlike [`automation_id`], the attribute name never incorporates the caller's
+/// `user_id` because QA tooling expects the attribute key to remain stable across
+/// component instances. Only the logical `component` name and descriptive
+/// `segments` participate in the key.
+#[must_use]
+pub(crate) fn automation_data_attr<I, S>(component: &str, segments: I) -> String
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    format!("data-{}", automation_id(component, None, segments))
+}
+
+fn sanitise(value: &str) -> String {
+    let mut output = String::new();
+    let mut prev_dash = false;
+
+    for ch in value.chars() {
+        let mapped = match ch {
+            'A'..='Z' => Some(ch.to_ascii_lowercase()),
+            'a'..='z' | '0'..='9' => Some(ch),
+            '-' | '_' | ' ' | ':' | '.' | '/' => None,
+            _ => None,
+        };
+
+        if let Some(valid) = mapped {
+            output.push(valid);
+            prev_dash = false;
+        } else if !prev_dash {
+            output.push('-');
+            prev_dash = true;
+        }
+    }
+
+    let trimmed = output.trim_matches('-').to_string();
+
+    if trimmed.is_empty() {
+        String::from("component")
+    } else {
+        trimmed
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,5 +182,17 @@ mod tests {
         let html = themed_attributes_html(style, [("aria-label", "Save")]);
         assert!(html.contains("class=\""));
         assert!(html.contains("aria-label=\"Save\""));
+    }
+
+    #[test]
+    fn automation_id_sanitises_segments() {
+        let id = automation_id("Select", Some("Team Menu"), ["Trigger", "Primary"]);
+        assert_eq!(id, "rustic-select-team-menu-trigger-primary");
+    }
+
+    #[test]
+    fn automation_data_attr_excludes_user_segment() {
+        let attr = automation_data_attr("tooltip", ["surface"]);
+        assert_eq!(attr, "data-rustic-tooltip-surface");
     }
 }

@@ -78,7 +78,7 @@ mod tests {
         assert_eq!(story.markup.len(), 4);
         for (framework, html) in &story.markup {
             assert!(
-                html.contains("data-automation-id=\"feedback-tooltip\""),
+                html.contains("data-rustic-tooltip-id=\"rustic-tooltip-feedback-tooltip\""),
                 "missing automation id for {framework}: {html}"
             );
             assert!(

@@ -52,7 +52,7 @@ fn workspace_root() -> PathBuf {
 fn ssr_document(theme: &rustic_ui_styled_engine::Theme, body: &str, automation_id: &str) -> String {
     let baseline = material_css_baseline_from_theme(theme);
     format!(
-        "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>Chip SSR snapshot</title>\n    <style>{baseline}</style>\n  </head>\n  <body data-automation-root=\"{automation_id}\">\n    <div id=\"app\">{body}</div>\n  </body>\n</html>\n",
+        "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>Chip SSR snapshot</title>\n    <style>{baseline}</style>\n  </head>\n  <body data-rustic-chip-root=\"rustic-chip-{automation_id}\">\n    <div id=\"app\">{body}</div>\n  </body>\n</html>\n",
         baseline = baseline,
         automation_id = automation_id,
         body = body
@@ -160,7 +160,7 @@ fn framework_readme(framework: &str, automation_id: &str) -> String {
 Generated via `cargo run --bin bootstrap` from `examples/feedback-chips`.\n\
 `dismissible.html` and `read-only.html` contain SSR markup for the two chip variants.\n\
 Wrap the hydration root with the returned theme so hover/focus affordances match the server snapshot.\n\
-Automation ids:\n\
-- Dismissible: `{automation_id}`\n- Read-only: `{automation_id}-static`\n\n"
+Automation selectors:\n\
+- Dismissible root: `data-rustic-chip-id=\"rustic-chip-{automation_id}\"`\n- Read-only root: `data-rustic-chip-id=\"rustic-chip-{automation_id}-static\"`\n\n"
     )
 }

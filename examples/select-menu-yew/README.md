@@ -22,7 +22,7 @@ trunk serve --open
 
 The app hydrates the server snapshot, fetches region data asynchronously, and
 keeps the select fully controlled via Yew state hooks. Every interactive element
-exposes deterministic `data-automation` attributes so CI tooling can exercise
+exposes deterministic `data-rustic` attributes so CI tooling can exercise
 the workflow without relying on brittle CSS selectors.
 
 Disabled regions can be toggled directly on the headless state machine without

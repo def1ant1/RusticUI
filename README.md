@@ -91,7 +91,7 @@ fn SaveButton() -> impl IntoView {
         <Button
             class=style.get_class_name()
             aria-label="save file"
-            data-automation="primary-save-action"
+            data-rustic-button-id="rustic-button-primary-save-action"
         >
             "Save"
         </Button>
@@ -161,7 +161,7 @@ Key capabilities showcased in the examples:
 - **Controlled props** – every renderer uses `controlled_state` to keep the
   open flag and selected option owned by the host application, mirroring the
   expectations of enterprise analytics and RBAC pipelines.【F:examples/select-menu-shared/src/lib.rs†L70-L89】
-- **Automation ready markup** – deterministic `data-automation` attributes flow
+- **Automation ready markup** – deterministic `data-rustic-*` attributes flow
   from `AUTOMATION_ID`, giving QA suites stable selectors across SSR and
   hydration.【F:examples/select-menu-shared/src/lib.rs†L16-L32】【F:examples/select-menu-yew/src/main.rs†L69-L106】
 - **Theme overrides** – both demos wrap the select in the high contrast

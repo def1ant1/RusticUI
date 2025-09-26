@@ -1,7 +1,7 @@
 use rustic_ui_material::select::SelectOption;
 use select_menu_shared::{
-    enterprise_theme, fetch_regions, props_from_options, render_select_markup, selection_summary,
-    to_select_options, AUTOMATION_ID,
+    enterprise_theme, example_automation_value, fetch_regions, props_from_options, render_select_markup,
+    selection_summary, to_select_options, AUTOMATION_ID,
 };
 #[cfg(feature = "ssr")]
 use select_menu_shared::ssr_shell;
@@ -71,7 +71,11 @@ fn app() -> Html {
         let summary_handle = summary_handle.clone();
         if options.is_empty() {
             summary_handle.set("Loading datacenters…".into());
-            html! { <p data-automation="select-menu-loading">{"Loading datacenters…"}</p> }
+            html! {
+                <p data-rustic-select-loading={example_automation_value(["loading"]) }>
+                    {"Loading datacenters…"}
+                </p>
+            }
         } else {
             let props = props_from_options(
                 "Primary replication region",
@@ -104,7 +108,7 @@ fn app() -> Html {
     html! {
         <div
             style={container_style}
-            data-automation="select-menu-yew-shell"
+            data-rustic-select-shell={example_automation_value(["shell", "yew"])}
         >
             <div style={panel_style}>
                 <header>
@@ -117,26 +121,26 @@ fn app() -> Html {
                     <button
                         type="button"
                         onclick={toggle_open}
-                        data-automation="select-menu-toggle-open"
+                        data-rustic-select-toggle={example_automation_value(["toggle", "open"])}
                     >
                         {if *open {"Close menu"} else {"Open menu"}}
                     </button>
                     <button
                         type="button"
                         onclick={cycle_selection}
-                        data-automation="select-menu-cycle"
+                        data-rustic-select-cycle={example_automation_value(["cycle"])}
                     >
                         {"Cycle selection"}
                     </button>
                 </section>
                 <p
                     aria-live="polite"
-                    data-automation="select-menu-selection"
+                    data-rustic-select-selection={example_automation_value(["selection"])}
                     style="margin:0;font-weight:500;"
                 >
                     {(*summary_text).clone()}
                 </p>
-                <section data-automation="select-menu-rendered">
+                <section data-rustic-select-rendered={example_automation_value(["rendered"])}>
                     {select_markup}
                 </section>
             </div>

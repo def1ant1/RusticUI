@@ -23,7 +23,7 @@ pub struct TableColumn {
     /// Whether the column is numeric. Numeric columns are right aligned and use
     /// tabular numbers for consistent metrics.
     pub numeric: bool,
-    /// Stable automation identifier appended to `data-automation-column`.
+    /// Stable automation identifier appended to `data-rustic-table-column`.
     pub automation_id: Option<String>,
 }
 
@@ -55,7 +55,7 @@ impl TableColumn {
 pub struct TableRow {
     /// Individual cell values rendered in order.
     pub cells: Vec<String>,
-    /// Optional automation identifier appended to `data-automation-row`.
+    /// Optional automation identifier appended to `data-rustic-table-row`.
     pub automation_id: Option<String>,
     /// Whether the row should be flagged as disabled.
     pub disabled: bool,
@@ -181,10 +181,20 @@ fn render_html(props: &TableProps, state: &ListState) -> String {
 
     let header_row_attrs = crate::style_helpers::themed_attributes_html(
         table_header_row_style(),
-        vec![(
-            String::from("data-component"),
-            String::from("rustic_ui_table_header_row"),
-        )],
+        vec![
+            (
+                String::from("data-component"),
+                crate::style_helpers::automation_id("table", None, ["header-row"]),
+            ),
+            (
+                crate::style_helpers::automation_data_attr("table", ["header-row"]),
+                crate::style_helpers::automation_id(
+                    "table",
+                    props.automation_id.as_deref(),
+                    ["header-row"],
+                ),
+            ),
+        ],
     );
 
     let mut header_cells_html = String::new();
@@ -217,25 +227,38 @@ fn render_html(props: &TableProps, state: &ListState) -> String {
 }
 
 fn automation_base(props: &TableProps) -> String {
-    props
-        .automation_id
-        .clone()
-        .unwrap_or_else(|| "rustic_ui_table".into())
+    crate::style_helpers::automation_id("table", props.automation_id.as_deref(), [])
 }
 
 fn column_id(props: &TableProps, index: usize) -> String {
-    format!("{}-column-{index}", automation_base(props))
+    crate::style_helpers::automation_id(
+        "table",
+        props.automation_id.as_deref(),
+        [format!("column-{index}")],
+    )
 }
 
 fn row_id(props: &TableProps, index: usize) -> String {
-    format!("{}-row-{index}", automation_base(props))
+    crate::style_helpers::automation_id(
+        "table",
+        props.automation_id.as_deref(),
+        [format!("row-{index}")],
+    )
 }
 
 fn cell_automation_id(props: &TableProps, row: usize, col: usize, column: &TableColumn) -> String {
     if let Some(id) = &column.automation_id {
-        format!("{}-{}-row-{row}", automation_base(props), id)
+        crate::style_helpers::automation_id(
+            "table",
+            props.automation_id.as_deref(),
+            [id.as_str(), format!("row-{row}")],
+        )
     } else {
-        format!("{}-cell-{row}-{col}", automation_base(props))
+        crate::style_helpers::automation_id(
+            "table",
+            props.automation_id.as_deref(),
+            [format!("cell-{row}-{col}")],
+        )
     }
 }
 
@@ -243,7 +266,7 @@ fn table_attributes(props: &TableProps, state: &ListState) -> Vec<(String, Strin
     let mut attrs = vec![
         (
             "data-component".to_string(),
-            String::from("rustic_ui_table"),
+            crate::style_helpers::automation_id("table", None, []),
         ),
         (
             "data-density".to_string(),
@@ -273,9 +296,15 @@ fn table_attributes(props: &TableProps, state: &ListState) -> Vec<(String, Strin
         }
     }
 
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-id".to_string(), id.clone()));
-    }
+    let base_id = automation_base(props);
+    attrs.push((
+        crate::style_helpers::automation_data_attr("table", ["id"]),
+        base_id.clone(),
+    ));
+    attrs.push((
+        crate::style_helpers::automation_data_attr("table", ["root"]),
+        crate::style_helpers::automation_id("table", props.automation_id.as_deref(), ["root"]),
+    ));
 
     attrs
 }
@@ -285,19 +314,30 @@ fn header_cell_attributes(
     column: &TableColumn,
     index: usize,
 ) -> Vec<(String, String)> {
-    vec![
+    let mut attrs = vec![
         ("id".to_string(), column_id(props, index)),
         ("scope".to_string(), String::from("col")),
         ("role".to_string(), String::from("columnheader")),
         ("data-numeric".to_string(), column.numeric.to_string()),
-        (
-            "data-automation-column".to_string(),
-            column
-                .automation_id
-                .clone()
-                .unwrap_or_else(|| format!("{}-column-{index}", automation_base(props))),
-        ),
-    ]
+    ];
+    let automation_value = column
+        .automation_id
+        .clone()
+        .map(|id| {
+            crate::style_helpers::automation_id("table", props.automation_id.as_deref(), [id])
+        })
+        .unwrap_or_else(|| {
+            crate::style_helpers::automation_id(
+                "table",
+                props.automation_id.as_deref(),
+                [format!("column-{index}")],
+            )
+        });
+    attrs.push((
+        crate::style_helpers::automation_data_attr("table", ["column"]),
+        automation_value,
+    ));
+    attrs
 }
 
 fn row_attributes(
@@ -316,13 +356,25 @@ fn row_attributes(
             (state.highlighted() == Some(index)).to_string(),
         ),
         ("data-disabled".into(), row.disabled.to_string()),
-        (
-            "data-automation-row".into(),
-            row.automation_id
-                .clone()
-                .unwrap_or_else(|| format!("{}-row-{index}", automation_base(props))),
-        ),
     ];
+
+    let row_value = row
+        .automation_id
+        .clone()
+        .map(|id| {
+            crate::style_helpers::automation_id("table", props.automation_id.as_deref(), [id])
+        })
+        .unwrap_or_else(|| {
+            crate::style_helpers::automation_id(
+                "table",
+                props.automation_id.as_deref(),
+                [format!("row-{index}")],
+            )
+        });
+    attrs.push((
+        crate::style_helpers::automation_data_attr("table", ["row"]),
+        row_value,
+    ));
 
     if matches!(
         props.selection_mode,
@@ -358,12 +410,11 @@ fn row_markup(props: &TableProps, row: &TableRow, row_index: usize) -> String {
                 vec![
                     (String::from("role"), String::from("gridcell")),
                     (
-                        String::from("data-automation-cell"),
-                        format!(
-                            "{}-cell-{}-extra-{}",
-                            automation_base(props),
-                            row_index,
-                            extra_index
+                        crate::style_helpers::automation_data_attr("table", ["cell"]),
+                        crate::style_helpers::automation_id(
+                            "table",
+                            props.automation_id.as_deref(),
+                            [format!("cell-{row_index}-extra-{extra_index}")],
                         ),
                     ),
                 ],
@@ -380,15 +431,16 @@ fn body_cell_attributes(
     row_index: usize,
     col_index: usize,
 ) -> Vec<(String, String)> {
-    vec![
+    let mut attrs = vec![
         ("role".to_string(), String::from("gridcell")),
         ("data-numeric".to_string(), column.numeric.to_string()),
         ("headers".to_string(), column_id(props, col_index)),
-        (
-            "data-automation-cell".to_string(),
-            cell_automation_id(props, row_index, col_index, column),
-        ),
-    ]
+    ];
+    attrs.push((
+        crate::style_helpers::automation_data_attr("table", ["cell"]),
+        cell_automation_id(props, row_index, col_index, column),
+    ));
+    attrs
 }
 
 fn table_style(props: &TableProps) -> Style {
@@ -598,7 +650,7 @@ mod tests {
         let props = sample_props();
         let attrs = header_cell_attributes(&props, &props.columns[1], 1);
         assert!(attrs.iter().any(|(k, v)| k == "scope" && v == "col"));
-        assert!(attrs.iter().any(|(k, _)| k == "data-automation-column"));
+        assert!(attrs.iter().any(|(k, _)| k == "data-rustic-table-column"));
     }
 
     #[test]
@@ -606,8 +658,8 @@ mod tests {
         let props = sample_props();
         let state = build_state(props.rows.len());
         let html = super::render_html(&props, &state);
-        assert!(html.contains("data-automation-cell"));
+        assert!(html.contains("data-rustic-table-cell"));
         assert!(html.contains("<table"));
-        assert!(html.contains("rustic_ui_table"));
+        assert!(html.contains("rustic-table"));
     }
 }

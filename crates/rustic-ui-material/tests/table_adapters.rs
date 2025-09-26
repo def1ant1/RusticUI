@@ -52,8 +52,9 @@ fn build_state(len: usize) -> ListState {
     feature = "sycamore",
 ))]
 fn assert_markup(html: &str) {
-    assert!(html.contains("data-component=\"rustic_ui_table\""));
-    assert!(html.contains("data-automation-cell"));
+    assert!(html.contains("data-component=\"rustic-table\""));
+    assert!(html.contains("data-rustic-table-id=\"rustic-table-adapter-table\"",));
+    assert!(html.contains("data-rustic-table-cell=\"rustic-table-adapter-table-cell-0-0\"",));
     assert!(html.contains("role=\"grid\""));
 }
 

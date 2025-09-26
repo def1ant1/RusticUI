@@ -25,8 +25,8 @@ The command produces `target/feedback-chips/<framework>/` directories with:
 
 Both chip variants expose deterministic `data-*` hooks:
 
-- `data-automation-id="feedback-chip"` for the dismissible instance.
-- `data-automation-id="feedback-chip-static"` for the read-only instance.
+- `data-rustic-chip-id="rustic-chip-feedback-chip"` for the dismissible instance.
+- `data-rustic-chip-id="rustic-chip-feedback-chip-static"` for the read-only instance.
 - `data-dismissible` toggles to `true`/`false` depending on the variant allowing
   QA suites to assert hover affordances.
 

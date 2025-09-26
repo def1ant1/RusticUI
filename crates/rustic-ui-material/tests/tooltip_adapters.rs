@@ -38,18 +38,25 @@ fn assert_tooltip_markup(html: &str) {
         "scoped class missing from root: {}",
         html
     );
-    assert!(html.contains("data-component=\"rustic_ui_tooltip\""));
-    assert!(html.contains("data-automation-id=\"adapter-tooltip\""));
-    assert!(html.contains("data-trigger-id=\"adapter-tooltip-trigger\""));
-    assert!(html.contains("data-surface-id=\"adapter-tooltip-surface\""));
+    assert!(html.contains("data-component=\"rustic-tooltip\""));
+    assert!(html.contains("data-rustic-tooltip-id=\"rustic-tooltip-adapter-tooltip\"",));
+    assert!(html.contains("data-rustic-tooltip-root=\"rustic-tooltip-adapter-tooltip-root\"",));
+    assert!(html.contains("data-trigger-id=\"rustic-tooltip-adapter-tooltip-trigger\"",));
+    assert!(html.contains("data-surface-id=\"rustic-tooltip-adapter-tooltip-surface\"",));
     assert!(html.contains("data-portal-layer=\"popover\""));
-    assert!(html.contains("data-portal-root=\"adapter-tooltip-portal\""));
+    assert!(html.contains("data-portal-root=\"rustic-tooltip-adapter-tooltip-popover\"",));
     assert!(html.contains("aria-describedby=\"adapter-tooltip-surface\""));
     assert!(html.contains("aria-controls=\"adapter-tooltip-surface\""));
     assert!(html.contains("aria-haspopup=\"dialog\""));
     assert!(html.contains("role=\"tooltip\""));
-    assert!(html.contains("data-component=\"rustic_ui_tooltip_trigger\""));
-    assert!(html.contains("data-component=\"rustic_ui_tooltip_surface\""));
+    assert!(html.contains("data-component=\"rustic-tooltip-trigger\""));
+    assert!(html.contains("data-component=\"rustic-tooltip-surface\""));
+    assert!(
+        html.contains("data-rustic-tooltip-trigger=\"rustic-tooltip-adapter-tooltip-trigger\"",)
+    );
+    assert!(
+        html.contains("data-rustic-tooltip-surface=\"rustic-tooltip-adapter-tooltip-surface\"",)
+    );
     assert!(
         html.matches("class=\"").count() >= 3,
         "expected scoped classes on root, trigger and surface"
@@ -58,11 +65,7 @@ fn assert_tooltip_markup(html: &str) {
         html.contains(">Detailed analytics</div>") || html.contains(">Detailed analytics</span>"),
         "tooltip content should render"
     );
-    assert!(
-        html.contains("data-automation-trigger=\"adapter-tooltip\"")
-            && html.contains("data-automation-surface=\"adapter-tooltip\""),
-        "automation hooks should mirror across trigger/surface"
-    );
+    assert!(html.contains("data-rustic-tooltip-portal=\"rustic-tooltip-adapter-tooltip-popover\"",));
 }
 
 #[cfg(feature = "yew")]

@@ -48,7 +48,7 @@
 //!
 //! let html = yew::render(&props, &state);
 //! assert!(html.contains("data-portal-root"));
-//! assert!(html.contains("data-automation-id=\"feedback-tooltip\""));
+//! assert!(html.contains("data-rustic-tooltip-id=\"rustic-tooltip-feedback-tooltip\""));
 //!
 //! // Hydration shells reuse the themed registry to flush styles after SSR.
 //! let _ = registry.style_manager();
@@ -123,9 +123,9 @@ impl TooltipProps {
 /// guaranteeing that automation hooks stay in sync across frameworks.
 fn render_html(props: &TooltipProps, state: &TooltipState) -> String {
     let base_id = automation_base(props);
-    let trigger_id = trigger_id(&base_id);
-    let surface_id = surface_id(&base_id);
-    let portal = tooltip_portal(&base_id);
+    let trigger_id = trigger_id(props);
+    let surface_id = surface_id(props);
+    let portal = tooltip_portal(props);
 
     // Attribute strings derived from themed styles + ARIA builders.  Keeping
     // them centralized ensures every adapter ships identical markup.
@@ -160,25 +160,26 @@ fn render_html(props: &TooltipProps, state: &TooltipState) -> String {
 
 /// Resolve the base automation identifier used to derive ids and data hooks.
 fn automation_base(props: &TooltipProps) -> String {
-    props
-        .automation_id
-        .clone()
-        .unwrap_or_else(|| "rustic_ui_tooltip".into())
+    crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), [])
 }
 
 /// Compute the DOM id for the trigger element.
-fn trigger_id(base: &str) -> String {
-    format!("{base}-trigger")
+fn trigger_id(props: &TooltipProps) -> String {
+    crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), ["trigger"])
 }
 
 /// Compute the DOM id for the tooltip surface.
-fn surface_id(base: &str) -> String {
-    format!("{base}-surface")
+fn surface_id(props: &TooltipProps) -> String {
+    crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), ["surface"])
 }
 
 /// Construct the portal mount coordinating anchor + detached container markup.
-fn tooltip_portal(base: &str) -> PortalMount {
-    PortalMount::popover(base)
+fn tooltip_portal(props: &TooltipProps) -> PortalMount {
+    PortalMount::popover(crate::style_helpers::automation_id(
+        "tooltip",
+        props.automation_id.as_deref(),
+        ["popover"],
+    ))
 }
 
 /// Attributes applied to the root span wrapping the trigger/anchor.
@@ -192,7 +193,18 @@ fn root_attributes(
 ) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("id".into(), base_id.to_string()));
-    attrs.push(("data-component".into(), "rustic_ui_tooltip".into()));
+    attrs.push((
+        crate::style_helpers::automation_data_attr("tooltip", ["id"]),
+        base_id.to_string(),
+    ));
+    attrs.push((
+        crate::style_helpers::automation_data_attr("tooltip", ["root"]),
+        crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), ["root"]),
+    ));
+    attrs.push((
+        "data-component".into(),
+        crate::style_helpers::automation_id("tooltip", None, []),
+    ));
     attrs.push(("data-visible".into(), state.visible().to_string()));
     attrs.push((
         "data-interactive".into(),
@@ -210,9 +222,10 @@ fn root_attributes(
     attrs.push(("data-surface-id".into(), surface_id.to_string()));
     attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
     attrs.push(("data-portal-root".into(), portal.container_id()));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-id".into(), id.clone()));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("tooltip", ["portal"]),
+        crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), ["popover"]),
+    ));
     attrs
 }
 
@@ -245,13 +258,17 @@ fn trigger_attributes(
     attrs.push((expanded_key.into(), expanded_value.into()));
     attrs.push(("aria-controls".into(), surface_id.to_string()));
     attrs.push(("type".into(), "button".into()));
-    attrs.push(("data-component".into(), "rustic_ui_tooltip_trigger".into()));
+    attrs.push((
+        "data-component".into(),
+        crate::style_helpers::automation_id("tooltip", None, ["trigger"]),
+    ));
     attrs.push(("data-visible".into(), state.visible().to_string()));
     attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
     attrs.push(("data-portal-root".into(), portal.container_id()));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-trigger".into(), id.clone()));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("tooltip", ["trigger"]),
+        crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), ["trigger"]),
+    ));
     attrs
 }
 
@@ -277,7 +294,10 @@ fn surface_attributes(
     }
     let (hidden_key, hidden_value) = builder.hidden();
     attrs.push((hidden_key.into(), hidden_value.into()));
-    attrs.push(("data-component".into(), "rustic_ui_tooltip_surface".into()));
+    attrs.push((
+        "data-component".into(),
+        crate::style_helpers::automation_id("tooltip", None, ["surface"]),
+    ));
     attrs.push(("data-visible".into(), state.visible().to_string()));
     attrs.push((
         "data-interactive".into(),
@@ -285,9 +305,10 @@ fn surface_attributes(
     ));
     attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
     attrs.push(("data-portal-root".into(), portal.container_id()));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-surface".into(), id.clone()));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("tooltip", ["surface"]),
+        crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), ["surface"]),
+    ));
     attrs
 }
 
