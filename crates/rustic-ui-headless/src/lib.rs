@@ -14,7 +14,7 @@
 //! [`toggle_button_group`] build on the same deterministic rules so Material
 //! and Joy stay aligned.
 //!
-//! The Material layer (`mui-material`) documents how these headless states are
+//! The Material layer (`rustic_ui_material`) documents how these headless states are
 //! rendered with shared theming, automation identifiers, and SSR safe markup.
 //! See [`crates/rustic-ui-material/README.md`](../rustic-ui-material/README.md#feedback-primitives-tooltip--chip)
 //! for a tour of the tooltip and chip primitives and the

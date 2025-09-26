@@ -1,7 +1,7 @@
 # Joy workflow – Yew
 
 This demo renders the shared [`joy-workflows-core`](../joy-workflows-core)
-blueprint with the Yew adapter from `mui-joy`. The entire pipeline – stepper
+blueprint with the Yew adapter from `rustic_ui_joy`. The entire pipeline – stepper
 state, snackbar logic, analytics identifiers, and Joy design tokens – lives in
 the shared crate so every framework emits identical automation hooks.
 

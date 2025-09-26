@@ -1,5 +1,5 @@
 /* Global baseline generated from the strongly typed Material theme.
-   Enterprise operators: adjust the `data-mui-color-scheme` attribute on the document element to flip between modes without rebuilding CSS. */
+   Enterprise operators: adjust the `data-rustic_ui_color_scheme` attribute on the document element to flip between modes without rebuilding CSS. */
 html {
     box-sizing: border-box;
     font-family: Roboto, Helvetica, Arial, sans-serif;
@@ -42,23 +42,23 @@ code, pre {
 }
 
 /* Data attribute selectors keep automated deployments deterministic by allowing infrastructure to force a mode before JS boots. */
-[data-mui-color-scheme='light'] html,
-[data-mui-color-scheme='light'] body {
+[data-rustic_ui_color_scheme='light'] html,
+[data-rustic_ui_color_scheme='light'] body {
     background-color: #fafafa;
     color: #1f2933;
 }
 
-[data-mui-color-scheme='light'] :root {
+[data-rustic_ui_color_scheme='light'] :root {
     color-scheme: light;
 }
 
-[data-mui-color-scheme='dark'] html,
-[data-mui-color-scheme='dark'] body {
+[data-rustic_ui_color_scheme='dark'] html,
+[data-rustic_ui_color_scheme='dark'] body {
     background-color: #121212;
     color: #ffffff;
 }
 
-[data-mui-color-scheme='dark'] :root {
+[data-rustic_ui_color_scheme='dark'] :root {
     color-scheme: dark;
 }
 

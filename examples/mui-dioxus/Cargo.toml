@@ -1,5 +1,5 @@
 [package]
-name = "mui-dioxus-example"
+name = "rustic_ui_dioxus_example"
 version = "0.1.0"
 edition = "2021"
 

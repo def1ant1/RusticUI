@@ -45,7 +45,7 @@ fn assert_chip_markup(html: &str) {
     );
     assert!(html.contains("role=\"button\""));
     assert!(html.contains("tabindex=\"0\""));
-    assert!(html.contains("data-component=\"mui-chip\""));
+    assert!(html.contains("data-component=\"rustic_ui_chip\""));
     assert!(html.contains("data-automation-id=\"adapter-chip\""));
     assert!(html.contains("data-label-id=\"adapter-chip-label\""));
     assert!(html.contains("data-delete-id=\"adapter-chip-delete\""));

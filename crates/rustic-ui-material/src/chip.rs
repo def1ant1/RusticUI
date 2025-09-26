@@ -36,7 +36,7 @@
 //!     .with_delete_label("remove escalation");
 //!
 //! let html = chip_yew::render(&props, &state);
-//! assert!(html.contains("data-component=\"mui-chip\""));
+//! assert!(html.contains("data-component=\"rustic_ui_chip\""));
 //! assert!(html.contains("data-automation-id=\"feedback-chip\""));
 //!
 //! // Style collection mirrors the tooltip story so SSR snapshots remain themed.
@@ -145,7 +145,7 @@ fn automation_base(props: &ChipProps) -> String {
     props
         .automation_id
         .clone()
-        .unwrap_or_else(|| "mui-chip".into())
+        .unwrap_or_else(|| "rustic_ui_chip".into())
 }
 
 /// DOM id for the label span.
@@ -191,7 +191,7 @@ fn root_attributes(
         "tabindex".into(),
         if state.disabled() { "-1" } else { "0" }.into(),
     ));
-    attrs.push(("data-component".into(), "mui-chip".into()));
+    attrs.push(("data-component".into(), "rustic_ui_chip".into()));
     attrs.push(("data-visible".into(), state.is_visible().to_string()));
     attrs.push((
         "data-controls-visible".into(),
@@ -431,7 +431,7 @@ mod tests {
         let state = ChipState::new(ChipConfig::default());
         let html = super::render_html(&props, &state);
 
-        assert!(html.contains("data-component=\"mui-chip\""));
+        assert!(html.contains("data-component=\"rustic_ui_chip\""));
         assert!(html.contains("data-chip-slot=\"delete\""));
         assert!(html.contains("aria-hidden"));
     }

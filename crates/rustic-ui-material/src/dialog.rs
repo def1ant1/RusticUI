@@ -7,7 +7,7 @@
 //!   rendering (SSR) and client-side rendering (CSR) perfectly aligned because
 //!   both environments observe the same lifecycle phases and transition
 //!   metadata.
-//! * Attribute builders returned by `mui-headless` – such as
+//! * Attribute builders returned by `rustic_ui_headless` – such as
 //!   [`DialogSurfaceAttributes`](rustic_ui_headless::dialog::DialogSurfaceAttributes)
 //!   and [`DialogBackdropAttributes`](rustic_ui_headless::dialog::DialogBackdropAttributes)
 //!   – feed into shared helpers that produce automation friendly `data-*`

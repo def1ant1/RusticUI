@@ -127,7 +127,7 @@ fn automation_base(props: &MenuProps) -> String {
     props
         .automation_id
         .clone()
-        .unwrap_or_else(|| "mui-menu".into())
+        .unwrap_or_else(|| "rustic_ui_menu".into())
 }
 
 fn surface_id(props: &MenuProps) -> String {
@@ -146,7 +146,7 @@ fn root_attributes(
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
-    attrs.push(("data-component".into(), "mui-menu".into()));
+    attrs.push(("data-component".into(), "rustic_ui_menu".into()));
     let (open_key, open_value) = surface_meta.data_open();
     attrs.push((open_key.into(), open_value.into()));
     let (preferred_key, preferred_value) = surface_meta.data_preferred();

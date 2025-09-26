@@ -1,6 +1,6 @@
 # Navigation Tabs with Leptos
 
-This guide documents how to integrate `mui-material`'s tab adapters into a
+This guide documents how to integrate `rustic_ui_material`'s tab adapters into a
 [Leptos](https://leptos.dev/) SPA while keeping routing, responsive breakpoints
 and accessibility concerns centralized. The pattern mirrors the Yew example but
 leans on Leptos' declarative `view!` syntax.
@@ -11,7 +11,7 @@ leans on Leptos' declarative `view!` syntax.
 - **Responsive** – uses `TabListLayoutOptions` to pivot into a vertical
 navigation rail at desktop breakpoints.
 - **Accessible by default** – the generated markup carries the WAI-ARIA
-contracts emitted by `mui-headless`.
+contracts emitted by `rustic_ui_headless`.
 - **Automatable** – an accompanying bootstrap script provisions a runnable demo
 with comments explaining every integration point.
 

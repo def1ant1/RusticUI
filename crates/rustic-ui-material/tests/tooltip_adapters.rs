@@ -38,7 +38,7 @@ fn assert_tooltip_markup(html: &str) {
         "scoped class missing from root: {}",
         html
     );
-    assert!(html.contains("data-component=\"mui-tooltip\""));
+    assert!(html.contains("data-component=\"rustic_ui_tooltip\""));
     assert!(html.contains("data-automation-id=\"adapter-tooltip\""));
     assert!(html.contains("data-trigger-id=\"adapter-tooltip-trigger\""));
     assert!(html.contains("data-surface-id=\"adapter-tooltip-surface\""));
@@ -48,8 +48,8 @@ fn assert_tooltip_markup(html: &str) {
     assert!(html.contains("aria-controls=\"adapter-tooltip-surface\""));
     assert!(html.contains("aria-haspopup=\"dialog\""));
     assert!(html.contains("role=\"tooltip\""));
-    assert!(html.contains("data-component=\"mui-tooltip-trigger\""));
-    assert!(html.contains("data-component=\"mui-tooltip-surface\""));
+    assert!(html.contains("data-component=\"rustic_ui_tooltip_trigger\""));
+    assert!(html.contains("data-component=\"rustic_ui_tooltip_surface\""));
     assert!(
         html.matches("class=\"").count() >= 3,
         "expected scoped classes on root, trigger and surface"

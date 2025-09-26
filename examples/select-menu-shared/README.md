@@ -12,7 +12,7 @@ markup, expose the same `data-*` hooks, and hydrate against the same HTML shell.
 - `enterprise_theme` &mdash; opinionated palette and typography settings reused by
   every demo so screenshots and SSR output stay consistent.
 - `render_select_markup` &mdash; deterministic HTML renderer that bypasses private
-  state constructors in `mui-headless` while mirroring Material attributes.
+  state constructors in `rustic_ui_headless` while mirroring Material attributes.
 - `selection_summary` &mdash; utility that produces a human-readable status line for
   automation and screen readers.
 

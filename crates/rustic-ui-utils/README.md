@@ -1,4 +1,4 @@
-# mui-utils
+# rustic_ui_utils
 
 Utility helpers shared across the Material UI Rust ecosystem.
 
@@ -13,7 +13,7 @@ browser:
 
 ```toml
 [dependencies]
-mui-utils = { version = "0.1", default-features = false, features = ["web"] }
+rustic_ui_utils = { version = "0.1", default-features = false, features = ["web"] }
 ```
 
 See the [Cargo feature guide](../../docs/cargo-features.md) for additional

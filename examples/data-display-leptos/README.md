@@ -1,8 +1,8 @@
 # Data display with Leptos
 
 This cookbook sample mirrors the Yew variant but targets Leptos. Both the list
-and table reuse the shared HTML renderers from `mui-material`, giving SSR and
-CSR the exact same markup while still benefiting from `mui-headless` keyboard
+and table reuse the shared HTML renderers from `rustic_ui_material`, giving SSR and
+CSR the exact same markup while still benefiting from `rustic_ui_headless` keyboard
 semantics.
 
 ## Running locally

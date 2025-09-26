@@ -21,7 +21,9 @@ use walkdir::WalkDir;
 )]
 struct Cli {
     /// Root of the JavaScript implementation (the canonical source of truth).
-    #[arg(long, default_value = "packages/mui-material/src")]
+    /// The default path tracks the legacy MUI material location but uses the
+    /// renamed `rustic_ui_material` alias to document the migration.
+    #[arg(long, default_value = "packages/rustic_ui_material/src")]
     material_src: PathBuf,
 
     /// Location of the Rust Material crate that should mirror the JS API surface.
@@ -414,12 +416,12 @@ fn write_markdown_report(report: &CoverageReport, path: &Path, top_n: usize) -> 
         report.total_components
     ));
     markdown.push_str(&format!(
-        "- `mui-material` coverage: {} ({:.1}%)\\n",
+        "- `rustic_ui_material` coverage: {} ({:.1}%)\\n",
         report.supported_in_material,
         report.material_coverage * 100.0
     ));
     markdown.push_str(&format!(
-        "- `mui-headless` coverage: {} ({:.1}%)\\n\n",
+        "- `rustic_ui_headless` coverage: {} ({:.1}%)\\n\n",
         report.supported_in_headless,
         report.headless_coverage * 100.0
     ));

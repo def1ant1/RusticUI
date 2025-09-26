@@ -121,7 +121,8 @@ fn generates_light_and_dark_artifacts_with_fixtures() -> Result<()> {
     // Verify that the log output remains descriptive for maintainers who rely on CI logs.
     let stdout = String::from_utf8_lossy(&assertion.get_output().stdout);
     assert!(
-        stdout.contains("[xtask] wrote crates/rustic-ui-system/templates/material_theme.light.json"),
+        stdout
+            .contains("[xtask] wrote crates/rustic-ui-system/templates/material_theme.light.json"),
         "xtask output should mention the light theme artifact"
     );
     for artifact in [

@@ -193,9 +193,7 @@ fn rewrite_manifest(path: &Path, block: &str) -> Result<(), Box<dyn Error>> {
     let new_manifest = format!("{}{}{}", &manifest[..start], block, &manifest[end..]);
 
     if new_manifest == manifest {
-        println!(
-            "[rustic-ui-icons] manifest already up to date; no changes written"
-        );
+        println!("[rustic-ui-icons] manifest already up to date; no changes written");
         return Ok(());
     }
 

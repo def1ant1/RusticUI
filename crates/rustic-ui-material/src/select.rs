@@ -7,7 +7,7 @@
 //! client runtimes while leaning on design tokens sourced from
 //! [`Theme`](rustic_ui_styled_engine::Theme) for every visual decision.
 //!
-//! ## Why this lives in `mui-material`
+//! ## Why this lives in `rustic_ui_material`
 //! * Rendering is centralized to prevent divergence between Yew, Leptos, Dioxus
 //!   and Sycamore adapters.
 //! * Styles derive from the active theme instead of literal CSS which allows
@@ -117,7 +117,7 @@ fn automation_base(props: &SelectProps) -> String {
     props
         .automation_id
         .clone()
-        .unwrap_or_else(|| "mui-select".into())
+        .unwrap_or_else(|| "rustic_ui_select".into())
 }
 
 /// Compute the DOM id for the option list.
@@ -137,7 +137,7 @@ fn root_attributes(
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
-    attrs.push(("data-component".into(), "mui-select".into()));
+    attrs.push(("data-component".into(), "rustic_ui_select".into()));
     attrs.push(("data-open".into(), state.is_open().to_string()));
     attrs.push((
         "data-portal-layer".into(),
@@ -420,7 +420,7 @@ mod tests {
             option_count,
             None,
             false,
-            // `ControlStrategy` lives in a private module inside `mui-headless`.
+            // `ControlStrategy` lives in a private module inside `rustic_ui_headless`.
             // The discriminant order is stable (documented within that crate),
             // so the test recreates the `Uncontrolled` variant via transmute to
             // keep the public surface lean while still exercising integration.

@@ -1,6 +1,6 @@
 # Feedback tooltips — multi-framework bootstrap
 
-This example packages the shared tooltip renderer from `mui-material` into a
+This example packages the shared tooltip renderer from `rustic_ui_material` into a
 single command that emits SSR markup, automation identifiers, and hydration
 stubs for every supported framework (Yew, Leptos, Dioxus, Sycamore). The goal is
 to eliminate one-off wiring when bootstrapping enterprise dashboards that rely

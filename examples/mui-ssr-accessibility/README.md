@@ -11,6 +11,6 @@ assistive technologies can properly describe the navigation landmark.
 Run the example with:
 
 ```bash
-cd examples/mui-ssr-accessibility
+cd examples/rustic_ui_ssr_accessibility
 cargo run
 ```

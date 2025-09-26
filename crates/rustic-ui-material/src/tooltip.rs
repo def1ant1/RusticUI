@@ -60,7 +60,9 @@
 //! emitting SSR snapshots, hydration entry points, and automation ids with a
 //! single `cargo run --bin bootstrap` invocation.
 
-use rustic_ui_headless::tooltip::{TooltipState, TooltipSurfaceAttributes, TooltipTriggerAttributes};
+use rustic_ui_headless::tooltip::{
+    TooltipState, TooltipSurfaceAttributes, TooltipTriggerAttributes,
+};
 use rustic_ui_styled_engine::{css_with_theme, Style};
 use rustic_ui_system::portal::PortalMount;
 
@@ -161,7 +163,7 @@ fn automation_base(props: &TooltipProps) -> String {
     props
         .automation_id
         .clone()
-        .unwrap_or_else(|| "mui-tooltip".into())
+        .unwrap_or_else(|| "rustic_ui_tooltip".into())
 }
 
 /// Compute the DOM id for the trigger element.
@@ -190,7 +192,7 @@ fn root_attributes(
 ) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
     attrs.push(("id".into(), base_id.to_string()));
-    attrs.push(("data-component".into(), "mui-tooltip".into()));
+    attrs.push(("data-component".into(), "rustic_ui_tooltip".into()));
     attrs.push(("data-visible".into(), state.visible().to_string()));
     attrs.push((
         "data-interactive".into(),
@@ -243,7 +245,7 @@ fn trigger_attributes(
     attrs.push((expanded_key.into(), expanded_value.into()));
     attrs.push(("aria-controls".into(), surface_id.to_string()));
     attrs.push(("type".into(), "button".into()));
-    attrs.push(("data-component".into(), "mui-tooltip-trigger".into()));
+    attrs.push(("data-component".into(), "rustic_ui_tooltip_trigger".into()));
     attrs.push(("data-visible".into(), state.visible().to_string()));
     attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
     attrs.push(("data-portal-root".into(), portal.container_id()));
@@ -275,7 +277,7 @@ fn surface_attributes(
     }
     let (hidden_key, hidden_value) = builder.hidden();
     attrs.push((hidden_key.into(), hidden_value.into()));
-    attrs.push(("data-component".into(), "mui-tooltip-surface".into()));
+    attrs.push(("data-component".into(), "rustic_ui_tooltip_surface".into()));
     attrs.push(("data-visible".into(), state.visible().to_string()));
     attrs.push((
         "data-interactive".into(),
@@ -459,7 +461,7 @@ mod tests {
         let state = TooltipState::new(TooltipConfig::default());
         let html = super::render_html(&props, &state);
 
-        assert!(html.contains("data-component=\"mui-tooltip\""));
+        assert!(html.contains("data-component=\"rustic_ui_tooltip\""));
         assert!(html.contains("aria-describedby"));
         assert!(html.contains("role=\"tooltip\""));
         assert!(html.contains("data-portal-layer=\"popover\""));
@@ -472,9 +474,9 @@ mod tests {
         let attrs = super::trigger_attributes(
             &props,
             &state,
-            &tooltip_portal("mui-tooltip"),
-            &trigger_id("mui-tooltip"),
-            &surface_id("mui-tooltip"),
+            &tooltip_portal("rustic_ui_tooltip"),
+            &trigger_id("rustic_ui_tooltip"),
+            &surface_id("rustic_ui_tooltip"),
         );
 
         assert!(attrs.iter().any(|(k, _)| k == "aria-expanded"));

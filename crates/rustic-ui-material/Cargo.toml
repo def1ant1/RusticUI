@@ -2,7 +2,7 @@
 name = "rustic-ui-material"
 version = "0.1.0"
 edition = "2021"
-description = "Material Design components implemented in Rust leveraging mui-system."
+description = "Material Design components implemented in Rust leveraging rustic_ui_system."
 repository = "https://github.com/apotheon-ai/rusticui"
 homepage = "https://apotheon.ai/rusticui"
 documentation = "https://docs.rs/rustic-ui-material"

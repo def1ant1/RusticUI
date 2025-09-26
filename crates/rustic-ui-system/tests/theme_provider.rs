@@ -97,7 +97,7 @@ fn css_baseline_includes_both_schemes() {
     assert!(css.contains(&theme.palette.light.background_default));
     assert!(css.contains(&theme.palette.dark.background_default));
     assert!(css.contains("@media (prefers-color-scheme: dark)"));
-    assert!(css.contains("[data-mui-color-scheme='dark']"));
+    assert!(css.contains("[data-rustic_ui_color_scheme='dark']"));
 }
 
 #[test]

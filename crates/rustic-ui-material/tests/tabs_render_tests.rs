@@ -4,7 +4,7 @@ use rustic_ui_material::Theme;
 
 /// Helper that constructs an uncontrolled [`TabsState`] with the provided
 /// orientation and activation mode. The `ControlStrategy` type lives in a
-/// private module inside `mui-headless`, so we mirror the approach used across
+/// private module inside `rustic_ui_headless`, so we mirror the approach used across
 /// the existing test suite by transmuting from the documented discriminants.
 fn build_state(orientation: TabsOrientation, activation: ActivationMode) -> TabsState {
     TabsState::new(
@@ -54,7 +54,7 @@ fn react_markup_includes_accessibility_contract() {
     // Snapshot style assertion: the top level wrapper should expose the custom
     // `data-on-activate` hook so orchestration layers can subscribe to tab
     // activation events without re-rendering. The inner tablist must carry the
-    // ARIA attributes emitted by `mui-headless` to remain screen-reader friendly.
+    // ARIA attributes emitted by `rustic_ui_headless` to remain screen-reader friendly.
     assert!(markup.contains("data-on-activate=\"tabs-activate\""));
     assert!(markup.contains("role=\"tablist\""));
     assert!(markup.contains("aria-labelledby"));

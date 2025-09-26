@@ -1,4 +1,4 @@
-# mui-joy
+# rustic_ui_joy
 
 Rust-first bindings for the Joy UI design language. The crate mirrors the
 structure of Material UI while exposing Joy-specific tokens such as neutral,
@@ -9,12 +9,12 @@ and Sycamore adapters share the same API surface and analytics hooks.
 ## Installation
 
 ```bash
-cargo add mui-joy --features yew
+cargo add rustic_ui_joy --features yew
 # or
-cargo add mui-joy --features leptos
+cargo add rustic_ui_joy --features leptos
 ```
 
-`mui-joy` deliberately keeps features granular so applications only compile the
+`rustic_ui_joy` deliberately keeps features granular so applications only compile the
 adapters they need:
 
 | Feature    | Purpose                                                                 | Typical consumers                |

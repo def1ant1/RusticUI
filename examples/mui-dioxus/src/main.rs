@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use rustic_ui_system::use_theme;
 
-/// Basic Dioxus component demonstrating integration with `mui-system`.
+/// Basic Dioxus component demonstrating integration with `rustic_ui_system`.
 fn App(cx: Scope) -> Element {
     let theme = use_theme();
     let pad = theme.spacing(2);

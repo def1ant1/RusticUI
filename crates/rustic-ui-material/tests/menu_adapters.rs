@@ -117,7 +117,7 @@ mod sycamore_tests {
         let props = sample_props();
         let state = build_state(props.items.len());
         let html = menu::sycamore::render(&props, &state);
-        assert!(html.contains("data-component=\"mui-menu\""));
+        assert!(html.contains("data-component=\"rustic_ui_menu\""));
         assert_portal_markup(&html);
     }
 

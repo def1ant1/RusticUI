@@ -11,7 +11,7 @@
 //! stateless.
 //!
 //! The Material wrappers described in
-//! [`mui-material/README.md`](../rustic-ui-material/README.md#feedback-primitives-tooltip--chip)
+//! [`rustic_ui_material/README.md`](../rustic-ui-material/README.md#feedback-primitives-tooltip--chip)
 //! reuse these primitives to emit SSR-ready HTML for Yew, Leptos, Dioxus, and
 //! Sycamore adapters.  The `examples/feedback-tooltips` bootstrap demonstrates
 //! how a single state machine instance can hydrate across frameworks while

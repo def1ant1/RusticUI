@@ -14,7 +14,9 @@
 use std::time::Duration;
 
 use rustic_ui_headless::dialog::{DialogPhase, DialogState, DialogTransition};
-use rustic_ui_headless::popover::{AnchorGeometry, CollisionOutcome, PopoverPlacement, PopoverState};
+use rustic_ui_headless::popover::{
+    AnchorGeometry, CollisionOutcome, PopoverPlacement, PopoverState,
+};
 use rustic_ui_headless::text_field::TextFieldState;
 
 /// ASCII anchor/floating surface illustration rendered in each example README

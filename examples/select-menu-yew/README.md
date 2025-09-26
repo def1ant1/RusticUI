@@ -1,7 +1,7 @@
 # RusticUI Select Menu — Yew
 
 This package demonstrates how to wire the headless `SelectState` from
-`mui-headless` into a Material-themed Yew surface with automation friendly
+`rustic_ui_headless` into a Material-themed Yew surface with automation friendly
 attributes, async data loading, and SSR parity. All behaviour that would be
 shared across frameworks (theme overrides, mocked API, automation ids) lives in
 [`examples/select-menu-shared`](../select-menu-shared).

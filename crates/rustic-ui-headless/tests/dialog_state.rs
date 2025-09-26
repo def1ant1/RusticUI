@@ -1,5 +1,5 @@
-use rustic_ui_headless::dialog::{DialogPhase, DialogState, DialogTransition};
 use proptest::prelude::*;
+use rustic_ui_headless::dialog::{DialogPhase, DialogState, DialogTransition};
 
 fn bool_actions() -> impl Strategy<Value = Vec<bool>> {
     prop::collection::vec(any::<bool>(), 1..24)

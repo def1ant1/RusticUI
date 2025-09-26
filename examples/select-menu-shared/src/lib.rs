@@ -36,7 +36,7 @@ pub async fn fetch_regions() -> Vec<Region> {
 }
 
 /// Convert the domain records into `SelectOption`s understood by
-/// `mui-material`.
+/// `rustic_ui_material`.
 pub fn to_select_options(regions: &[Region]) -> Vec<SelectOption> {
     regions
         .iter()
@@ -72,7 +72,7 @@ pub fn enterprise_theme() -> Theme {
 /// Render Material inspired markup for the select trigger and option list.
 ///
 /// The helper keeps the HTML consistent across SSR and CSR entry points without
-/// pulling in the private `ControlStrategy` types from `mui-headless`.
+/// pulling in the private `ControlStrategy` types from `rustic_ui_headless`.
 pub fn render_select_markup(props: &SelectProps, open: bool, selected: Option<usize>) -> String {
     let base = props
         .automation_id
@@ -116,7 +116,7 @@ pub fn render_select_markup(props: &SelectProps, open: bool, selected: Option<us
     }
 
     format!(
-        "<div class=\"mui-select-root\" data-component=\"mui-select\" data-open=\"{open_flag}\"{automation_root}><button id=\"{trigger_id}\" role=\"button\" aria-haspopup=\"listbox\" aria-expanded=\"{open_flag}\" aria-controls=\"{list_id}\" data-open=\"{open_flag}\"{automation_trigger}>{}</button><ul id=\"{list_id}\" role=\"listbox\" aria-hidden=\"{}\" data-open=\"{open_flag}\"{automation_list}>{options_markup}</ul></div>",
+        "<div class=\"rustic_ui_select_root\" data-component=\"rustic_ui_select\" data-open=\"{open_flag}\"{automation_root}><button id=\"{trigger_id}\" role=\"button\" aria-haspopup=\"listbox\" aria-expanded=\"{open_flag}\" aria-controls=\"{list_id}\" data-open=\"{open_flag}\"{automation_trigger}>{}</button><ul id=\"{list_id}\" role=\"listbox\" aria-hidden=\"{}\" data-open=\"{open_flag}\"{automation_list}>{options_markup}</ul></div>",
         props.label,
         (!open).then_some("true").unwrap_or("false")
     )

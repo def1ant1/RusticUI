@@ -97,7 +97,7 @@ pub fn material_css_baseline_from_theme(theme: &Theme) -> String {
     let joy_focus_shadow = theme.joy.focus_shadow_for_color(&joy_focus_color);
 
     format!(
-        "/* Global baseline generated from the strongly typed Material theme.\n   Enterprise operators: adjust the `data-mui-color-scheme` attribute on the document element to flip between modes without rebuilding CSS. */\nhtml {{\n    box-sizing: border-box;\n    font-family: {};\n    font-size: {}px;\n    -webkit-font-smoothing: antialiased;\n    -moz-osx-font-smoothing: grayscale;\n    color-scheme: {};\n    background-color: {};\n    color: {};\n}}\n\n*, *::before, *::after {{\n    box-sizing: inherit;\n}}\n\n:root {{\n    color-scheme: {};\n    /* Joy automation hook: the custom properties below stay in sync with `cargo xtask generate-theme --joy`. */\n    --joy-radius: {}px;\n    --joy-focus-outline: {};\n    --joy-focus-shadow: {};\n}}\n\nbody {{\n    margin: 0;\n    min-height: 100vh;\n    font-family: {};\n    font-size: {}px;\n    line-height: {};\n    background-color: {};\n    color: {};\n}}\n\nstrong, b {{\n    font-weight: {};\n}}\n\ncode, pre {{\n    font-family: {};\n}}\n\n/* Data attribute selectors keep automated deployments deterministic by allowing infrastructure to force a mode before JS boots. */\n[data-mui-color-scheme='light'] html,\n[data-mui-color-scheme='light'] body {{\n    background-color: {};\n    color: {};\n}}\n\n[data-mui-color-scheme='light'] :root {{\n    color-scheme: light;\n}}\n\n[data-mui-color-scheme='dark'] html,\n[data-mui-color-scheme='dark'] body {{\n    background-color: {};\n    color: {};\n}}\n\n[data-mui-color-scheme='dark'] :root {{\n    color-scheme: dark;\n}}\n\n/* Respect end-user preference media queries so SSR output automatically matches OS settings even before hydration. */\n@media (prefers-color-scheme: dark) {{\n    :root {{\n        color-scheme: dark;\n    }}\n\n    html, body {{\n        background-color: {};\n        color: {};\n    }}\n}}\n\n@media (prefers-color-scheme: light) {{\n    :root {{\n        color-scheme: light;\n    }}\n\n    html, body {{\n        background-color: {};\n        color: {};\n    }}\n}}\n",
+        "/* Global baseline generated from the strongly typed Material theme.\n   Enterprise operators: adjust the `data-rustic_ui_color_scheme` attribute on the document element to flip between modes without rebuilding CSS. */\nhtml {{\n    box-sizing: border-box;\n    font-family: {};\n    font-size: {}px;\n    -webkit-font-smoothing: antialiased;\n    -moz-osx-font-smoothing: grayscale;\n    color-scheme: {};\n    background-color: {};\n    color: {};\n}}\n\n*, *::before, *::after {{\n    box-sizing: inherit;\n}}\n\n:root {{\n    color-scheme: {};\n    /* Joy automation hook: the custom properties below stay in sync with `cargo xtask generate-theme --joy`. */\n    --joy-radius: {}px;\n    --joy-focus-outline: {};\n    --joy-focus-shadow: {};\n}}\n\nbody {{\n    margin: 0;\n    min-height: 100vh;\n    font-family: {};\n    font-size: {}px;\n    line-height: {};\n    background-color: {};\n    color: {};\n}}\n\nstrong, b {{\n    font-weight: {};\n}}\n\ncode, pre {{\n    font-family: {};\n}}\n\n/* Data attribute selectors keep automated deployments deterministic by allowing infrastructure to force a mode before JS boots. */\n[data-rustic_ui_color_scheme='light'] html,\n[data-rustic_ui_color_scheme='light'] body {{\n    background-color: {};\n    color: {};\n}}\n\n[data-rustic_ui_color_scheme='light'] :root {{\n    color-scheme: light;\n}}\n\n[data-rustic_ui_color_scheme='dark'] html,\n[data-rustic_ui_color_scheme='dark'] body {{\n    background-color: {};\n    color: {};\n}}\n\n[data-rustic_ui_color_scheme='dark'] :root {{\n    color-scheme: dark;\n}}\n\n/* Respect end-user preference media queries so SSR output automatically matches OS settings even before hydration. */\n@media (prefers-color-scheme: dark) {{\n    :root {{\n        color-scheme: dark;\n    }}\n\n    html, body {{\n        background-color: {};\n        color: {};\n    }}\n}}\n\n@media (prefers-color-scheme: light) {{\n    :root {{\n        color-scheme: light;\n    }}\n\n    html, body {{\n        background-color: {};\n        color: {};\n    }}\n}}\n",
         theme.typography.font_family,
         html_font_size,
         active_scheme.as_str(),
@@ -142,7 +142,7 @@ fn detect_user_prefers_dark() -> Option<bool> {
 fn push_color_scheme_to_dom(scheme: ColorScheme) {
     if let Some(document) = web_sys::window().and_then(|window| window.document()) {
         if let Some(root) = document.document_element() {
-            let _ = root.set_attribute("data-mui-color-scheme", scheme.as_str());
+            let _ = root.set_attribute("data-rustic_ui_color_scheme", scheme.as_str());
         }
     }
 }
@@ -243,7 +243,7 @@ mod yew_impl {
         let state = use_state(|| initial);
 
         // Ensure the DOM attribute mirrors the current scheme so the CSS reset
-        // can rely on `[data-mui-color-scheme]` selectors.
+        // can rely on `[data-rustic_ui_color_scheme]` selectors.
         {
             let state = state.clone();
             use_effect_with(*state, move |scheme: &ColorScheme| {

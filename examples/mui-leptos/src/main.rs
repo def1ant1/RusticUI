@@ -2,7 +2,7 @@ use leptos::*;
 use rustic_ui_system::{theme::Theme, ThemeProvider, Box};
 
 /// Root application component demonstrating a minimal theming setup
-/// using `mui-system` primitives within Leptos.
+/// using `rustic_ui_system` primitives within Leptos.
 #[component]
 fn App() -> impl IntoView {
     let theme = Theme::default();

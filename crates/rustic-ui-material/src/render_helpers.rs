@@ -18,7 +18,7 @@ use rustic_ui_styled_engine::Style;
 ///   so the CSS emitted by [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
 ///   automatically attaches to the element.
 /// * `attrs` accepts any iterator of `(key, value)` pairs making it ergonomic to
-///   feed attribute builders from `mui-headless` without additional
+///   feed attribute builders from `rustic_ui_headless` without additional
 ///   transformations.
 /// * `children` is injected verbatim allowing adapters to pre-render complex
 ///   layouts upstream.

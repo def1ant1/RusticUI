@@ -1,5 +1,9 @@
 #![forbid(unsafe_code)]
-//! General purpose utilities shared across the `mui-*` crates.
+//! General purpose utilities shared across the `rustic_ui_*` crates.
+//!
+//! NOTE: we leave this explicit migration note to guide downstream consumers
+//! through the legacy MUI-to-`rustic_ui_*` rename so aliases can be retired once
+//! applications finish the transition.
 //!
 //! The goal of this crate is to centralize tiny helpers behind
 //! zero-cost, highly generic abstractions. Functions are organized in

@@ -1,5 +1,5 @@
-use rustic_ui_styled_engine::{StyleRegistry, Theme};
 use proptest::prelude::*;
+use rustic_ui_styled_engine::{StyleRegistry, Theme};
 use stylist::Style;
 
 proptest! {

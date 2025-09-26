@@ -42,4 +42,4 @@ cargo test --manifest-path examples/feedback-chips/Cargo.toml
 ```
 
 The test suite confirms each framework variant emits the same automation hooks,
-preventing regressions when the upstream `mui-headless` state machines evolve.
+preventing regressions when the upstream `rustic_ui_headless` state machines evolve.

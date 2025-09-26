@@ -1,7 +1,7 @@
 # Navigation Drawer with Yew
 
-The navigation drawer blueprint demonstrates how to combine `mui-headless`
-`DrawerState` with `mui-material`'s responsive layout helpers inside a Yew
+The navigation drawer blueprint demonstrates how to combine `rustic_ui_headless`
+`DrawerState` with `rustic_ui_material`'s responsive layout helpers inside a Yew
 application. It showcases manual vs controlled behaviour, anchor switching and
 accessible markup ready for analytics instrumentation.
 

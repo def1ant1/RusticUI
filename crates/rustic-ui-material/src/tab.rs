@@ -15,7 +15,7 @@ use rustic_ui_styled_engine::{css_with_theme, Style};
 
 /// Collect the attributes required to render a tab element.
 ///
-/// The function merges the ARIA metadata from `mui-headless` with data attributes
+/// The function merges the ARIA metadata from `rustic_ui_headless` with data attributes
 /// that downstream CSS (or analytics tooling) can leverage without needing to
 /// re-implement state derivation.
 #[must_use]

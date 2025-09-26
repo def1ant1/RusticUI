@@ -25,7 +25,7 @@
 //! | `dioxus`     | Derives `dioxus::Props` on every generated prop struct                  |
 //! | `sycamore`   | Derives `sycamore::Props` on every generated prop struct                |
 //!
-//! All features activate the corresponding `mui-system` adapter to guarantee that themed
+//! All features activate the corresponding `rustic_ui_system` adapter to guarantee that themed
 //! primitives behave consistently across frameworks. This design avoids manual repetitive
 //! glue code and ensures future adapters reuse the exact same prop contracts.
 

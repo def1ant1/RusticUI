@@ -98,7 +98,7 @@ mod dioxus_tests {
         let props = sample_props();
         let state = build_state(props.options.len());
         let html = select::dioxus::render(&props, &state);
-        assert!(html.contains("data-component=\"mui-select\""));
+        assert!(html.contains("data-component=\"rustic_ui_select\""));
         assert_portal_markup(&html);
     }
 

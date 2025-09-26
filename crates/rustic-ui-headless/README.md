@@ -1,4 +1,4 @@
-# mui-headless
+# rustic_ui_headless
 
 Deterministic component state machines designed for SSR friendly rendering,
 enterprise automation hooks, and ergonomic framework adapters. Every public API
@@ -123,13 +123,13 @@ assert!(attrs.iter().any(|(k, v)| k == &"aria-disabled" && v == "true"));
 
 Unit tests live alongside the implementations (`src/select.rs`) and document how
 navigation, typeahead fallback, and controlled/uncontrolled sync behave when
-options are disabled. Integration tests in `mui-material` assert that every
+options are disabled. Integration tests in `rustic_ui_material` assert that every
 framework adapter emits `aria-disabled`/`data-disabled` attributes so SSR output
 stays deterministic. Run the workspace suites with:
 
 ```bash
-cargo test -p mui-headless
-cargo test -p mui-material --all-features
+cargo test -p rustic_ui_headless
+cargo test -p rustic_ui_material --all-features
 ```
 
 ### Automation-friendly design notes

@@ -1,4 +1,4 @@
-# mui-icons-material
+# rustic_ui_icons_material
 
 This crate auto-generates Rust bindings for Material Design SVG icons.
 
@@ -25,7 +25,7 @@ disable the default and enable only the icons your application actually uses:
 
 ```toml
 [dependencies]
-mui-icons-material = { version = "0.1", default-features = false, features = ["icon-10k_24px"] }
+rustic_ui_icons_material = { version = "0.1", default-features = false, features = ["icon-10k_24px"] }
 ```
 
 Additional examples live in the [Cargo feature guide](../../docs/cargo-features.md).
@@ -59,7 +59,7 @@ identical SVGs. When testing unreleased drops or debugging stale assets you can
 invoke the binary directly and opt out of the cache layer:
 
 ```bash
-cargo run -p mui-icons-material --features update-icons --bin update_icons -- \
+cargo run -p rustic_ui_icons_material --features update-icons --bin update_icons -- \
   --force-refresh
 ```
 

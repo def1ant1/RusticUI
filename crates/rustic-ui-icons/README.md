@@ -1,6 +1,6 @@
-# mui-icons
+# rustic_ui_icons
 
-The `mui-icons` crate provides auto-generated bindings to multiple SVG icon
+The `rustic_ui_icons` crate provides auto-generated bindings to multiple SVG icon
 sets for Rust front-end frameworks. Icon sets are organized under
 `icons/<set>/` and converted into memoized Rust functions and macros at build
 time.
@@ -43,13 +43,13 @@ select only the icons your application needs:
 
 ```toml
 [dependencies]
-mui-icons = { version = "0.1", default-features = false, features = ["icon-material-10k_24px"] }
+rustic_ui_icons = { version = "0.1", default-features = false, features = ["icon-material-10k_24px"] }
 ```
 
 ## Maintenance
 
 The `cargo xtask icon-update` command downloads upstream icon assets, syncs the
-`mui-icons-material` crate, and then re-runs the local `update_features`
+`rustic_ui_icons_material` crate, and then re-runs the local `update_features`
 generator. The process guarantees that both crates stay aligned and that the
 workspace maintains a scalable, fully managed workflow for large icon
 libraries.

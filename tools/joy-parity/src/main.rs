@@ -26,7 +26,9 @@ use walkdir::WalkDir;
 )]
 struct Cli {
     /// Root of the Joy UI TypeScript sources (authoritative implementation).
-    #[arg(long, default_value = "packages/mui-joy/src")]
+    /// Defaults reflect the renamed `rustic_ui_joy` alias so parity automation
+    /// reinforces the migration away from the legacy MUI Joy path.
+    #[arg(long, default_value = "packages/rustic_ui_joy/src")]
     joy_src: PathBuf,
 
     /// Location of the Rust Joy crate that should mirror the React API surface.
@@ -377,7 +379,15 @@ fn derive_name_from_specifier(specifier: &str) -> String {
 fn normalize_component_name(name: &str) -> String {
     let mut snake = name.to_snake_case();
     // Strip well-known prefixes that appear in alias exports. Apply repeatedly in case aliases combine them.
-    let prefixes = ["joy_", "mui_", "rustic_ui_joy_", "unstable_", "experimental_"];
+    // The `rustic_ui_` entry replaces the legacy MUI-prefixed alias while keeping parity scripts backwards compatible
+    // throughout the migration.
+    let prefixes = [
+        "joy_",
+        "rustic_ui_",
+        "rustic_ui_joy_",
+        "unstable_",
+        "experimental_",
+    ];
     let mut changed = true;
     while changed {
         changed = false;
@@ -445,12 +455,12 @@ fn write_markdown_report(report: &CoverageReport, path: &Path, top_n: usize) -> 
         report.total_components
     ));
     markdown.push_str(&format!(
-        "- `mui-joy` coverage: {} ({:.1}%)\\n",
+        "- `rustic_ui_joy` coverage: {} ({:.1}%)\\n",
         report.supported_in_joy,
         report.joy_coverage * 100.0
     ));
     markdown.push_str(&format!(
-        "- `mui-headless` coverage: {} ({:.1}%)\\n\n",
+        "- `rustic_ui_headless` coverage: {} ({:.1}%)\\n\n",
         report.supported_in_headless,
         report.headless_coverage * 100.0
     ));

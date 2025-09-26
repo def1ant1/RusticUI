@@ -33,7 +33,7 @@ fn build_popover(props: &MenuProps) -> PopoverState {
         .automation_id
         .as_ref()
         .map(|id| format!("{}-popover", id))
-        .unwrap_or_else(|| "mui-menu-popover".into());
+        .unwrap_or_else(|| "rustic_ui_menu_popover".into());
     let portal = PortalMount::popover(base);
     popover.set_anchor_metadata(Some(portal.anchor_id()), None);
     popover
