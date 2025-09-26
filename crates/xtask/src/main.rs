@@ -1,14 +1,26 @@
-//! Developer automation commands for the MUI Rust workspace.
+//! Developer automation commands for the RusticUI workspace.
 //!
 //! The `xtask` pattern keeps our repository free of ad-hoc shell
 //! scripts and centralizes repeatable tasks in a small Rust binary.
 //! This approach scales well for large teams and CI environments,
 //! ensuring that contributors invoke the exact same logic locally
 //! and in automation.
+//!
+//! The commands declared below intentionally favour a "Rust-first"
+//! workflow: we hydrate design tokens from `rustic-ui-system`, drive
+//! front-end automation via strongly typed binaries, and orchestrate
+//! web tooling (Playwright, mdBook, etc.) through a single entry
+//! point.  Enterprise adopters can wire these tasks directly into CI
+//! without sprinkling custom shell scripts across repositories, while
+//! contributors get consistent documentation about which crates,
+//! examples, and documentation sites each task touches.
 
 use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use rustic_ui_system::theme::{ColorScheme, JoyTheme, Theme};
+use rustic_ui_system::{
+    theme::{ColorScheme, JoyTheme, Theme},
+    theme_provider,
+};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,7 +28,14 @@ use std::process::Command;
 
 /// Entry point for the `cargo xtask` command.
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    author,
+    version,
+    about = "Rust-first automation for RusticUI contributors.",
+    long_about = None,
+    disable_help_flag = false,
+    disable_help_subcommand = true
+)]
 struct Xtask {
     #[command(subcommand)]
     command: Commands,
@@ -34,21 +53,20 @@ enum Commands {
     /// Run Clippy across the workspace and deny warnings.
     Clippy,
     /// Execute the default test suites for all crates.
+    ///
+    /// After the workspace tests finish we compile the `joy-*` WebAssembly
+    /// examples (`examples/joy-yew`, `examples/joy-leptos`, etc.) to guarantee
+    /// each renderer remains compatible with the shared RusticUI APIs.
     Test,
     /// Run WebAssembly tests via `wasm-pack` for selected crates.
+    ///
+    /// This exercises the `rustic-ui-material` and `rustic-ui-joy` crates across
+    /// every supported renderer to ensure feature flags stay in sync.
     WasmTest,
     /// Build API documentation for the entire workspace.
     Doc,
-    /// Refresh the Material Design icon bindings.
-    ///
-    /// Historically this task shipped under the `refresh-icons` name. We
-    /// preserve that alias so automation and bespoke scripts keep working while
-    /// providing the canonical `icon-update` entrypoint surfaced in `--help`
-    /// output for new contributors.
-    #[command(
-        name = "icon-update",
-        aliases = ["refresh-icons", "refresh_icons"]
-    )]
+    /// Refresh the Rustic icon bindings.
+    #[command(name = "icon-update")]
     RefreshIcons,
     /// Generate an `lcov.info` report using grcov.
     Coverage,
@@ -56,11 +74,17 @@ enum Commands {
     Bench,
     /// Regenerate component scaffolding and associated metadata.
     UpdateComponents,
-    /// Run automated accessibility audits against the docs site.
+    /// Run automated accessibility smoke tests against the docs site.
     AccessibilityAudit,
-    /// Build the JavaScript documentation site.
+    /// Execute the long running nightly accessibility coverage suite.
+    ///
+    /// The command exports `RUSTIC_UI_A11Y_MODE=nightly` so Playwright can
+    /// widen its crawl. This is a dry-run friendly hook for upcoming fixtures.
+    #[command(name = "accessibility-nightly")]
+    AccessibilityNightly,
+    /// Build the Rust-first documentation site and supporting API docs.
     BuildDocs,
-    /// Regenerate serialized theme templates and CSS baselines.
+    /// Regenerate RusticUI serialized theme templates and CSS baselines.
     GenerateTheme {
         /// Optional path to a JSON or TOML fixture that overrides
         /// sections of the canonical Material theme before serialization.
@@ -73,9 +97,9 @@ enum Commands {
         #[arg(long)]
         joy: bool,
     },
-    /// Recompute the Material component parity dashboard.
+    /// Recompute the RusticUI Material component parity dashboard.
     MaterialParity,
-    /// Recompute the Joy UI inventory to highlight missing Rust bindings.
+    /// Recompute the RusticUI Joy inventory to highlight missing Rust bindings.
     #[command(name = "joy-inventory", alias = "joy-parity")]
     JoyParity,
 }
@@ -93,6 +117,7 @@ fn main() -> Result<()> {
         Commands::Bench => bench(),
         Commands::UpdateComponents => update_components(),
         Commands::AccessibilityAudit => accessibility_audit(),
+        Commands::AccessibilityNightly => accessibility_nightly(),
         Commands::BuildDocs => build_docs(),
         Commands::GenerateTheme {
             overrides,
@@ -166,11 +191,13 @@ fn test() -> Result<()> {
     cmd.arg("test").arg("--workspace").arg("--all-features");
     run(cmd)?;
     // Also ensure each example still compiles for the WebAssembly target.
+    // We prioritise the joy-* demos because they double as regression
+    // coverage for the RusticUI bindings across all supported renderers.
     let examples = [
-        "exampl../rustic-ui-yew",
-        "exampl../rustic-ui-leptos",
-        "exampl../rustic-ui-dioxus",
-        "exampl../rustic-ui-sycamore",
+        "examples/joy-yew",
+        "examples/joy-leptos",
+        "examples/joy-dioxus",
+        "examples/joy-sycamore",
     ];
     for ex in &examples {
         let mut check = Command::new("cargo");
@@ -179,7 +206,7 @@ fn test() -> Result<()> {
             .arg("--target")
             .arg("wasm32-unknown-unknown")
             .arg("--manifest-path")
-            .arg(format!("{}/Cargo.toml", ex));
+            .arg(format!("{ex}/Cargo.toml"));
         run(check)?;
     }
     Ok(())
@@ -231,7 +258,7 @@ fn doc() -> Result<()> {
 fn refresh_icons() -> Result<()> {
     let workspace = workspace_root();
 
-    println!("[xtask] refreshing upstream Material icons via the managed download utility");
+    println!("[xtask] refreshing upstream Rustic icon glyphs via the managed download utility");
     // Delegate to the existing Rust binary that fetches the latest Material
     // Design SVGs and rewrites the `rustic-ui-icons-material` feature manifest.
     let mut material = Command::new("cargo");
@@ -273,20 +300,43 @@ fn update_components() -> Result<()> {
 }
 
 fn accessibility_audit() -> Result<()> {
-    // Execute Playwright based accessibility tests that crawl the
-    // documentation site. Any violation bubbles up as a command failure
-    // ensuring CI visibility.
+    // Execute the fast Playwright based accessibility smoke tests that crawl
+    // the primary documentation entry points. Any violation bubbles up as a
+    // command failure ensuring CI visibility for release gating.
     let mut cmd = Command::new("pnpm");
     cmd.arg("test:e2e-website");
     run(cmd)
 }
 
-fn build_docs() -> Result<()> {
-    // Build the full documentation website via the existing npm script.
-    // This compiles API documentation, markdown demos and bundles the
-    // static site for deployment.
+fn accessibility_nightly() -> Result<()> {
+    // Delegate to the same Playwright test suite but toggle the extended
+    // coverage mode so nightly jobs exercise every section of the content
+    // tree. The `RUSTIC_UI_A11Y_MODE` variable is consumed by upcoming
+    // Playwright fixtures that widen the crawl scope.
+    println!("[xtask] running nightly accessibility sweeps with extended Playwright coverage");
     let mut cmd = Command::new("pnpm");
-    cmd.arg("docs:build");
+    cmd.arg("test:e2e-website");
+    cmd.env("RUSTIC_UI_A11Y_MODE", "nightly");
+    run(cmd)
+}
+
+fn build_docs() -> Result<()> {
+    // Compose the Rust documentation experience by first generating API docs
+    // (consumed through mdBook `include_str!` snippets) and then building the
+    // rendered book. Splitting the steps keeps CI logs actionable and makes it
+    // obvious which phase fails when new chapters land.
+    println!("[xtask] generating workspace API docs so the mdBook embeds stay in sync");
+    doc()?;
+
+    let workspace = workspace_root();
+    let book_dir = workspace.join("docs/rust-book");
+    println!(
+        "[xtask] building the Rust-first documentation book via mdBook at {}",
+        book_dir.display()
+    );
+
+    let mut cmd = Command::new("mdbook");
+    cmd.arg("build").arg(&book_dir);
     run(cmd)
 }
 
@@ -332,7 +382,7 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
     };
 
     // Always start from the canonical Material theme before layering user supplied overrides.
-    let base_theme = rustic_ui_system::theme_provider::material_theme();
+    let base_theme: Theme = Theme::default();
 
     // Split overrides into the portions that apply to all color schemes and the
     // scheme-specific fragments.  We intentionally keep this logic explicit so
@@ -416,7 +466,26 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
             merge_values(&mut merged_value, global);
         }
         if let Some(specific) = scheme_overrides.get(&scheme) {
-            merge_values(&mut merged_value, specific);
+            if let Some(map) = specific.as_object() {
+                let mut scoped: serde_json::Map<String, Value> = serde_json::Map::new();
+                for (key, value) in map {
+                    if key == "palette" {
+                        if let Some(palette_map) = value.as_object() {
+                            let mut palette_wrapper = serde_json::Map::new();
+                            palette_wrapper
+                                .insert(scheme.clone(), Value::Object(palette_map.clone()));
+                            scoped.insert(key.clone(), Value::Object(palette_wrapper));
+                        } else {
+                            scoped.insert(key.clone(), value.clone());
+                        }
+                    } else {
+                        scoped.insert(key.clone(), value.clone());
+                    }
+                }
+                merge_values(&mut merged_value, &Value::Object(scoped));
+            } else {
+                merge_values(&mut merged_value, specific);
+            }
         }
 
         let merged_theme: Theme = serde_json::from_value(merged_value).with_context(|| {
@@ -424,9 +493,7 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
                 "failed to convert merged theme representation into Theme struct for `{scheme}`"
             )
         })?;
-        let mut theme = rustic_ui_system::theme_provider::material_theme_with_optional_overrides(
-            Some(merged_theme),
-        );
+        let mut theme = merged_theme;
         if let Some(color_scheme) = match scheme.as_str() {
             "light" => Some(ColorScheme::Light),
             "dark" => Some(ColorScheme::Dark),
@@ -448,7 +515,7 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
         println!("[xtask] wrote {}", output_path.display());
 
         let css_path = output_dir.join(format!("material_css_baseline.{scheme}.css"));
-        let css = rustic_ui_system::theme_provider::material_css_baseline_from_theme(&theme);
+        let css = theme_provider::material_css_baseline_from_theme(&theme);
         fs::write(&css_path, css)?;
         println!("[xtask] wrote {}", css_path.display());
 
