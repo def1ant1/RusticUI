@@ -1,6 +1,6 @@
-use mui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
-use mui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
-use mui_material::Theme;
+use rustic_ui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
+use rustic_ui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
+use rustic_ui_material::Theme;
 
 /// Helper that constructs an uncontrolled [`DrawerState`]. Similar to other
 /// tests we lean on the documented discriminants for `ControlStrategy` inside
@@ -63,7 +63,7 @@ fn react_surface_and_backdrop_expose_semantic_attributes() {
 #[test]
 fn persistent_variant_omits_backdrop_and_marks_state() {
     let mut layout = DrawerLayoutOptions::default();
-    layout.anchor = mui_system::responsive::Responsive::constant(DrawerAnchor::End);
+    layout.anchor = rustic_ui_system::responsive::Responsive::constant(DrawerAnchor::End);
     let theme = Theme::default();
     let state = build_state(DrawerAnchor::End, DrawerVariant::Persistent, true);
 

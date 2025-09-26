@@ -1,4 +1,4 @@
-use mui_styled_engine::{StyleRegistry, Theme};
+use rustic_ui_styled_engine::{StyleRegistry, Theme};
 use stylist::Style;
 
 /// Helper function simulating a nested component hierarchy where inner

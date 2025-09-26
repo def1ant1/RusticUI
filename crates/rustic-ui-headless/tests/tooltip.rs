@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use mui_headless::timing::MockClock;
-use mui_headless::tooltip::{
+use rustic_ui_headless::timing::MockClock;
+use rustic_ui_headless::tooltip::{
     TooltipConfig, TooltipState, TooltipSurfaceAttributes, TooltipTriggerAttributes,
 };
 

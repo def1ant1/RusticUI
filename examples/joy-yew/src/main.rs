@@ -1,16 +1,16 @@
 use joy_workflows_core::{
     JoyWorkflowEvent, JoyWorkflowMachine, JoyWorkflowSnapshot, SnackbarSeverity,
 };
-use mui_joy::helpers::resolve_surface_tokens;
-use mui_joy::{Button, ButtonProps, Card, Color, Variant};
-use mui_system::theme_provider::{CssBaseline, ThemeProvider};
+use rustic_ui_joy::helpers::resolve_surface_tokens;
+use rustic_ui_joy::{Button, ButtonProps, Card, Color, Variant};
+use rustic_ui_system::theme_provider::{CssBaseline, ThemeProvider};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
 /// Translate the Joy stepper status into a short label for the demo UI.
-fn status_label(status: &mui_joy::stepper::StepStatus) -> &'static str {
-    use mui_joy::stepper::StepStatus::{Active, Completed, Pending};
+fn status_label(status: &rustic_ui_joy::stepper::StepStatus) -> &'static str {
+    use rustic_ui_joy::stepper::StepStatus::{Active, Completed, Pending};
     match status {
         Completed => "Completed",
         Active => "In progress",
@@ -213,7 +213,7 @@ fn app() -> Html {
                             <h2 style="margin:0;font-size:1.25rem;">{"Release checklist"}</h2>
                             <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;">
                                 { for blueprint.steps.iter().enumerate().map(|(index, step)| {
-                                    let status = snapshot.step_status.get(index).cloned().unwrap_or(mui_joy::stepper::StepStatus::Pending);
+                                    let status = snapshot.step_status.get(index).cloned().unwrap_or(rustic_ui_joy::stepper::StepStatus::Pending);
                                     html! {
                                         <li>
                                             <div style="display:flex;flex-direction:column;gap:4px;">

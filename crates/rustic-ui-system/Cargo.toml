@@ -1,12 +1,11 @@
 [package]
-name = "mui-system"
+name = "rustic-ui-system"
 version = "0.1.0"
 edition = "2021"
 description = "Foundational styling primitives for the Material UI Rust ecosystem."
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/m../rustic-ui-rust"
-homepage = "https://github.com/m../rustic-ui-rust"
-documentation = "https://docs.../rustic-ui-system"
+repository = "https://github.com/apotheon-ai/rusticui"
+homepage = "https://apotheon.ai/rusticui"
+documentation = "https://docs.rs/rustic-ui-system"
 keywords = ["material", "ui", "web"]
 categories = ["gui"]
 
@@ -21,8 +20,8 @@ maintenance = { status = "experimental" }
 serde.workspace = true
 serde_json.workspace = true
 stylist = { version = "0.13", default-features = false, features = ["macros", "parser", "ssr"] }
-mui-styled-engine-macros = { path = "../rustic-ui-styled-engine-macros" }
-mui-utils = { path = "../rustic-ui-utils" }
+rustic-ui-styled-engine-macros = { path = "../rustic-ui-styled-engine-macros" }
+rustic-ui-utils = { path = "../rustic-ui-utils" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }

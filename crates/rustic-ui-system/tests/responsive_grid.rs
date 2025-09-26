@@ -1,4 +1,4 @@
-use mui_system::{
+use rustic_ui_system::{
     grid::{build_grid_style, GridStyleInputs},
     responsive::Responsive,
     Theme,

@@ -1,5 +1,5 @@
 use crate::{responsive::Responsive, style, theme::Breakpoints};
-use mui_utils::deep_merge;
+use rustic_ui_utils::deep_merge;
 use serde_json::{Map, Value};
 
 fn insert_declaration(map: &mut Map<String, Value>, declaration: String) {

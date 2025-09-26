@@ -2,11 +2,11 @@
 //!
 //! Rendering logic is centralized so the button looks and behaves the same
 //! across all supported frameworks. The shared renderer uses
-//! [`css_with_theme!`](mui_styled_engine::css_with_theme) to derive visual
-//! styles from the active [`Theme`](mui_styled_engine::Theme) instead of hard
+//! [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme) to derive visual
+//! styles from the active [`Theme`](rustic_ui_styled_engine::Theme) instead of hard
 //! coded strings. The [`style_helpers::themed_class`](crate::style_helpers::themed_class)
 //! and [`style_helpers::themed_attributes_html`](crate::style_helpers::themed_attributes_html)
-//! helpers convert the generated [`Style`](mui_styled_engine::Style) into scoped
+//! helpers convert the generated [`Style`](rustic_ui_styled_engine::Style) into scoped
 //! classes and attribute strings so SSR adapters do not need to hand-roll
 //! concatenation logic. Accessibility attributes returned by [`ButtonState`]
 //! travel through the same helper which keeps ARIA wiring consistent across all
@@ -18,8 +18,8 @@
 //! business logic and keeps rendering concerns decoupled from behavior while
 //! encouraging adapters to reuse the shared helpers documented above.
 
-use mui_headless::button::ButtonState;
-use mui_styled_engine::{css_with_theme, Style};
+use rustic_ui_headless::button::ButtonState;
+use rustic_ui_styled_engine::{css_with_theme, Style};
 
 /// Shared properties accepted by all adapter implementations.
 #[derive(Clone, Debug)]
@@ -41,7 +41,7 @@ impl ButtonProps {
 ///
 /// The function generates a scoped CSS class using [`css_with_theme!`]. The
 /// macro pulls spacing, typography and palette tokens from the active
-/// [`Theme`](mui_styled_engine::Theme) so the button's appearance automatically
+/// [`Theme`](rustic_ui_styled_engine::Theme) so the button's appearance automatically
 /// tracks global design decisions. The returned class is attached to the
 /// `<button>` element and the ARIA attributes emitted from [`ButtonState`] are
 /// merged into the final tag to enhance accessibility for assistive

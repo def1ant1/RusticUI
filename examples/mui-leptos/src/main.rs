@@ -1,5 +1,5 @@
 use leptos::*;
-use mui_system::{theme::Theme, ThemeProvider, Box};
+use rustic_ui_system::{theme::Theme, ThemeProvider, Box};
 
 /// Root application component demonstrating a minimal theming setup
 /// using `mui-system` primitives within Leptos.

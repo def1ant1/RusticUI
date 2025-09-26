@@ -4,7 +4,7 @@
 //! inside the individual component modules:
 //!
 //! * **Design token resolution** – everything that transforms the strongly
-//!   typed [`Theme`](mui_system::theme::Theme) into inline CSS declarations now
+//!   typed [`Theme`](rustic_ui_system::theme::Theme) into inline CSS declarations now
 //!   flows through [`resolve_surface_tokens`].  This keeps palette lookups,
 //!   border radius calculations and future theming extensions reusable across
 //!   the Yew/Dioxus/Leptos/Sycamore adapters without hand-maintaining the
@@ -14,7 +14,7 @@
 //!   translation lives in one place so enterprise automation suites can rely on
 //!   consistent role/aria/data hooks across renderers.
 //! * **Adapter glue** – [`yew::use_button_adapter`] and
-//!   [`yew::use_chip_adapter`] wrap the [`mui_headless`] state machines inside
+//!   [`yew::use_chip_adapter`] wrap the [`rustic_ui_headless`] state machines inside
 //!   ergonomic hooks.  They expose stable callbacks/events so feature teams can
 //!   bolt on analytics, logging or custom styling without re-implementing the
 //!   headless transitions.
@@ -25,7 +25,7 @@
 //! trivial to add enterprise grade behaviour to additional components.
 
 use crate::{Color, Variant};
-use mui_system::theme::{PaletteScheme, Theme};
+use rustic_ui_system::theme::{PaletteScheme, Theme};
 
 /// Describes the resolved surface level design tokens for a Joy component.
 ///
@@ -182,8 +182,8 @@ pub fn resolve_aspect_ratio_styles(ratio: f32) -> AspectRatioStyles {
 
 #[cfg(feature = "yew")]
 mod aria {
-    use mui_headless::aria;
-    use mui_headless::chip::{ChipAttributes, ChipState};
+    use rustic_ui_headless::aria;
+    use rustic_ui_headless::chip::{ChipAttributes, ChipState};
     use yew::virtual_dom::AttrValue;
 
     use super::ChipAdapterConfig;
@@ -279,8 +279,8 @@ mod yew_adapters {
     use std::time::Duration;
 
     use gloo_timers::callback::Interval;
-    use mui_headless::button::ButtonState;
-    use mui_headless::chip::{ChipChange, ChipConfig as HeadlessChipConfig, ChipState};
+    use rustic_ui_headless::button::ButtonState;
+    use rustic_ui_headless::chip::{ChipChange, ChipConfig as HeadlessChipConfig, ChipState};
     use yew::prelude::*;
 
     use super::{aria, ChipAria};
@@ -304,7 +304,7 @@ mod yew_adapters {
         handle.set(next);
     }
 
-    /// Hook exposing the [`mui_headless::button::ButtonState`] state machine to Yew.
+    /// Hook exposing the [`rustic_ui_headless::button::ButtonState`] state machine to Yew.
     #[hook]
     pub fn use_button_adapter(
         config: ButtonAdapterConfig,
@@ -428,7 +428,7 @@ mod yew_adapters {
         }
     }
 
-    /// Hook exposing the [`mui_headless::chip::ChipState`] state machine to Yew.
+    /// Hook exposing the [`rustic_ui_headless::chip::ChipState`] state machine to Yew.
     #[hook]
     pub fn use_chip_adapter(
         config: ChipAdapterConfig,
@@ -572,7 +572,7 @@ pub use yew_adapters::{
 mod tests {
     use super::*;
     use crate::{Color, Variant};
-    use mui_system::theme::Theme;
+    use rustic_ui_system::theme::Theme;
 
     /// Ensure every color variant maps to a palette entry. All framework adapters rely on this
     /// helper so keeping the assertion here prevents drift between Yew, Leptos, Dioxus and

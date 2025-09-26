@@ -1,5 +1,5 @@
-use mui_headless::menu::MenuState;
-use mui_material::menu::{self, MenuItem, MenuProps};
+use rustic_ui_headless::menu::MenuState;
+use rustic_ui_material::menu::{self, MenuItem, MenuProps};
 
 fn sample_props() -> MenuProps {
     MenuProps::new(

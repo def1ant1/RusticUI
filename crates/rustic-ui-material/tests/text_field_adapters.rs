@@ -1,7 +1,7 @@
 #![cfg(any(feature = "dioxus", feature = "sycamore"))]
 
-use mui_headless::text_field::TextFieldState;
-use mui_material::text_field::{TextFieldColor, TextFieldSize, TextFieldVariant};
+use rustic_ui_headless::text_field::TextFieldState;
+use rustic_ui_material::text_field::{TextFieldColor, TextFieldSize, TextFieldVariant};
 
 /// The text field adapters render an `<input>` element with a themed class and
 /// accessible `aria-label`. Assertions are performed per framework so that each
@@ -10,7 +10,7 @@ use mui_material::text_field::{TextFieldColor, TextFieldSize, TextFieldVariant};
 #[cfg(feature = "dioxus")]
 mod dioxus_tests {
     use super::*;
-    use mui_material::text_field::dioxus;
+    use rustic_ui_material::text_field::dioxus;
 
     #[test]
     fn renders_state_driven_metadata() {
@@ -46,7 +46,7 @@ mod dioxus_tests {
 #[cfg(feature = "sycamore")]
 mod sycamore_tests {
     use super::*;
-    use mui_material::text_field::sycamore;
+    use rustic_ui_material::text_field::sycamore;
 
     #[test]
     fn renders_state_driven_metadata() {

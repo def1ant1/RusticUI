@@ -16,7 +16,7 @@
 //!
 //! # Examples
 //! ```
-//! use mui_utils::{deep_merge, compose_classes};
+//! use rustic_ui_utils::{deep_merge, compose_classes};
 //! use serde_json::json;
 //! use std::collections::HashMap;
 //!

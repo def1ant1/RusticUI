@@ -1,6 +1,6 @@
 //! Shared dialog, popover, and text field state machine orchestration used by
 //! the cross-framework automation blueprints.  The helpers in this crate keep
-//! the deterministic [`mui_headless`] state machines front-and-center so every
+//! the deterministic [`rustic_ui_headless`] state machines front-and-center so every
 //! adapter (Yew, Leptos, Dioxus, Sycamore) can render identical markup, emit the
 //! same automation hooks, and perform validation with matching semantics without
 //! copy/pasting lifecycle code.
@@ -13,9 +13,9 @@
 
 use std::time::Duration;
 
-use mui_headless::dialog::{DialogPhase, DialogState, DialogTransition};
-use mui_headless::popover::{AnchorGeometry, CollisionOutcome, PopoverPlacement, PopoverState};
-use mui_headless::text_field::TextFieldState;
+use rustic_ui_headless::dialog::{DialogPhase, DialogState, DialogTransition};
+use rustic_ui_headless::popover::{AnchorGeometry, CollisionOutcome, PopoverPlacement, PopoverState};
+use rustic_ui_headless::text_field::TextFieldState;
 
 /// ASCII anchor/floating surface illustration rendered in each example README
 /// to explain how the shared state tracks geometry between SSR and hydration.

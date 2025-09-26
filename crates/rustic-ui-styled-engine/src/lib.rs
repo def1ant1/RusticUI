@@ -9,7 +9,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use mui_styled_engine::{css_with_theme, Theme};
+//! use rustic_ui_styled_engine::{css_with_theme, Theme};
 //!
 //! // `css_with_theme!` automatically retrieves the current theme and exposes a
 //! // `theme` binding that can be used in value substitutions.
@@ -17,17 +17,17 @@
 //! assert!(!style.get_class_name().is_empty());
 //! ```
 
-pub use mui_system::theme::{Breakpoints, Palette, Theme, TypographyScheme};
-pub use mui_system::theme_provider::use_theme;
+pub use rustic_ui_system::theme::{Breakpoints, Palette, Theme, TypographyScheme};
+pub use rustic_ui_system::theme_provider::use_theme;
 #[cfg(all(not(feature = "yew"), feature = "leptos"))]
-pub use mui_system::theme_provider::ThemeProviderLeptos as ThemeProvider;
+pub use rustic_ui_system::theme_provider::ThemeProviderLeptos as ThemeProvider;
 #[cfg(feature = "yew")]
-pub use mui_system::theme_provider::ThemeProviderYew as ThemeProvider;
+pub use rustic_ui_system::theme_provider::ThemeProviderYew as ThemeProvider;
 // Re-export procedural macros so crate users only depend on one package.
-pub use mui_styled_engine_macros::{css_with_theme, styled_component, Theme};
-// Ensure procedural macros can reference this crate as `mui_styled_engine` even
+pub use rustic_ui_styled_engine_macros::{css_with_theme, styled_component, Theme};
+// Ensure procedural macros can reference this crate as `rustic_ui_styled_engine` even
 // when used internally.
-extern crate self as mui_styled_engine;
+extern crate self as rustic_ui_styled_engine;
 
 mod ssr;
 pub use ssr::*;
@@ -114,7 +114,7 @@ mod yew_integration {
 
 /// Placeholder to prove the crate links correctly.
 pub fn placeholder() {
-    mui_system::placeholder();
+    rustic_ui_system::placeholder();
 }
 
 #[cfg(test)]

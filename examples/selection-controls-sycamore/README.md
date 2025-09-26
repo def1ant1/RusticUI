@@ -2,12 +2,12 @@
 
 ```rust
 use sycamore::prelude::*;
-use mui_headless::checkbox::CheckboxState;
-use mui_headless::switch::SwitchState;
-use mui_headless::radio::{RadioGroupState, RadioOrientation};
-use mui_material::checkbox::{self, CheckboxProps};
-use mui_material::switch::{self, SwitchProps};
-use mui_material::radio::{self, RadioGroupProps};
+use rustic_ui_headless::checkbox::CheckboxState;
+use rustic_ui_headless::switch::SwitchState;
+use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+use rustic_ui_material::checkbox::{self, CheckboxProps};
+use rustic_ui_material::switch::{self, SwitchProps};
+use rustic_ui_material::radio::{self, RadioGroupProps};
 
 #[component]
 pub fn SelectionControls<G: Html>(cx: Scope) -> View<G> {

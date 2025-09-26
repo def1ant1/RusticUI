@@ -377,7 +377,7 @@ fn derive_name_from_specifier(specifier: &str) -> String {
 fn normalize_component_name(name: &str) -> String {
     let mut snake = name.to_snake_case();
     // Strip well-known prefixes that appear in alias exports. Apply repeatedly in case aliases combine them.
-    let prefixes = ["joy_", "mui_", "mui_joy_", "unstable_", "experimental_"];
+    let prefixes = ["joy_", "mui_", "rustic_ui_joy_", "unstable_", "experimental_"];
     let mut changed = true;
     while changed {
         changed = false;

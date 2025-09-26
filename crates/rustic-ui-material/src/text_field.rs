@@ -1,8 +1,8 @@
 //! Enterprise ready text input component powered by the headless
-//! [`TextFieldState`](mui_headless::text_field::TextFieldState).
+//! [`TextFieldState`](rustic_ui_headless::text_field::TextFieldState).
 //!
 //! The widget exposes adapters for Yew, Leptos, Dioxus and Sycamore. Shared
-//! styling is expressed through [`css_with_theme!`](mui_styled_engine::css_with_theme)
+//! styling is expressed through [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
 //! so palette and spacing values derive from the active [`Theme`]. The
 //! [`style_helpers::themed_class`](crate::style_helpers::themed_class) helper
 //! converts styles into scoped classes ensuring each adapter references the
@@ -15,7 +15,7 @@
 //!
 //! ## Theme-driven styling
 //! * **Palette integration** – colour variants map directly to
-//!   [`Theme::palette`](mui_styled_engine::Theme) entries ensuring a primary
+//!   [`Theme::palette`](rustic_ui_styled_engine::Theme) entries ensuring a primary
 //!   field instantly reflects brand accents while secondary variants pick up the
 //!   complementary tone.
 //! * **Sizing** – font sizes align with Material defaults (`0.8rem`, `1rem`,
@@ -27,9 +27,9 @@
 //!
 //! ## State-driven change management
 //! Instead of wiring bespoke debounce timers per framework, adapters now invoke
-//! [`TextFieldState::change`](mui_headless::text_field::TextFieldState::change),
-//! [`TextFieldState::commit`](mui_headless::text_field::TextFieldState::commit)
-//! and [`TextFieldState::reset`](mui_headless::text_field::TextFieldState::reset).
+//! [`TextFieldState::change`](rustic_ui_headless::text_field::TextFieldState::change),
+//! [`TextFieldState::commit`](rustic_ui_headless::text_field::TextFieldState::commit)
+//! and [`TextFieldState::reset`](rustic_ui_headless::text_field::TextFieldState::reset).
 //! Each callback receives an owned snapshot (`TextFieldChangeEvent`,
 //! `TextFieldCommitEvent`, `TextFieldResetEvent`) exposing debounced change
 //! guidance, dirty/visited flags and analytics metadata so upstream code can
@@ -49,7 +49,7 @@
     feature = "dioxus",
     feature = "sycamore"
 ))]
-use mui_headless::text_field::{
+use rustic_ui_headless::text_field::{
     TextFieldChangeEvent, TextFieldCommitEvent, TextFieldResetEvent, TextFieldState,
 };
 #[cfg(any(
@@ -58,7 +58,7 @@ use mui_headless::text_field::{
     feature = "dioxus",
     feature = "sycamore"
 ))]
-use mui_styled_engine::{css_with_theme, use_theme, Style, Theme};
+use rustic_ui_styled_engine::{css_with_theme, use_theme, Style, Theme};
 
 pub use crate::macros::{
     Color as TextFieldColor, Size as TextFieldSize, Variant as TextFieldVariant,
@@ -254,7 +254,7 @@ mod yew_impl {
     use yew::{prelude::*, virtual_dom::VNode};
 
     #[cfg(target_arch = "wasm32")]
-    use mui_utils::debounce;
+    use rustic_ui_utils::debounce;
 
     fn apply_input_attributes(tag: &mut yew::virtual_dom::VTag, attrs: Vec<(String, String)>) {
         for (key, value) in attrs {
@@ -264,7 +264,7 @@ mod yew_impl {
 
     /// Internal helper that memoizes a debounced change dispatcher.
     ///
-    /// The Yew adapter historically delegated debouncing to `mui_utils::debounce`
+    /// The Yew adapter historically delegated debouncing to `rustic_ui_utils::debounce`
     /// so consumers could throttle expensive validation or network operations.
     /// When the state-driven refactor landed that wiring was accidentally dropped,
     /// causing change callbacks to fire on every keystroke.  This struct stores
@@ -833,7 +833,7 @@ pub mod sycamore {
 ))]
 mod tests {
     use super::{build_text_field_attributes, input_attribute_pairs, ssr_input_attributes};
-    use mui_headless::text_field::TextFieldState;
+    use rustic_ui_headless::text_field::TextFieldState;
 
     #[test]
     fn input_pairs_reflect_dirty_and_visited_flags() {

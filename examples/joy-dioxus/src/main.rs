@@ -1,10 +1,10 @@
 use dioxus::events::FormEvent;
 use dioxus::prelude::*;
 use joy_workflows_core::{JoyWorkflowEvent, JoyWorkflowMachine, SnackbarSeverity};
-use mui_headless::stepper::StepStatus;
-use mui_joy::helpers::resolve_surface_tokens;
-use mui_joy::{Color, Variant};
-use mui_system::theme::Theme;
+use rustic_ui_headless::stepper::StepStatus;
+use rustic_ui_joy::helpers::resolve_surface_tokens;
+use rustic_ui_joy::{Color, Variant};
+use rustic_ui_system::theme::Theme;
 
 fn snackbar_tokens(severity: &SnackbarSeverity) -> (Color, Variant) {
     match severity {

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use mui_system::theme_provider::use_theme;
+use rustic_ui_system::theme_provider::use_theme;
 use yew::prelude::*;
 use yew::virtual_dom::AttrValue;
 
@@ -33,7 +33,7 @@ joy_component_props!(ChipProps {
     delete_delay_ms: Option<u64>,
 });
 
-/// Joy UI chip that wires into [`mui_headless::chip::ChipState`].
+/// Joy UI chip that wires into [`rustic_ui_headless::chip::ChipState`].
 ///
 /// # Design tokens
 /// * [`helpers::resolve_surface_tokens`](crate::helpers::resolve_surface_tokens) aligns color and
@@ -42,7 +42,7 @@ joy_component_props!(ChipProps {
 ///   component stays consistent across adapters without hand-maintained CSS.
 ///
 /// # Headless state contract
-/// The component renders the state exposed by [`mui_headless::chip::ChipState`] via
+/// The component renders the state exposed by [`rustic_ui_headless::chip::ChipState`] via
 /// [`helpers::use_chip_adapter`](crate::helpers::use_chip_adapter). Hover/focus/delete semantics
 /// remain identical across the Yew implementation and future Leptos/Dioxus/Sycamore bindings.
 #[function_component(Chip)]

@@ -8,12 +8,12 @@
 
 use std::time::Duration;
 
-use mui_headless::button::ButtonState;
-use mui_headless::chip::{ChipConfig, ChipState};
-use mui_headless::dialog::DialogState;
-use mui_material::button::ButtonProps;
-use mui_material::chip::ChipProps;
-use mui_material::dialog::DialogSurfaceOptions;
+use rustic_ui_headless::button::ButtonState;
+use rustic_ui_headless::chip::{ChipConfig, ChipState};
+use rustic_ui_headless::dialog::DialogState;
+use rustic_ui_material::button::ButtonProps;
+use rustic_ui_material::chip::ChipProps;
+use rustic_ui_material::dialog::DialogSurfaceOptions;
 
 /// Build button props representing a primary action used throughout the tests.
 #[must_use]

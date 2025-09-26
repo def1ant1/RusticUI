@@ -1,8 +1,8 @@
-use mui_styled_engine_macros::Theme as ThemeOverride;
-extern crate mui_system as mui_styled_engine;
+use rustic_ui_styled_engine_macros::Theme as ThemeOverride;
+extern crate rustic_ui_system as rustic_ui_styled_engine;
 
-use mui_system::theme::{ColorScheme, Palette};
-use mui_system::theme_provider::{
+use rustic_ui_system::theme::{ColorScheme, Palette};
+use rustic_ui_system::theme_provider::{
     material_css_baseline, material_css_baseline_from_theme, material_theme, material_theme_dark,
     material_theme_for_scheme, material_theme_light, material_theme_with_optional_overrides,
     material_theme_with_overrides,

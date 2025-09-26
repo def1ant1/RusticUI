@@ -2,12 +2,12 @@
 
 ```rust
 use dioxus::prelude::*;
-use mui_headless::checkbox::CheckboxState;
-use mui_headless::switch::SwitchState;
-use mui_headless::radio::{RadioGroupState, RadioOrientation};
-use mui_material::checkbox::{self, CheckboxProps};
-use mui_material::switch::{self, SwitchProps};
-use mui_material::radio::{self, RadioGroupProps};
+use rustic_ui_headless::checkbox::CheckboxState;
+use rustic_ui_headless::switch::SwitchState;
+use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+use rustic_ui_material::checkbox::{self, CheckboxProps};
+use rustic_ui_material::switch::{self, SwitchProps};
+use rustic_ui_material::radio::{self, RadioGroupProps};
 
 pub fn selection_controls(cx: Scope) -> Element {
     let checkbox_state = CheckboxState::uncontrolled(false, false);

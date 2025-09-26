@@ -12,8 +12,8 @@ members = []
 yew = { version = "0.21", default-features = false, features = ["csr", "ssr", "hydration"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-mui-material = { path = "../../crates/rustic-ui-material" }
-mui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-material = { path = "../../crates/rustic-ui-material" }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
 select-menu-shared = { path = "../select-menu-shared", default-features = false }
 tokio = { version = "1.37", default-features = false, features = ["macros", "rt-multi-thread", "time"], optional = true }
 

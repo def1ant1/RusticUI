@@ -1,4 +1,4 @@
-use mui_system::portal::{PortalLayer, PortalMount};
+use rustic_ui_system::portal::{PortalLayer, PortalMount};
 
 #[test]
 fn popover_anchor_markup_is_deterministic() {

@@ -90,7 +90,7 @@ cargo test -p mui-material yew_button_matches_react_baseline --features yew -- -
 
 Typical remediation steps:
 
-1. Confirm whether the React renderer (`mui_material::button::react`, `mui_material::chip::react`, etc.) changed intentionally. If so, update the corresponding framework adapter module so it emits the new markup.
+1. Confirm whether the React renderer (`rustic_ui_material::button::react`, `rustic_ui_material::chip::react`, etc.) changed intentionally. If so, update the corresponding framework adapter module so it emits the new markup.
 2. If analytics hooks or accessibility IDs changed globally, adjust the shared fixtures in `crates/rustic-ui-material/tests/common/fixtures.rs` so every parity suite receives the same canonical data.
 3. Re-run the targeted test, then `cargo test --workspace --all-features` to ensure no other suites regressed.
 

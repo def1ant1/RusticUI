@@ -9,9 +9,9 @@ license = "MIT OR Apache-2.0"
 sycamore.workspace = true
 wasm-bindgen.workspace = true
 joy-workflows-core = { path = "../joy-workflows-core" }
-mui-headless = { path = "../../crates/rustic-ui-headless" }
-mui-joy = { path = "../../crates/rustic-ui-joy", default-features = false, features = ["sycamore"] }
-mui-system = { path = "../../crates/rustic-ui-system", features = ["sycamore"] }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-joy = { path = "../../crates/rustic-ui-joy", default-features = false, features = ["sycamore"] }
+rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["sycamore"] }
 tokio = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true, features = ["HtmlInputElement"] }
 

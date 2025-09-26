@@ -1,4 +1,4 @@
-use mui_utils::compose_classes;
+use rustic_ui_utils::compose_classes;
 use proptest::prelude::*;
 use std::collections::HashMap;
 

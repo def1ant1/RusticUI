@@ -5,10 +5,10 @@
     feature = "yew"
 ))]
 
-use mui_headless::menu::MenuState;
-use mui_headless::popover::{AnchorGeometry, PopoverPlacement, PopoverState};
-use mui_material::menu::{self, MenuItem, MenuProps};
-use mui_system::portal::PortalMount;
+use rustic_ui_headless::menu::MenuState;
+use rustic_ui_headless::popover::{AnchorGeometry, PopoverPlacement, PopoverState};
+use rustic_ui_material::menu::{self, MenuItem, MenuProps};
+use rustic_ui_system::portal::PortalMount;
 
 fn sample_props() -> MenuProps {
     MenuProps::new(

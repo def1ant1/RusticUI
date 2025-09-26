@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use clap::Parser;
-use mui_icons_material::icon_update::{
+use rustic_ui_icons_material::icon_update::{
     run_update, HttpFetcher, UpdateOptions, UpdateOutcome, UpdateReuseReason, DEFAULT_ZIP_URL,
 };
 

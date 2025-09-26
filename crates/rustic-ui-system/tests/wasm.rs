@@ -1,4 +1,4 @@
-use mui_system::style_props;
+use rustic_ui_system::style_props;
 use wasm_bindgen_test::*;
 
 #[wasm_bindgen_test]

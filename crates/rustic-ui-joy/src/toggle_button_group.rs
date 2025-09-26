@@ -4,7 +4,7 @@
 //! finish the styled components.  Automation suites can hook into
 //! [`ToggleButtonGroupChange`] without depending on JSX/TSX internals.
 
-pub use mui_headless::toggle_button_group::{
+pub use rustic_ui_headless::toggle_button_group::{
     ToggleButtonGroupChange, ToggleButtonGroupConfig, ToggleButtonGroupState,
 };
 

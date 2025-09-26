@@ -52,7 +52,7 @@ Frameworks like [Leptos](https://leptos.dev) or [Yew](https://yew.rs) can reuse 
 
 ```rust
 use leptos::*;
-use mui_styled_engine::{StyleRegistry, StyledEngineProvider, Theme};
+use rustic_ui_styled_engine::{StyleRegistry, StyledEngineProvider, Theme};
 
 pub fn app(cx: Scope) -> impl IntoView {
     view! { cx,

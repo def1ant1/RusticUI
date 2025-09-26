@@ -6,7 +6,7 @@
 
 #[cfg(feature = "dioxus")]
 mod dioxus_tests {
-    use mui_material::card::dioxus;
+    use rustic_ui_material::card::dioxus;
 
     #[test]
     fn renders_div_with_class() {
@@ -22,7 +22,7 @@ mod dioxus_tests {
 
 #[cfg(feature = "sycamore")]
 mod sycamore_tests {
-    use mui_material::card::sycamore;
+    use rustic_ui_material::card::sycamore;
 
     #[test]
     fn renders_div_with_class() {

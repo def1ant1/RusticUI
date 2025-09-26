@@ -8,9 +8,9 @@
 
 use std::collections::BTreeMap;
 
-use mui_headless::tooltip::{TooltipConfig, TooltipState};
-use mui_material::tooltip::{dioxus, leptos, sycamore, yew, TooltipProps};
-use mui_styled_engine::Theme;
+use rustic_ui_headless::tooltip::{TooltipConfig, TooltipState};
+use rustic_ui_material::tooltip::{dioxus, leptos, sycamore, yew, TooltipProps};
+use rustic_ui_styled_engine::Theme;
 
 /// Aggregated tooltip story including markup for each framework and the
 /// automation identifier driving portal ids.
@@ -57,8 +57,8 @@ pub fn enterprise_story() -> TooltipStory {
 fn enterprise_theme() -> Theme {
     let mut theme = Theme::default();
     for scheme in [
-        mui_system::theme::ColorScheme::Light,
-        mui_system::theme::ColorScheme::Dark,
+        rustic_ui_system::theme::ColorScheme::Light,
+        rustic_ui_system::theme::ColorScheme::Dark,
     ] {
         let palette = theme.palette.scheme_mut(scheme);
         palette.primary = "#0057B7".into();

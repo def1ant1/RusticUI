@@ -10,7 +10,7 @@ use serde_json::Value;
 /// # Examples
 /// Basic object merging:
 /// ```
-/// use mui_utils::deep_merge;
+/// use rustic_ui_utils::deep_merge;
 /// use serde_json::json;
 ///
 /// let mut a = json!({"a": {"b": 1}});
@@ -21,7 +21,7 @@ use serde_json::Value;
 ///
 /// Arrays are appended:
 /// ```
-/// use mui_utils::deep_merge;
+/// use rustic_ui_utils::deep_merge;
 /// use serde_json::json;
 ///
 /// let mut a = json!({"nums": [1,2]});
@@ -32,7 +32,7 @@ use serde_json::Value;
 ///
 /// Primitive values replace the previous entry:
 /// ```
-/// use mui_utils::deep_merge;
+/// use rustic_ui_utils::deep_merge;
 /// use serde_json::json;
 ///
 /// let mut a = json!({"value": 1});

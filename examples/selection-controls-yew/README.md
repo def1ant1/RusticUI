@@ -5,17 +5,17 @@ machines from `mui-headless` into a Yew application using the render helpers
 from `mui-material`.
 
 ```rust
-use mui_headless::checkbox::CheckboxState;
-use mui_material::checkbox::{self, CheckboxProps};
-use mui_material::switch::{self, SwitchProps};
-use mui_material::radio::{self, RadioGroupProps};
-use mui_headless::radio::{RadioGroupState, RadioOrientation};
+use rustic_ui_headless::checkbox::CheckboxState;
+use rustic_ui_material::checkbox::{self, CheckboxProps};
+use rustic_ui_material::switch::{self, SwitchProps};
+use rustic_ui_material::radio::{self, RadioGroupProps};
+use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
 use yew::prelude::*;
 
 #[function_component(SelectionControls)]
 fn selection_controls() -> Html {
     let checkbox_state = CheckboxState::uncontrolled(false, false);
-    let switch_state = mui_headless::switch::SwitchState::uncontrolled(false, true);
+    let switch_state = rustic_ui_headless::switch::SwitchState::uncontrolled(false, true);
     let radio_state = RadioGroupState::uncontrolled(
         vec!["Email".into(), "SMS".into()],
         false,

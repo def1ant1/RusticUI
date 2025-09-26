@@ -1,4 +1,4 @@
-use mui_system::themed_element::{ThemedProps, Variant};
+use rustic_ui_system::themed_element::{ThemedProps, Variant};
 
 #[cfg(feature = "leptos")]
 #[test]
@@ -10,7 +10,7 @@ fn leptos_adapter_renders() {
         aria_label: Some("note".into()),
         ..Default::default()
     };
-    let html = mui_system::themed_element::leptos::render(&props);
+    let html = rustic_ui_system::themed_element::leptos::render(&props);
     assert!(html.contains("<style>"), "expected inlined stylesheet");
     assert!(html.contains("mui-themed-input--plain"));
     assert!(html.contains("aria-label=\"note\""));
@@ -33,7 +33,7 @@ fn dioxus_adapter_renders() {
     };
     props.aria_label = Some("greet".into());
     props.debounce_ms = Some(200);
-    let html = mui_system::themed_element::dioxus::render(&props);
+    let html = rustic_ui_system::themed_element::dioxus::render(&props);
     assert!(html.contains("mui-themed-input--outlined"));
     assert!(html.contains("<input"));
     assert!(html.contains("<style>"));
@@ -56,7 +56,7 @@ fn sycamore_adapter_renders() {
         aria_label: Some("global search".into()),
         ..Default::default()
     };
-    let html = mui_system::themed_element::sycamore::render(&props);
+    let html = rustic_ui_system::themed_element::sycamore::render(&props);
     assert!(html.contains("aria-label=\"global search\""));
     assert!(html.contains("mui-themed-input"));
     assert!(html.contains("<input"));

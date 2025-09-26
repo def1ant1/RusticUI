@@ -7,13 +7,13 @@
 //! shared helpers also inject deterministic automation hooks so QA pipelines have
 //! stable selectors regardless of the adapter being used.
 
-use mui_headless::{
+use rustic_ui_headless::{
     menu::MenuState,
     popover::{CollisionOutcome, PopoverState},
 };
-use mui_styled_engine::{css_with_theme, Style};
-use mui_system::portal::PortalMount;
-use mui_utils::attributes_to_html;
+use rustic_ui_styled_engine::{css_with_theme, Style};
+use rustic_ui_system::portal::PortalMount;
+use rustic_ui_utils::attributes_to_html;
 
 /// Individual actionable item rendered within the menu surface.
 #[derive(Clone, Debug)]
@@ -141,7 +141,7 @@ fn item_id(props: &MenuProps, index: usize) -> String {
 fn root_attributes(
     props: &MenuProps,
     menu_state: &MenuState,
-    surface_meta: &mui_headless::popover::PopoverSurfaceAttributes<'_>,
+    surface_meta: &rustic_ui_headless::popover::PopoverSurfaceAttributes<'_>,
     outcome: CollisionOutcome,
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
@@ -171,8 +171,8 @@ fn root_attributes(
 fn trigger_attributes(
     props: &MenuProps,
     menu_state: &MenuState,
-    surface_meta: &mui_headless::popover::PopoverSurfaceAttributes<'_>,
-    anchor_meta: &mui_headless::popover::PopoverAnchorAttributes<'_>,
+    surface_meta: &rustic_ui_headless::popover::PopoverSurfaceAttributes<'_>,
+    anchor_meta: &rustic_ui_headless::popover::PopoverAnchorAttributes<'_>,
     outcome: CollisionOutcome,
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
@@ -206,8 +206,8 @@ fn trigger_attributes(
 fn surface_attributes(
     props: &MenuProps,
     menu_state: &MenuState,
-    surface_meta: &mui_headless::popover::PopoverSurfaceAttributes<'_>,
-    anchor_meta: &mui_headless::popover::PopoverAnchorAttributes<'_>,
+    surface_meta: &rustic_ui_headless::popover::PopoverSurfaceAttributes<'_>,
+    anchor_meta: &rustic_ui_headless::popover::PopoverAnchorAttributes<'_>,
     outcome: CollisionOutcome,
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
@@ -268,7 +268,7 @@ fn popover_mount(props: &MenuProps) -> PortalMount {
 }
 
 fn anchor_attributes(
-    anchor_meta: &mui_headless::popover::PopoverAnchorAttributes<'_>,
+    anchor_meta: &rustic_ui_headless::popover::PopoverAnchorAttributes<'_>,
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
     // Merge the static portal metadata with the runtime placement analytics so
@@ -290,7 +290,7 @@ fn anchor_attributes(
 fn popover_surface_metadata<'a>(
     props: &'a MenuProps,
     popover_state: &'a PopoverState,
-) -> mui_headless::popover::PopoverSurfaceAttributes<'a> {
+) -> rustic_ui_headless::popover::PopoverSurfaceAttributes<'a> {
     // The headless popover exposes a fluent attribute builder. Centralising the
     // analytics wiring here keeps the menu rendering paths in sync regardless of
     // which adapter invokes them.
@@ -482,7 +482,7 @@ pub mod sycamore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mui_headless::popover::{AnchorGeometry, PopoverPlacement};
+    use rustic_ui_headless::popover::{AnchorGeometry, PopoverPlacement};
 
     fn build_state(item_count: usize) -> MenuState {
         MenuState::new(

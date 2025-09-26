@@ -1,4 +1,4 @@
-use mui_utils::deep_merge;
+use rustic_ui_utils::deep_merge;
 use proptest::prelude::*;
 use serde_json::{Map, Value};
 

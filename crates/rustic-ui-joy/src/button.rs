@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use mui_system::theme_provider::use_theme;
+use rustic_ui_system::theme_provider::use_theme;
 use yew::prelude::*;
 
 use crate::helpers::{
@@ -20,16 +20,16 @@ joy_component_props!(ButtonProps {
     disabled: bool,
 });
 
-/// Joy UI button rendering the [`mui_headless::button::ButtonState`] machine.
+/// Joy UI button rendering the [`rustic_ui_headless::button::ButtonState`] machine.
 ///
 /// # Design tokens
 /// * [`helpers::resolve_surface_tokens`](crate::helpers::resolve_surface_tokens) pulls the
 ///   palette entry for [`Color`] and merges it with the Joy border radius + focus tokens.
-/// * [`Theme::spacing`](mui_system::theme::Theme::spacing) is leveraged for consistent padding.
+/// * [`Theme::spacing`](rustic_ui_system::theme::Theme::spacing) is leveraged for consistent padding.
 ///
 /// # Headless state contract
 /// The component delegates click orchestration to
-/// [`mui_headless::button::ButtonState`], exposed to Yew via
+/// [`rustic_ui_headless::button::ButtonState`], exposed to Yew via
 /// [`helpers::use_button_adapter`](crate::helpers::use_button_adapter). The adapter mirrors the
 /// same state transitions across future Leptos/Dioxus/Sycamore bindings ensuring SSR + hydration
 /// consistency.

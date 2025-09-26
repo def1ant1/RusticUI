@@ -4,7 +4,7 @@ use syn::{parse_macro_input, DeriveInput, Fields, ItemFn, Type};
 
 /// Derive macro generating an `into_theme` helper for custom theme structs.
 ///
-/// The macro merges the user provided fields with [`mui_styled_engine::Theme`]'s
+/// The macro merges the user provided fields with [`rustic_ui_styled_engine::Theme`]'s
 /// defaults. This enables ergonomic creation of theme overrides without
 /// requiring manual plumbing for each field.
 #[proc_macro_derive(Theme)]
@@ -28,7 +28,7 @@ pub fn derive_theme(input: TokenStream) -> TokenStream {
             quote! {
                 #ident: self.#ident
                     .map(::core::convert::Into::into)
-                    .unwrap_or_else(|| ::mui_styled_engine::Theme::default().#ident)
+                    .unwrap_or_else(|| ::rustic_ui_styled_engine::Theme::default().#ident)
             }
         } else {
             quote! { #ident: ::core::convert::Into::into(self.#ident) }
@@ -39,12 +39,12 @@ pub fn derive_theme(input: TokenStream) -> TokenStream {
         impl #name {
             /// Converts the custom struct into the engine's [`Theme`],
             /// filling unspecified fields from `Theme::default`.
-            pub fn into_theme(self) -> ::mui_styled_engine::Theme {
-                ::mui_styled_engine::Theme { #( #assignments, )* ..::mui_styled_engine::Theme::default() }
+            pub fn into_theme(self) -> ::rustic_ui_styled_engine::Theme {
+                ::rustic_ui_styled_engine::Theme { #( #assignments, )* ..::rustic_ui_styled_engine::Theme::default() }
             }
         }
 
-        impl ::core::convert::From<#name> for ::mui_styled_engine::Theme {
+        impl ::core::convert::From<#name> for ::rustic_ui_styled_engine::Theme {
             fn from(value: #name) -> Self {
                 value.into_theme()
             }
@@ -80,7 +80,7 @@ pub fn styled_component(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         #[::yew::function_component(#name)]
         #vis #sig {
-            let theme = ::mui_styled_engine::use_theme();
+            let theme = ::rustic_ui_styled_engine::use_theme();
             #block
         }
     };
@@ -90,7 +90,7 @@ pub fn styled_component(input: TokenStream) -> TokenStream {
 
 /// Function-like macro that wraps [`stylist::css!`] while automatically injecting
 /// a `use_theme` call. The macro works across supported front-end frameworks by
-/// delegating theme retrieval to `mui_styled_engine::use_theme`.
+/// delegating theme retrieval to `rustic_ui_styled_engine::use_theme`.
 ///
 /// ```ignore
 /// let style = css_with_theme!(r#"color: ${theme.palette.primary};"#);
@@ -100,8 +100,8 @@ pub fn styled_component(input: TokenStream) -> TokenStream {
 pub fn css_with_theme(input: TokenStream) -> TokenStream {
     let tokens = proc_macro2::TokenStream::from(input);
     let expanded = quote! {{
-        let theme = ::mui_styled_engine::use_theme();
-        ::mui_styled_engine::Style::new(::mui_styled_engine::css!(#tokens))
+        let theme = ::rustic_ui_styled_engine::use_theme();
+        ::rustic_ui_styled_engine::Style::new(::rustic_ui_styled_engine::css!(#tokens))
             .expect("valid css")
     }};
     TokenStream::from(expanded)

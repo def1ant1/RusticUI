@@ -3,9 +3,9 @@
 //! Run with:
 //! `cargo run -p mui-joy --example button --features yew`
 
-use mui_joy::{Button, Color, Variant};
-use mui_system::theme_provider::ThemeProvider;
-use mui_system::Theme;
+use rustic_ui_joy::{Button, Color, Variant};
+use rustic_ui_system::theme_provider::ThemeProvider;
+use rustic_ui_system::Theme;
 use yew::prelude::*;
 
 #[function_component(App)]

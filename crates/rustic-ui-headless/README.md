@@ -34,9 +34,9 @@ interactivity during SSR and client renders.
 ### Example (framework agnostic)
 
 ```rust
-use mui_headless::select::SelectState;
-use mui_headless::interaction::ControlKey;
-use mui_headless::selection::ControlStrategy;
+use rustic_ui_headless::select::SelectState;
+use rustic_ui_headless::interaction::ControlKey;
+use rustic_ui_headless::selection::ControlStrategy;
 
 let mut state = SelectState::new(
     4,             // options rendered
@@ -91,9 +91,9 @@ interactivity during SSR and client hydration.
 ### Example (framework agnostic)
 
 ```rust
-use mui_headless::menu::MenuState;
-use mui_headless::interaction::ControlKey;
-use mui_headless::selection::ControlStrategy;
+use rustic_ui_headless::menu::MenuState;
+use rustic_ui_headless::interaction::ControlKey;
+use rustic_ui_headless::selection::ControlStrategy;
 
 let mut state = MenuState::new(
     3,              // items rendered
@@ -229,9 +229,9 @@ change(value) ──▶ dirty? ──▶ commit() ──▶ errors? ──▶ an
 ## Sample orchestration
 
 ```rust
-use mui_headless::dialog::DialogState;
-use mui_headless::popover::{AnchorGeometry, PopoverPlacement, PopoverState};
-use mui_headless::text_field::TextFieldState;
+use rustic_ui_headless::dialog::DialogState;
+use rustic_ui_headless::popover::{AnchorGeometry, PopoverPlacement, PopoverState};
+use rustic_ui_headless::text_field::TextFieldState;
 use std::time::Duration;
 
 let mut dialog = DialogState::controlled();

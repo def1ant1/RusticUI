@@ -1,5 +1,5 @@
 //! update_features.rs -- regenerates the `[features]` manifest for the
-//! `mui-icons` crate based on the SVG assets currently present on disk.
+//! `rustic-ui-icons` crate based on the SVG assets currently present on disk.
 //!
 //! The binary intentionally lives alongside the crate so maintainers can run it
 //! without pulling in heavyweight external tooling. It is invoked automatically
@@ -77,13 +77,13 @@ impl Config {
 fn main() -> Result<(), Box<dyn Error>> {
     let config = Config::from_env()?;
     println!(
-        "[mui-icons] regenerating feature manifest using icons from {}",
+        "[rustic-ui-icons] regenerating feature manifest using icons from {}",
         config.icons_dir.display()
     );
 
     let sets = discover_icon_sets(&config.icons_dir)?;
     println!(
-        "[mui-icons] discovered {} icon set(s): {}",
+        "[rustic-ui-icons] discovered {} icon set(s): {}",
         sets.len(),
         sets.keys().cloned().collect::<Vec<_>>().join(", ")
     );
@@ -177,7 +177,7 @@ fn render_feature_block(sets: &BTreeMap<String, Vec<String>>) -> String {
 /// Rewrites the manifest with the freshly generated block, keeping surrounding
 /// configuration intact.
 fn rewrite_manifest(path: &Path, block: &str) -> Result<(), Box<dyn Error>> {
-    println!("[mui-icons] updating manifest at {}", path.display());
+    println!("[rustic-ui-icons] updating manifest at {}", path.display());
     let manifest = fs::read_to_string(path)?;
     let start = manifest
         .find(START_MARKER)
@@ -193,11 +193,13 @@ fn rewrite_manifest(path: &Path, block: &str) -> Result<(), Box<dyn Error>> {
     let new_manifest = format!("{}{}{}", &manifest[..start], block, &manifest[end..]);
 
     if new_manifest == manifest {
-        println!("[mui-icons] manifest already up to date; no changes written");
+        println!(
+            "[rustic-ui-icons] manifest already up to date; no changes written"
+        );
         return Ok(());
     }
 
     fs::write(path, new_manifest)?;
-    println!("[mui-icons] manifest features refreshed successfully");
+    println!("[rustic-ui-icons] manifest features refreshed successfully");
     Ok(())
 }

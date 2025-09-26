@@ -1,5 +1,5 @@
 use yew::prelude::*;
-use mui_system::{theme::Theme, ThemeProvider, Box};
+use rustic_ui_system::{theme::Theme, ThemeProvider, Box};
 
 /// Yew application wired up with MUI theming and an SSR entry point.
 #[function_component(App)]

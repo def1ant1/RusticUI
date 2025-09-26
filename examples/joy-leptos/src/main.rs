@@ -6,9 +6,9 @@ use joy_workflows_core::{
 use leptos::ev::{Event, MouseEvent};
 use leptos::*;
 use leptos::{event_target_value, IntoView};
-use mui_headless::stepper::StepStatus;
-use mui_joy::helpers::resolve_surface_tokens;
-use mui_joy::{Color, Variant};
+use rustic_ui_headless::stepper::StepStatus;
+use rustic_ui_joy::helpers::resolve_surface_tokens;
+use rustic_ui_joy::{Color, Variant};
 
 /// Map the shared snackbar severity into Joy color/variant pairs for styling.
 fn snackbar_tokens(severity: &SnackbarSeverity) -> (Color, Variant) {

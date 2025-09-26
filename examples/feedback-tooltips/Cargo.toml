@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [dependencies]
-mui-material = { path = "../../crates/rustic-ui-material" }
-mui-headless = { path = "../../crates/rustic-ui-headless" }
-mui-styled-engine = { path = "../../crates/rustic-ui-styled-engine" }
-mui-system = { path = "../../crates/rustic-ui-system" }
+rustic-ui-material = { path = "../../crates/rustic-ui-material" }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine" }
+rustic-ui-system = { path = "../../crates/rustic-ui-system" }

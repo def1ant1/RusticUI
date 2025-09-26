@@ -1,17 +1,16 @@
 [package]
-name = "mui-icons"
+name = "rustic-ui-icons"
 version = "0.1.0"
 edition = "2021"
 description = "Bindings to Material UI's SVG icon set for Rust front-end frameworks."
-license = "MIT OR Apache-2.0"
 # Build script converts SVGs into memoized Rust functions.
 build = "build.rs"
 # Rich metadata surfaces crate intent on crates.io and enables automated
 # publishing workflows. The repository/homepage links funnel users to the
 # centralized documentation and issue tracker to reduce fragmentation.
-repository = "https://github.com/m../rustic-ui-rust"
-homepage = "https://github.com/m../rustic-ui-rust"
-documentation = "https://docs.../rustic-ui-icons"
+repository = "https://github.com/apotheon-ai/rusticui"
+homepage = "https://apotheon.ai/rusticui"
+documentation = "https://docs.rs/rustic-ui-icons"
 keywords = ["material", "ui", "web"]
 categories = ["gui"]
 

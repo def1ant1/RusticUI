@@ -9,7 +9,7 @@
 //! closure generic while allowing easy integration with event handlers that
 //! pass richer arguments:
 //! ```
-//! use mui_utils::throttle;
+//! use rustic_ui_utils::throttle;
 //! use std::time::Duration;
 //!
 //! let counter = std::sync::Arc::new(std::sync::Mutex::new(0));
@@ -28,7 +28,7 @@
 //! Supplying a zero interval disables throttling and every invocation is
 //! forwarded:
 //! ```
-//! use mui_utils::throttle;
+//! use rustic_ui_utils::throttle;
 //! use std::sync::{Arc, Mutex};
 //! use std::time::Duration;
 //!

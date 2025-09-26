@@ -1,7 +1,7 @@
 #![cfg(any(feature = "dioxus", feature = "sycamore"))]
 
-use mui_headless::text_field::TextFieldState;
-use mui_material::text_field::{self, TextFieldColor, TextFieldSize, TextFieldVariant};
+use rustic_ui_headless::text_field::TextFieldState;
+use rustic_ui_material::text_field::{self, TextFieldColor, TextFieldSize, TextFieldVariant};
 use std::time::Duration;
 
 fn hydrated_state() -> TextFieldState {

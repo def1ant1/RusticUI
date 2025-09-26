@@ -6,15 +6,15 @@
 
 #[cfg(feature = "dioxus")]
 mod dioxus_tests {
-    use mui_material::app_bar::dioxus;
+    use rustic_ui_material::app_bar::dioxus;
 
     #[test]
     fn renders_header_with_aria() {
         let props = dioxus::AppBarProps {
             title: "Dashboard".into(),
             aria_label: "Application header".into(),
-            color: mui_material::app_bar::AppBarColor::Primary,
-            size: mui_material::app_bar::AppBarSize::Medium,
+            color: rustic_ui_material::app_bar::AppBarColor::Primary,
+            size: rustic_ui_material::app_bar::AppBarSize::Medium,
         };
         let out = dioxus::render(&props);
         assert!(out.starts_with("<header"));
@@ -26,15 +26,15 @@ mod dioxus_tests {
 
 #[cfg(feature = "sycamore")]
 mod sycamore_tests {
-    use mui_material::app_bar::sycamore;
+    use rustic_ui_material::app_bar::sycamore;
 
     #[test]
     fn renders_header_with_aria() {
         let props = sycamore::AppBarProps {
             title: "Dashboard".into(),
             aria_label: "Application header".into(),
-            color: mui_material::app_bar::AppBarColor::Primary,
-            size: mui_material::app_bar::AppBarSize::Medium,
+            color: rustic_ui_material::app_bar::AppBarColor::Primary,
+            size: rustic_ui_material::app_bar::AppBarSize::Medium,
         };
         let out = sycamore::render(&props);
         assert!(out.starts_with("<header"));

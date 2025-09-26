@@ -49,7 +49,7 @@ active [`Theme`](crates/rustic-ui-styled-engine/src/theme.rs) into scoped CSS bl
 ```rust
 use leptos::*;
 use rustic_ui::Button;
-use mui_styled_engine::css_with_theme; // Rename to `rustic_ui_styled_engine` once the crates are published
+use rustic_ui_styled_engine::css_with_theme; // Rename to `rustic_ui_styled_engine` once the crates are published
 
 #[component]
 fn SaveButton() -> impl IntoView {
@@ -201,7 +201,7 @@ explicit controls for toggling the popover and cycling the selected region:
 ```rust
 let props = props_from_options("Primary replication region", AUTOMATION_ID, &*options);
 let state = controlled_state(props.options.len(), *selected, *open);
-let html = mui_material::select::yew::render(&props, &state);
+let html = rustic_ui_material::select::yew::render(&props, &state);
 Html::from_html_unchecked(AttrValue::from(html));
 ```
 

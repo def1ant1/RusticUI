@@ -1,6 +1,6 @@
-use mui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
-use mui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
-use mui_material::Theme;
+use rustic_ui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
+use rustic_ui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
+use rustic_ui_material::Theme;
 
 fn sample_state(anchor: DrawerAnchor, variant: DrawerVariant) -> DrawerState {
     DrawerState::new(true, unsafe { std::mem::transmute(1u8) }, variant, anchor)

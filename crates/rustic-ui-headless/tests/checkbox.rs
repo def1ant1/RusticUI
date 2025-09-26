@@ -1,5 +1,5 @@
-use mui_headless::checkbox::{CheckboxState, CheckboxValue};
-use mui_headless::interaction::ControlKey;
+use rustic_ui_headless::checkbox::{CheckboxState, CheckboxValue};
+use rustic_ui_headless::interaction::ControlKey;
 
 fn attr<'a>(attrs: &'a [(&'static str, String)], key: &str) -> Option<&'a str> {
     attrs

@@ -6,7 +6,7 @@
 //! the [`material_icon!`] macro for ergonomic access:
 //!
 //! ```no_run
-//! let svg = mui_icons_material::material_icon!("10k_24px");
+//! let svg = rustic_ui_icons_material::material_icon!("10k_24px");
 //! println!("{}", svg);
 //! ```
 //!

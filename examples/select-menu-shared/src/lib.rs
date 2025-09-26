@@ -6,8 +6,8 @@
 //! examples focused on framework specific wiring while still demonstrating how
 //! enterprises can share core behaviour across SSR and CSR entry points.
 
-use mui_material::select::{SelectOption, SelectProps};
-use mui_system::theme::{ColorScheme, Theme};
+use rustic_ui_material::select::{SelectOption, SelectProps};
+use rustic_ui_system::theme::{ColorScheme, Theme};
 
 /// Stable automation identifier applied to every DOM node we render.
 ///

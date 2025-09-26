@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use mui_headless::button::ButtonState;
-use mui_headless::chip::{ChipAttributes, ChipConfig, ChipState};
-use mui_headless::timing::MockClock;
+use rustic_ui_headless::button::ButtonState;
+use rustic_ui_headless::chip::{ChipAttributes, ChipConfig, ChipState};
+use rustic_ui_headless::timing::MockClock;
 
 // Utility helper returning a configuration where every transition fires
 // immediately. This keeps the assertions deterministic without waiting for real

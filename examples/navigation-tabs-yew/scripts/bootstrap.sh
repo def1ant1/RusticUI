@@ -50,11 +50,11 @@ HTML
 
 cat > "$EXAMPLE_ROOT/src/main.rs" <<'RS'
 use gloo::events::EventListener;
-use mui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
-use mui_material::tab;
-use mui_material::tab_panel;
-use mui_material::tabs::{self, TabListLayoutOptions, TabListProps};
-use mui_styled_engine::{Theme, ThemeProvider};
+use rustic_ui_headless::tabs::{ActivationMode, TabsOrientation, TabsState};
+use rustic_ui_material::tab;
+use rustic_ui_material::tab_panel;
+use rustic_ui_material::tabs::{self, TabListLayoutOptions, TabListProps};
+use rustic_ui_styled_engine::{Theme, ThemeProvider};
 use wasm_bindgen::JsCast;
 use yew::prelude::*;
 use yew_router::prelude::*;

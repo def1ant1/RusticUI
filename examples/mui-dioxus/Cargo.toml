@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 dioxus.workspace = true
 dioxus-web.workspace = true
-mui-system = { path = "../../crates/rustic-ui-system", features = ["dioxus"] }
+rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["dioxus"] }
 dioxus-ssr = { workspace = true, optional = true }
 
 [features]

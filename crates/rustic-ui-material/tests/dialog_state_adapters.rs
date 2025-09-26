@@ -1,7 +1,7 @@
 #![cfg(any(feature = "dioxus", feature = "leptos", feature = "sycamore"))]
 
-use mui_headless::dialog::{DialogState, DialogTransition};
-use mui_material::dialog::{self, DialogSurfaceOptions};
+use rustic_ui_headless::dialog::{DialogState, DialogTransition};
+use rustic_ui_material::dialog::{self, DialogSurfaceOptions};
 
 fn opening_state() -> DialogState {
     let mut state = DialogState::controlled();

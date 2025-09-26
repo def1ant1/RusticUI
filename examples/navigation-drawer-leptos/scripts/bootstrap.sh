@@ -48,9 +48,9 @@ HTML
 cat > "$EXAMPLE_ROOT/src/main.rs" <<'RS'
 use leptos::*;
 use leptos_router::*;
-use mui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
-use mui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
-use mui_styled_engine::{Theme, ThemeProvider};
+use rustic_ui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
+use rustic_ui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
+use rustic_ui_styled_engine::{Theme, ThemeProvider};
 use wasm_bindgen::JsCast;
 
 #[derive(Clone, Routable, PartialEq, Eq, Debug)]

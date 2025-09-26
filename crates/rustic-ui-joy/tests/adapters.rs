@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use mui_headless::button::ButtonState;
-use mui_headless::chip::{ChipAttributes, ChipConfig, ChipState};
-use mui_headless::timing::MockClock;
+use rustic_ui_headless::button::ButtonState;
+use rustic_ui_headless::chip::{ChipAttributes, ChipConfig, ChipState};
+use rustic_ui_headless::timing::MockClock;
 
 type ChipStateUnderTest = ChipState<MockClock>;
 
@@ -73,7 +73,7 @@ fn render_chip_markup(
 #[cfg(feature = "yew")]
 mod yew {
     use super::*;
-    use mui_joy::helpers::{ButtonAria, ChipAdapterConfig, ChipAria};
+    use rustic_ui_joy::helpers::{ButtonAria, ChipAdapterConfig, ChipAria};
     use yew::virtual_dom::AttrValue;
 
     #[test]

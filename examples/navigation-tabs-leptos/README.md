@@ -53,9 +53,9 @@ fn NavigationTabs() -> impl IntoView {
     let layout = TabListLayoutOptions::default();
     let theme = Theme::default();
     let tabs_markup = vec![
-        mui_material::tab::render_tab_html(&state, state.tab(0).id("tab-overview").controls("panel-overview"), "Overview"),
-        mui_material::tab::render_tab_html(&state, state.tab(1).id("tab-reports").controls("panel-reports"), "Reports"),
-        mui_material::tab::render_tab_html(&state, state.tab(2).id("tab-settings").controls("panel-settings"), "Settings"),
+        rustic_ui_material::tab::render_tab_html(&state, state.tab(0).id("tab-overview").controls("panel-overview"), "Overview"),
+        rustic_ui_material::tab::render_tab_html(&state, state.tab(1).id("tab-reports").controls("panel-reports"), "Reports"),
+        rustic_ui_material::tab::render_tab_html(&state, state.tab(2).id("tab-settings").controls("panel-settings"), "Settings"),
     ].join("");
 
     let props = TabListProps {

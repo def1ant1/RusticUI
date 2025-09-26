@@ -1,4 +1,4 @@
-use mui_system::{
+use rustic_ui_system::{
     r#box::{build_box_style, BoxStyleInputs},
     responsive::Responsive,
     Theme,

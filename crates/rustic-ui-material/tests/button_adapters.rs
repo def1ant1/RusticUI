@@ -1,5 +1,5 @@
-use mui_headless::button::ButtonState;
-use mui_material::button::{self, ButtonProps};
+use rustic_ui_headless::button::ButtonState;
+use rustic_ui_material::button::{self, ButtonProps};
 
 /// Each framework adapter should emit a `<button>` element with the generated
 /// class, `role="button"` and the current `aria-pressed` state.

@@ -5,7 +5,7 @@
 //! Leptos, Dioxus and Sycamore while sharing the same styling pipeline.  Each
 //! variant resolves palette colours, typography and focus treatments from the
 //! active [`Theme`] before wiring the values into a scoped stylesheet generated
-//! by [`css_with_theme!`](mui_styled_engine_macros::css_with_theme). Centralising
+//! by [`css_with_theme!`](rustic_ui_styled_engine_macros::css_with_theme). Centralising
 //! the behaviour avoids subtle regressions between frameworks and keeps
 //! enterprise teams from hand-maintaining near-identical CSS snippets.
 //!
@@ -31,17 +31,17 @@
 //! ## Debounce-friendly metadata
 //! When [`ThemedProps::debounce_ms`] is provided the adapters emit a
 //! `data-debounce-ms` attribute. Downstream frameworks frequently pair the
-//! rendered markup with [`mui_utils::debounce`] to delay expensive network or
+//! rendered markup with [`rustic_ui_utils::debounce`] to delay expensive network or
 //! state updates; surfacing the chosen debounce window in the DOM keeps this
 //! behaviour declarative and easy to introspect during QA walkthroughs.
 //!
 //! ## Accessibility
 //! Assistive technologies rely on `aria-label` metadata to describe the purpose
 //! of text inputs.  The helpers automatically merge [`ThemedProps::aria_label`]
-//! into the rendered attributes via [`mui_utils::collect_attributes`], ensuring
+//! into the rendered attributes via [`rustic_ui_utils::collect_attributes`], ensuring
 //! hydration friendly ordering while keeping the implementation identical across
 //! frameworks.  Additional attributes such as `placeholder` and
-//! `data-debounce-ms` are merged using [`mui_utils::extend_attributes`], making
+//! `data-debounce-ms` are merged using [`rustic_ui_utils::extend_attributes`], making
 //! it easy to audit which metadata ships with the control in server rendered
 //! output.
 
@@ -49,7 +49,7 @@
 use crate::theme_provider::use_theme;
 #[cfg(feature = "leptos")]
 use crate::theme_provider::use_theme_leptos as use_theme;
-use mui_utils::{attributes_to_html, collect_attributes, extend_attributes};
+use rustic_ui_utils::{attributes_to_html, collect_attributes, extend_attributes};
 
 /// Available visual variants for the themed element.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -182,7 +182,7 @@ fn deterministic_class(variant: Variant) -> String {
 /// Generates a scoped CSS class and stylesheet using the active [`Theme`].
 #[cfg(any(feature = "leptos", feature = "dioxus", feature = "sycamore"))]
 fn scoped_style(tokens: &VisualTokens, overrides: Option<&str>) -> ScopedStyle {
-    use mui_styled_engine_macros::css_with_theme;
+    use rustic_ui_styled_engine_macros::css_with_theme;
 
     // Drive every declaration from theme tokens so updates to palette/spacing
     // cascade through the component without touching presentation code.
@@ -249,7 +249,7 @@ fn themed_classes(props: &ThemedProps) -> (String, ScopedStyle) {
 /// Collects HTML attributes shared across adapters.
 ///
 /// The helper funnels the caller supplied class list through
-/// [`mui_utils::collect_attributes`] before layering optional ARIA metadata on
+/// [`rustic_ui_utils::collect_attributes`] before layering optional ARIA metadata on
 /// top. Returning a `Vec` keeps the structure ergonomic for
 /// [`attributes_to_html`], SSR renderers and potential future automation.
 fn attribute_pairs(props: &ThemedProps, classes: String) -> Vec<(String, String)> {
@@ -299,7 +299,7 @@ pub mod leptos {
     //! Leptos adapter that renders a themed `<input>` while exercising the
     //! shared styling helpers.
     //!
-    //! The adapter leans on [`css_with_theme!`](mui_styled_engine::css_with_theme)
+    //! The adapter leans on [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
     //! to derive palette driven spacing, typography and focus outlines ensuring
     //! the scoped class aligns with the active [`Theme`](crate::theme::Theme).
     //! By delegating attribute assembly to [`attribute_pairs`](super::attribute_pairs)

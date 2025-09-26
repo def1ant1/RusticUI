@@ -1,12 +1,11 @@
 [package]
-name = "mui-utils"
+name = "rustic-ui-utils"
 version = "0.1.0"
 edition = "2021"
 description = "Utility helpers for the Material UI Rust ecosystem."
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/m../rustic-ui-rust"
-homepage = "https://github.com/m../rustic-ui-rust"
-documentation = "https://docs.../rustic-ui-utils"
+repository = "https://github.com/apotheon-ai/rusticui"
+homepage = "https://apotheon.ai/rusticui"
+documentation = "https://docs.rs/rustic-ui-utils"
 keywords = ["material", "ui", "web"]
 categories = ["gui"]
 

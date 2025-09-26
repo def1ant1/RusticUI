@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use yew::ServerRenderer;
-use mui_material::{AppBar};
-use mui_styled_engine::{StyledEngineProvider, Theme};
+use rustic_ui_material::{AppBar};
+use rustic_ui_styled_engine::{StyledEngineProvider, Theme};
 
 /// Demonstrates server-side rendering (SSR) with accessibility best
 /// practices. The example renders an [`AppBar`] with an `aria-label` so

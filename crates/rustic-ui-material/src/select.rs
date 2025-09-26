@@ -1,11 +1,11 @@
 //! Material themed select/listbox renderer built atop the headless [`SelectState`].
 //!
 //! The module mirrors the structure of [`button`](crate::button) by centralizing
-//! HTML assembly and [`css_with_theme!`](mui_styled_engine::css_with_theme)
+//! HTML assembly and [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
 //! styling in one place so framework adapters simply forward props/state into the
 //! shared helpers.  This keeps enterprise surfaces consistent across SSR and
 //! client runtimes while leaning on design tokens sourced from
-//! [`Theme`](mui_styled_engine::Theme) for every visual decision.
+//! [`Theme`](rustic_ui_styled_engine::Theme) for every visual decision.
 //!
 //! ## Why this lives in `mui-material`
 //! * Rendering is centralized to prevent divergence between Yew, Leptos, Dioxus
@@ -16,9 +16,9 @@
 //! * Automation hooks (`data-*` attributes) are standardized so QA teams can
 //!   target components reliably regardless of hosting framework.
 
-use mui_headless::select::SelectState;
-use mui_styled_engine::{css_with_theme, Style};
-use mui_system::portal::PortalMount;
+use rustic_ui_headless::select::SelectState;
+use rustic_ui_styled_engine::{css_with_theme, Style};
+use rustic_ui_system::portal::PortalMount;
 
 /// Discrete option rendered inside the Material select popover.
 #[derive(Clone, Debug)]
