@@ -12,7 +12,12 @@ import { useDocsConfig } from '../DocsProvider';
  * - /packages/mui-docs/src/Link/Link.tsx
  * - /examples/material-ui-nextjs-pages-router/src/Link.js
  * - /examples/material-ui-nextjs-pages-router-ts/src/Link.tsx
- * - /examples/material-ui-nextjs-ts-v4-v5-migration/src/Link.tsx
+ *
+ * Legacy note:
+ * The historical `material-ui-nextjs-ts-v4-v5-migration` sample has been retired
+ * in favour of the actively maintained `material-ui-nextjs-pages-router`
+ * examples above. Contributors should rely on those automation-ready samples
+ * when validating cross-environment SSR behaviour.
  */
 
 interface NextLinkComposedProps
