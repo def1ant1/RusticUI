@@ -48,3 +48,13 @@ pub use compose_classes::compose_classes;
 pub use debounce::debounce;
 pub use deep_merge::deep_merge;
 pub use throttle::throttle;
+
+#[cfg(feature = "compat-mui")]
+#[doc = "Deprecated compatibility shim exposing the crate under the legacy `mui_utils` name.\n\
+Enable the `compat-mui` feature only while migrating to `rustic_ui_utils`.\n\
+The alias will be removed once downstream projects complete the rename."]
+#[deprecated(
+    since = "0.1.0",
+    note = "Use `rustic_ui_utils`. The `mui_utils` alias is temporary and will be removed."
+)]
+pub use crate as mui_utils;

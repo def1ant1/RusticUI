@@ -22,6 +22,8 @@ time = { workspace = true, optional = true }
 
 [features]
 default = []
+# Enable compatibility aliases only during the rename transition.
+compat-mui = []
 # Enable experimental widgets individually to keep compile times lean.
 autocomplete = []
 date-picker = []

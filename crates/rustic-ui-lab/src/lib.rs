@@ -38,3 +38,13 @@ pub mod tree_view;
 
 #[cfg(feature = "timeline")]
 pub mod timeline;
+
+#[cfg(feature = "compat-mui")]
+#[doc = "Deprecated compatibility shim exposing the crate under the legacy `mui_lab` name.\n\
+Opt into the `compat-mui` feature only while updating imports to `rustic_ui_lab`.\n\
+The alias will be removed in a forthcoming release once migrations conclude."]
+#[deprecated(
+    since = "0.1.0",
+    note = "Switch to `rustic_ui_lab`. The `mui_lab` compatibility alias will be removed."
+)]
+pub use crate as mui_lab;

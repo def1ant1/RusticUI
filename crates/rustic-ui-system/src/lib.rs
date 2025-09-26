@@ -60,6 +60,16 @@ pub(crate) use scoped_class::ScopedClass;
 /// more features are ported. New functionality resides in the modules above.
 pub fn placeholder() {}
 
+#[cfg(feature = "compat-mui")]
+#[doc = "Deprecated compatibility shim exposing the crate under the legacy `mui_system` name.\n\
+Enable the `compat-mui` feature while you migrate imports to `rustic_ui_system`.\n\
+This alias will be removed in a future pre-1.0 release."]
+#[deprecated(
+    since = "0.1.0",
+    note = "Update imports to use `rustic_ui_system`. The `mui_system` alias will be removed."
+)]
+pub use crate as mui_system;
+
 #[cfg(test)]
 mod tests {
     use super::*;

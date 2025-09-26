@@ -81,3 +81,13 @@ pub use toggle_button_group::{
     ToggleButtonGroupChange, ToggleButtonGroupConfig, ToggleButtonGroupController,
     ToggleButtonGroupState,
 };
+
+#[cfg(feature = "compat-mui")]
+#[doc = "Deprecated compatibility shim exposing the crate under the legacy `mui_joy` name.\n\
+Keep the `compat-mui` feature enabled only while migrating to `rustic_ui_joy`.\n\
+The alias will be retired prior to the 1.0 release."]
+#[deprecated(
+    since = "0.1.0",
+    note = "Update imports to `rustic_ui_joy`. The `mui_joy` alias is temporary and will be removed."
+)]
+pub use crate as mui_joy;

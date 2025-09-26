@@ -49,3 +49,13 @@ pub mod tooltip;
 
 mod selection;
 mod toggle;
+
+#[cfg(feature = "compat-mui")]
+#[doc = "Deprecated compatibility shim exposing the crate under the legacy `mui_headless` name.\n\
+Enable the `compat-mui` feature only while migrating to `rustic_ui_headless`.\n\
+The alias will be removed once downstream crates finish the transition."]
+#[deprecated(
+    since = "0.1.0",
+    note = "Use `rustic_ui_headless` going forward. The `mui_headless` alias is temporary."
+)]
+pub use crate as mui_headless;

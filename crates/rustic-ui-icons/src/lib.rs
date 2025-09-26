@@ -9,6 +9,16 @@
 // change.
 include!(concat!(env!("OUT_DIR"), "/icons.rs"));
 
+#[cfg(feature = "compat-mui")]
+#[doc = "Deprecated compatibility shim exposing the crate under the legacy `mui_icons` name.\n\
+Activate the `compat-mui` feature only during the rename transition to `rustic_ui_icons`.\n\
+The alias will be removed ahead of the 1.0 release."]
+#[deprecated(
+    since = "0.1.0",
+    note = "Use `rustic_ui_icons`. The `mui_icons` compatibility alias will be removed soon."
+)]
+pub use crate as mui_icons;
+
 #[cfg(test)]
 mod tests {
     use super::*;

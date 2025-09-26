@@ -18,6 +18,16 @@
 // Include the generated icon functions and the `material_icon!` macro.
 include!(concat!(env!("OUT_DIR"), "/icons.rs"));
 
+#[cfg(feature = "compat-mui")]
+#[doc = "Deprecated compatibility shim exposing the crate under the legacy `mui_icons_material` name.\n\
+Enable the `compat-mui` feature while migrating to `rustic_ui_icons_material`.\n\
+The alias will be removed in a future release."]
+#[deprecated(
+    since = "0.1.0",
+    note = "Use `rustic_ui_icons_material`. The `mui_icons_material` alias will go away soon."
+)]
+pub use crate as mui_icons_material;
+
 // Expose the maintenance helpers only when the optional `update-icons` feature
 // is enabled. This keeps the production build lean while still allowing the
 // binary and its tests to share rich logic for caching, HTTP retrieval and

@@ -29,6 +29,7 @@ web-sys = { workspace = true, features = ["HtmlElement", "Event", "EventTarget"]
 
 [features]
 default = []
+compat-mui = []
 yew = ["dep:yew", "dep:wasm-bindgen", "rustic-ui-system/yew", "dep:gloo-timers"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "rustic-ui-system/leptos"]
 dioxus = ["dep:dioxus", "dep:wasm-bindgen", "rustic-ui-system/dioxus"]

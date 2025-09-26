@@ -19,3 +19,7 @@ maintenance = { status = "experimental" }
 
 [dev-dependencies]
 proptest.workspace = true
+
+[features]
+default = []
+compat-mui = []
