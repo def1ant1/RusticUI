@@ -1,9 +1,9 @@
-//! Material Design components built on top of [`mui-styled-engine`].
+//! Material Design components built on top of [`rustic_ui_styled_engine`].
 //!
 //! The crate currently provides a small subset of widgets such as [`button`],
 //! [`card`], [`dialog`], [`app_bar`], [`text_field`], [`snackbar`], [`checkbox`],
 //! [`radio`], [`select`], [`menu`], [`list`], [`table`] and [`switch`]. Each component consumes the shared [`Theme`]
-//! provided by `mui-styled-engine` so applications have a single source of
+//! provided by `rustic_ui_styled_engine` so applications have a single source of
 //! truth for styling.
 //!
 //! # Example
@@ -48,7 +48,7 @@ pub mod tooltip;
 
 pub use rustic_ui_styled_engine::Theme;
 
-/// Confirms that the crate links to `mui-styled-engine` and compiles.
+/// Confirms that the crate links to `rustic_ui_styled_engine` and compiles.
 pub fn placeholder() {
     rustic_ui_styled_engine::placeholder();
 }

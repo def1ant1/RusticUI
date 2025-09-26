@@ -1,5 +1,5 @@
-use rustic_ui_utils::compose_classes;
 use proptest::prelude::*;
+use rustic_ui_utils::compose_classes;
 use std::collections::HashMap;
 
 proptest! {

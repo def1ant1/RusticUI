@@ -29,7 +29,7 @@ use rustic_ui_system::{
 /// prefer vertical navigation rails on larger breakpoints.  Modeling that
 /// behaviour with [`Responsive`] keeps the decision declarative and allows the
 /// adapters below to lean on the centralized resolution logic provided by
-/// `mui-system`.
+/// `rustic_ui_system`.
 #[derive(Clone, Debug)]
 pub struct TabListLayoutOptions {
     /// Responsive orientation strategy. Defaults to horizontal tabs on small
@@ -96,7 +96,7 @@ impl TabListLayoutOptions {
 /// and documentation snippets without juggling bespoke prop names.
 #[derive(Clone, Debug)]
 pub struct TabListProps<'a> {
-    /// Resolved tab state produced by `mui-headless`.
+    /// Resolved tab state produced by `rustic_ui_headless`.
     pub state: &'a TabsState,
     /// Attribute builder describing identifiers and labelling metadata.
     pub attributes: TabListAttributes<'a>,
@@ -117,10 +117,10 @@ pub struct TabListProps<'a> {
     pub on_activate_event: Option<&'a str>,
 }
 
-/// Convert a `mui-headless` attribute builder into a stable vector of HTML
+/// Convert a `rustic_ui_headless` attribute builder into a stable vector of HTML
 /// attributes ready for SSR pipelines or client side adapters.
 ///
-/// The function augments the ARIA metadata emitted by `mui-headless` with
+/// The function augments the ARIA metadata emitted by `rustic_ui_headless` with
 /// automation friendly data attributes so design systems can target the
 /// orientation and state without hardcoding selectors in every application.
 #[must_use]
@@ -277,7 +277,7 @@ fn render_tab_list_with_layout(params: TabListRenderParams<'_>) -> String {
         },
     );
     let stack_style =
-        Style::new(stack_css).expect("mui-system stack builder should emit valid CSS");
+        Style::new(stack_css).expect("rustic_ui_system stack builder should emit valid CSS");
     let inner_html = render_tab_list_html(params.state, params.attributes, params.children);
 
     let mut outer_attrs = Vec::with_capacity(1);

@@ -424,8 +424,9 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
                 "failed to convert merged theme representation into Theme struct for `{scheme}`"
             )
         })?;
-        let mut theme =
-            rustic_ui_system::theme_provider::material_theme_with_optional_overrides(Some(merged_theme));
+        let mut theme = rustic_ui_system::theme_provider::material_theme_with_optional_overrides(
+            Some(merged_theme),
+        );
         if let Some(color_scheme) = match scheme.as_str() {
             "light" => Some(ColorScheme::Light),
             "dark" => Some(ColorScheme::Dark),

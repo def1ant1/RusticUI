@@ -126,7 +126,7 @@ pub struct DrawerRenderResult {
 /// Shared props consumed by every framework adapter.
 #[derive(Clone, Debug)]
 pub struct DrawerProps<'a> {
-    /// Drawer state machine provided by `mui-headless`.
+    /// Drawer state machine provided by `rustic_ui_headless`.
     pub state: &'a DrawerState,
     /// Attribute builder for the drawer surface.
     pub surface: DrawerSurfaceAttributes<'a>,
@@ -422,7 +422,7 @@ fn render_drawer(params: DrawerRenderParams<'_>) -> DrawerRenderResult {
 
     let container_css = build_box_style(params.viewport, &params.theme.breakpoints, inputs);
     let container_style =
-        Style::new(container_css).expect("mui-system box builder should emit valid CSS");
+        Style::new(container_css).expect("rustic_ui_system box builder should emit valid CSS");
     let surface_html = render_drawer_surface_html(params.state, params.surface, params.body);
 
     let mut outer_attrs = Vec::with_capacity(1);

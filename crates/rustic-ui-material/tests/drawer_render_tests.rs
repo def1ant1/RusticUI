@@ -4,7 +4,7 @@ use rustic_ui_material::Theme;
 
 /// Helper that constructs an uncontrolled [`DrawerState`]. Similar to other
 /// tests we lean on the documented discriminants for `ControlStrategy` inside
-/// `mui-headless` because the type itself lives in a private module.
+/// `rustic_ui_headless` because the type itself lives in a private module.
 fn build_state(anchor: DrawerAnchor, variant: DrawerVariant, open: bool) -> DrawerState {
     DrawerState::new(
         open,

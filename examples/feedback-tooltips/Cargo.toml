@@ -2,7 +2,7 @@
 name = "feedback-tooltips"
 version = "0.1.0"
 edition = "2021"
-description = "Multi-framework tooltip blueprints for mui-material."
+description = "Multi-framework tooltip blueprints for rustic_ui_material."
 license = "MIT OR Apache-2.0"
 publish = false
 

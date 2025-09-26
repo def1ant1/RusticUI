@@ -1,5 +1,7 @@
-use rustic_ui_headless::popover::{AnchorGeometry, CollisionOutcome, PopoverPlacement, PopoverState};
 use proptest::prelude::*;
+use rustic_ui_headless::popover::{
+    AnchorGeometry, CollisionOutcome, PopoverPlacement, PopoverState,
+};
 
 fn placement_strategy() -> impl Strategy<Value = PopoverPlacement> {
     prop_oneof![

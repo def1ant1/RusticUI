@@ -1,5 +1,5 @@
 [package]
-name = "mui-ssr-accessibility"
+name = "rustic_ui_ssr_accessibility"
 version = "0.1.0"
 edition = "2021"
 

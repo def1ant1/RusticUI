@@ -1,8 +1,8 @@
 # Navigation Tabs with Yew
 
 This example blueprint shows how to orchestrate responsive navigation tabs in a
-[Yew](https://yew.rs/) single page application using the `mui-headless` state
-machine and the HTML renderers exposed by `mui-material`. The goal is to make it
+[Yew](https://yew.rs/) single page application using the `rustic_ui_headless` state
+machine and the HTML renderers exposed by `rustic_ui_material`. The goal is to make it
 trivial for enterprise teams to compose routing-aware tab bars that are
 accessible, theme aware and easy to automate.
 
@@ -12,7 +12,7 @@ accessible, theme aware and easy to automate.
 the active route while dispatching navigation when users activate a tab.
 - **Responsive orientation** – `TabListLayoutOptions` flips the list into a
 vertical rail on large screens while remaining horizontal on mobile.
-- **Accessibility first** – markup produced by `mui-material` keeps
+- **Accessibility first** – markup produced by `rustic_ui_material` keeps
 ARIA contracts intact; the demo additionally runs `axe-core` in CI by default.
 - **Automation ready** – a bootstrap script generates a runnable project with
 Trunk configuration, dependency wiring, and exhaustive inline comments.

@@ -1,7 +1,7 @@
-# mui-styled-engine
+# rustic_ui_styled_engine
 
-`mui-styled-engine` binds the [stylist] CSS-in-Rust library with the
-`mui-system` theme primitives. It generates scoped CSS at compile time and
+`rustic_ui_styled_engine` binds the [stylist] CSS-in-Rust library with the
+`rustic_ui_system` theme primitives. It generates scoped CSS at compile time and
 provides components for global style injection, style collection and server
 side rendering (SSR) across Yew, Leptos, Dioxus and Sycamore front-ends.
 
@@ -103,7 +103,7 @@ internal reader is protected by a mutex.
 
 ## Benchmarks
 
-Run `cargo bench -p mui-styled-engine` to compare compile-time CSS generation
+Run `cargo bench -p rustic_ui_styled_engine` to compare compile-time CSS generation
 against dynamic string formatting. The benchmark reports both runtime and the
 size of generated CSS strings.
 

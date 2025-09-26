@@ -1,5 +1,5 @@
-use rustic_ui_utils::deep_merge;
 use proptest::prelude::*;
+use rustic_ui_utils::deep_merge;
 use serde_json::{Map, Value};
 
 fn arb_value() -> impl Strategy<Value = Value> {

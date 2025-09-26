@@ -37,7 +37,7 @@ fn yew_chip_includes_all_automation_hooks() {
     let yew = chip::yew::render(&props, &state_yew);
 
     assert_eq!(yew, react);
-    assert!(react.contains("data-component=\"mui-chip\""));
+    assert!(react.contains("data-component=\"rustic_ui_chip\""));
     assert!(react.contains("data-automation-id=\"joy-chip\""));
     assert!(react.contains("data-chip-slot=\"delete\""));
     assert!(react.contains("aria-label=\"Remove joy filter\""));

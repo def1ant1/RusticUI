@@ -1,5 +1,5 @@
-use rustic_ui_headless::text_field::TextFieldState;
 use proptest::prelude::*;
+use rustic_ui_headless::text_field::TextFieldState;
 use std::time::Duration;
 
 fn string_strategy() -> impl Strategy<Value = String> {

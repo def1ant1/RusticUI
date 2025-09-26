@@ -18,9 +18,12 @@ edition = "2021"
 leptos = { version = "0.6", features = ["csr"] }
 leptos_router = { version = "0.6", features = ["csr"] }
 wasm-bindgen = "0.2"
-mui-material = { path = "../../crates/rustic-ui-material", features = ["leptos"] }
-mui-headless = { path = "../../crates/rustic-ui-headless" }
-mui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["leptos"] }
+# Renamed from the legacy MUI material alias to document the migration path for downstream blueprints.
+rustic_ui_material = { package = "rustic-ui-material", path = "../../crates/rustic-ui-material", features = ["leptos"] }
+# Alias the renamed headless primitives so teams following the migration guide continue to build successfully.
+rustic_ui_headless = { package = "rustic-ui-headless", path = "../../crates/rustic-ui-headless" }
+# Styled engine alias mirrors the rename and ensures automation remains consistent post-migration.
+rustic_ui_styled_engine = { package = "rustic-ui-styled-engine", path = "../../crates/rustic-ui-styled-engine", features = ["leptos"] }
 TOML
 
 cat > "$EXAMPLE_ROOT/Trunk.toml" <<'TOML'
@@ -36,7 +39,7 @@ cat > "$EXAMPLE_ROOT/index.html" <<'HTML'
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Navigation Drawer – Leptos + mui-material</title>
+    <title>Navigation Drawer – Leptos + rustic_ui_material</title>
   </head>
   <body>
     <div id="root"></div>

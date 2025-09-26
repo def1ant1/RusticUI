@@ -1,7 +1,7 @@
 //! Simple example showcasing the Joy `Button` component.
 //!
 //! Run with:
-//! `cargo run -p mui-joy --example button --features yew`
+//! `cargo run -p rustic_ui_joy --example button --features yew`
 
 use rustic_ui_joy::{Button, Color, Variant};
 use rustic_ui_system::theme_provider::ThemeProvider;

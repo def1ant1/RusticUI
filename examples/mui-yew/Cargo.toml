@@ -1,5 +1,5 @@
 [package]
-name = "mui-yew-example"
+name = "rustic_ui_yew_example"
 version = "0.1.0"
 edition = "2021"
 

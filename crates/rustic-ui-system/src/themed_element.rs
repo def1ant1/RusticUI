@@ -22,7 +22,7 @@
 //!   secondary text colour whereas [`Variant::Plain`] keeps the background clean
 //!   for use inside already-contained layouts. A deterministic BEM modifier is
 //!   appended to the scoped class so downstream automation can target
-//!   `mui-themed-input--outlined`/`--plain` without string concatenation.
+//!   `rustic_ui_themed_input__outlined`/`--plain` without string concatenation.
 //! * **Overrides** – [`ThemedProps::style_overrides`] accepts raw CSS which is
 //!   spliced directly into the generated stylesheet. This makes it trivial to
 //!   adjust corner cases (for example, forcing uppercase text) without giving up
@@ -94,7 +94,7 @@ pub struct ThemedProps {
 
 /// Scoped CSS class prefix used by every adapter.  Centralising the constant
 /// avoids subtle typos when new integrations are added in the future.
-const BASE_CLASS: &str = "mui-themed-input";
+const BASE_CLASS: &str = "rustic_ui_themed_input";
 
 /// Convenience type holding precomputed visual tokens.  The helpers below share
 /// this struct so that colour, padding and border calculations remain consistent

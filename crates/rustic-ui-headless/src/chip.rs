@@ -8,7 +8,7 @@
 //! lingers for animations, and how keyboard driven cancellation behaves.
 //!
 //! The Material layer consumes this state machine to render the automation-rich
-//! chips documented in [`mui-material/README.md`](../rustic-ui-material/README.md#feedback-primitives-tooltip--chip)
+//! chips documented in [`rustic_ui_material/README.md`](../rustic-ui-material/README.md#feedback-primitives-tooltip--chip)
 //! and exercised in `examples/feedback-chips`.  Those demos pair dismissible and
 //! read-only chips across Yew, Leptos, Dioxus, and Sycamore to validate that the
 //! automation hooks exposed here survive SSR and hydration.

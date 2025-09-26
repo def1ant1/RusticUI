@@ -1,7 +1,7 @@
 //! Styling engine for Material UI Rust components.
 //!
 //! This crate wires together the [`stylist`](https://crates.io/crates/stylist)
-//! CSS-in-Rust engine with the [`mui-system`] theme primitives so that
+//! CSS-in-Rust engine with the [`rustic_ui_system`] theme primitives so that
 //! components can define scoped styles at compile time.  It provides a thin
 //! wrapper around stylist with helpers for theme aware styling, global style
 //! injection and server side rendering (SSR) integration.

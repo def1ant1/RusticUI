@@ -12,7 +12,7 @@ fn leptos_adapter_renders() {
     };
     let html = rustic_ui_system::themed_element::leptos::render(&props);
     assert!(html.contains("<style>"), "expected inlined stylesheet");
-    assert!(html.contains("mui-themed-input--plain"));
+    assert!(html.contains("rustic_ui_themed_input__plain"));
     assert!(html.contains("aria-label=\"note\""));
     assert!(html.contains("<input"));
     assert!(html.contains("placeholder=\"type\""));
@@ -34,7 +34,7 @@ fn dioxus_adapter_renders() {
     props.aria_label = Some("greet".into());
     props.debounce_ms = Some(200);
     let html = rustic_ui_system::themed_element::dioxus::render(&props);
-    assert!(html.contains("mui-themed-input--outlined"));
+    assert!(html.contains("rustic_ui_themed_input__outlined"));
     assert!(html.contains("<input"));
     assert!(html.contains("<style>"));
     assert!(html.contains("class=\""));
@@ -58,7 +58,7 @@ fn sycamore_adapter_renders() {
     };
     let html = rustic_ui_system::themed_element::sycamore::render(&props);
     assert!(html.contains("aria-label=\"global search\""));
-    assert!(html.contains("mui-themed-input"));
+    assert!(html.contains("rustic_ui_themed_input"));
     assert!(html.contains("<input"));
     assert!(html.contains("placeholder=\"search\""));
     assert!(html.contains("<style>"));

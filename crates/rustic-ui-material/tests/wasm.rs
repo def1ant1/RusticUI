@@ -683,7 +683,7 @@ async fn tooltip_focus_keyboard_and_accessibility() {
     Renderer::<App>::with_root(mount.clone()).render();
 
     let trigger: web_sys::HtmlElement = mount
-        .query_selector("[data-component='mui-tooltip-trigger']")
+        .query_selector("[data-component='rustic_ui_tooltip_trigger']")
         .unwrap()
         .expect("tooltip trigger rendered")
         .dyn_into()
@@ -795,7 +795,7 @@ async fn chip_delete_button_activation_and_accessibility() {
     Renderer::<App>::with_root(mount.clone()).render();
 
     let chip_root: web_sys::HtmlElement = mount
-        .query_selector("[data-component='mui-chip']")
+        .query_selector("[data-component='rustic_ui_chip']")
         .unwrap()
         .expect("chip root rendered")
         .dyn_into()
@@ -969,7 +969,7 @@ fn wasm_popover_state(props: &MenuProps) -> PopoverState {
         props
             .automation_id
             .clone()
-            .unwrap_or_else(|| "mui-menu".into())
+            .unwrap_or_else(|| "rustic_ui_menu".into())
     );
     let portal = rustic_ui_system::portal::PortalMount::popover(base);
     popover.set_anchor_metadata(Some(portal.anchor_id()), None);
@@ -1054,7 +1054,7 @@ async fn popover_portal_accessibility_audit() {
     open_button.click();
 
     let menu_root = mount
-        .query_selector("[data-component='mui-menu']")
+        .query_selector("[data-component='rustic_ui_menu']")
         .unwrap()
         .expect("menu rendered");
     assert_eq!(menu_root.get_attribute("data-open").unwrap(), "true");

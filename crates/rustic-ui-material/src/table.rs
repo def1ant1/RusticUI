@@ -6,7 +6,7 @@
 //! SSR output, hydration adapters, and static site generators receive identical
 //! markup and deterministic automation hooks.
 //!
-//! Layout is derived from the [`mui-system`] theme: spacing originates from the
+//! Layout is derived from the [`rustic_ui_system`] theme: spacing originates from the
 //! `Theme::spacing` scale, typography comes from the shared
 //! [`ListTypography`](crate::list::ListTypography) enum, and focus styling honors
 //! Joy tokens so enterprise overrides automatically cascade.
@@ -183,7 +183,7 @@ fn render_html(props: &TableProps, state: &ListState) -> String {
         table_header_row_style(),
         vec![(
             String::from("data-component"),
-            String::from("mui-table-header-row"),
+            String::from("rustic_ui_table_header_row"),
         )],
     );
 
@@ -220,7 +220,7 @@ fn automation_base(props: &TableProps) -> String {
     props
         .automation_id
         .clone()
-        .unwrap_or_else(|| "mui-table".into())
+        .unwrap_or_else(|| "rustic_ui_table".into())
 }
 
 fn column_id(props: &TableProps, index: usize) -> String {
@@ -241,7 +241,10 @@ fn cell_automation_id(props: &TableProps, row: usize, col: usize, column: &Table
 
 fn table_attributes(props: &TableProps, state: &ListState) -> Vec<(String, String)> {
     let mut attrs = vec![
-        ("data-component".to_string(), String::from("mui-table")),
+        (
+            "data-component".to_string(),
+            String::from("rustic_ui_table"),
+        ),
         (
             "data-density".to_string(),
             props.density.data_value().to_string(),
@@ -399,12 +402,12 @@ fn table_style(props: &TableProps) -> Style {
         border-radius: ${radius};
         border: 1px solid ${border_color};
         overflow: hidden;
-        --mui-table-padding-y: ${padding_y};
-        --mui-table-padding-x: ${padding_x};
-        --mui-table-header-font-size: ${header_size};
-        --mui-table-header-font-weight: ${header_weight};
-        --mui-table-body-font-size: ${body_size};
-        --mui-table-body-font-weight: ${body_weight};
+        --rustic_ui_table_padding_y: ${padding_y};
+        --rustic_ui_table_padding_x: ${padding_x};
+        --rustic_ui_table_header_font_size: ${header_size};
+        --rustic_ui_table_header_font_weight: ${header_weight};
+        --rustic_ui_table_body_font_size: ${body_size};
+        --rustic_ui_table_body_font_weight: ${body_weight};
 
         &[data-striped='true'] tbody tr:nth-child(even) {
             background: ${striped_bg};
@@ -446,9 +449,9 @@ fn table_header_cell_style() -> Style {
     css_with_theme!(
         r#"
         text-align: left;
-        padding: var(--mui-table-padding-y) var(--mui-table-padding-x);
-        font-size: var(--mui-table-header-font-size);
-        font-weight: var(--mui-table-header-font-weight);
+        padding: var(--rustic_ui_table_padding_y) var(--rustic_ui_table_padding_x);
+        font-size: var(--rustic_ui_table_header_font_size);
+        font-weight: var(--rustic_ui_table_header_font_weight);
         color: ${header_color};
         border-bottom: 1px solid ${divider};
         letter-spacing: 0.01em;
@@ -499,9 +502,9 @@ fn table_row_style() -> Style {
 fn table_body_cell_style() -> Style {
     css_with_theme!(
         r#"
-        padding: var(--mui-table-padding-y) var(--mui-table-padding-x);
-        font-size: var(--mui-table-body-font-size);
-        font-weight: var(--mui-table-body-font-weight);
+        padding: var(--rustic_ui_table_padding_y) var(--rustic_ui_table_padding_x);
+        font-size: var(--rustic_ui_table_body_font_size);
+        font-weight: var(--rustic_ui_table_body_font_weight);
         color: ${body_color};
         border-bottom: 1px solid ${divider};
         font-family: ${font_family};
@@ -605,6 +608,6 @@ mod tests {
         let html = super::render_html(&props, &state);
         assert!(html.contains("data-automation-cell"));
         assert!(html.contains("<table"));
-        assert!(html.contains("mui-table"));
+        assert!(html.contains("rustic_ui_table"));
     }
 }

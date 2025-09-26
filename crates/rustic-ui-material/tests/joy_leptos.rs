@@ -38,7 +38,7 @@ fn leptos_chip_mirrors_react_snapshot() {
     let leptos = chip::leptos::render(&props, &state_leptos);
 
     assert_eq!(leptos, react);
-    assert!(react.contains("data-component=\"mui-chip\""));
+    assert!(react.contains("data-component=\"rustic_ui_chip\""));
     assert!(react.contains("aria-describedby=\"joy-chip-delete\""));
 }
 

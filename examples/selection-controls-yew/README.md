@@ -1,8 +1,8 @@
 # Selection Controls with Yew
 
 This example demonstrates how to wire the headless selection control state
-machines from `mui-headless` into a Yew application using the render helpers
-from `mui-material`.
+machines from `rustic_ui_headless` into a Yew application using the render helpers
+from `rustic_ui_material`.
 
 ```rust
 use rustic_ui_headless::checkbox::CheckboxState;

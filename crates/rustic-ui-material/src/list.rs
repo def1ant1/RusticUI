@@ -1,5 +1,5 @@
-//! Material themed list renderer built on top of [`mui-headless`] selection
-//! primitives and the shared [`mui-system`] theme tokens.
+//! Material themed list renderer built on top of [`rustic_ui_headless`] selection
+//! primitives and the shared [`rustic_ui_system`] theme tokens.
 //!
 //! The module purposely centralizes HTML generation for every supported
 //! framework so that Yew, Leptos, Dioxus and Sycamore adapters can simply call
@@ -236,7 +236,7 @@ fn automation_base(props: &ListProps) -> String {
     props
         .automation_id
         .clone()
-        .unwrap_or_else(|| "mui-list".into())
+        .unwrap_or_else(|| "rustic_ui_list".into())
 }
 
 fn item_automation_id(props: &ListProps, item: &ListItem, index: usize) -> String {
@@ -253,7 +253,7 @@ fn item_id(props: &ListProps, index: usize) -> String {
 
 fn root_attributes(props: &ListProps, state: &ListState) -> Vec<(String, String)> {
     let mut attrs = vec![
-        ("data-component".into(), "mui-list".into()),
+        ("data-component".into(), "rustic_ui_list".into()),
         ("data-density".into(), props.density.data_value().into()),
         (
             "data-selection-mode".into(),
@@ -339,17 +339,19 @@ fn item_attributes(
 fn item_markup(item: &ListItem) -> String {
     let mut html = String::new();
     html.push_str(&format!(
-        "<div class=\"mui-list-content\"><span class=\"mui-list-primary\">{}</span>",
+        "<div class=\"rustic_ui_list_content\"><span class=\"rustic_ui_list_primary\">{}</span>",
         item.primary
     ));
     if let Some(secondary) = &item.secondary {
         html.push_str(&format!(
-            "<span class=\"mui-list-secondary\">{secondary}</span>"
+            "<span class=\"rustic_ui_list_secondary\">{secondary}</span>"
         ));
     }
     html.push_str("</div>");
     if let Some(meta) = &item.meta {
-        html.push_str(&format!("<span class=\"mui-list-meta\">{meta}</span>"));
+        html.push_str(&format!(
+            "<span class=\"rustic_ui_list_meta\">{meta}</span>"
+        ));
     }
     html
 }
@@ -368,13 +370,13 @@ fn list_style(props: &ListProps) -> Style {
         border-radius: ${radius};
         border: 1px solid ${border_color};
         overflow: hidden;
-        --mui-list-padding-y: ${padding_y};
-        --mui-list-padding-x: ${padding_x};
-        --mui-list-gap: ${item_gap};
-        --mui-list-primary-font-size: ${primary_size};
-        --mui-list-primary-font-weight: ${primary_weight};
-        --mui-list-secondary-font-size: ${secondary_size};
-        --mui-list-secondary-font-weight: ${secondary_weight};
+        --rustic_ui_list_padding_y: ${padding_y};
+        --rustic_ui_list_padding_x: ${padding_x};
+        --rustic_ui_list_gap: ${item_gap};
+        --rustic_ui_list_primary_font_size: ${primary_size};
+        --rustic_ui_list_primary_font_weight: ${primary_weight};
+        --rustic_ui_list_secondary_font_size: ${secondary_size};
+        --rustic_ui_list_secondary_font_weight: ${secondary_weight};
     "#,
         gap = format!("{}px", theme.spacing(density.row_gap())),
         background = theme.palette.background_paper.clone(),
@@ -399,8 +401,8 @@ fn list_item_style() -> Style {
         display: grid;
         grid-template-columns: 1fr auto;
         align-items: center;
-        column-gap: var(--mui-list-gap);
-        padding: var(--mui-list-padding-y) var(--mui-list-padding-x);
+        column-gap: var(--rustic_ui_list_gap);
+        padding: var(--rustic_ui_list_padding_y) var(--rustic_ui_list_padding_x);
         background: transparent;
         color: ${text_color};
         font-family: ${font_family};
@@ -428,28 +430,28 @@ fn list_item_style() -> Style {
             opacity: 0.64;
         }
 
-        .mui-list-content {
+        .rustic_ui_list_content {
             display: flex;
             flex-direction: column;
             gap: ${content_gap};
         }
 
-        .mui-list-primary {
-            font-size: var(--mui-list-primary-font-size);
-            font-weight: var(--mui-list-primary-font-weight);
+        .rustic_ui_list_primary {
+            font-size: var(--rustic_ui_list_primary_font_size);
+            font-weight: var(--rustic_ui_list_primary_font_weight);
             line-height: ${line_height};
         }
 
-        .mui-list-secondary {
-            font-size: var(--mui-list-secondary-font-size);
-            font-weight: var(--mui-list-secondary-font-weight);
+        .rustic_ui_list_secondary {
+            font-size: var(--rustic_ui_list_secondary_font_size);
+            font-weight: var(--rustic_ui_list_secondary_font_weight);
             line-height: ${line_height};
             color: ${secondary_color};
         }
 
-        .mui-list-meta {
+        .rustic_ui_list_meta {
             justify-self: end;
-            font-size: var(--mui-list-secondary-font-size);
+            font-size: var(--rustic_ui_list_secondary_font_size);
             color: ${meta_color};
         }
     "#,
@@ -557,8 +559,8 @@ mod tests {
         let props = sample_props();
         let state = build_state(props.items.len());
         let html = super::render_html(&props, &state);
-        assert!(html.contains("data-component=\"mui-list\""));
-        assert!(html.contains("class=\"mui-list-primary\""));
+        assert!(html.contains("data-component=\"rustic_ui_list\""));
+        assert!(html.contains("class=\"rustic_ui_list_primary\""));
         assert!(html.contains("data-automation-item"));
         assert!(html.contains("<ul"));
     }
