@@ -42,16 +42,16 @@ Joy UI ships SSR renderers for every supported framework. The parity suites comp
 
 ```bash
 # Yew parity
-cargo test -p mui-material --test joy_yew --features yew
+cargo test -p rustic-ui-material --test joy_yew --features yew
 
 # Leptos parity
-cargo test -p mui-material --test joy_leptos --features leptos
+cargo test -p rustic-ui-material --test joy_leptos --features leptos
 
 # Dioxus parity
-cargo test -p mui-material --test joy_dioxus --features dioxus
+cargo test -p rustic-ui-material --test joy_dioxus --features dioxus
 
 # Sycamore parity
-cargo test -p mui-material --test joy_sycamore --features sycamore
+cargo test -p rustic-ui-material --test joy_sycamore --features sycamore
 ```
 
 Each suite consumes the shared fixtures in `crates/rustic-ui-material/tests/common/fixtures.rs` so updating the canonical props or Joy analytics hooks automatically propagates across frameworks.
@@ -63,7 +63,7 @@ Interactive components execute inside a headless Chrome instance using the `wasm
 cargo xtask wasm-test
 ```
 
-CI relies on this command to build and run WebAssembly tests for both `mui-joy` and `mui-material`. To run suites individually (useful when isolating regressions) call the underlying commands directly—one per framework adapter:
+CI relies on this command to build and run WebAssembly tests for both `rustic-ui-joy` and `rustic-ui-material`. To run suites individually (useful when isolating regressions) call the underlying commands directly—one per framework adapter:
 
 ```bash
 # Joy UI adapters
@@ -85,7 +85,7 @@ The `--no-default-features` flag mirrors CI by ensuring optional adapters declar
 When a Joy snapshot test fails, the panic message includes both the framework-specific markup and the React baseline. Use `-- --nocapture --exact` to focus on the failing test:
 
 ```bash
-cargo test -p mui-material yew_button_matches_react_baseline --features yew -- --nocapture --exact
+cargo test -p rustic-ui-material yew_button_matches_react_baseline --features yew -- --nocapture --exact
 ```
 
 Typical remediation steps:

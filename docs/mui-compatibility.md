@@ -30,11 +30,18 @@ imports are required. Treat the warnings as your migration punch list.
 
 1. **Flip dependencies to the `rustic-ui-*` crates** – Update `Cargo.toml` to reference the new package names. Add the
    `compat-mui` feature while you update source code imports.
-2. **Run `cargo fix --allow-dirty --allow-staged`** – Rust can automatically rewrite many paths from
-   `mui_*` to `rustic_ui_*`. The compatibility shim ensures the project keeps building while you apply the fixes.
-3. **Audit compiler warnings** – Re-run `cargo check` with `-D warnings` to guarantee no deprecated aliases remain.
-4. **Disable `compat-mui`** – Once the build is warning-free, remove the feature flag from your dependency entries. Your
-   project is now fully migrated to the RusticUI namespace.
+2. **Run `scripts/migrate-crate-prefix.sh --with-compat`** – The script wraps `cargo fix` so Rust rewrites imports from
+   `mui_*` to `rustic_ui_*` automatically while the compatibility shim keeps builds passing.
+3. **Disable `compat-mui`** – Remove the feature flag from your dependency entries once the automated rewrites finish.
+4. **Verify clean builds** – Execute `scripts/migrate-crate-prefix.sh --verify-clean` (or `cargo xtask clippy`) to deny
+   warnings and guarantee no deprecated aliases remain. Your project is now fully migrated to the RusticUI namespace.
+
+### Automation tips
+
+- `scripts/migrate-crate-prefix.sh` is idempotent and safe to rerun as you migrate individual crates within a monorepo.
+- Pair the script with `cargo xtask build-docs` or `make doc` to update API documentation immediately after imports change.
+- Use the command under CI so reviewers can trust that every pull request preserves the `rustic_ui_*` identifiers and keeps
+  the compatibility shim disabled once migrations complete.
 
 ## Removal timeline
 
