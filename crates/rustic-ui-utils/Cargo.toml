@@ -24,6 +24,7 @@ serde_json = { workspace = true }
 # `web` support when compiling to WebAssembly which pulls in the
 # `wasm-bindgen` timer bindings.
 default = []
+compat-mui = []
 web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 
 [dev-dependencies]

@@ -29,6 +29,7 @@ gloo-utils = "0.2"
 
 [features]
 default = []
+compat-mui = []
 yew = ["dep:yew", "dep:wasm-bindgen", "rustic-ui-system/yew", "rustic-ui-styled-engine/yew", "dep:web-sys"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "rustic-ui-system/leptos"]
 dioxus = ["rustic-ui-system/dioxus", "rustic-ui-styled-engine/dioxus"]

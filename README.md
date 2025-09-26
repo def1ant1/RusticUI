@@ -41,6 +41,15 @@ Run an example with the Yew adapter:
 cargo run --package mui-yew --example hello_world
 ```
 
+## Legacy MUI compatibility shims
+
+The crates now ship under the `rustic_ui_*` namespace. To keep migrations predictable each crate exposes a
+`compat-mui` Cargo feature that re-exports the legacy `mui_*` identifiers as deprecated aliases. Enable the feature
+while you update imports, watch the compiler warnings it emits, and disable it once your workspace is clean.
+
+See [`docs/mui-compatibility.md`](docs/mui-compatibility.md) for a step-by-step migration playbook covering dependency
+updates, automation-friendly `cargo fix` flows, and the planned removal timeline for the shims.
+
 ## Design system automation with `css_with_theme!`
 
 Enterprise teams demand consistent design tokens without repetitive wiring. The RusticUI theming macros automatically inject the

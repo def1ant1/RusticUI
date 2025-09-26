@@ -22,6 +22,8 @@ maintenance = { status = "experimental" }
 [features]
 # By default include all icons so downstream users get a drop-in experience.
 default = ["all-icons"]
+# Opt-in compatibility alias supporting the legacy `mui_icons_material` crate name.
+compat-mui = []
 
 # BEGIN ICON FEATURES -- auto-generated, do not edit by hand.
 all-icons = [

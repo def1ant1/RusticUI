@@ -34,6 +34,7 @@ wasm-bindgen-test.workspace = true
 
 [features]
 default = []
+compat-mui = []
 yew = ["dep:yew", "dep:wasm-bindgen", "dep:web-sys", "stylist/yew_integration"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "dep:web-sys"]
 dioxus = ["dep:dioxus", "dep:wasm-bindgen", "dep:web-sys"]

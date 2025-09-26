@@ -53,6 +53,16 @@ pub fn placeholder() {
     rustic_ui_styled_engine::placeholder();
 }
 
+#[cfg(feature = "compat-mui")]
+#[doc = "Deprecated compatibility shim exposing the crate under the legacy `mui_material` name.\n\
+Activate the `compat-mui` feature only while migrating to `rustic_ui_material`.\n\
+The alias will be purged in an upcoming pre-1.0 release."]
+#[deprecated(
+    since = "0.1.0",
+    note = "Migrate to `rustic_ui_material`. The `mui_material` compatibility alias will be removed."
+)]
+pub use crate as mui_material;
+
 #[cfg(test)]
 mod tests {
     use super::*;

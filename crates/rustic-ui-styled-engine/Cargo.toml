@@ -21,6 +21,7 @@ rustic-ui-styled-engine-macros = { path = "../rustic-ui-styled-engine-macros" }
 
 [features]
 default = []
+compat-mui = []
 yew = ["rustic-ui-system/yew", "dep:yew", "dep:wasm-bindgen", "stylist/yew_integration"]
 leptos = ["rustic-ui-system/leptos"]
 dioxus = ["rustic-ui-system/dioxus"]
