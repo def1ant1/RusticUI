@@ -30,7 +30,7 @@ the same document while toggling tooltip visibility through the shared
 `automation_id` drives both DOM ids and `data-*` hooks which flow directly into
 `ssr.html`. Hydration clients can reuse the returned `Theme` to ensure the
 `css_with_theme!` styles match the server output. Analytics pipelines can bind to
-`data-automation-root` in the generated HTML to register listeners before
+`data-rustic-tooltip-root` in the generated HTML to register listeners before
 hydration begins.
 
 ## Verifying the snapshot
@@ -42,5 +42,5 @@ cargo test --manifest-path examples/feedback-tooltips/Cargo.toml
 ```
 
 `cargo test` validates that every framework variant exposes the shared
-`data-automation-id` and portal metadata ensuring deterministic selectors for QA
+`data-rustic-tooltip-id` and portal metadata ensuring deterministic selectors for QA
 pipelines.

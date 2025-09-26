@@ -124,18 +124,19 @@ fn render_html(props: &MenuProps, menu_state: &MenuState, popover_state: &Popove
 }
 
 fn automation_base(props: &MenuProps) -> String {
-    props
-        .automation_id
-        .clone()
-        .unwrap_or_else(|| "rustic_ui_menu".into())
+    crate::style_helpers::automation_id("menu", props.automation_id.as_deref(), [])
 }
 
 fn surface_id(props: &MenuProps) -> String {
-    format!("{}-surface", automation_base(props))
+    crate::style_helpers::automation_id("menu", props.automation_id.as_deref(), ["surface"])
 }
 
 fn item_id(props: &MenuProps, index: usize) -> String {
-    format!("{}-item-{index}", automation_base(props))
+    crate::style_helpers::automation_id(
+        "menu",
+        props.automation_id.as_deref(),
+        [format!("item-{index}")],
+    )
 }
 
 fn root_attributes(
@@ -146,7 +147,19 @@ fn root_attributes(
     portal: &PortalMount,
 ) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
-    attrs.push(("data-component".into(), "rustic_ui_menu".into()));
+    let base_id = automation_base(props);
+    attrs.push((
+        crate::style_helpers::automation_data_attr("menu", ["id"]),
+        base_id.clone(),
+    ));
+    attrs.push((
+        crate::style_helpers::automation_data_attr("menu", ["root"]),
+        crate::style_helpers::automation_id("menu", props.automation_id.as_deref(), ["root"]),
+    ));
+    attrs.push((
+        "data-component".into(),
+        crate::style_helpers::automation_id("menu", None, []),
+    ));
     let (open_key, open_value) = surface_meta.data_open();
     attrs.push((open_key.into(), open_value.into()));
     let (preferred_key, preferred_value) = surface_meta.data_preferred();
@@ -162,9 +175,10 @@ fn root_attributes(
         "data-portal-layer".into(),
         portal.layer().as_str().to_string(),
     ));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-id".into(), id.clone()));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("menu", ["portal"]),
+        crate::style_helpers::automation_id("menu", props.automation_id.as_deref(), ["popover"]),
+    ));
     attrs
 }
 
@@ -197,9 +211,10 @@ fn trigger_attributes(
         "data-placement-outcome".into(),
         collision_outcome(outcome).into(),
     ));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-trigger".into(), id.clone()));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("menu", ["trigger"]),
+        crate::style_helpers::automation_id("menu", props.automation_id.as_deref(), ["trigger"]),
+    ));
     attrs
 }
 
@@ -240,9 +255,10 @@ fn surface_attributes(
         "data-placement-outcome".into(),
         collision_outcome(outcome).into(),
     ));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-surface".into(), id.clone()));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("menu", ["surface"]),
+        crate::style_helpers::automation_id("menu", props.automation_id.as_deref(), ["surface"]),
+    ));
     attrs
 }
 
@@ -256,15 +272,23 @@ fn item_attributes(props: &MenuProps, state: &MenuState, index: usize) -> Vec<(S
     attrs.push(("data-highlighted".into(), is_highlighted.to_string()));
     attrs.push(("data-index".into(), index.to_string()));
     attrs.push(("data-command".into(), props.items[index].command.clone()));
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-item".into(), format!("{id}-{index}")));
-    }
+    attrs.push((
+        crate::style_helpers::automation_data_attr("menu", ["item"]),
+        crate::style_helpers::automation_id(
+            "menu",
+            props.automation_id.as_deref(),
+            [format!("item-{index}")],
+        ),
+    ));
     attrs
 }
 
 fn popover_mount(props: &MenuProps) -> PortalMount {
-    let base = format!("{}-popover", automation_base(props));
-    PortalMount::popover(base)
+    PortalMount::popover(crate::style_helpers::automation_id(
+        "menu",
+        props.automation_id.as_deref(),
+        ["popover"],
+    ))
 }
 
 fn anchor_attributes(
@@ -649,7 +673,7 @@ mod tests {
         let popover = build_popover(&props);
         let html = render_html(&props, &state, &popover);
         assert!(html.contains("data-command=\"profile\""));
-        assert!(html.contains("data-automation-id=\"sample-menu\""));
+        assert!(html.contains("data-rustic-menu-id=\"rustic-menu-sample-menu\"",));
         assert!(html.contains("data-portal-root"));
         assert!(html.contains("data-portal-anchor"));
         assert!(html.contains("data-resolved-placement"));

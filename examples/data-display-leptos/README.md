@@ -19,5 +19,5 @@ cargo run --package data-display-leptos --no-default-features --features ssr
 
 The demo renders two `div.demo-panel` containers that mount the generated HTML
 via the `inner_html` attribute. Because the renderers stamp deterministic
-`data-automation-*` attributes, QA teams can reuse the same selectors across
+`data-rustic-*` attributes, QA teams can reuse the same selectors across
 frameworks and runtime modes.

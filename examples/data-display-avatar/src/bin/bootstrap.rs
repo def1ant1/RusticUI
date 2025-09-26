@@ -46,7 +46,7 @@ fn workspace_root() -> PathBuf {
 fn ssr_document(theme: &rustic_ui_styled_engine::Theme, body: &str, automation_id: &str) -> String {
     let baseline = material_css_baseline_from_theme(theme);
     format!(
-        "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>Avatar SSR snapshot</title>\n    <style>{baseline}</style>\n  </head>\n  <body data-automation-root=\"{automation_id}\">\n    <main id=\"app\">{body}</main>\n  </body>\n</html>\n",
+        "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>Avatar SSR snapshot</title>\n    <style>{baseline}</style>\n  </head>\n  <body data-rustic-avatar-root=\"rustic-avatar-{automation_id}\">\n    <main id=\"app\">{body}</main>\n  </body>\n</html>\n",
         baseline = baseline,
         automation_id = automation_id,
         body = body

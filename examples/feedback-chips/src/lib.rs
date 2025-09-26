@@ -104,7 +104,7 @@ mod tests {
                 "dismissible flag missing for {framework}: {html}"
             );
             assert!(
-                html.contains("data-automation-id=\"feedback-chip\""),
+                html.contains("data-rustic-chip-id=\"rustic-chip-feedback-chip\""),
                 "automation id missing for {framework}: {html}"
             );
         }
@@ -112,6 +112,10 @@ mod tests {
             assert!(
                 html.contains("data-dismissible=\"false\""),
                 "read-only flag missing for {framework}: {html}"
+            );
+            assert!(
+                html.contains("data-rustic-chip-id=\"rustic-chip-feedback-chip-static\""),
+                "read-only automation id missing for {framework}: {html}"
             );
         }
     }

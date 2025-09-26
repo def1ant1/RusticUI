@@ -266,9 +266,9 @@ async fn table_accessibility_contract() {
         .expect("table rendered");
     assert_eq!(table.get_attribute("role").unwrap(), "grid");
     assert!(table
-        .get_attribute("data-automation-id")
+        .get_attribute("data-rustic-table-id")
         .unwrap()
-        .contains("wasm-table"));
+        .contains("rustic-table-wasm-table"));
 
     axe_check(&mount).await;
 }
@@ -625,7 +625,7 @@ async fn menu_disabled_items_expose_state_and_pass_axe() {
     Renderer::<App>::with_root(mount.clone()).render();
 
     let disabled_item = mount
-        .query_selector("[data-automation-item='wasm-menu-1']")
+        .query_selector("[data-rustic-menu-item='rustic-menu-wasm-menu-item-1']")
         .unwrap()
         .expect("disabled menu item rendered");
     assert_eq!(
@@ -638,7 +638,7 @@ async fn menu_disabled_items_expose_state_and_pass_axe() {
     );
 
     let enabled_item = mount
-        .query_selector("[data-automation-item='wasm-menu-0']")
+        .query_selector("[data-rustic-menu-item='rustic-menu-wasm-menu-item-0']")
         .unwrap()
         .expect("enabled menu item rendered");
     assert!(enabled_item.get_attribute("aria-disabled").is_none());
@@ -683,20 +683,22 @@ async fn tooltip_focus_keyboard_and_accessibility() {
     Renderer::<App>::with_root(mount.clone()).render();
 
     let trigger: web_sys::HtmlElement = mount
-        .query_selector("[data-component='rustic_ui_tooltip_trigger']")
+        .query_selector("[data-component='rustic-tooltip-trigger']")
         .unwrap()
         .expect("tooltip trigger rendered")
         .dyn_into()
         .unwrap();
-    assert_eq!(trigger.id(), "wasm-tooltip-trigger");
+    assert_eq!(trigger.id(), "rustic-tooltip-wasm-tooltip-trigger");
     assert_eq!(
         trigger.get_attribute("aria-describedby").unwrap(),
-        "wasm-tooltip-surface"
+        "rustic-tooltip-wasm-tooltip-surface"
     );
     assert_eq!(trigger.get_attribute("type").unwrap(), "button");
     assert_eq!(
-        trigger.get_attribute("data-automation-trigger").unwrap(),
-        "wasm-tooltip"
+        trigger
+            .get_attribute("data-rustic-tooltip-trigger")
+            .unwrap(),
+        "rustic-tooltip-wasm-tooltip-trigger"
     );
     assert!(
         !trigger.class_name().is_empty(),
@@ -704,19 +706,21 @@ async fn tooltip_focus_keyboard_and_accessibility() {
     );
 
     let surface = document
-        .get_element_by_id("wasm-tooltip-surface")
+        .get_element_by_id("rustic-tooltip-wasm-tooltip-surface")
         .expect("tooltip surface rendered");
     assert_eq!(surface.get_attribute("role").unwrap(), "tooltip");
     assert_eq!(surface.get_attribute("aria-hidden").unwrap(), "false");
     assert_eq!(
-        surface.get_attribute("data-automation-surface").unwrap(),
-        "wasm-tooltip"
+        surface
+            .get_attribute("data-rustic-tooltip-surface")
+            .unwrap(),
+        "rustic-tooltip-wasm-tooltip-surface"
     );
     let surface_class = surface.get_attribute("class").unwrap_or_default();
     assert!(!surface_class.is_empty(), "scoped class missing on surface");
 
     let portal = document
-        .get_element_by_id("wasm-tooltip-portal")
+        .get_element_by_id("rustic-tooltip-wasm-tooltip-popover-portal")
         .expect("portal container rendered");
     assert_eq!(
         portal.get_attribute("data-portal-root").unwrap(),
@@ -795,12 +799,12 @@ async fn chip_delete_button_activation_and_accessibility() {
     Renderer::<App>::with_root(mount.clone()).render();
 
     let chip_root: web_sys::HtmlElement = mount
-        .query_selector("[data-component='rustic_ui_chip']")
+        .query_selector("[data-component='rustic-chip']")
         .unwrap()
         .expect("chip root rendered")
         .dyn_into()
         .unwrap();
-    assert_eq!(chip_root.id(), "wasm-chip");
+    assert_eq!(chip_root.id(), "rustic-chip-wasm-chip");
     assert_eq!(chip_root.get_attribute("role").unwrap(), "button");
     assert_eq!(chip_root.get_attribute("tabindex").unwrap(), "0");
     assert_eq!(
@@ -808,16 +812,16 @@ async fn chip_delete_button_activation_and_accessibility() {
         "true"
     );
     assert_eq!(
-        chip_root.get_attribute("data-automation-id").unwrap(),
-        "wasm-chip"
+        chip_root.get_attribute("data-rustic-chip-id").unwrap(),
+        "rustic-chip-wasm-chip"
     );
     assert_eq!(
         chip_root.get_attribute("aria-labelledby").unwrap(),
-        "wasm-chip-label"
+        "rustic-chip-wasm-chip-label"
     );
     assert_eq!(
         chip_root.get_attribute("aria-describedby").unwrap(),
-        "wasm-chip-delete"
+        "rustic-chip-wasm-chip-delete"
     );
     assert!(
         !chip_root.class_name().is_empty(),
@@ -828,7 +832,7 @@ async fn chip_delete_button_activation_and_accessibility() {
     assert_eq!(document.active_element().unwrap().id(), chip_root.id());
 
     let label = document
-        .get_element_by_id("wasm-chip-label")
+        .get_element_by_id("rustic-chip-wasm-chip-label")
         .expect("chip label rendered");
     assert_eq!(label.text_content().unwrap(), "Error budget");
 
@@ -838,7 +842,7 @@ async fn chip_delete_button_activation_and_accessibility() {
         .expect("delete button rendered")
         .dyn_into()
         .unwrap();
-    assert_eq!(delete_button.id(), "wasm-chip-delete");
+    assert_eq!(delete_button.id(), "rustic-chip-wasm-chip-delete");
     assert_eq!(delete_button.get_attribute("type").unwrap(), "button");
     assert_eq!(delete_button.get_attribute("aria-hidden").unwrap(), "false");
     assert_eq!(
@@ -1054,7 +1058,7 @@ async fn popover_portal_accessibility_audit() {
     open_button.click();
 
     let menu_root = mount
-        .query_selector("[data-component='rustic_ui_menu']")
+        .query_selector("[data-component='rustic-menu']")
         .unwrap()
         .expect("menu rendered");
     assert_eq!(menu_root.get_attribute("data-open").unwrap(), "true");

@@ -19,8 +19,8 @@ fn build_state(count: usize) -> MenuState {
 }
 
 fn assert_portal_markup(html: &str) {
-    assert!(html.contains("data-portal-root=\"adapter-menu-popover\""));
-    assert!(html.contains("adapter-menu-popover-anchor"));
+    assert!(html.contains("data-portal-root=\"rustic-menu-adapter-menu-popover\"",));
+    assert!(html.contains("rustic-menu-adapter-menu-popover-anchor"));
     assert_eq!(
         html.matches("<ul").count(),
         1,
@@ -34,6 +34,7 @@ fn assert_portal_markup(html: &str) {
         !html.contains("data-disabled=\"false\""),
         "enabled menu items should omit data-disabled"
     );
+    assert!(html.contains("data-rustic-menu-item=\"rustic-menu-adapter-menu-item-0\"",));
 }
 
 #[cfg(feature = "yew")]
@@ -45,7 +46,8 @@ mod yew_tests {
         let props = sample_props();
         let state = build_state(props.items.len());
         let html = menu::yew::render(&props, &state);
-        assert!(html.contains("data-automation-id=\"adapter-menu\""));
+        assert!(html.contains("data-rustic-menu-id=\"rustic-menu-adapter-menu\"",));
+        assert!(html.contains("data-rustic-menu-surface=\"rustic-menu-adapter-menu-surface\"",));
         assert_portal_markup(&html);
     }
 
@@ -69,7 +71,7 @@ mod leptos_tests {
         let props = sample_props();
         let state = build_state(props.items.len());
         let html = menu::leptos::render(&props, &state);
-        assert!(html.contains("data-automation-id=\"adapter-menu\""));
+        assert!(html.contains("data-rustic-menu-id=\"rustic-menu-adapter-menu\"",));
         assert_portal_markup(&html);
     }
 
@@ -93,7 +95,7 @@ mod dioxus_tests {
         let props = sample_props();
         let state = build_state(props.items.len());
         let html = menu::dioxus::render(&props, &state);
-        assert!(html.contains("data-automation-id=\"adapter-menu\""));
+        assert!(html.contains("data-rustic-menu-id=\"rustic-menu-adapter-menu\"",));
         assert_portal_markup(&html);
     }
 
@@ -117,7 +119,7 @@ mod sycamore_tests {
         let props = sample_props();
         let state = build_state(props.items.len());
         let html = menu::sycamore::render(&props, &state);
-        assert!(html.contains("data-component=\"rustic_ui_menu\""));
+        assert!(html.contains("data-component=\"rustic-menu\""));
         assert_portal_markup(&html);
     }
 

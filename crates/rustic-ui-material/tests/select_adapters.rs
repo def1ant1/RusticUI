@@ -23,14 +23,15 @@ fn build_state(count: usize) -> SelectState {
 }
 
 fn assert_portal_markup(html: &str) {
-    assert!(html.contains("data-portal-root=\"adapter-select-popover\""));
-    assert!(html.contains("adapter-select-popover-anchor"));
+    assert!(html.contains("data-portal-root=\"rustic-select-adapter-select-popover\"",));
+    assert!(html.contains("rustic-select-adapter-select-popover-anchor"));
     assert_eq!(
         html.matches("<ul").count(),
         1,
         "options should only be rendered once"
     );
     assert!(html.contains("role=\"option\""));
+    assert!(html.contains("data-rustic-select-option=\"rustic-select-adapter-select-option-0\"",));
     assert!(
         !html.contains("aria-disabled=\"false\""),
         "enabled options should omit aria-disabled metadata"
@@ -50,7 +51,10 @@ mod yew_tests {
         let props = sample_props();
         let state = build_state(props.options.len());
         let html = select::yew::render(&props, &state);
-        assert!(html.contains("data-automation-id=\"adapter-select\""));
+        assert!(html.contains("data-rustic-select-id=\"rustic-select-adapter-select\"",));
+        assert!(
+            html.contains("data-rustic-select-trigger=\"rustic-select-adapter-select-trigger\"",)
+        );
         assert_portal_markup(&html);
     }
 
@@ -74,7 +78,7 @@ mod leptos_tests {
         let props = sample_props();
         let state = build_state(props.options.len());
         let html = select::leptos::render(&props, &state);
-        assert!(html.contains("data-automation-id=\"adapter-select\""));
+        assert!(html.contains("data-rustic-select-id=\"rustic-select-adapter-select\"",));
         assert_portal_markup(&html);
     }
 
@@ -98,7 +102,7 @@ mod dioxus_tests {
         let props = sample_props();
         let state = build_state(props.options.len());
         let html = select::dioxus::render(&props, &state);
-        assert!(html.contains("data-component=\"rustic_ui_select\""));
+        assert!(html.contains("data-component=\"rustic-select\""));
         assert_portal_markup(&html);
     }
 
@@ -122,7 +126,7 @@ mod sycamore_tests {
         let props = sample_props();
         let state = build_state(props.options.len());
         let html = select::sycamore::render(&props, &state);
-        assert!(html.contains("data-automation-id=\"adapter-select\""));
+        assert!(html.contains("data-rustic-select-id=\"rustic-select-adapter-select\"",));
         assert_portal_markup(&html);
     }
 

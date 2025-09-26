@@ -21,7 +21,7 @@ The generator creates `target/data-display-avatar/<framework>/` with:
 
 ## Automation and theming
 
-The wrapper exposes `data-automation-avatar="avatar-alex"` while the nested chip
+The wrapper exposes `data-rustic-avatar-id="rustic-avatar-avatar-alex"` while the nested chip
 and tooltip reuse `avatar-alex` and `avatar-alex-tooltip` respectively. Theme
 overrides darken the background and adjust typography so avatars stand out
 against dashboards.

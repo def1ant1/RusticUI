@@ -16,7 +16,7 @@ cargo run --package data-display-yew
 The example renders two panels:
 
 - **List** – Compact density with primary and secondary typography showcasing
-  deterministic `data-automation-*` hooks.
+  deterministic `data-rustic-*` hooks.
 - **Table** – Zebra striped grid with numeric alignment that reuses the same
   headless `ListState` for selection.
 

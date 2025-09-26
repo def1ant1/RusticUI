@@ -11,7 +11,7 @@
 //! crates.
 //!
 //! # Automation & accessibility
-//! * Deterministic `data-automation-*` hooks are emitted for the list root and
+//! * Deterministic `data-rustic-list-*` hooks are emitted for the list root and
 //!   every item, keeping QA pipelines stable across SSR and hydration.
 //! * ARIA roles mirror the WAI-ARIA listbox design pattern when selection is
 //!   enabled, including `aria-multiselectable` and `aria-activedescendant`
@@ -107,7 +107,7 @@ pub struct ListItem {
     pub secondary: Option<String>,
     /// Optional metadata column rendered on the trailing edge.
     pub meta: Option<String>,
-    /// Stable automation identifier appended to `data-automation-item`.
+    /// Stable automation identifier appended to `data-rustic-list-item`.
     pub automation_id: Option<String>,
     /// Whether the row should be marked as disabled.
     pub disabled: bool,
@@ -233,27 +233,35 @@ fn render_html(props: &ListProps, state: &ListState) -> String {
 }
 
 fn automation_base(props: &ListProps) -> String {
-    props
-        .automation_id
-        .clone()
-        .unwrap_or_else(|| "rustic_ui_list".into())
+    crate::style_helpers::automation_id("list", props.automation_id.as_deref(), [])
 }
 
 fn item_automation_id(props: &ListProps, item: &ListItem, index: usize) -> String {
     if let Some(id) = &item.automation_id {
-        format!("{}-{}", automation_base(props), id)
+        crate::style_helpers::automation_id("list", props.automation_id.as_deref(), [id])
     } else {
-        format!("{}-item-{index}", automation_base(props))
+        crate::style_helpers::automation_id(
+            "list",
+            props.automation_id.as_deref(),
+            [format!("item-{index}")],
+        )
     }
 }
 
 fn item_id(props: &ListProps, index: usize) -> String {
-    format!("{}-option-{index}", automation_base(props))
+    crate::style_helpers::automation_id(
+        "list",
+        props.automation_id.as_deref(),
+        [format!("option-{index}")],
+    )
 }
 
 fn root_attributes(props: &ListProps, state: &ListState) -> Vec<(String, String)> {
     let mut attrs = vec![
-        ("data-component".into(), "rustic_ui_list".into()),
+        (
+            "data-component".into(),
+            crate::style_helpers::automation_id("list", None, []),
+        ),
         ("data-density".into(), props.density.data_value().into()),
         (
             "data-selection-mode".into(),
@@ -281,9 +289,15 @@ fn root_attributes(props: &ListProps, state: &ListState) -> Vec<(String, String)
         }
     }
 
-    if let Some(id) = &props.automation_id {
-        attrs.push(("data-automation-id".into(), id.clone()));
-    }
+    let base_id = automation_base(props);
+    attrs.push((
+        crate::style_helpers::automation_data_attr("list", ["id"]),
+        base_id.clone(),
+    ));
+    attrs.push((
+        crate::style_helpers::automation_data_attr("list", ["root"]),
+        crate::style_helpers::automation_id("list", props.automation_id.as_deref(), ["root"]),
+    ));
 
     attrs
 }
@@ -310,11 +324,12 @@ fn item_attributes(
             (state.highlighted() == Some(index)).to_string(),
         ),
         ("data-disabled".to_string(), item.disabled.to_string()),
-        (
-            "data-automation-item".to_string(),
-            item_automation_id(props, item, index),
-        ),
     ];
+
+    attrs.push((
+        crate::style_helpers::automation_data_attr("list", ["item"]),
+        item_automation_id(props, item, index),
+    ));
 
     match props.selection_mode {
         SelectionMode::None => {
@@ -551,7 +566,7 @@ mod tests {
             .any(|(k, v)| k == "data-selected" && v == "true"));
         assert!(attrs
             .iter()
-            .any(|(k, v)| k == "data-automation-item" && v.contains("sample-list")));
+            .any(|(k, v)| k == "data-rustic-list-item" && v.contains("rustic-list-sample-list")));
     }
 
     #[test]
@@ -559,9 +574,9 @@ mod tests {
         let props = sample_props();
         let state = build_state(props.items.len());
         let html = super::render_html(&props, &state);
-        assert!(html.contains("data-component=\"rustic_ui_list\""));
+        assert!(html.contains("data-component=\"rustic-list\""));
         assert!(html.contains("class=\"rustic_ui_list_primary\""));
-        assert!(html.contains("data-automation-item"));
+        assert!(html.contains("data-rustic-list-item"));
         assert!(html.contains("<ul"));
     }
 }

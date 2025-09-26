@@ -16,6 +16,9 @@ use rustic_ui_system::theme::{ColorScheme, Theme};
 /// may change during refactors.
 pub const AUTOMATION_ID: &str = "rusticui-select-menu";
 
+/// Component prefix shared with the Material select implementation.
+const COMPONENT_PREFIX: &str = "rustic-select";
+
 /// Domain model representing an option returned from the mock async API.
 #[derive(Clone, Debug)]
 pub struct Region {
@@ -74,40 +77,33 @@ pub fn enterprise_theme() -> Theme {
 /// The helper keeps the HTML consistent across SSR and CSR entry points without
 /// pulling in the private `ControlStrategy` types from `rustic_ui_headless`.
 pub fn render_select_markup(props: &SelectProps, open: bool, selected: Option<usize>) -> String {
-    let base = props
-        .automation_id
-        .as_deref()
-        .unwrap_or(AUTOMATION_ID);
-    let trigger_id = format!("{base}-trigger");
-    let list_id = format!("{base}-list");
+    let user_id = props.automation_id.as_deref();
+    let base = automation_value(user_id, []);
+    let trigger_id = automation_value(user_id, ["trigger"]);
+    let list_id = automation_value(user_id, ["list"]);
     let open_flag = open.then_some("true").unwrap_or("false");
 
-    let automation_root = props
-        .automation_id
-        .as_ref()
-        .map(|id| format!(" data-automation-id=\"{id}\""))
-        .unwrap_or_default();
-    let automation_trigger = props
-        .automation_id
-        .as_ref()
-        .map(|id| format!(" data-automation-trigger=\"{id}\""))
-        .unwrap_or_default();
-    let automation_list = props
-        .automation_id
-        .as_ref()
-        .map(|id| format!(" data-automation-list=\"{id}\""))
-        .unwrap_or_default();
+    let automation_root = format!(" data-rustic-select-id=\"{base}\"");
+    let automation_root_marker = format!(
+        " data-rustic-select-root=\"{}\"",
+        automation_value(user_id, ["root"])
+    );
+    let automation_trigger = format!(
+        " data-rustic-select-trigger=\"{}\"",
+        automation_value(user_id, ["trigger"])
+    );
+    let automation_list = format!(
+        " data-rustic-select-list=\"{}\"",
+        automation_value(user_id, ["list"])
+    );
 
     let mut options_markup = String::new();
     for (index, option) in props.options.iter().enumerate() {
         let is_selected = selected == Some(index);
         let selected_flag = is_selected.then_some("true").unwrap_or("false");
-        let option_id = format!("{base}-option-{index}");
-        let automation_option = props
-            .automation_id
-            .as_ref()
-            .map(|id| format!(" data-automation-option=\"{id}-{index}\""))
-            .unwrap_or_default();
+        let option_marker = automation_value(user_id, [format!("option-{index}")]);
+        let option_id = option_marker.clone();
+        let automation_option = format!(" data-rustic-select-option=\"{option_marker}\"");
         options_markup.push_str(&format!(
             "<li id=\"{option_id}\" role=\"option\" aria-selected=\"{selected_flag}\" data-selected=\"{selected_flag}\" data-index=\"{index}\" data-value=\"{}\"{automation_option}>{}</li>",
             option.value,
@@ -116,7 +112,7 @@ pub fn render_select_markup(props: &SelectProps, open: bool, selected: Option<us
     }
 
     format!(
-        "<div class=\"rustic_ui_select_root\" data-component=\"rustic_ui_select\" data-open=\"{open_flag}\"{automation_root}><button id=\"{trigger_id}\" role=\"button\" aria-haspopup=\"listbox\" aria-expanded=\"{open_flag}\" aria-controls=\"{list_id}\" data-open=\"{open_flag}\"{automation_trigger}>{}</button><ul id=\"{list_id}\" role=\"listbox\" aria-hidden=\"{}\" data-open=\"{open_flag}\"{automation_list}>{options_markup}</ul></div>",
+        "<div class=\"rustic_ui_select_root\" data-component=\"rustic-select\" data-open=\"{open_flag}\"{automation_root}{automation_root_marker}><button id=\"{trigger_id}\" role=\"button\" aria-haspopup=\"listbox\" aria-expanded=\"{open_flag}\" aria-controls=\"{list_id}\" data-open=\"{open_flag}\"{automation_trigger}>{}</button><ul id=\"{list_id}\" role=\"listbox\" aria-hidden=\"{}\" data-open=\"{open_flag}\"{automation_list}>{options_markup}</ul></div>",
         props.label,
         (!open).then_some("true").unwrap_or("false")
     )
@@ -137,13 +133,99 @@ pub fn selection_summary(props: &SelectProps, selected: Option<usize>) -> String
 pub fn ssr_shell(select_markup: &str, theme: &Theme) -> String {
     let palette = theme.palette.active();
     format!(
-        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title>RusticUI Select Menu</title></head><body style=\"margin:0;background:{};color:{};font-family:{};min-height:100vh;display:flex;align-items:center;justify-content:center;\"><main data-automation=\"{}-shell\" style=\"padding:32px;max-width:720px;\"><h1 style=\"margin-top:0;font-size:1.75rem;\">RusticUI Select Menu</h1>{}</main></body></html>",
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title>RusticUI Select Menu</title></head><body style=\"margin:0;background:{};color:{};font-family:{};min-height:100vh;display:flex;align-items:center;justify-content:center;\"><main data-rustic-select-shell=\"{}\" style=\"padding:32px;max-width:720px;\"><h1 style=\"margin-top:0;font-size:1.75rem;\">RusticUI Select Menu</h1>{}</main></body></html>",
         palette.background_default,
         palette.text_primary,
         theme.typography.font_family,
-        AUTOMATION_ID,
+        automation_value(Some(AUTOMATION_ID), ["shell"]),
         select_markup
     )
+}
+
+pub fn example_automation_value<I, S>(segments: I) -> String
+where
+    I: IntoIterator<Item = S>,
+    S: Into<String>,
+{
+    automation_value(Some(AUTOMATION_ID), segments)
+}
+
+fn automation_value<I, S>(automation_id: Option<&str>, segments: I) -> String
+where
+    I: IntoIterator<Item = S>,
+    S: Into<String>,
+{
+    let mut parts = Vec::new();
+    parts.push(sanitise(
+        automation_id
+            .filter(|id| !id.trim().is_empty())
+            .unwrap_or(AUTOMATION_ID),
+    ));
+
+    for segment in segments {
+        let value: String = segment.into();
+        let sanitised = sanitise(&value);
+        if !sanitised.is_empty() {
+            parts.push(sanitised);
+        }
+    }
+
+    format!("{COMPONENT_PREFIX}-{}", parts.join("-"))
+}
+
+fn sanitise(input: &str) -> String {
+    let mut output = String::new();
+    let mut prev_dash = false;
+
+    for ch in input.chars() {
+        let mapped = match ch {
+            'A'..='Z' => Some(ch.to_ascii_lowercase()),
+            'a'..='z' | '0'..='9' => Some(ch),
+            '-' | '_' | ' ' | ':' | '.' | '/' => None,
+            _ => None,
+        };
+
+        if let Some(valid) = mapped {
+            output.push(valid);
+            prev_dash = false;
+        } else if !prev_dash {
+            output.push('-');
+            prev_dash = true;
+        }
+    }
+
+    let trimmed = output.trim_matches('-').to_string();
+
+    if trimmed.is_empty() {
+        String::from("select")
+    } else {
+        trimmed
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rustic_ui_material::select::{SelectOption, SelectProps};
+
+    #[test]
+    fn automation_value_prefixes_component() {
+        let value = example_automation_value(["shell", "yew"]);
+        assert_eq!(value, "rustic-select-rusticui-select-menu-shell-yew");
+    }
+
+    #[test]
+    fn render_markup_embeds_prefixed_attributes() {
+        let options = vec![SelectOption::new("Sydney", "ap-southeast-2")];
+        let mut props = SelectProps::new("Region", options.clone());
+        props.automation_id = Some("custom id".into());
+
+        let html = render_select_markup(&props, false, Some(0));
+        assert!(html.contains("data-rustic-select-id=\"rustic-select-custom-id\""));
+        assert!(html.contains("data-rustic-select-trigger=\"rustic-select-custom-id-trigger\""));
+        assert!(html.contains("data-rustic-select-list=\"rustic-select-custom-id-list\""));
+        assert!(html.contains("data-rustic-select-option=\"rustic-select-custom-id-option-0\""));
+    }
 }
 
 #[cfg(feature = "csr")]

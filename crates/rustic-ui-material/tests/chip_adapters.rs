@@ -45,10 +45,13 @@ fn assert_chip_markup(html: &str) {
     );
     assert!(html.contains("role=\"button\""));
     assert!(html.contains("tabindex=\"0\""));
-    assert!(html.contains("data-component=\"rustic_ui_chip\""));
-    assert!(html.contains("data-automation-id=\"adapter-chip\""));
+    assert!(html.contains("data-component=\"rustic-chip\""));
+    assert!(html.contains("data-rustic-chip-id=\"rustic-chip-adapter-chip\"",));
+    assert!(html.contains("data-rustic-chip-root=\"rustic-chip-adapter-chip-root\"",));
     assert!(html.contains("data-label-id=\"adapter-chip-label\""));
     assert!(html.contains("data-delete-id=\"adapter-chip-delete\""));
+    assert!(html.contains("data-rustic-chip-label=\"rustic-chip-adapter-chip-label\"",));
+    assert!(html.contains("data-rustic-chip-delete=\"rustic-chip-adapter-chip-delete\"",));
     assert!(html.contains("aria-labelledby=\"adapter-chip-label\""));
     assert!(html.contains("aria-describedby=\"adapter-chip-delete\""));
     assert!(html.contains("data-chip-slot=\"label\""));

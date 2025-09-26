@@ -37,7 +37,8 @@ fn sycamore_chip_snapshot_matches_react() {
     let sycamore = chip::sycamore::render(&props, &state_sycamore);
 
     assert_eq!(sycamore, react);
-    assert!(react.contains("data-automation-id=\"joy-chip\""));
+    assert!(react.contains("data-rustic-chip-id=\"rustic-chip-joy-chip\""));
+    assert!(react.contains("data-rustic-chip-root=\"rustic-chip-joy-chip-root\""));
 }
 
 #[test]

@@ -36,6 +36,24 @@ imports are required. Treat the warnings as your migration punch list.
 4. **Verify clean builds** – Execute `scripts/migrate-crate-prefix.sh --verify-clean` (or `cargo xtask clippy`) to deny
    warnings and guarantee no deprecated aliases remain. Your project is now fully migrated to the RusticUI namespace.
 
+## Automation selector migration
+
+The Material automation hooks now follow the `data-rustic-<component>-*` naming convention. Instances of the legacy
+`data-automation-*` attributes should be replaced to ensure selectors remain stable across releases.
+
+```bash
+# Update attribute names (e.g. data-automation-item -> data-rustic-list-item)
+rg --files -g"*.{rs,tsx,ts,js,jsx,html}" -0 | \ 
+  xargs -0 sed -i "s/data-automation-/data-rustic-/g"
+
+# Update attribute values (e.g. "wasm-tooltip" -> "rustic-tooltip-wasm-tooltip")
+rg --files -g"*.{rs,tsx,ts,js,jsx,html}" -0 | \ 
+  xargs -0 sed -i "s/\"\(\w\+-\?\)tooltip\"/\"rustic-tooltip-\1tooltip\"/g"
+```
+
+The helper functions in `style_helpers::automation_id` and `style_helpers::automation_data_attr` can also be invoked
+directly from application code when bespoke automation hooks are required.
+
 ### Automation tips
 
 - `scripts/migrate-crate-prefix.sh` is idempotent and safe to rerun as you migrate individual crates within a monorepo.
