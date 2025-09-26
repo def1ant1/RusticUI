@@ -28,7 +28,11 @@ Need to refer back to an older version of the docs? Check out [the v4 documentat
 :::
 
 :::info
-If you are using Next.js and you are not sure how to configure SSR to work with both Emotion & JSS, take a look a this [example project](https://github.com/mui/material-ui/tree/master/examples/material-ui-nextjs-ts-v4-v5-migration).
+If you are using Next.js and need to validate Emotion + JSS interoperability, start from the maintained [material-ui-nextjs-pages-router](https://github.com/mui/material-ui/tree/master/examples/material-ui-nextjs-pages-router) samples (JavaScript and TypeScript variants).
+:::
+
+:::note
+We retired the legacy v4→v5 migration example in favour of the Rust-first automation flows described in the [Legacy JSS migration sample retirement note](/material-ui/migration/notes/legacy-jss-sample-retired/). That guide enumerates the repeatable `cargo xtask` commands that keep SSR scaffolding consistent across projects.
 :::
 
 ## Why you should migrate

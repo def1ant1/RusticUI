@@ -18,7 +18,11 @@ Note that you may continue to use JSS for adding overrides for the components (f
 Then, if at any point you want to move over to the new styling engine, you can refactor your components progressively.
 
 :::info
-If you are using Next.js and you are not sure how to configure SSR to work with both Emotion & JSS, take a look a this [example project](https://github.com/mui/material-ui/tree/master/examples/material-ui-nextjs-ts-v4-v5-migration).
+Need a maintained SSR reference? The `material-ui-nextjs-pages-router` samples show the latest Emotion configuration for both [JavaScript](https://github.com/mui/material-ui/tree/master/examples/material-ui-nextjs-pages-router) and [TypeScript](https://github.com/mui/material-ui/tree/master/examples/material-ui-nextjs-pages-router-ts) workspaces.
+:::
+
+:::note
+The legacy v4→v5 migration sample has been archived. For repeatable upgrades, rely on the Rust-first automation documented in the [Legacy JSS migration sample retirement note](/material-ui/migration/notes/legacy-jss-sample-retired/), which highlights the `cargo xtask` flows that supersede manual scaffolding.
 :::
 
 This document reviews all the steps necessary to migrate away from JSS.
