@@ -15,9 +15,9 @@ cat > "$EXAMPLE_ROOT/README.md" <<'MD'
    sycamore = { version = "0.9", features = ["web"] }
    sycamore-router = "0.9"
    wasm-bindgen = "0.2"
-   mui-material = { path = "../../crates/mui-material", features = ["sycamore"] }
-   mui-headless = { path = "../../crates/mui-headless" }
-   mui-styled-engine = { path = "../../crates/mui-styled-engine", features = ["sycamore"] }
+   mui-material = { path = "../../crates/rustic-ui-material", features = ["sycamore"] }
+   mui-headless = { path = "../../crates/rustic-ui-headless" }
+   mui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["sycamore"] }
    ```
 2. Use the snippet below inside `main.rs` to render responsive tabs while
    dispatching router navigation events:

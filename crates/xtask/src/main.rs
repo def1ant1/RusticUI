@@ -167,10 +167,10 @@ fn test() -> Result<()> {
     run(cmd)?;
     // Also ensure each example still compiles for the WebAssembly target.
     let examples = [
-        "examples/mui-yew",
-        "examples/mui-leptos",
-        "examples/mui-dioxus",
-        "examples/mui-sycamore",
+        "exampl../rustic-ui-yew",
+        "exampl../rustic-ui-leptos",
+        "exampl../rustic-ui-dioxus",
+        "exampl../rustic-ui-sycamore",
     ];
     for ex in &examples {
         let mut check = Command::new("cargo");
@@ -191,7 +191,7 @@ fn wasm_test() -> Result<()> {
     // change for a specific framework while the others still pass. Running the
     // suites serially keeps logging deterministic for CI while still providing
     // actionable context to developers when a specific adapter fails.
-    let wasm_crates = ["crates/mui-joy", "crates/mui-material"];
+    let wasm_crates = ["crates/rustic-ui-joy", "crates/rustic-ui-material"];
     let frameworks = ["yew", "leptos", "dioxus", "sycamore"];
 
     for krate in &wasm_crates {
@@ -391,7 +391,7 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
 
     // Prepare the templates directory and remove historical single-file
     // artefacts so downstream tooling never accidentally consumes stale data.
-    let output_dir = PathBuf::from("crates/mui-system/templates");
+    let output_dir = PathBuf::from("crates/rustic-ui-system/templates");
     fs::create_dir_all(&output_dir)?;
     for legacy in [
         output_dir.join("material_theme.json"),

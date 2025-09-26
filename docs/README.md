@@ -30,6 +30,6 @@ team can propagate the updates across the automation pipeline.
 ## Rustic theming resources
 
 Looking for the Rust-specific theming workflow (Rustic palettes, overrides via `#[derive(Theme)]`, and global baseline styles)?
-Start with [`crates/mui-system/README.md`](../crates/mui-system/README.md#theming-and-global-styles) while the crates transition to
+Start with [`crates/rustic-ui-system/README.md`](../crates/rustic-ui-system/README.md#theming-and-global-styles) while the crates transition to
 their RusticUI names. That guide documents the automation steps such as `cargo xtask generate-theme` and explains how the design
 tokens integrate with the continuous delivery workflows.

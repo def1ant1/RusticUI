@@ -25,11 +25,11 @@ struct Cli {
     material_src: PathBuf,
 
     /// Location of the Rust Material crate that should mirror the JS API surface.
-    #[arg(long, default_value = "crates/mui-material/src")]
+    #[arg(long, default_value = "crates/rustic-ui-material/src")]
     rust_material: PathBuf,
 
     /// Location of the headless primitives crate for comparison.
-    #[arg(long, default_value = "crates/mui-headless/src")]
+    #[arg(long, default_value = "crates/rustic-ui-headless/src")]
     rust_headless: PathBuf,
 
     /// Destination markdown file that will host the parity report.

@@ -19,9 +19,9 @@ yew = { version = "0.21", features = ["csr"] }
 yew-router = "0.18"
 wasm-bindgen = "0.2"
 gloo = { version = "0.9", features = ["events"] }
-mui-material = { path = "../../crates/mui-material", features = ["yew"] }
-mui-headless = { path = "../../crates/mui-headless" }
-mui-styled-engine = { path = "../../crates/mui-styled-engine", features = ["yew"] }
+mui-material = { path = "../../crates/rustic-ui-material", features = ["yew"] }
+mui-headless = { path = "../../crates/rustic-ui-headless" }
+mui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["yew"] }
 TOML
 
 cat > "$EXAMPLE_ROOT/Trunk.toml" <<'TOML'

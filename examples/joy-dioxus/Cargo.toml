@@ -9,9 +9,9 @@ license = "MIT OR Apache-2.0"
 dioxus = { workspace = true, features = ["macro", "hooks", "html"] }
 dioxus-web = { workspace = true, features = ["file_engine"] }
 joy-workflows-core = { path = "../joy-workflows-core" }
-mui-joy = { path = "../../crates/mui-joy", default-features = false, features = ["dioxus"] }
-mui-system = { path = "../../crates/mui-system", features = ["dioxus"] }
-mui-headless = { path = "../../crates/mui-headless" }
+mui-joy = { path = "../../crates/rustic-ui-joy", default-features = false, features = ["dioxus"] }
+mui-system = { path = "../../crates/rustic-ui-system", features = ["dioxus"] }
+mui-headless = { path = "../../crates/rustic-ui-headless" }
 dioxus-ssr = { workspace = true, optional = true }
 
 [features]

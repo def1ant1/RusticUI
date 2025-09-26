@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 yew.workspace = true
-mui-system = { path = "../../crates/mui-system", features = ["yew"] }
+mui-system = { path = "../../crates/rustic-ui-system", features = ["yew"] }
 tokio = { workspace = true, optional = true }
 
 [features]

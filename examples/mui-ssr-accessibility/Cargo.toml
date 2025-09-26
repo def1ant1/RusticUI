@@ -7,5 +7,5 @@ edition = "2021"
 yew.workspace = true
 # Tokio runtime enables async server side rendering.
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-mui-material = { path = "../../crates/mui-material", features = ["yew"] }
-mui-styled-engine = { path = "../../crates/mui-styled-engine", features = ["yew"] }
+mui-material = { path = "../../crates/rustic-ui-material", features = ["yew"] }
+mui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["yew"] }

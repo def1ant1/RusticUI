@@ -30,11 +30,11 @@ struct Cli {
     joy_src: PathBuf,
 
     /// Location of the Rust Joy crate that should mirror the React API surface.
-    #[arg(long, default_value = "crates/mui-joy/src")]
+    #[arg(long, default_value = "crates/rustic-ui-joy/src")]
     rust_joy: PathBuf,
 
     /// Location of the shared headless primitives for parity comparisons.
-    #[arg(long, default_value = "crates/mui-headless/src")]
+    #[arg(long, default_value = "crates/rustic-ui-headless/src")]
     rust_headless: PathBuf,
 
     /// Destination markdown report path.  The artifact blends narrative and

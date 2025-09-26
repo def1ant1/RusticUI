@@ -1,0 +1,31 @@
+[package]
+name = "mui-utils"
+version = "0.1.0"
+edition = "2021"
+description = "Utility helpers for the Material UI Rust ecosystem."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/m../rustic-ui-rust"
+homepage = "https://github.com/m../rustic-ui-rust"
+documentation = "https://docs.../rustic-ui-utils"
+keywords = ["material", "ui", "web"]
+categories = ["gui"]
+
+[badges]
+maintenance = { status = "experimental" }
+
+[dependencies]
+wasm-bindgen = { workspace = true, optional = true }
+js-sys = { workspace = true, optional = true }
+web-sys = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[features]
+# No default features to keep the crate lightweight. Consumers opt into
+# `web` support when compiling to WebAssembly which pulls in the
+# `wasm-bindgen` timer bindings.
+default = []
+web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
+
+[dev-dependencies]
+proptest.workspace = true

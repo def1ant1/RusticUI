@@ -11,6 +11,6 @@ members = []
 [dependencies]
 yew = { version = "0.21", default-features = false, features = ["csr", "hydration", "ssr"] }
 wasm-bindgen = "0.2"
-mui-material = { path = "../../crates/mui-material" }
-mui-headless = { path = "../../crates/mui-headless" }
-mui-styled-engine = { path = "../../crates/mui-styled-engine", features = ["yew"] }
+mui-material = { path = "../../crates/rustic-ui-material" }
+mui-headless = { path = "../../crates/rustic-ui-headless" }
+mui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["yew"] }

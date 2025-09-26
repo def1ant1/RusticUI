@@ -83,7 +83,7 @@ fn generates_light_and_dark_artifacts_with_fixtures() -> Result<()> {
     let overrides = fixtures.join("material_overrides.json");
     assert!(overrides.exists(), "fixture missing: {overrides:?}");
 
-    let templates_dir = workspace.join("crates/mui-system/templates");
+    let templates_dir = workspace.join("crates/rustic-ui-system/templates");
     let expected_outputs = [
         templates_dir.join("material_theme.light.json"),
         templates_dir.join("material_theme.dark.json"),
@@ -121,7 +121,7 @@ fn generates_light_and_dark_artifacts_with_fixtures() -> Result<()> {
     // Verify that the log output remains descriptive for maintainers who rely on CI logs.
     let stdout = String::from_utf8_lossy(&assertion.get_output().stdout);
     assert!(
-        stdout.contains("[xtask] wrote crates/mui-system/templates/material_theme.light.json"),
+        stdout.contains("[xtask] wrote crates/rustic-ui-system/templates/material_theme.light.json"),
         "xtask output should mention the light theme artifact"
     );
     for artifact in [
@@ -133,7 +133,7 @@ fn generates_light_and_dark_artifacts_with_fixtures() -> Result<()> {
     ] {
         assert!(
             stdout.contains(&format!(
-                "[xtask] wrote crates/mui-system/templates/{artifact}"
+                "[xtask] wrote crates/rustic-ui-system/templates/{artifact}"
             )),
             "xtask output should mention the {artifact} artifact"
         );
