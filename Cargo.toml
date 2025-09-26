@@ -38,6 +38,7 @@ members = [
     "crates/rustic-ui-headless",
     "crates/rustic-ui-material",
     "crates/rustic-ui-joy",
+    "crates/rustic-ui-lab",
     "crates/rustic-ui-icons",
     "crates/rustic-ui-icons-material",
     "crates/rustic-ui-utils",

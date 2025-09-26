@@ -95,7 +95,7 @@ impl StepperState {
                     None
                 }
             })
-            .or_else(|| if config.step_count > 0 { Some(0) } else { None });
+            .or(if config.step_count > 0 { Some(0) } else { None });
         Self {
             steps,
             linear: config.linear,
@@ -177,7 +177,7 @@ impl StepperState {
     }
 
     /// Move to the next available step.
-    pub fn next(&mut self) -> StepperChange {
+    pub fn advance(&mut self) -> StepperChange {
         if let Some(active) = self.active {
             if let Some(next) = self.next_available(active, 1) {
                 return self.set_active(Some(next));
