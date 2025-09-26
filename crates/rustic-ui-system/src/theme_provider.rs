@@ -430,6 +430,7 @@ mod other_impl {
     /// Placeholder theme hook for non Yew/Leptos backends like Dioxus and
     /// Sycamore. Returns [`Theme::default()`] so integration tests can compile
     /// without pulling additional dependencies.
+    #[allow(dead_code)]
     pub fn use_theme() -> Theme {
         material_theme()
     }
@@ -448,6 +449,7 @@ pub use other_impl::use_theme;
     feature = "dioxus",
     feature = "sycamore",
 )))]
+#[allow(dead_code)]
 pub fn use_theme() -> Theme {
     material_theme()
 }

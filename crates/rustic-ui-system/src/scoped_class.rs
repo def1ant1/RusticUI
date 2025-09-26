@@ -23,6 +23,7 @@ use rustic_ui_styled_engine::Style;
 #[derive(Clone, Debug)]
 pub struct ScopedClass {
     class: String,
+    #[allow(dead_code)]
     style: Style,
 }
 
@@ -56,6 +57,7 @@ impl ScopedClass {
     /// the handle alive is important because dropping it immediately would
     /// unmount the CSS from the registry and strip visual styling from the
     /// component.
+    #[allow(dead_code)]
     pub fn style(&self) -> &Style {
         &self.style
     }
@@ -63,6 +65,7 @@ impl ScopedClass {
     /// Exposes the generated stylesheet for integration tests and documentation
     /// examples. We return a `&str` to avoid needless allocations when callers
     /// simply want to assert on fragments of the CSS.
+    #[allow(dead_code)]
     pub fn stylesheet(&self) -> &str {
         self.style.get_style_str()
     }

@@ -86,6 +86,14 @@ impl AccordionGroupState {
         self.items.len()
     }
 
+    /// Returns `true` when the group manages zero items. This convenience helper
+    /// mirrors standard collection APIs, silencing Clippy's `len_without_is_empty`
+    /// lint while providing a clearer affordance for adapters.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
     /// Returns whether the provided index is expanded.
     #[inline]
     pub fn is_expanded(&self, index: usize) -> bool {

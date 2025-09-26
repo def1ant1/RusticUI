@@ -64,12 +64,14 @@ mod yew_integration {
     /// obtain the [`StyleManager`] and record CSS as they render. After the tree
     /// is rendered on the server, calling [`StyledEngineProvider::flush_styles`]
     /// will return all accumulated `<style>` blocks.
+    #[allow(dead_code)]
     pub struct StyledEngineProvider {
         registry: StyleRegistry,
     }
 
     impl StyledEngineProvider {
         /// Drains collected styles from the internal registry.
+        #[allow(dead_code)]
         pub fn flush_styles(&self) -> String {
             self.registry.flush_styles()
         }
