@@ -4,7 +4,7 @@ title: App Bar React component
 components: AppBar, Toolbar, Menu
 githubLabel: 'scope: app bar'
 materialDesign: https://m2.material.io/components/app-bars-top
-githubSource: packages/mui-material/src/AppBar
+githubSource: archives/mui-packages/mui-material/src/AppBar
 ---
 
 # App Bar

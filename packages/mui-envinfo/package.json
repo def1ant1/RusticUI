@@ -13,7 +13,7 @@
   "bugs": {
     "url": "https://github.com/mui/material-ui/issues"
   },
-  "homepage": "https://github.com/mui/material-ui/tree/HEAD/packages/mui-envinfo",
+  "homepage": "https://github.com/RusticUI/RusticUI/tree/HEAD/archives/mui-packages/mui-envinfo",
   "files": [],
   "scripts": {
     "build": "code-infra build --bundle cjs --buildTypes false --skipBabelRuntimeCheck"

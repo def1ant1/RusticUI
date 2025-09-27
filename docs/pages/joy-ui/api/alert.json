@@ -158,7 +158,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyAlert",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/Alert/Alert.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Alert/Alert.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-alert/\">Alert</a></li></ul>",
   "cssComponent": false

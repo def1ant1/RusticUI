@@ -60,7 +60,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiStepper",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/Stepper/Stepper.js",
+  "filename": "/archives/mui-packages/mui-material/src/Stepper/Stepper.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-stepper/\">Stepper</a></li></ul>",
   "cssComponent": false

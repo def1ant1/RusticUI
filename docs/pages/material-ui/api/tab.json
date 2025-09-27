@@ -99,7 +99,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiTab",
   "forwardsRefTo": "HTMLButtonElement",
-  "filename": "/packages/mui-material/src/Tab/Tab.js",
+  "filename": "/archives/mui-packages/mui-material/src/Tab/Tab.js",
   "inheritance": { "component": "ButtonBase", "pathname": "/material-ui/api/button-base/" },
   "demos": "<ul><li><a href=\"/material-ui/react-tabs/\">Tabs</a></li></ul>",
   "cssComponent": false

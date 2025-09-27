@@ -22,7 +22,7 @@
     "directory": "packages/mui-codemod"
   },
   "license": "MIT",
-  "homepage": "https://github.com/mui/material-ui/tree/master/packages/mui-codemod",
+  "homepage": "https://github.com/RusticUI/RusticUI/tree/HEAD/archives/mui-packages/mui-codemod",
   "funding": {
     "type": "opencollective",
     "url": "https://opencollective.com/mui-org"

@@ -18,7 +18,7 @@
   "bugs": {
     "url": "https://github.com/mui/material-ui/issues"
   },
-  "homepage": "https://github.com/mui/material-ui/tree/master/packages/mui-types",
+  "homepage": "https://github.com/RusticUI/RusticUI/tree/HEAD/archives/mui-packages/mui-types",
   "scripts": {
     "build": "code-infra build",
     "release": "pnpm build && pnpm publish",

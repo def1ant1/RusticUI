@@ -3,7 +3,7 @@ productId: material-ui
 title: Backdrop React Component
 components: Backdrop
 githubLabel: 'scope: backdrop'
-githubSource: packages/mui-material/src/Backdrop
+githubSource: archives/mui-packages/mui-material/src/Backdrop
 ---
 
 # Backdrop

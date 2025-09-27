@@ -81,7 +81,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiCollapse",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/Collapse/Collapse.js",
+  "filename": "/archives/mui-packages/mui-material/src/Collapse/Collapse.js",
   "inheritance": {
     "component": "Transition",
     "pathname": "https://reactcommunity.org/react-transition-group/transition/#Transition-props"

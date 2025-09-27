@@ -187,7 +187,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiTypography",
   "forwardsRefTo": "HTMLParagraphElement",
-  "filename": "/packages/mui-material/src/Typography/Typography.js",
+  "filename": "/archives/mui-packages/mui-material/src/Typography/Typography.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-breadcrumbs/\">Breadcrumbs</a></li>\n<li><a href=\"/material-ui/react-typography/\">Typography</a></li></ul>",
   "cssComponent": true

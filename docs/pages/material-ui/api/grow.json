@@ -25,7 +25,7 @@
   "themeDefaultProps": false,
   "muiName": "MuiGrow",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/Grow/Grow.js",
+  "filename": "/archives/mui-packages/mui-material/src/Grow/Grow.js",
   "inheritance": {
     "component": "Transition",
     "pathname": "https://reactcommunity.org/react-transition-group/transition/#Transition-props"

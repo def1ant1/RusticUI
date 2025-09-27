@@ -88,7 +88,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiIcon",
   "forwardsRefTo": "HTMLSpanElement",
-  "filename": "/packages/mui-material/src/Icon/Icon.js",
+  "filename": "/archives/mui-packages/mui-material/src/Icon/Icon.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/icons/\">Icons</a></li>\n<li><a href=\"/material-ui/material-icons/\">Material Icons</a></li></ul>",
   "cssComponent": false

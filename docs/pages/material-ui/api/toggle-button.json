@@ -115,7 +115,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiToggleButton",
   "forwardsRefTo": "HTMLButtonElement",
-  "filename": "/packages/mui-material/src/ToggleButton/ToggleButton.js",
+  "filename": "/archives/mui-packages/mui-material/src/ToggleButton/ToggleButton.js",
   "inheritance": { "component": "ButtonBase", "pathname": "/material-ui/api/button-base/" },
   "demos": "<ul><li><a href=\"/material-ui/react-toggle-button/\">Toggle Button</a></li></ul>",
   "cssComponent": false

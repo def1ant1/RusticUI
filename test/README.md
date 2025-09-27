@@ -42,7 +42,7 @@ In addition to the core matchers from `chai` we also use matchers from [`chai-do
 
 Deciding where to put a test is (like naming things) a hard problem:
 
-- When in doubt, put the new test case directly in the unit test file for that component, for example `packages/mui-material/src/Button/Button.test.js`.
+- When in doubt, put the new test case directly in the unit test file for that component, for example `archives/mui-packages/mui-material/src/Button/Button.test.js`.
 - If your test requires multiple components from the library create a new integration test.
 - If you find yourself using a lot of `data-testid` attributes or you're accessing
   a lot of styles consider adding a component (that doesn't require any interaction)
@@ -132,11 +132,11 @@ If you want to `grep` for certain tests add `-g STRING_TO_GREP` though for devel
 
 First, we have the **unit test** suite.
 It uses [mocha](https://mochajs.org) and a thin wrapper around `@testing-library/react`.
-Here is an [example](https://github.com/mui/material-ui/blob/6d9f42a637184a3b3cb552d2591e2cf39653025d/packages/mui-material/src/Dialog/Dialog.test.js#L60-L69) with the `Dialog` component.
+Here is an [example](https://github.com/RusticUI/RusticUI/blob/6d9f42a637184a3b3cb552d2591e2cf39653025d/archives/mui-packages/mui-material/src/Dialog/Dialog.test.js#L60-L69) with the `Dialog` component.
 
 Next, we have the **integration** tests. They are mostly used for components that
 act as composite widgets like `Select` or `Menu`.
-Here is an [example](https://github.com/mui/material-ui/blob/814fb60bbd8e500517b2307b6a297a638838ca89/packages/material-ui/test/integration/Menu.test.js#L98-L108) with the `Menu` component.
+Here is an [example](https://github.com/RusticUI/RusticUI/blob/814fb60bbd8e500517b2307b6a297a638838ca89/packages/material-ui/test/integration/Menu.test.js#L98-L108) with the `Menu` component.
 
 #### Create HTML coverage reports
 

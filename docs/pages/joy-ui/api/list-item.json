@@ -151,7 +151,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyListItem",
   "forwardsRefTo": "HTMLLIElement",
-  "filename": "/packages/mui-joy/src/ListItem/ListItem.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/ListItem/ListItem.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-list/\">Lists</a></li></ul>",
   "cssComponent": false

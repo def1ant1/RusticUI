@@ -264,7 +264,10 @@ function getAreaMaintainers(area, packageName) {
 }
 
 function processComponents(packageName) {
-  const componentsDirectory = path.join(thisDirectory, `../packages/mui-${packageName}/src`);
+  const componentsDirectory = path.join(
+    thisDirectory,
+    `../archives/mui-packages/mui-${packageName}/src`,
+  );
   const componentDirectories = fs.readdirSync(componentsDirectory);
   const result = [];
 
@@ -278,7 +281,7 @@ function processComponents(packageName) {
 
     if (componentArea) {
       const maintainers = getAreaMaintainers(componentArea, packageName);
-      const codeowners = `/packages/mui-${packageName}/src/${componentDirectory}/ ${maintainers}`;
+      const codeowners = `/archives/mui-packages/mui-${packageName}/src/${componentDirectory}/ ${maintainers}`;
 
       result.push(codeowners);
     } else {

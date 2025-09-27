@@ -1,7 +1,7 @@
 # Joy UI Rust Parity Audit
 
 This document enumerates the Joy UI surface exported from
-`packages/mui-joy/src/index.ts` and maps every widget to the equivalent (or
+`archives/mui-packages/mui-joy/src/index.ts` and maps every widget to the equivalent (or
 planned) Rust support.  Interactive components — the ones that need a state
 machine rather than purely presentational markup — are called out explicitly so
 we can close gaps in `mui-headless` and keep downstream Joy adapters fully

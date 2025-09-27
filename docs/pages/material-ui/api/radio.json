@@ -112,7 +112,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiRadio",
   "forwardsRefTo": "HTMLSpanElement",
-  "filename": "/packages/mui-material/src/Radio/Radio.js",
+  "filename": "/archives/mui-packages/mui-material/src/Radio/Radio.js",
   "inheritance": { "component": "ButtonBase", "pathname": "/material-ui/api/button-base/" },
   "demos": "<ul><li><a href=\"/material-ui/react-radio-button/\">Radio Group</a></li></ul>",
   "cssComponent": false

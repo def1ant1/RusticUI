@@ -29,6 +29,18 @@ Before starting large efforts, open a GitHub discussion or issue so the maintain
 
 All repetitive chores are encapsulated inside the `Makefile` or `cargo xtask`. Prefer these entry points over ad-hoc scripts.
 
+### Archived JavaScript workspace
+
+Legacy Material UI sources now live under `archives/mui-packages/`. Each folder is a symlink back to
+the historical JavaScript snapshot so Rust-first contributors can trace provenance without
+reintroducing Node-centric build chains. When docs or tooling refer to a `mui-*` package, follow the
+`archives/` path—automation, TypeScript path aliases, and pnpm workspace definitions have all been
+updated to resolve through these archive mirrors.
+
+> **Tip for enterprise teams:** Keep custom scripts pointed at `archives/mui-packages/<package>` and
+> rely on the manifest contract described in `archives/README.md`. Doing so ensures internal CI/CD
+> runners pick up future archive reorganizations without manual edits.
+
 ### Component parity tracker
 
 To monitor progress toward full Material UI coverage run the automated scanner:
@@ -38,7 +50,7 @@ cargo xtask material-parity
 ```
 
 The command invokes the Rust CLI under `tools/material-parity` which parses the
-React source (`packages/mui-material/src`) and generates the consolidated
+React source (`archives/mui-packages/mui-material/src`) and generates the consolidated
 report at `docs/material-component-parity.md`. Keep this artifact up to date in
 pull requests that add or remove components so downstream teams have a reliable
 signal when planning migrations.
@@ -53,7 +65,7 @@ cargo xtask joy-inventory
 ```
 
 The xtask delegates to `tools/joy-parity`, a standalone Rust binary that walks
-`packages/mui-joy/src/**/index.ts` via SWC, normalizes aliases, and compares the
+`archives/mui-packages/mui-joy/src/**/index.ts` via SWC, normalizes aliases, and compares the
 exports with the Rust crates (`crates/rustic-ui-joy` and `crates/rustic-ui-headless`). The
 command rewrites `docs/joy-component-parity.md` with a markdown dashboard plus a
 machine-readable JSON blob embedded in the same file. Commit the refreshed

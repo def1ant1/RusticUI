@@ -148,7 +148,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyAccordionGroup",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/AccordionGroup/AccordionGroup.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/AccordionGroup/AccordionGroup.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-accordion/\">Accordion</a></li></ul>",
   "cssComponent": false

@@ -28,19 +28,21 @@ export default function getBabelConfig(api) {
   const useESModules = api.env(['regressions', 'stable']);
 
   const defaultAlias = {
-    '@mui/material': resolveAliasPath('./packages/mui-material/src'),
-    '@mui/docs': resolveAliasPath('./packages/mui-docs/src'),
+    // Route Babel's module resolver through the archived packages so Jest and tooling reuse the
+    // frozen JavaScript sources instead of the Rust-first crates.
+    '@mui/material': resolveAliasPath('./archives/mui-packages/mui-material/src'),
+    '@mui/docs': resolveAliasPath('./archives/mui-packages/mui-docs/src'),
     '@mui/icons-material': resolveAliasPath(
-      `./packages/mui-icons-material/lib${useESModules ? '/esm' : ''}`,
+      `./archives/mui-packages/mui-icons-material/lib${useESModules ? '/esm' : ''}`,
     ),
-    '@mui/lab': resolveAliasPath('./packages/mui-lab/src'),
+    '@mui/lab': resolveAliasPath('./archives/mui-packages/mui-lab/src'),
     '@mui/internal-markdown': resolveAliasPath('./packages/markdown'),
-    '@mui/styled-engine': resolveAliasPath('./packages/mui-styled-engine/src'),
-    '@mui/styled-engine-sc': resolveAliasPath('./packages/mui-styled-engine-sc/src'),
-    '@mui/system': resolveAliasPath('./packages/mui-system/src'),
-    '@mui/private-theming': resolveAliasPath('./packages/mui-private-theming/src'),
-    '@mui/utils': resolveAliasPath('./packages/mui-utils/src'),
-    '@mui/joy': resolveAliasPath('./packages/mui-joy/src'),
+    '@mui/styled-engine': resolveAliasPath('./archives/mui-packages/mui-styled-engine/src'),
+    '@mui/styled-engine-sc': resolveAliasPath('./archives/mui-packages/mui-styled-engine-sc/src'),
+    '@mui/system': resolveAliasPath('./archives/mui-packages/mui-system/src'),
+    '@mui/private-theming': resolveAliasPath('./archives/mui-packages/mui-private-theming/src'),
+    '@mui/utils': resolveAliasPath('./archives/mui-packages/mui-utils/src'),
+    '@mui/joy': resolveAliasPath('./archives/mui-packages/mui-joy/src'),
     '@mui/internal-docs-utils': resolveAliasPath('./packages-internal/docs-utils/src'),
     '@mui/internal-test-utils': resolveAliasPath('./packages-internal/test-utils/src'),
     docs: resolveAliasPath('./docs'),

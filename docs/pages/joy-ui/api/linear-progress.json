@@ -148,7 +148,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyLinearProgress",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/LinearProgress/LinearProgress.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/LinearProgress/LinearProgress.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-linear-progress/\">Linear Progress</a></li></ul>",
   "cssComponent": false

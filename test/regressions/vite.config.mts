@@ -41,12 +41,27 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@mui/material': path.resolve(WORKSPACE_ROOT, './packages/mui-material/src'),
-      '@mui/docs': path.resolve(WORKSPACE_ROOT, './packages/mui-docs/src'),
-      '@mui/icons-material': path.resolve(WORKSPACE_ROOT, './packages/mui-icons-material/lib/esm'),
-      '@mui/lab': path.resolve(WORKSPACE_ROOT, './packages/mui-lab/src'),
-      '@mui/styled-engine': path.resolve(WORKSPACE_ROOT, './packages/mui-styled-engine/src'),
-      '@mui/styled-engine-sc': path.resolve(WORKSPACE_ROOT, './packages/mui-styled-engine-sc/src'),
+      '@mui/material': path.resolve(
+        WORKSPACE_ROOT,
+        './archives/mui-packages/mui-material/src',
+      ),
+      '@mui/docs': path.resolve(
+        WORKSPACE_ROOT,
+        './archives/mui-packages/mui-docs/src',
+      ),
+      '@mui/icons-material': path.resolve(
+        WORKSPACE_ROOT,
+        './archives/mui-packages/mui-icons-material/lib/esm',
+      ),
+      '@mui/lab': path.resolve(WORKSPACE_ROOT, './archives/mui-packages/mui-lab/src'),
+      '@mui/styled-engine': path.resolve(
+        WORKSPACE_ROOT,
+        './archives/mui-packages/mui-styled-engine/src',
+      ),
+      '@mui/styled-engine-sc': path.resolve(
+        WORKSPACE_ROOT,
+        './archives/mui-packages/mui-styled-engine-sc/src',
+      ),
       /**
        * Intentionally omit an alias for the legacy `@mui/styles` package.
        *
@@ -56,14 +71,26 @@ export default defineConfig({
        * development rather than allowing stale compatibility paths to linger
        * until CI.
        */
-      '@mui/system': path.resolve(WORKSPACE_ROOT, './packages/mui-system/src'),
-      '@mui/private-theming': path.resolve(WORKSPACE_ROOT, './packages/mui-private-theming/src'),
-      '@mui/utils': path.resolve(WORKSPACE_ROOT, './packages/mui-utils/src'),
-      '@mui/material-nextjs': path.resolve(WORKSPACE_ROOT, './packages/mui-material-nextjs/src'),
-      '@mui/joy': path.resolve(WORKSPACE_ROOT, './packages/mui-joy/src'),
+      '@mui/system': path.resolve(
+        WORKSPACE_ROOT,
+        './archives/mui-packages/mui-system/src',
+      ),
+      '@mui/private-theming': path.resolve(
+        WORKSPACE_ROOT,
+        './archives/mui-packages/mui-private-theming/src',
+      ),
+      '@mui/utils': path.resolve(
+        WORKSPACE_ROOT,
+        './archives/mui-packages/mui-utils/src',
+      ),
+      '@mui/material-nextjs': path.resolve(
+        WORKSPACE_ROOT,
+        './archives/mui-packages/mui-material-nextjs/src',
+      ),
+      '@mui/joy': path.resolve(WORKSPACE_ROOT, './archives/mui-packages/mui-joy/src'),
       '@mui/stylis-plugin-rtl': path.resolve(
         WORKSPACE_ROOT,
-        './packages/mui-stylis-plugin-rtl/src',
+        './archives/mui-packages/mui-stylis-plugin-rtl/src',
       ),
       '@mui/internal-docs-utils': path.resolve(
         WORKSPACE_ROOT,

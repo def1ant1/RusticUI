@@ -47,7 +47,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiStepButton",
   "forwardsRefTo": "HTMLButtonElement",
-  "filename": "/packages/mui-material/src/StepButton/StepButton.js",
+  "filename": "/archives/mui-packages/mui-material/src/StepButton/StepButton.js",
   "inheritance": { "component": "ButtonBase", "pathname": "/material-ui/api/button-base/" },
   "demos": "<ul><li><a href=\"/material-ui/react-stepper/\">Stepper</a></li></ul>",
   "cssComponent": false

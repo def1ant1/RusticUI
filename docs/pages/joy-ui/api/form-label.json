@@ -47,7 +47,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyFormLabel",
   "forwardsRefTo": "HTMLLabelElement",
-  "filename": "/packages/mui-joy/src/FormLabel/FormLabel.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/FormLabel/FormLabel.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-input/\">Input</a></li></ul>",
   "cssComponent": false

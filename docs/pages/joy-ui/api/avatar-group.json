@@ -61,7 +61,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyAvatarGroup",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/AvatarGroup/AvatarGroup.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/AvatarGroup/AvatarGroup.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-avatar/\">Avatar</a></li></ul>",
   "cssComponent": false

@@ -79,7 +79,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyListDivider",
   "forwardsRefTo": "HTMLLIElement",
-  "filename": "/packages/mui-joy/src/ListDivider/ListDivider.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/ListDivider/ListDivider.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-list/\">Lists</a></li></ul>",
   "cssComponent": false

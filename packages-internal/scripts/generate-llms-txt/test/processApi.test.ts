@@ -349,14 +349,14 @@ describe('processApi', () => {
         name: 'Component',
         imports: ["import Component from '@mui/material/Component';"],
         props: {},
-        filename: '/packages/mui-material/src/Component/Component.js',
+        filename: '/archives/mui-packages/mui-material/src/Component/Component.js',
       };
 
       const result = processApiJson(apiJson);
 
       expect(result).to.include('## Source code');
       expect(result).to.include(
-        'https://github.com/mui/material-ui/tree/HEAD/packages/mui-material/src/Component/Component.js',
+        'https://github.com/RusticUI/RusticUI/tree/HEAD/archives/mui-packages/mui-material/src/Component/Component.js',
       );
     });
 

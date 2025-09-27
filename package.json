@@ -215,7 +215,7 @@
   },
   "nyc": {
     "include": [
-      "packages/mui*/src/**/*.?(c|m)[jt]s?(x)"
+      "archives/mui-packages/mui-*/src/**/*.?(c|m)[jt]s?(x)"
     ],
     "exclude": [
       "**/*.test.?(c|m)[jt]s?(x)",

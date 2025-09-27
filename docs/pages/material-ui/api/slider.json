@@ -350,7 +350,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiSlider",
   "forwardsRefTo": "HTMLSpanElement",
-  "filename": "/packages/mui-material/src/Slider/Slider.js",
+  "filename": "/archives/mui-packages/mui-material/src/Slider/Slider.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-slider/\">Slider</a></li></ul>",
   "cssComponent": false

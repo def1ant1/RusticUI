@@ -93,7 +93,7 @@ export default defineConfig(
   ),
   // Test start
   {
-    files: [`**/*${EXTENSION_TEST_FILE}`, 'packages/mui-codemod/testUtils/**/*'],
+    files: [`**/*${EXTENSION_TEST_FILE}`, 'archives/mui-packages/mui-codemod/testUtils/**/*'],
     extends: createTestConfig({
       useMocha: true,
     }),
@@ -225,8 +225,11 @@ export default defineConfig(
     },
   },
   {
-    files: [`packages/*/src/**/*${EXTENSION_TS}`],
-    ignores: ['**/*.d.ts', '**/*.spec.*', 'packages/mui-joy/**/*'],
+    files: [
+      `archives/mui-packages/*/src/**/*${EXTENSION_TS}`,
+      `packages/*/src/**/*${EXTENSION_TS}`,
+    ],
+    ignores: ['**/*.d.ts', '**/*.spec.*', 'archives/mui-packages/mui-joy/**/*'],
     rules: {
       'material-ui/mui-name-matches-component-name': 'error',
     },
@@ -238,9 +241,9 @@ export default defineConfig(
       'import/extensions': ['error', 'ignorePackages'],
     },
   },
-  // Migrated config from packages/mui-icons-material/.eslintrc.js
+  // Migrated config from packages/mui-icons-material/.eslintrc.js (now symlinked under archives)
   {
-    files: ['packages/mui-icons-material/custom/**/*'],
+    files: ['archives/mui-packages/mui-icons-material/custom/**/*'],
     rules: {
       'import/no-unresolved': 'off',
       'import/extensions': 'off',

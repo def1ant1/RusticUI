@@ -226,7 +226,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiBadge",
   "forwardsRefTo": "HTMLSpanElement",
-  "filename": "/packages/mui-material/src/Badge/Badge.js",
+  "filename": "/archives/mui-packages/mui-material/src/Badge/Badge.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-avatar/\">Avatar</a></li>\n<li><a href=\"/material-ui/react-badge/\">Badge</a></li></ul>",
   "cssComponent": false

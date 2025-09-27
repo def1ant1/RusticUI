@@ -2,7 +2,7 @@
 productId: material-ui
 title: InitColorSchemeScript component
 components: InitColorSchemeScript
-githubSource: packages/mui-material/src/InitColorSchemeScript
+githubSource: archives/mui-packages/mui-material/src/InitColorSchemeScript
 ---
 
 # InitColorSchemeScript

@@ -146,7 +146,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyTabList",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/TabList/TabList.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/TabList/TabList.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-tabs/\">Tabs</a></li></ul>",
   "cssComponent": false

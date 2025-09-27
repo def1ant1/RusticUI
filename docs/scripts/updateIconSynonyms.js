@@ -2,10 +2,13 @@
 import path from 'path';
 import fs from 'node:fs';
 import fetch from 'cross-fetch';
+// Pull icons from the archived npm snapshot instead of the active workspace. The alias keeps
+// enterprise consumers aware that `archives/mui-packages/` is the canonical location for the
+// frozen JavaScript packages.
 import * as mui from '@mui/icons-material';
 import synonyms from 'docs/data/material/components/material-icons/synonyms';
 // eslint-disable-next-line import/no-relative-packages
-import myDestRewriter from '../../packages/mui-icons-material/renameFilters/material-design-icons';
+import myDestRewriter from '../../archives/mui-packages/mui-icons-material/renameFilters/material-design-icons';
 
 function not(a, b) {
   return a.filter((value) => !b.includes(value));

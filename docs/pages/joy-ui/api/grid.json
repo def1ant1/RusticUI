@@ -15,7 +15,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyGrid",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/Grid/Grid.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Grid/Grid.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-grid/\">Grid</a></li></ul>",
   "cssComponent": true

@@ -78,7 +78,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiContainer",
   "forwardsRefTo": "HTMLElement",
-  "filename": "/packages/mui-material/src/Container/Container.js",
+  "filename": "/archives/mui-packages/mui-material/src/Container/Container.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-container/\">Container</a></li></ul>",
   "cssComponent": false

@@ -69,7 +69,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyDivider",
   "forwardsRefTo": "HTMLHRElement",
-  "filename": "/packages/mui-joy/src/Divider/Divider.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Divider/Divider.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-divider/\">Divider</a></li></ul>",
   "cssComponent": false

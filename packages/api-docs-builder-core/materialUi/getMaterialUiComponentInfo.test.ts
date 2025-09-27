@@ -7,7 +7,7 @@ import { getMaterialUiComponentInfo } from './getMaterialUiComponentInfo';
 describe('getMaterialUiComponentInfo', () => {
   it('return correct info for material component file', () => {
     const componentInfo = getMaterialUiComponentInfo(
-      path.join(process.cwd(), `/packages/mui-material/src/Button/Button.js`),
+      path.join(process.cwd(), `/archives/mui-packages/mui-material/src/Button/Button.js`),
     );
     sinon.assert.match(componentInfo, {
       name: 'Button',

@@ -4,7 +4,7 @@ title: React Typography component
 components: Typography
 githubLabel: 'scope: typography'
 materialDesign: https://m2.material.io/design/typography/the-type-system.html
-githubSource: packages/mui-material/src/Typography
+githubSource: archives/mui-packages/mui-material/src/Typography
 ---
 
 # Typography

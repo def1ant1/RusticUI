@@ -200,7 +200,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyMenuButton",
   "forwardsRefTo": "HTMLButtonElement",
-  "filename": "/packages/mui-joy/src/MenuButton/MenuButton.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/MenuButton/MenuButton.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-menu/\">Menu</a></li></ul>",
   "cssComponent": false

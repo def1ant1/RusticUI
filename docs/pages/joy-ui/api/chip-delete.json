@@ -128,7 +128,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyChipDelete",
   "forwardsRefTo": "HTMLButtonElement",
-  "filename": "/packages/mui-joy/src/ChipDelete/ChipDelete.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/ChipDelete/ChipDelete.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-chip/\">Chip</a></li></ul>",
   "cssComponent": false

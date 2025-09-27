@@ -4,7 +4,7 @@ title: React Paper component
 components: Paper
 githubLabel: 'scope: paper'
 materialDesign: https://m2.material.io/design/environment/elevation.html
-githubSource: packages/mui-material/src/Paper
+githubSource: archives/mui-packages/mui-material/src/Paper
 ---
 
 # Paper

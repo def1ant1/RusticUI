@@ -33,7 +33,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiListItemIcon",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/ListItemIcon/ListItemIcon.js",
+  "filename": "/archives/mui-packages/mui-material/src/ListItemIcon/ListItemIcon.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-list/\">Lists</a></li></ul>",
   "cssComponent": false

@@ -3,7 +3,7 @@ productId: material-ui
 title: React Badge component
 components: Badge
 githubLabel: 'scope: badge'
-githubSource: packages/mui-material/src/Badge
+githubSource: archives/mui-packages/mui-material/src/Badge
 ---
 
 # Badge
