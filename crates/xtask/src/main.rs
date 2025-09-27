@@ -54,6 +54,8 @@ enum Commands {
     },
     /// Run Clippy across the workspace and deny warnings.
     Clippy,
+    /// Audit third-party crates for advisories, bans, and license issues.
+    Deny,
     /// Execute the default test suites for all crates.
     ///
     /// After the workspace tests finish we compile the `joy-*` WebAssembly
@@ -140,6 +142,7 @@ fn main() -> Result<()> {
     match xtask.command {
         Commands::Fmt { check } => fmt(check),
         Commands::Clippy => clippy(),
+        Commands::Deny => deny(),
         Commands::Test => test(),
         Commands::WasmTest => wasm_test(),
         Commands::Doc => doc(),
@@ -231,6 +234,17 @@ fn clippy() -> Result<()> {
         .arg("--")
         .arg("-D")
         .arg("warnings");
+    run(cmd)
+}
+
+fn deny() -> Result<()> {
+    println!(
+        "[xtask] auditing dependencies for security advisories, license drift, and banned crates"
+    );
+
+    let mut cmd = Command::new("cargo");
+    cmd.arg("deny").arg("check");
+    cmd.current_dir(workspace_root());
     run(cmd)
 }
 

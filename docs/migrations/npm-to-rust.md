@@ -199,6 +199,20 @@ jobs:
         run: pnpm docs:build
 ```
 
+## 7. Audit the Rust supply chain
+
+Run RusticUI's new dependency audit before finishing the migration:
+
+```bash
+cargo xtask deny
+# or
+make deny
+```
+
+The command wraps `cargo deny check` with verbose logging so regulated teams can capture advisories, yanked crates, and license
+drift alongside the rest of the migration evidence. Commit any required `deny.toml` exceptions with rationale comments and mirror
+the command in CI to keep nightly releases compliant.
+
 Because every command funnels through `cargo xtask`, the same automation runs locally, in nightly jobs, and inside release pipelines.
 
 ## 7. Troubleshooting archived npm dependencies

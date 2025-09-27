@@ -3,6 +3,22 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-05-06 – Supply-chain automation and archive governance
+
+### Highlights
+
+- Finalized the JavaScript package archival plan by wiring the new `deny` make target and xtask guardrail into CI, ensuring the Rust crates and frozen npm snapshots stay coordinated for regulated adopters.
+- Added a `cargo xtask deny` subcommand that wraps `cargo deny check` with workspace-aware logging so dependency advisories, license drift, and yanked crates surface alongside the existing `fmt` and `clippy` checks.
+- Updated the npm-to-Rust migration guide and contributor playbook to call out the new audit requirement, making it clear that every migration run must finish with a Rust-native supply-chain review.
+
+### Breaking changes
+
+- CI and local workflows now require the `cargo-deny` binary. Downstream pipelines must install the tool (for example via `cargo install cargo-deny --locked`) before invoking `cargo xtask deny`, otherwise the lint stage will fail fast.
+
+### Backlog
+
+- [ ] Automate cargo-deny database caching in CI so nightly runs avoid re-downloading the advisory index on large monorepos.
+
 ## 2025-04-22 – RusticUI styling macros only
 
 ### Highlights

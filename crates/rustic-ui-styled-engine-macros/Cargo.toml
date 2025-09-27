@@ -2,6 +2,7 @@
 name = "rustic-ui-styled-engine-macros"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 description = "Procedural macros for rustic-ui-styled-engine"
 repository = "https://github.com/apotheon-ai/rusticui"
 homepage = "https://apotheon.ai/rusticui"

@@ -6,9 +6,9 @@ description = "Shared automation-first Joy workflow state used by cross-framewor
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
-rustic-ui-joy = { path = "../../crates/rustic-ui-joy", default-features = false }
-rustic-ui-system = { path = "../../crates/rustic-ui-system" }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", version = "0.1.0"}
+rustic-ui-joy = { path = "../../crates/rustic-ui-joy", default-features = false , version = "0.1.0"}
+rustic-ui-system = { path = "../../crates/rustic-ui-system", version = "0.1.0"}
 
 [features]
 default = []

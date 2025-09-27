@@ -2,6 +2,7 @@
 name = "rustic-ui-utils"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 description = "Utility helpers for the Material UI Rust ecosystem."
 repository = "https://github.com/apotheon-ai/rusticui"
 homepage = "https://apotheon.ai/rusticui"

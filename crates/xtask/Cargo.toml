@@ -2,6 +2,7 @@
 name = "xtask"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 publish = false
 
 [dependencies]
@@ -9,8 +10,8 @@ clap = { workspace = true, features = ["derive", "std"] }
 anyhow = { workspace = true }
 serde_json.workspace = true
 toml.workspace = true
-rustic-ui-system = { path = "../rustic-ui-system" }
-rustic-ui-design-tokens = { path = "../rustic-ui-design-tokens" }
+rustic-ui-system = { path = "../rustic-ui-system", version = "0.1.0" }
+rustic-ui-design-tokens = { path = "../rustic-ui-design-tokens", version = "0.1.0" }
 walkdir.workspace = true
 
 [dev-dependencies]

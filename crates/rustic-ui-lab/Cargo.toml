@@ -2,6 +2,7 @@
 name = "rustic-ui-lab"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 description = "Experimental widgets for MUI Rust. These APIs are unstable and subject to change."
 repository = "https://github.com/apotheon-ai/rusticui"
 homepage = "https://apotheon.ai/rusticui"

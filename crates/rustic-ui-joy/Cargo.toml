@@ -2,6 +2,7 @@
 name = "rustic-ui-joy"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 description = "Joy UI components implemented in Rust leveraging rustic-ui-system."
 repository = "https://github.com/apotheon-ai/rusticui"
 homepage = "https://apotheon.ai/rusticui"
@@ -13,8 +14,8 @@ categories = ["gui"]
 maintenance = { status = "experimental" }
 
 [dependencies]
-rustic-ui-system = { path = "../rustic-ui-system" }
-rustic-ui-headless = { path = "../rustic-ui-headless" }
+rustic-ui-system = { path = "../rustic-ui-system", version = "0.1.0" }
+rustic-ui-headless = { path = "../rustic-ui-headless", version = "0.1.0" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }

@@ -3,7 +3,7 @@
 # underlying commands so contributors and CI use the same logic.
 
 .RECIPEPREFIX := >
-.PHONY: build fmt clippy test wasm-test doc icon-update coverage bench
+.PHONY: build fmt clippy deny test wasm-test doc icon-update coverage bench
 
 # Format the entire workspace. Use `cargo xtask fmt --check` in CI.
 fmt:
@@ -12,6 +12,10 @@ fmt:
 # Lint all crates with Clippy and deny warnings.
 clippy:
 > @cargo xtask clippy
+
+# Audit dependencies for advisories, yanked crates, and license drift.
+deny:
+> @cargo xtask deny
 
 # Run the standard test suites for every crate.
 test:

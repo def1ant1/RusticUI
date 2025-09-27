@@ -8,10 +8,10 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 dioxus = { workspace = true, features = ["macro", "hooks", "html"] }
 dioxus-web = { workspace = true, features = ["file_engine"] }
-joy-workflows-core = { path = "../joy-workflows-core" }
-rustic-ui-joy = { path = "../../crates/rustic-ui-joy", default-features = false, features = ["dioxus"] }
-rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["dioxus"] }
-rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+joy-workflows-core = { path = "../joy-workflows-core", version = "0.1.0"}
+rustic-ui-joy = { path = "../../crates/rustic-ui-joy", default-features = false, features = ["dioxus"] , version = "0.1.0"}
+rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["dioxus"] , version = "0.1.0"}
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", version = "0.1.0"}
 dioxus-ssr = { workspace = true, optional = true }
 
 [features]
