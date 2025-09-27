@@ -60,7 +60,9 @@ Use the automation-first migration routine to avoid hand editing thousands of ca
 5. Rerun your CI entrypoints (see [Rust CI quick reference](#rust-ci-quick-reference)).
 
 The [`docs/mui-compatibility.md`](docs/mui-compatibility.md) guide expands on the workflow and documents
-automation-friendly guardrails for large-scale migrations.
+automation-friendly guardrails for large-scale migrations. When you are ready to replace the historical pnpm icon/font scripts,
+follow the [`docs/migrations/npm-to-rust.md`](docs/migrations/npm-to-rust.md) guide. It documents how `cargo xtask icons-bundle`
+and the other Rust-first tasks reproduce the JavaScript build outputs while eliminating manual asset updates.
 
 ### Accessing archived JavaScript packages
 

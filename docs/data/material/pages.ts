@@ -307,6 +307,10 @@ const pages: MuiPage[] = [
         title: 'Migration from @material-ui/pickers',
       },
       {
+        pathname: '/material-ui/migration/npm-to-rust',
+        title: 'Migrate from npm to RusticUI crates',
+      },
+      {
         pathname: '/material-ui/migration/v7',
         subheader: 'Upgrade to v7',
         children: [
