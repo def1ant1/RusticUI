@@ -1,0 +1,21 @@
+[package]
+name = "rustic-ui-design-tokens"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Shared helpers for packaging RusticUI design token bundles."
+
+[dependencies]
+anyhow.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+sha2.workspace = true
+walkdir.workspace = true
+zip.workspace = true
+tar = { workspace = true }
+flate2.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile = "3"
