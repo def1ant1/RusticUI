@@ -1,53 +1,36 @@
-<!-- markdownlint-disable-next-line -->
-<p align="center">
-  <a href="https://mui.com/joy-ui/getting-started/" rel="noopener" target="_blank"><img width="150" height="133" src="https://mui.com/static/logo.svg" alt="Joy UI logo"></a>
-</p>
+# Archive notice: mui-joy
 
-<h1 align="center">Joy UI</h1>
+This directory preserves the React-first Joy UI package for posterity while component innovation moves into the cross-framework Rust crate.
 
-Joy UI is an open-source React component library that implements MUI's own design principles. It's comprehensive and can be used in production out of the box.
+> **Enterprise rollout note:** Regulated tenants must register this archive in [`archives/mui-packages/_template/archive.manifest.toml`](../../archives/mui-packages/_template/archive.manifest.toml) before promoting changes. Use [`tools/archive-manifests/merge.ts`](../../tools/archive-manifests/merge.ts) to compose environment-specific overrides instead of copying bespoke scripts.
 
-## Installation
+## Successor Rust crate
 
-Install the package in your project directory with:
+- Path: [`crates/rustic-ui-joy`](../../crates/rustic-ui-joy)
+  - Implements Joy UI components with shared state machines and renderer adapters so the design system ships consistently across web and native targets.
+
+## Sync back from Rust
+
+Use the automation-friendly snippet below to mirror the current crate implementation back into the archive for historical diffing. Execute it from the repository root whenever a release branch demands a refreshed snapshot:
 
 ```bash
-npm install @mui/joy @emotion/react @emotion/styled
+#!/usr/bin/env bash
+set -euo pipefail
+
+crate_name="rustic-ui-joy"
+crate_root="crates/rustic-ui-joy"
+archive_root="archives/mui-packages/mui-joy"
+
+cargo fmt -p "${crate_name}"
+cargo test -p "${crate_name}" --all-features
+
+rsync --archive --delete \
+  --exclude '/target/' \
+  --exclude '/.git/' \
+  "${crate_root}/" \
+  "${archive_root}/rust-reference"
+
+pnpm exec prettier --write "${archive_root}/rust-reference"
 ```
 
-## Documentation
-
-Visit [https://mui.com/joy-ui/getting-started/](https://mui.com/joy-ui/getting-started/) to view the full documentation.
-
-## Questions
-
-For how-to questions that don't involve making changes to the code base, please use [Stack Overflow](https://stackoverflow.com/questions/tagged/joy-ui) instead of GitHub issues.
-Use the "joy-ui" tag on Stack Overflow to make it easier for the community to find your question.
-
-## Examples
-
-The documentation features [a collection of example projects using Joy UI](https://github.com/mui/material-ui/tree/master/examples).
-
-## Contributing
-
-Read the [contributing guide](/CONTRIBUTING.md) to learn about the development process, how to propose bug fixes and improvements, and how to build and test your changes.
-
-Contributing to Joy UI is about more than just issues and pull requests!
-There are many other ways to [support Joy UI](https://mui.com/material-ui/getting-started/faq/#mui-is-awesome-how-can-i-support-the-project) beyond contributing to the code base.
-
-## Changelog
-
-The [changelog](https://github.com/mui/material-ui/releases) is regularly updated to reflect what's changed in each new release.
-
-## Roadmap
-
-Future plans and high-priority features and enhancements can be found in the [roadmap](https://mui.com/material-ui/discover-more/roadmap/).
-
-## License
-
-This project is licensed under the terms of the
-[MIT license](/LICENSE).
-
-## Security
-
-For details of supported versions and contact details for reporting security issues, please refer to the [security policy](https://github.com/mui/material-ui/security/policy).
+> **Rollout manifest hook:** After syncing, update the manifest per [`docs/archives/archive-manifests.md`](../../docs/archives/archive-manifests.md) so CI runners consume the correct revision.

@@ -1,41 +1,36 @@
-# @mui/envinfo
+# Archive notice: mui-envinfo
 
-Prints information about the current environment relevant to MUI packages to the console.
-Please use this package if you report [issues to MUI](https://github.com/mui/material-ui/issues).
+This directory preserves the Node-based environment diagnostics utility so prior support workflows stay reproducible as diagnostics move into Rust.
 
-## Usage
+> **Enterprise rollout note:** Regulated tenants must register this archive in [`archives/mui-packages/_template/archive.manifest.toml`](../../archives/mui-packages/_template/archive.manifest.toml) before promoting changes. Use [`tools/archive-manifests/merge.ts`](../../tools/archive-manifests/merge.ts) to compose environment-specific overrides instead of copying bespoke scripts.
+
+## Successor Rust crate
+
+- Path: [`crates/rustic-ui-utils`](../../crates/rustic-ui-utils)
+  - Ships cross-platform environment probes and support tooling implemented in Rust, replacing the JavaScript envinfo helper with typed automation.
+
+## Sync back from Rust
+
+Use the automation-friendly snippet below to mirror the current crate implementation back into the archive for historical diffing. Execute it from the repository root whenever a release branch demands a refreshed snapshot:
 
 ```bash
-$ npx @mui/envinfo
+#!/usr/bin/env bash
+set -euo pipefail
 
-  System:
-    OS: Linux 5.4 Ubuntu 20.04.1 LTS (Focal Fossa)
-  Binaries:
-    Node: 12.20.0 - ~/.nvm/versions/node/v12.20.0/bin/node
-    Yarn: 1.22.4 - /usr/bin/yarn
-    npm: 6.14.8 - ~/.nvm/versions/node/v12.20.0/bin/npm
-  Browsers:
-    Chrome: 87.0.4280.66
-    Firefox: 83.0
-  npmPackages:
-    @emotion/react: ^11.0.0 => 11.1.1
-    @emotion/styled: ^11.0.0 => 11.0.0
-    @mui/codemod:  5.0.0-alpha.17
-    @mui/material:  5.0.0-alpha.18
-    @mui/docs:  5.0.0-alpha.1
-    @mui/envinfo:  2.0.0
-    @mui/icons-material:  5.0.0-alpha.15
-    @mui/lab:  5.0.0-alpha.18
-    @mui/styled-engine:  5.0.0-alpha.18
-    @mui/styled-engine-sc:  5.0.0-alpha.18
-    @mui/styles:  5.0.0-alpha.18
-    @mui/system:  5.0.0-alpha.18
-    @mui/types:  5.1.0
-    @mui/base:  5.0.0-alpha.18
-    @mui/utils:  5.0.0-alpha.18
-    @types/react: ^17.0.0 => 17.0.0
-    react: ^16.14.0 => 16.14.0
-    react-dom: ^16.14.0 => 16.14.0
-    styled-components:  5.2.1
-    typescript: ^4.0.2 => 4.0.5
+crate_name="rustic-ui-utils"
+crate_root="crates/rustic-ui-utils"
+archive_root="archives/mui-packages/mui-envinfo"
+
+cargo fmt -p "${crate_name}"
+cargo test -p "${crate_name}" --all-features
+
+rsync --archive --delete \
+  --exclude '/target/' \
+  --exclude '/.git/' \
+  "${crate_root}/" \
+  "${archive_root}/rust-reference"
+
+pnpm exec prettier --write "${archive_root}/rust-reference"
 ```
+
+> **Rollout manifest hook:** After syncing, update the manifest per [`docs/archives/archive-manifests.md`](../../docs/archives/archive-manifests.md) so CI runners consume the correct revision.

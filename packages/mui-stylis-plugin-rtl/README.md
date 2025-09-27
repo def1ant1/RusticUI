@@ -1,51 +1,36 @@
-# @mui/stylis-plugin-rtl
+# Archive notice: mui-stylis-plugin-rtl
 
-Stylis RTL plugin for Material UI.
+This directory preserves the stylis RTL plugin so historical RTL diffs stay reproducible while Rust centralizes direction-aware styling.
 
-> Note: this is a fork of [stylis-plugin-rtl](https://github.com/styled-components/stylis-plugin-rtl) to fix issues with CSS layers and to support the latest version of Stylis.
+> **Enterprise rollout note:** Regulated tenants must register this archive in [`archives/mui-packages/_template/archive.manifest.toml`](../../archives/mui-packages/_template/archive.manifest.toml) before promoting changes. Use [`tools/archive-manifests/merge.ts`](../../tools/archive-manifests/merge.ts) to compose environment-specific overrides instead of copying bespoke scripts.
 
-## Installation
+## Successor Rust crate
+
+- Path: [`crates/rustic-ui-styled-engine`](../../crates/rustic-ui-styled-engine)
+  - Encapsulates bidirectional layout transforms and streaming style rewrites, ensuring RTL support is handled within the Rust theming engine.
+
+## Sync back from Rust
+
+Use the automation-friendly snippet below to mirror the current crate implementation back into the archive for historical diffing. Execute it from the repository root whenever a release branch demands a refreshed snapshot:
 
 ```bash
-npm install @mui/stylis-plugin-rtl @emotion/cache stylis
+#!/usr/bin/env bash
+set -euo pipefail
+
+crate_name="rustic-ui-styled-engine"
+crate_root="crates/rustic-ui-styled-engine"
+archive_root="archives/mui-packages/mui-stylis-plugin-rtl"
+
+cargo fmt -p "${crate_name}"
+cargo test -p "${crate_name}" --all-features
+
+rsync --archive --delete \
+  --exclude '/target/' \
+  --exclude '/.git/' \
+  "${crate_root}/" \
+  "${archive_root}/rust-reference"
+
+pnpm exec prettier --write "${archive_root}/rust-reference"
 ```
 
-## Usage
-
-```js
-import * as React from 'react';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import TextField from '@mui/material/TextField';
-import rtlPlugin from '@mui/stylis-plugin-rtl';
-import { prefixer } from 'stylis';
-import { CacheProvider } from '@emotion/react';
-import createCache from '@emotion/cache';
-
-const theme = createTheme({
-  direction: 'rtl',
-});
-
-const cacheRtl = createCache({
-  key: 'muirtl',
-  stylisPlugins: [prefixer, rtlPlugin],
-});
-
-export default function RtlDemo() {
-  return (
-    <CacheProvider value={cacheRtl}>
-      <ThemeProvider theme={theme}>
-        <div dir="rtl">
-          <TextField
-            label="ملصق"
-            placeholder="العنصر النائب"
-            helperText="هذا نص مساعد"
-            variant="outlined"
-          />
-        </div>
-      </ThemeProvider>
-    </CacheProvider>
-  );
-}
-```
-
-For more information, see the [RTL documentation](https://mui.com/material-ui/guides/right-to-left/).
+> **Rollout manifest hook:** After syncing, update the manifest per [`docs/archives/archive-manifests.md`](../../docs/archives/archive-manifests.md) so CI runners consume the correct revision.
