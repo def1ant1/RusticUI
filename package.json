@@ -40,6 +40,7 @@
     "extract-error-codes": "code-infra extract-error-codes --errorCodesPath docs/public/static/error-codes.json --skip @mui/core-downloads-tracker @mui/envinfo @mui/docs @mui/codemod @mui/icons-material",
     "template:screenshot": "cross-env BABEL_ENV=development babel-node --extensions \".tsx,.ts,.js\" ./docs/scripts/generateTemplateScreenshots",
     "jsonlint": "code-infra jsonlint",
+    "lint": "cargo xtask fmt --check && pnpm eslint",
     "eslint": "eslint . --cache --report-unused-disable-directives --ext .js,.ts,.tsx --max-warnings 0",
     "eslint:ci": "eslint . --report-unused-disable-directives --ext .js,.ts,.tsx --max-warnings 0",
     "stylelint": "stylelint --reportInvalidScopeDisables --reportNeedlessDisables \"docs/**/*.?(c|m)[jt]s?(x)\" --ignore-path .gitignore",

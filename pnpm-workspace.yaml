@@ -1,16 +1,37 @@
 packages:
-  # Legacy Material UI sources are archived under `archives/mui-packages/` to keep Node-centric
-  # tooling isolated from the Rust-first workspace. Including the directory here lets pnpm filter
-  # against those snapshots without pointing new contributors at the deprecated layout.
-  - archives/mui-packages/*
-  - archives/mui-packages/*/test
-  # Active Rust and TypeScript utilities that continue to evolve alongside the archives.
+  # Active workspace packages only. JavaScript snapshots now live under `archives/` and
+  # are intentionally excluded so recursive pnpm/Nx commands stay focused on the
+  # Rust-first toolchain.
+  - apps/*
+  - docs
+  - docs/*
   - packages/*
   - packages-internal/*
-  - docs
   - test
   - test/*
-  - apps/*
+
+# Archived npm packages remain available for tooling that still needs to inspect
+# the historical sources. Consumers should reference them through the catalog
+# entries below (e.g. `"catalog:@mui/material"`) or by reading the mapping in
+# automation scripts instead of re-adding the directories to the workspace.
+catalog:
+  '@mui/codemod': 'link:archives/mui-packages/mui-codemod'
+  '@mui/core-downloads-tracker': 'link:archives/mui-packages/mui-core-downloads-tracker'
+  '@mui/docs': 'link:archives/mui-packages/mui-docs'
+  '@mui/envinfo': 'link:archives/mui-packages/mui-envinfo'
+  '@mui/icons-material': 'link:archives/mui-packages/mui-icons-material'
+  '@mui/joy': 'link:archives/mui-packages/mui-joy'
+  '@mui/lab': 'link:archives/mui-packages/mui-lab'
+  '@mui/material': 'link:archives/mui-packages/mui-material'
+  '@mui/material-nextjs': 'link:archives/mui-packages/mui-material-nextjs'
+  '@mui/material-pigment-css': 'link:archives/mui-packages/mui-material-pigment-css'
+  '@mui/private-theming': 'link:archives/mui-packages/mui-private-theming'
+  '@mui/styled-engine': 'link:archives/mui-packages/mui-styled-engine'
+  '@mui/styled-engine-sc': 'link:archives/mui-packages/mui-styled-engine-sc'
+  '@mui/stylis-plugin-rtl': 'link:archives/mui-packages/mui-stylis-plugin-rtl'
+  '@mui/system': 'link:archives/mui-packages/mui-system'
+  '@mui/types': 'link:archives/mui-packages/mui-types'
+  '@mui/utils': 'link:archives/mui-packages/mui-utils'
 
 patchedDependencies:
   styled-components: patches/styled-components.patch

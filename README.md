@@ -62,6 +62,16 @@ Use the automation-first migration routine to avoid hand editing thousands of ca
 The [`docs/mui-compatibility.md`](docs/mui-compatibility.md) guide expands on the workflow and documents
 automation-friendly guardrails for large-scale migrations.
 
+### Accessing archived JavaScript packages
+
+Historical JavaScript packages continue to live under `archives/mui-packages/`, but the pnpm workspace no longer
+indexes them. This keeps recursive commands (like `pnpm -r lint`) and Nx pipelines focused on the Rust-first crates and
+TypeScript bridges that ship to production. Tooling that still needs to read the old sources should reference the
+shared pnpm catalog entries instead of adding the directories back into the workspace. For example, declare a
+dependency as `"catalog:@mui/material"` or inspect the mapping emitted by `pnpm config list --json` to locate
+`archives/mui-packages/mui-material`. Scripts that previously globbed through `archives/mui-packages/**` should
+consume the catalog so they automatically follow any future archive relocations.
+
 ## Design system automation with `css_with_theme!`
 
 Enterprise teams demand consistent design tokens without repetitive wiring. The RusticUI theming macros automatically inject the

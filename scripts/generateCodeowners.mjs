@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import childProcess from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as url from 'url';
@@ -190,6 +191,51 @@ const additionalRules = {
 };
 
 const thisDirectory = url.fileURLToPath(new URL('.', import.meta.url));
+const workspaceRoot = path.resolve(thisDirectory, '..');
+let archiveCatalogCache;
+
+function readArchiveCatalog() {
+  if (!archiveCatalogCache) {
+    try {
+      const output = childProcess.execSync('pnpm config list --json', { encoding: 'utf8' });
+      const config = JSON.parse(output);
+
+      archiveCatalogCache = Object.entries(config.catalog ?? {}).reduce((acc, [name, spec]) => {
+        if (typeof spec === 'string' && spec.startsWith('link:archives/mui-packages/')) {
+          acc[name] = spec.replace(/^link:/, '');
+        }
+        return acc;
+      }, {});
+    } catch (error) {
+      throw new Error(
+        `Failed to read pnpm catalog while resolving archive packages. Ensure pnpm is installed and pnpm-workspace.yaml defines the archive mappings. Original error: ${error.message}`,
+      );
+    }
+  }
+
+  return archiveCatalogCache;
+}
+
+function resolveArchivePackageDir(packageName) {
+  const packageKey = packageName.startsWith('@') ? packageName : `@mui/${packageName}`;
+  const catalog = readArchiveCatalog();
+  const catalogEntry = catalog[packageKey];
+  if (catalogEntry) {
+    return catalogEntry;
+  }
+
+  const archiveFallback = `archives/mui-packages/mui-${packageName}`;
+  if (fs.existsSync(path.join(workspaceRoot, archiveFallback))) {
+    return archiveFallback;
+  }
+
+  const packageFallback = `packages/mui-${packageName}`;
+  if (fs.existsSync(path.join(workspaceRoot, packageFallback))) {
+    return packageFallback;
+  }
+
+  return null;
+}
 
 const buffer = [];
 
@@ -264,10 +310,21 @@ function getAreaMaintainers(area, packageName) {
 }
 
 function processComponents(packageName) {
-  const componentsDirectory = path.join(
-    thisDirectory,
-    `../archives/mui-packages/mui-${packageName}/src`,
-  );
+  const archiveDir = resolveArchivePackageDir(packageName);
+  if (!archiveDir) {
+    console.info(
+      `Skipping CODEOWNERS component entries for "${packageName}" because the archive path is not mapped in pnpm-workspace.yaml.`,
+    );
+    return '';
+  }
+
+  const componentsDirectory = path.join(workspaceRoot, archiveDir, 'src');
+  if (!fs.existsSync(componentsDirectory)) {
+    console.info(
+      `Skipping CODEOWNERS component entries for "${packageName}" because ${componentsDirectory} does not exist.`,
+    );
+    return '';
+  }
   const componentDirectories = fs.readdirSync(componentsDirectory);
   const result = [];
 
@@ -281,7 +338,7 @@ function processComponents(packageName) {
 
     if (componentArea) {
       const maintainers = getAreaMaintainers(componentArea, packageName);
-      const codeowners = `/archives/mui-packages/mui-${packageName}/src/${componentDirectory}/ ${maintainers}`;
+      const codeowners = `/${archiveDir}/src/${componentDirectory}/ ${maintainers}`;
 
       result.push(codeowners);
     } else {

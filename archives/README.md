@@ -1,9 +1,11 @@
 # Archives
 
 RusticUI carries forward legacy Material UI packages in a Rust-first workspace. The `archives/` tree persists the
-JavaScript-era sources so we can reference prior art without forking workflows back to Node-based bundlers. When a
-package graduates into the maintained workspace we migrate it into a Rust crate or automation-driven TypeScript bridge
-and keep the historical bundle here for provenance.
+JavaScript-era sources so we can reference prior art without forking workflows back to Node-based bundlers. The active pnpm
+workspace intentionally excludes these directories; automation should rely on the catalog entries defined in
+`pnpm-workspace.yaml` (for example `catalog:@mui/material` → `archives/mui-packages/mui-material`). When a package
+graduates into the maintained workspace we migrate it into a Rust crate or automation-driven TypeScript bridge and keep the
+historical bundle here for provenance.
 
 ## Rust-first toolchain reference
 
