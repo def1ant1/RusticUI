@@ -10,6 +10,7 @@ import { defineConfig } from 'eslint/config';
 import eslintPluginConsistentName from 'eslint-plugin-consistent-default-export-name';
 import eslintPluginReact from 'eslint-plugin-react';
 import * as path from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'url';
 
 const filename = fileURLToPath(import.meta.url);
@@ -52,6 +53,24 @@ const NO_RESTRICTED_IMPORTS_PATTERNS_DEEPLY_NESTED = [
   },
 ];
 
+const archivedMuiPackagesDir = path.join(dirname, 'archives/mui-packages');
+const archivedMuiRuleTargets = readdirSync(archivedMuiPackagesDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && entry.name.startsWith('mui-'))
+  .map((entry) => {
+    const srcDir = path.join(archivedMuiPackagesDir, entry.name, 'src');
+    if (!existsSync(srcDir)) {
+      return null;
+    }
+
+    const relativeSrc = path.posix.join('archives', 'mui-packages', entry.name, 'src');
+    return {
+      name: entry.name,
+      srcGlob: `${relativeSrc}/**/*${EXTENSION_TEST_FILE}`,
+      indexPattern: `**/${relativeSrc}/index.*`,
+    };
+  })
+  .filter(Boolean);
+
 export default defineConfig(
   {
     name: 'Base ESLint Configuration',
@@ -73,24 +92,22 @@ export default defineConfig(
       '@typescript-eslint/no-require-imports': 'off', // 133
     },
   },
-  ...['mui-material', 'mui-system', 'mui-utils', 'mui-lab', 'mui-utils', 'mui-styled-engine'].map(
-    (packageName) => ({
-      files: [`packages/${packageName}/src/**/*${EXTENSION_TEST_FILE}`],
-      ignores: ['**/*.test.*', '**/*.spec.*'],
-      rules: {
-        'material-ui/no-restricted-resolved-imports': [
-          'error',
-          [
-            {
-              pattern: `**/packages/${packageName}/src/index.*`,
-              message:
-                "Don't import from the package index. Import the specific module directly instead.",
-            },
-          ],
+  ...archivedMuiRuleTargets.map(({ srcGlob, indexPattern }) => ({
+    files: [srcGlob],
+    ignores: ['**/*.test.*', '**/*.spec.*'],
+    rules: {
+      'material-ui/no-restricted-resolved-imports': [
+        'error',
+        [
+          {
+            pattern: indexPattern,
+            message:
+              "Don't import from the package index. Import the specific module directly instead.",
+          },
         ],
-      },
-    }),
-  ),
+      ],
+    },
+  })),
   // Test start
   {
     files: [`**/*${EXTENSION_TEST_FILE}`, 'archives/mui-packages/mui-codemod/testUtils/**/*'],
@@ -150,7 +167,7 @@ export default defineConfig(
   },
   // Next.js entry points pages
   {
-    files: ['docs/pages/**/*', 'packages/*/src/**/*.tsx'],
+    files: ['docs/pages/**/*', 'packages/*/src/**/*.tsx', 'archives/mui-packages/*/src/**/*.tsx'],
     ignores: ['**/*.spec.tsx'],
     rules: {
       'react/prop-types': 'off',
@@ -180,7 +197,10 @@ export default defineConfig(
     },
   },
   {
-    files: [`packages/*/src/*/*${EXTENSION_TS}`],
+    files: [
+      `packages/*/src/*/*${EXTENSION_TS}`,
+      `archives/mui-packages/*/src/*/*${EXTENSION_TS}`,
+    ],
     ignores: [
       '**/*.spec.*',
       '**/*.test.*',
@@ -194,7 +214,10 @@ export default defineConfig(
     },
   },
   {
-    files: [`packages/*/src/**/*${EXTENSION_TS}`],
+    files: [
+      `packages/*/src/**/*${EXTENSION_TS}`,
+      `archives/mui-packages/*/src/**/*${EXTENSION_TS}`,
+    ],
     ignores: ['**/*.spec.*'],
     rules: {
       'no-restricted-imports': [

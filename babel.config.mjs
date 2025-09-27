@@ -1,6 +1,7 @@
 // @ts-check
 import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
+import { existsSync } from 'node:fs';
 // @ts-ignore
 import getBaseConfig from '@mui/internal-code-infra/babel-config';
 
@@ -22,6 +23,26 @@ function resolveAliasPath(relativeToBabelConf) {
   return `./${resolvedPath.replace('\\', '/')}`;
 }
 
+/**
+ * @param {string} alias
+ * @param {{ subPath?: string }} [options]
+ * @returns {string}
+ */
+function resolveArchivedMuiAlias(alias, options = {}) {
+  const { subPath = 'src' } = options;
+  const aliasSuffix = alias.replace(/^@mui\//, '');
+  const archiveFolder = `./archives/mui-packages/mui-${aliasSuffix}`;
+  const candidatePath = subPath ? path.join(archiveFolder, subPath) : archiveFolder;
+
+  if (!existsSync(path.resolve(dirname, candidatePath))) {
+    throw new Error(
+      `Unable to resolve archived alias for ${alias}. Expected ${candidatePath} to exist.`,
+    );
+  }
+
+  return resolveAliasPath(candidatePath);
+}
+
 /** @type {babel.ConfigFunction} */
 export default function getBabelConfig(api) {
   const baseConfig = getBaseConfig(api);
@@ -29,20 +50,21 @@ export default function getBabelConfig(api) {
 
   const defaultAlias = {
     // Route Babel's module resolver through the archived packages so Jest and tooling reuse the
-    // frozen JavaScript sources instead of the Rust-first crates.
-    '@mui/material': resolveAliasPath('./archives/mui-packages/mui-material/src'),
-    '@mui/docs': resolveAliasPath('./archives/mui-packages/mui-docs/src'),
-    '@mui/icons-material': resolveAliasPath(
-      `./archives/mui-packages/mui-icons-material/lib${useESModules ? '/esm' : ''}`,
-    ),
-    '@mui/lab': resolveAliasPath('./archives/mui-packages/mui-lab/src'),
+    // frozen JavaScript sources instead of the Rust-first crates. The Rust implementations live in
+    // `crates/rustic-ui-*` and ship typed shims via `cargo xtask build-docs` before publishing.
+    '@mui/material': resolveArchivedMuiAlias('@mui/material'),
+    '@mui/docs': resolveArchivedMuiAlias('@mui/docs'),
+    '@mui/icons-material': resolveArchivedMuiAlias('@mui/icons-material', {
+      subPath: useESModules ? 'lib/esm' : 'lib',
+    }),
+    '@mui/lab': resolveArchivedMuiAlias('@mui/lab'),
     '@mui/internal-markdown': resolveAliasPath('./packages/markdown'),
-    '@mui/styled-engine': resolveAliasPath('./archives/mui-packages/mui-styled-engine/src'),
-    '@mui/styled-engine-sc': resolveAliasPath('./archives/mui-packages/mui-styled-engine-sc/src'),
-    '@mui/system': resolveAliasPath('./archives/mui-packages/mui-system/src'),
-    '@mui/private-theming': resolveAliasPath('./archives/mui-packages/mui-private-theming/src'),
-    '@mui/utils': resolveAliasPath('./archives/mui-packages/mui-utils/src'),
-    '@mui/joy': resolveAliasPath('./archives/mui-packages/mui-joy/src'),
+    '@mui/styled-engine': resolveArchivedMuiAlias('@mui/styled-engine'),
+    '@mui/styled-engine-sc': resolveArchivedMuiAlias('@mui/styled-engine-sc'),
+    '@mui/system': resolveArchivedMuiAlias('@mui/system'),
+    '@mui/private-theming': resolveArchivedMuiAlias('@mui/private-theming'),
+    '@mui/utils': resolveArchivedMuiAlias('@mui/utils'),
+    '@mui/joy': resolveArchivedMuiAlias('@mui/joy'),
     '@mui/internal-docs-utils': resolveAliasPath('./packages-internal/docs-utils/src'),
     '@mui/internal-test-utils': resolveAliasPath('./packages-internal/test-utils/src'),
     docs: resolveAliasPath('./docs'),
