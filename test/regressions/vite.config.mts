@@ -47,7 +47,15 @@ export default defineConfig({
       '@mui/lab': path.resolve(WORKSPACE_ROOT, './packages/mui-lab/src'),
       '@mui/styled-engine': path.resolve(WORKSPACE_ROOT, './packages/mui-styled-engine/src'),
       '@mui/styled-engine-sc': path.resolve(WORKSPACE_ROOT, './packages/mui-styled-engine-sc/src'),
-      '@mui/styles': path.resolve(WORKSPACE_ROOT, './packages/mui-styles/src'),
+      /**
+       * Intentionally omit an alias for the legacy `@mui/styles` package.
+       *
+       * The regression harness must mirror the production toolchain, which
+       * has fully migrated to the RusticUI styling pipeline. Dropping the
+       * alias surfaces any lingering imports immediately during local
+       * development rather than allowing stale compatibility paths to linger
+       * until CI.
+       */
       '@mui/system': path.resolve(WORKSPACE_ROOT, './packages/mui-system/src'),
       '@mui/private-theming': path.resolve(WORKSPACE_ROOT, './packages/mui-private-theming/src'),
       '@mui/utils': path.resolve(WORKSPACE_ROOT, './packages/mui-utils/src'),
