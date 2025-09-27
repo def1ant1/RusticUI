@@ -23,6 +23,7 @@ import {
 } from '@mui-internal/api-docs-builder/utils/createTypeScriptProject';
 
 import CORE_TYPESCRIPT_PROJECTS from './coreTypeScriptProjects';
+import { resolvePackageSourceRoot, rustDocFlags } from './rustDocAutomation.js';
 
 const useExternalPropsFromInputBase = [
   'autoComplete',
@@ -311,23 +312,36 @@ async function run(argv: HandlerArgv) {
     console.log(`Only considering declaration files matching ${filePattern}`);
   }
 
+  if (rustDocFlags.shouldSkipArchives) {
+    console.log(
+      'Rust metadata marked authoritative – skipping JS prop-type generation so automation can consume the Rust-derived definitions instead.',
+    );
+    return;
+  }
+
   const buildProject = createTypeScriptProjectBuilder(CORE_TYPESCRIPT_PROJECTS);
 
   // Matches files where the folder and file both start with uppercase letters
   // Example: AppBar/AppBar.d.ts
+  const packageSlugs = ['mui-system', 'mui-base', 'mui-material', 'mui-lab', 'mui-joy'];
   const allFiles = await Promise.all(
-    [
-      path.resolve(__dirname, '../archives/mui-packages/mui-system/src'),
-      path.resolve(__dirname, '../archives/mui-packages/mui-base/src'),
-      path.resolve(__dirname, '../archives/mui-packages/mui-material/src'),
-      path.resolve(__dirname, '../archives/mui-packages/mui-lab/src'),
-      path.resolve(__dirname, '../archives/mui-packages/mui-joy/src'),
-    ].map((folderPath) =>
-      glob('+([A-Z])*/+([A-Z])*.*@(d.ts|ts|tsx)', {
+    packageSlugs.map(async (slug) => {
+      const folderPath = path.join(resolvePackageSourceRoot(slug), 'src');
+
+      try {
+        await fs.access(folderPath);
+      } catch (error) {
+        console.warn(
+          `⚠️  Skipping prop-type scan for ${slug} because ${folderPath} is unavailable. When Rust metadata drives the docs this directory is intentionally absent.`,
+        );
+        return [];
+      }
+
+      return glob('+([A-Z])*/+([A-Z])*.*@(d.ts|ts|tsx)', {
         absolute: true,
         cwd: folderPath,
-      }),
-    ),
+      });
+    }),
   );
 
   const files = _.flatten(allFiles)
@@ -350,8 +364,18 @@ async function run(argv: HandlerArgv) {
   const promises = files.map<Promise<void>>(async (tsFile) => {
     const sourceFile = tsFile.includes('.d.ts') ? tsFile.replace('.d.ts', '.js') : tsFile;
     try {
-      const projectName = tsFile.match(/archives\/mui-packages\/mui-([a-zA-Z-]+)\/src/)![1];
-      const project = buildProject(projectName);
+      const normalizedFile = path.resolve(tsFile);
+      const projectEntry = Object.entries(CORE_TYPESCRIPT_PROJECTS)
+        .map(([name, config]) => {
+          return { name, rootPath: path.resolve(config.rootPath) };
+        })
+        .find(({ rootPath }) => normalizedFile.startsWith(rootPath));
+
+      if (!projectEntry) {
+        throw new Error('Unable to resolve TypeScript project for file');
+      }
+
+      const project = buildProject(projectEntry.name);
       await generateProptypes(project, sourceFile, tsFile);
     } catch (error: any) {
       error.message = `${tsFile}: ${error.message}`;
