@@ -30,25 +30,17 @@ jobs:
     steps:
       - run: echo "${{ github.actor }}"
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions-rs/toolchain@v1
         with:
-          # fetch all tags which are required for `pnpm release:changelog`
-          fetch-depth: 0
-      - name: Set up pnpm
-        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-      - name: Use Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: '22.18.0'
-          cache: 'pnpm' # https://github.com/actions/setup-node/blob/main/docs/advanced-usage.md#caching-packages-dependencies
-      - run: pnpm install
-      - run: pnpm build:ci
-        env:
-          NODE_OPTIONS: --max_old_space_size=6144
-      - run: pnpm release:changelog
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: pnpm validate-declarations
-      - name: pnpm release:tag
-        run: |
-          git remote -v
-          pnpm release:tag --dryRun
+          toolchain: stable
+          components: rustfmt, clippy
+          target: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo xtask fmt --check
+      - name: Lint with Clippy
+        run: cargo xtask clippy
+      - name: Run workspace tests
+        run: cargo xtask test
+      - name: Build Rust-first docs
+        run: cargo xtask build-docs

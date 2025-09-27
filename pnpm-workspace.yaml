@@ -1,14 +1,9 @@
 packages:
-  # Active workspace packages only. JavaScript snapshots now live under `archives/` and
-  # are intentionally excluded so recursive pnpm/Nx commands stay focused on the
-  # Rust-first toolchain.
-  - apps/*
+  # The pnpm workspace now only supports the documentation stack. All archived
+  # JavaScript packages have been removed so contributors default to the Rust
+  # tooling orchestrated by `cargo xtask`.
   - docs
   - docs/*
-  - packages/*
-  - packages-internal/*
-  - test
-  - test/*
 
 # Archived npm packages remain available for tooling that still needs to inspect
 # the historical sources. Consumers should reference them through the catalog
