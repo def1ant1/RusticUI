@@ -17,7 +17,8 @@
       // The archived JavaScript workspaces live under `archives/mui-packages/` to keep historical
       // sources accessible without polluting the Rust-first crates. TypeScript still resolves
       // against those folders so editors jump straight to the snapshot when developers inspect
-      // legacy APIs.
+      // legacy APIs. See README.md#accessing-archived-javascript-packages for IDE setup guidance
+      // and pointers to the Rust-first shims.
       "@mui/material": ["./archives/mui-packages/mui-material/src"],
       "@mui/material/package.json": ["./archives/mui-packages/mui-material/package.json"],
       "@mui/material/*": ["./archives/mui-packages/mui-material/src/*"],

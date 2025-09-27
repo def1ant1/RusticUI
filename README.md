@@ -72,6 +72,12 @@ dependency as `"catalog:@mui/material"` or inspect the mapping emitted by `pnpm 
 `archives/mui-packages/mui-material`. Scripts that previously globbed through `archives/mui-packages/**` should
 consume the catalog so they automatically follow any future archive relocations.
 
+Editors and language servers lean on the root `tsconfig.json` paths to follow those archives. If completion stops
+working for `@mui/*` imports, reload your IDE so it re-parses the updated configuration or run
+`pnpm exec tsc --showConfig` to confirm the archived aliases resolve. The canonical implementation lives in the
+Rust crates (`crates/rustic-ui-*`) and exposes automated TypeScript shims via `cargo xtask build-docs`; the archived
+files remain as read-only references for parity investigations.
+
 ## Design system automation with `css_with_theme!`
 
 Enterprise teams demand consistent design tokens without repetitive wiring. The RusticUI theming macros automatically inject the

@@ -1,8 +1,28 @@
+const fs = require('fs');
 const path = require('path');
 const playwright = require('@playwright/test');
 const webpack = require('webpack');
 
 const CI = Boolean(process.env.CI);
+
+const workspaceRoot = path.resolve(__dirname, '..');
+const archivedMuiRoot = path.join(workspaceRoot, 'archives', 'mui-packages');
+
+function resolveArchivedMuiAlias(alias, subPath = 'src') {
+  const aliasSuffix = alias.replace(/^@mui\//, '');
+  const archiveFolder = path.join(archivedMuiRoot, `mui-${aliasSuffix}`);
+  const candidate = subPath ? path.join(archiveFolder, subPath) : archiveFolder;
+
+  if (!fs.existsSync(candidate)) {
+    throw new Error(
+      `Unable to resolve archived alias for ${alias}. Expected ${candidate} to exist.\n` +
+        'Run `cargo xtask build-docs` to regenerate the Rust-owned shims if the archive moved.',
+    );
+  }
+
+  const relative = path.relative(workspaceRoot, candidate).replace(/\\/g, '/');
+  return `./${relative}`;
+}
 
 let build = `material-ui local ${new Date().toISOString()}`;
 
@@ -152,17 +172,19 @@ module.exports = function setKarmaConfig(config) {
                     'babel-plugin-module-resolver',
                     {
                       alias: {
-                        // all packages in this monorepo
-                        '@mui/material': './packages/mui-material/src',
-                        '@mui/docs': './packages/mui-docs/src',
-                        '@mui/icons-material': './packages/mui-icons-material/lib',
-                        '@mui/lab': './packages/mui-lab/src',
-                        '@mui/styled-engine': './packages/mui-styled-engine/src',
-                        '@mui/system': './packages/mui-system/src',
-                        '@mui/private-theming': './packages/mui-private-theming/src',
-                        '@mui/utils': './packages/mui-utils/src',
-                        '@mui/material-nextjs': './packages/mui-material-nextjs/src',
-                        '@mui/joy': './packages/mui-joy/src',
+                        // all packages in this monorepo. The canonical implementations are Rust crates
+                        // (`crates/rustic-ui-*`) that surface typed shims via `cargo xtask build-docs`. Karma
+                        // continues to transpile the archived JavaScript snapshots for regression parity.
+                        '@mui/material': resolveArchivedMuiAlias('@mui/material'),
+                        '@mui/docs': resolveArchivedMuiAlias('@mui/docs'),
+                        '@mui/icons-material': resolveArchivedMuiAlias('@mui/icons-material', 'lib'),
+                        '@mui/lab': resolveArchivedMuiAlias('@mui/lab'),
+                        '@mui/styled-engine': resolveArchivedMuiAlias('@mui/styled-engine'),
+                        '@mui/system': resolveArchivedMuiAlias('@mui/system'),
+                        '@mui/private-theming': resolveArchivedMuiAlias('@mui/private-theming'),
+                        '@mui/utils': resolveArchivedMuiAlias('@mui/utils'),
+                        '@mui/material-nextjs': resolveArchivedMuiAlias('@mui/material-nextjs'),
+                        '@mui/joy': resolveArchivedMuiAlias('@mui/joy'),
                       },
                       transformFunctions: ['require'],
                     },
