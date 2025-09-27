@@ -36,6 +36,10 @@ imports are required. Treat the warnings as your migration punch list.
 4. **Verify clean builds** – Execute `scripts/migrate-crate-prefix.sh --verify-clean` (or `cargo xtask clippy`) to deny
    warnings and guarantee no deprecated aliases remain. Your project is now fully migrated to the RusticUI namespace.
 
+Need guidance on replacing pnpm asset scripts? Read the [RusticUI npm-to-Rust migration walkthrough](migrations/npm-to-rust.md)
+for `cargo xtask icons-bundle`, `cargo xtask themes-bundle`, and CI wiring examples that keep archived icon and font bundles in
+sync during the transition.
+
 ## Automation selector migration
 
 The Material automation hooks now follow the `data-rustic-<component>-*` naming convention. Instances of the legacy

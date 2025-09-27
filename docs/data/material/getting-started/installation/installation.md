@@ -2,6 +2,12 @@
 
 <p class="description">Install Material UI, the world's most popular React UI framework.</p>
 
+:::info
+Migrating an existing `@mui/*` codebase to the Rust-first crates? Start with the
+[npm-to-Rust migration guide](/material-ui/migration/npm-to-rust/). It explains how `cargo xtask icons-bundle` and the rest of
+the Rust automation replace the retired pnpm asset scripts so icons, fonts, and docs stay in sync during the transition.
+:::
+
 ## Default installation
 
 Run one of the following commands to add Material UI to your project:
