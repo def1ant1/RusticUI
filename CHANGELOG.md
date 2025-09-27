@@ -3,6 +3,22 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-04-01 – Regression harness styling migration guardrails
+
+### Highlights
+
+- Updated the regression Vite harness to stop aliasing the legacy `@mui/styles`
+  path, guaranteeing that contributors exercise the RusticUI styling
+  toolchain end-to-end while developing fixes.
+- Documented the change so downstream consumers can remove any remaining
+  compatibility shims and rely solely on the maintained RusticUI styling
+  adapters.
+
+### Backlog
+
+- [ ] Wire an automated alert that flags any reintroduction attempts of the
+  deprecated alias during review so the guardrail stays enforced.
+
 ## 2025-03-25 – GridLegacy removal and Grid v2 consolidation
 
 ### Highlights
