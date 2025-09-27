@@ -128,21 +128,15 @@ jobs:
     steps:
       # Checkout repository so automation tasks operate on latest sources
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      # Install Node and pnpm for scripts invoked by xtask
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: '22.18.0'
-          cache: 'pnpm'
-      - run: pnpm install
       # Install the Rust toolchain used by cargo-xtask
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      # Regenerate component scaffolding
-      - run: cargo xtask update-components
       # Refresh icon bindings from upstream Material icons
       - run: cargo xtask icon-update
+      # Rebuild Material parity snapshots to keep docs in sync
+      - name: Generate Material parity report
+        run: cargo xtask material-parity
       # Capture the Joy UI component inventory so regressions surface quickly in diffs
       - name: Generate Joy component parity report
         run: cargo xtask joy-inventory
@@ -157,10 +151,12 @@ jobs:
       # Fail fast when the inventory drifts to force contributors to commit the refreshed snapshot
       - name: Ensure Joy parity report committed
         run: git diff --exit-code docs/joy-component-parity.md
-      # Run accessibility audits for the documentation site
-      - run: cargo xtask accessibility-audit
-      # Build the JavaScript documentation site for validation
+      # Ensure the Rust-first documentation stack builds cleanly
       - run: cargo xtask build-docs
+      # Assemble distributable icon bundles for compatibility consumers
+      - run: cargo xtask icons-bundle --compat
+      # Assemble distributable theme bundles for compatibility consumers
+      - run: cargo xtask themes-bundle --compat
 
   publish-check:
     name: Publish Dry Run

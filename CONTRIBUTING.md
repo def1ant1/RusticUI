@@ -13,8 +13,7 @@ before interacting with the community. Violations can be reported confidentially
 
 RusticUI thrives on a wide range of contributions:
 
-- **Crates & components** – Implement new components, fix bugs, or improve performance in any crate under `crates/` or
-  `packages/`.
+- **Crates & components** – Implement new components, fix bugs, or improve performance in any crate under `crates/`.
 - **Documentation & demos** – Expand the docs hosted in `docs/` or add examples in `examples/`.
 - **Automation** – Enhance the `cargo xtask` CLI, CI workflows, and observability pipelines.
 - **Community** – Review pull requests, triage issues, or mentor newcomers in the [discussion board](https://github.com/apotheon-ai/rusticui/discussions).
@@ -24,8 +23,13 @@ Before starting large efforts, open a GitHub discussion or issue so the maintain
 ## Development setup
 
 1. Install the latest stable Rust toolchain and ensure `wasm32-unknown-unknown` is available via `rustup target add`.
-2. Install [pnpm](https://pnpm.io/installation) for documentation tooling.
+2. Install supporting CLI tools with Cargo: `cargo install mdbook grcov wasm-pack` (the automation will leverage them when
+   present).
 3. Run `make bootstrap` to install workspace prerequisites and run quick smoke tests.
+
+> **Important:** The root pnpm workspace has been retired. Do not run `pnpm install` from the repository root and ignore any
+> legacy references to `pnpm-lock.yaml` in older documentation. All active automation now flows through `cargo xtask`, and the
+> docs site manages its own dependencies locally within `docs/` when needed.
 
 All repetitive chores are encapsulated inside the `Makefile` or `cargo xtask`. Prefer these entry points over ad-hoc scripts.
 
