@@ -99,6 +99,14 @@ fn icons_bundle_emits_single_manifest_and_unique_entries() -> Result<()> {
         manifest["metadata"]["bundle_kind"].as_str(),
         Some("icon-assets")
     );
+    assert!(
+        manifest["metadata"]["packages"]
+            .as_array()
+            .expect("packages list present")
+            .iter()
+            .any(|value| value == "rustic-ui-icons"),
+        "manifest should document the RusticUI crate identifier"
+    );
 
     let entries = manifest["entries"]
         .as_array()
@@ -126,6 +134,13 @@ fn icons_bundle_emits_single_manifest_and_unique_entries() -> Result<()> {
                 .iter()
                 .any(|value| value == "@mui/icons-material"),
             "entry missing legacy package metadata"
+        );
+        let packages = entry["metadata"]["packages"]
+            .as_array()
+            .expect("packages list present on entry");
+        assert!(
+            packages.iter().any(|value| value == "rustic-ui-icons"),
+            "entry missing RusticUI package metadata"
         );
         assert_eq!(entry["media_type"].as_str(), Some("image/svg+xml"));
     }

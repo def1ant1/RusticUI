@@ -133,11 +133,21 @@ binary:
 ```bash
 cargo xtask scaffold-component    # scaffold a fully-instrumented component package
 cargo xtask icon-update           # pull the latest Rustic icon sets
-cargo xtask accessibility-audit   # run Playwright accessibility tests
+cargo xtask update-components     # emit the Rust-native component metadata manifest
+cargo xtask accessibility-audit   # lint Markdown docs for accessibility regressions
 cargo xtask build-docs            # build the documentation site
 ```
 
 Each task emits verbose logs and returns a non-zero exit code on failure so it can be safely wired into CI pipelines.
+
+`cargo xtask update-components` parses the upstream TypeScript declarations without invoking pnpm. The generated manifest now
+records the RusticUI crate identifiers under a `packages` array while preserving the historical npm names under
+`legacy_packages`. Use `RUSTIC_UI_COMPONENT_CONFIG` to scope the scan and `RUSTIC_UI_COMPONENT_OUT_DIR` to mirror the JSON into
+your build artifacts directory.
+
+`cargo xtask accessibility-audit` exercises the Markdown parser directly in Rust, providing the same checks that previously ran
+through Playwright fixtures. Set `RUSTIC_UI_A11Y_CONFIG` to point at a JSON manifest when you need to focus the crawl during CI
+dry runs without editing the repository.
 
 The Material icon updater persists ETag/Last-Modified metadata in
 `target/.icon-cache` so repeated runs skip unnecessary downloads. To bypass the

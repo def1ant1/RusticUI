@@ -72,7 +72,70 @@ fn nightly_accessibility_help_mentions_env_toggle() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("RUSTIC_UI_A11Y_MODE"));
+        .stdout(predicate::str::contains(
+            "extended nightly accessibility coverage suite",
+        ))
+        .stdout(predicate::str::contains("docs section"));
+
+    Ok(())
+}
+
+#[test]
+fn update_components_help_highlights_packages_and_env() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("update-components")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("packages"))
+        .stdout(predicate::str::contains("RUSTIC_UI_COMPONENT_CONFIG"));
+
+    Ok(())
+}
+
+#[test]
+fn icons_bundle_help_mentions_schema_bridge() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("icons-bundle")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Rust-native bundler"))
+        .stdout(predicate::str::contains("legacy_packages"));
+
+    Ok(())
+}
+
+#[test]
+fn accessibility_audit_help_mentions_config_manifest() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("accessibility-audit")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Markdown-first accessibility"))
+        .stdout(predicate::str::contains("RUSTIC_UI_A11Y_CONFIG"));
 
     Ok(())
 }
