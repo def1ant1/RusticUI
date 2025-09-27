@@ -350,12 +350,6 @@ _Last updated 2025-09-19T13:05:32.393450968+00:00 via `cargo xtask material-pari
       "declared_in": "packages/mui-material/src/Grid/index.ts"
     },
     {
-      "name": "GridLegacy",
-      "normalized": "grid_legacy",
-      "source": "packages/mui-material/src/GridLegacy",
-      "declared_in": "packages/mui-material/src/GridLegacy/index.js"
-    },
-    {
       "name": "Grow",
       "normalized": "grow",
       "source": "packages/mui-material/src/Grow",
@@ -1202,12 +1196,6 @@ _Last updated 2025-09-19T13:05:32.393450968+00:00 via `cargo xtask material-pari
       "normalized": "grid",
       "source": "packages/mui-material/src/Grid",
       "declared_in": "packages/mui-material/src/Grid/index.ts"
-    },
-    {
-      "name": "GridLegacy",
-      "normalized": "grid_legacy",
-      "source": "packages/mui-material/src/GridLegacy",
-      "declared_in": "packages/mui-material/src/GridLegacy/index.js"
     },
     {
       "name": "Grow",
@@ -2062,12 +2050,6 @@ _Last updated 2025-09-19T13:05:32.393450968+00:00 via `cargo xtask material-pari
       "normalized": "grid",
       "source": "packages/mui-material/src/Grid",
       "declared_in": "packages/mui-material/src/Grid/index.ts"
-    },
-    {
-      "name": "GridLegacy",
-      "normalized": "grid_legacy",
-      "source": "packages/mui-material/src/GridLegacy",
-      "declared_in": "packages/mui-material/src/GridLegacy/index.js"
     },
     {
       "name": "Grow",

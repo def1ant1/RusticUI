@@ -212,11 +212,11 @@ If you are augmenting the theme and using declarations for nested imports, you s
  }
 ```
 
-### Grid and Grid2 renamed
+### GridLegacy removal and Grid2 promotion
 
-The deprecated `Grid` component has been renamed to `GridLegacy`.
-The `Grid2` component has been moved to the `Grid` namespace.
-Depending on your project, you may follow one of the following approaches:
+The deprecated `Grid` component that was temporarily renamed to `GridLegacy` has now been removed from the Material UI package.
+The `Grid2` component has been promoted to the canonical `Grid` namespace.
+Depending on your project, follow the steps below:
 
 1. **If you are using the deprecated grid and wish to upgrade,** run the following codemod:
 
@@ -228,30 +228,7 @@ Depending on your project, you may follow one of the following approaches:
 
    See the [Grid upgrade guide](/material-ui/migration/upgrade-to-grid-v2/) for more information.
 
-2. **If you are using the deprecated grid and wish to continue using it,** update the `Grid` references as follows:
-
-   ```diff
-    // imports
-   -import Grid, { gridClasses, GridProps } from '@mui/material/Grid';
-   +import Grid, { gridLegacyClasses, GridLegacyProps } from '@mui/material/GridLegacy';
-
-   -import { Grid } from '@mui/material';
-   +import { GridLegacy as Grid } from '@mui/material';
-
-    // theme
-    const theme = createTheme({
-      components: {
-   -    MuiGrid: {
-   +    MuiGridLegacy: {
-          // ...
-        },
-      },
-    });
-
-    // CSS classes
-   -.MuiGrid-root
-   +.MuiGridLegacy-root
-   ```
+2. **If you still have legacy-specific layout needs,** prefer migrating to [`Stack`](/material-ui/react-stack/) or the CSS Flexbox utilities rather than attempting to resurrect the deleted alias.
 
 3. **If you are using Grid2,** update the `Grid2` references as follows:
 

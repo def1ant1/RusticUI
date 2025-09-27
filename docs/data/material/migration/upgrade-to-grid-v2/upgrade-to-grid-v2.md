@@ -1,11 +1,11 @@
 # Upgrade to Grid v2
 
-<p class="description">This guide explains how and why to migrate from the GridLegacy component to the Grid component.</p>
+<p class="description">This guide explains how and why to migrate from the removed Grid v1 implementation (previously exposed as GridLegacy) to the modern Grid component.</p>
 
 ## Grid component versions
 
-In Material UI v7, the GridLegacy component has been deprecated and replaced by Grid, which offers several new features as well as significant improvements to the developer experience.
-This guide explains how to upgrade from GridLegacy to Grid, and includes details for Material UI v5, v6, and v7.
+In Material UI v7, the final GridLegacy alias was removed in favor of the v2 Grid component, which offers several new features as well as significant improvements to the developer experience.
+This guide explains how to upgrade old Grid layouts to the modern API, and includes details for Material UI v5, v6, and v7.
 
 ## Why you should upgrade
 
@@ -16,7 +16,7 @@ Grid provides the following improvements over GridLegacy:
 - All grids are considered items without specifying the `item` prop.
 - The [offset feature](/material-ui/react-grid/#offset) gives you more flexibility for positioning.
 - [Nested grids](/material-ui/react-grid/#nested-grid) now have no depth limitation.
-- Its implementation doesn't use negative margins so it doesn't [overflow like GridLegacy](/material-ui/react-grid-legacy/#negative-margin).
+- Its implementation doesn't use negative margins so it no longer inherits the overflow issues present in the legacy implementation.
 
 ## How to upgrade
 
@@ -29,17 +29,16 @@ Before proceeding with this upgrade:
 
 ### 1. Update the import
 
-Depending on the Material UI version you are using, you must update the import as follows:
+Depending on the Material UI version you are using, you must update the import as follows.
+For v7 projects that still reference the removed alias, run `npx @mui/codemod@next v7.0.0/grid-props <path>` to rewrite the imports automatically before adjusting any remaining code by hand.
 
 <codeblock storageKey="material-ui-version">
 
 ```diff v7
-// The legacy Grid component is named GridLegacy
+-// Legacy alias (removed in v7)
 -import Grid from '@mui/material/GridLegacy';
-
-// The updated Grid component is named Grid
++// Modern Grid export
 +import Grid from '@mui/material/Grid';
-
 ```
 
 ```diff v6
@@ -163,8 +162,8 @@ function Demo() {
 
 ### Column direction
 
-Using `direction="column"` or `direction="column-reverse"` is not supported on [GridLegacy](/material-ui/react-grid-legacy/#direction-column-column-reverse) nor on [the updated Grid](/material-ui/react-grid/#column-direction).
-If your layout used GridLegacy with these values, it might break when you switch to the updated Grid.
+Using `direction="column"` or `direction="column-reverse"` was never supported by the legacy grid nor by the updated Grid.
+If your layout relied on those values prior to migration, it might break when you switch to the updated Grid.
 If you need a vertical layout, follow the instructions in the [Grid documentation](/material-ui/react-grid/#column-direction).
 
 ### Container width
@@ -202,6 +201,7 @@ You'll need to manually update these components.
 - Grid:
   - [Documentation](/material-ui/react-grid/)
   - [API](/material-ui/api/grid/)
-- GridLegacy:
-  - [Documentation](/material-ui/react-grid-legacy/)
-  - [API](/material-ui/api/grid-legacy/)
+- Automation:
+  - [Grid props codemod](https://github.com/mui/material-ui/tree/master/packages/mui-codemod/src/v7.0.0/grid-props)
+- Layout alternatives:
+  - [Stack component](/material-ui/react-stack/)

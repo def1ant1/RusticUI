@@ -228,11 +228,6 @@ export interface Components<Theme = unknown> {
     styleOverrides?: ComponentsOverrides<Theme>['MuiFormLabel'];
     variants?: ComponentsVariants<Theme>['MuiFormLabel'];
   };
-  MuiGridLegacy?: {
-    defaultProps?: ComponentsProps['MuiGridLegacy'];
-    styleOverrides?: ComponentsOverrides<Theme>['MuiGridLegacy'];
-    variants?: ComponentsVariants<Theme>['MuiGridLegacy'];
-  };
   MuiGrid?: {
     defaultProps?: ComponentsProps['MuiGrid'];
     styleOverrides?: ComponentsOverrides<Theme>['MuiGrid'];
