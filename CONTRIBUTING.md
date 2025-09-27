@@ -33,13 +33,19 @@ All repetitive chores are encapsulated inside the `Makefile` or `cargo xtask`. P
 
 Legacy Material UI sources now live under `archives/mui-packages/`. Each folder is a symlink back to
 the historical JavaScript snapshot so Rust-first contributors can trace provenance without
-reintroducing Node-centric build chains. When docs or tooling refer to a `mui-*` package, follow the
-`archives/` path—automation, TypeScript path aliases, and pnpm workspace definitions have all been
-updated to resolve through these archive mirrors.
+reintroducing Node-centric build chains. The pnpm workspace no longer indexes these directories,
+which keeps `pnpm -r` and Nx pipelines exclusively focused on the Rust-first crates and
+TypeScript bridges that still evolve.
 
-> **Tip for enterprise teams:** Keep custom scripts pointed at `archives/mui-packages/<package>` and
-> rely on the manifest contract described in `archives/README.md`. Doing so ensures internal CI/CD
-> runners pick up future archive reorganizations without manual edits.
+When docs or tooling refer to a `mui-*` package use the shared pnpm catalog entries instead of
+adding the directories back to the workspace. For example, `catalog:@mui/material` resolves to
+`archives/mui-packages/mui-material`, and `pnpm config list --json` exposes the full mapping for
+automation. Scripts that previously globbed through `archives/mui-packages/**` should prefer the
+catalog map so they follow future archive relocations automatically.
+
+> **Tip for enterprise teams:** Keep custom scripts pointed at `archives/mui-packages/<package>`
+> via the catalog map and rely on the manifest contract described in `archives/README.md`. Doing so
+> ensures internal CI/CD runners pick up future archive reorganizations without manual edits.
 
 ### Component parity tracker
 
