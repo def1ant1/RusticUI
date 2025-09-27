@@ -2,12 +2,19 @@ import path from 'path';
 import fs from 'fs';
 import { expect } from 'chai';
 import sinon from 'sinon';
+import { resolvePackageSourceRoot, rustDocFlags } from '../../../scripts/rustDocAutomation.js';
 import { getMaterialUiComponentInfo } from './getMaterialUiComponentInfo';
 
 describe('getMaterialUiComponentInfo', () => {
-  it('return correct info for material component file', () => {
+  it('return correct info for material component file', function testMaterialInfo() {
+    if (rustDocFlags.shouldSkipArchives) {
+      // The Rust-first flow swaps in generated JSON and omits the archived JS files.
+      this.skip();
+      return;
+    }
+
     const componentInfo = getMaterialUiComponentInfo(
-      path.join(process.cwd(), `/archives/mui-packages/mui-material/src/Button/Button.js`),
+      path.join(resolvePackageSourceRoot('mui-material'), 'src/Button/Button.js'),
     );
     sinon.assert.match(componentInfo, {
       name: 'Button',
