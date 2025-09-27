@@ -161,7 +161,7 @@
   "themeDefaultProps": false,
   "muiName": "JoyMenu",
   "forwardsRefTo": "HTMLUListElement",
-  "filename": "/packages/mui-joy/src/Menu/Menu.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Menu/Menu.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-menu/\">Menu</a></li></ul>",
   "cssComponent": false

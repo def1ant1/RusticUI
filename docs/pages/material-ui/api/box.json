@@ -23,7 +23,7 @@
   "themeDefaultProps": false,
   "muiName": "MuiBox",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/Box/Box.js",
+  "filename": "/archives/mui-packages/mui-material/src/Box/Box.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-box/\">Box</a></li></ul>",
   "cssComponent": true

@@ -244,7 +244,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyLink",
   "forwardsRefTo": "HTMLAnchorElement",
-  "filename": "/packages/mui-joy/src/Link/Link.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Link/Link.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-link/\">Link</a></li></ul>",
   "cssComponent": false

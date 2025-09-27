@@ -204,7 +204,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyRadio",
   "forwardsRefTo": "HTMLSpanElement",
-  "filename": "/packages/mui-joy/src/Radio/Radio.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Radio/Radio.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-radio-button/\">Radio</a></li></ul>",
   "cssComponent": false

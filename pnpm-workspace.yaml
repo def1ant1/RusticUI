@@ -1,6 +1,11 @@
 packages:
+  # Legacy Material UI sources are archived under `archives/mui-packages/` to keep Node-centric
+  # tooling isolated from the Rust-first workspace. Including the directory here lets pnpm filter
+  # against those snapshots without pointing new contributors at the deprecated layout.
+  - archives/mui-packages/*
+  - archives/mui-packages/*/test
+  # Active Rust and TypeScript utilities that continue to evolve alongside the archives.
   - packages/*
-  - packages/mui-envinfo/test
   - packages-internal/*
   - docs
   - test

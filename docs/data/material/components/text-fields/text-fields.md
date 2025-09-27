@@ -4,7 +4,7 @@ title: React Text Field component
 components: FilledInput, FormControl, FormHelperText, Input, InputAdornment, InputBase, InputLabel, OutlinedInput, TextField
 githubLabel: 'scope: text field'
 materialDesign: https://m2.material.io/components/text-fields
-githubSource: packages/mui-material/src/TextField
+githubSource: archives/mui-packages/mui-material/src/TextField
 ---
 
 # Text Field

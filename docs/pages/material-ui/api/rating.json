@@ -182,7 +182,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiRating",
   "forwardsRefTo": "HTMLSpanElement",
-  "filename": "/packages/mui-material/src/Rating/Rating.js",
+  "filename": "/archives/mui-packages/mui-material/src/Rating/Rating.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-rating/\">Rating</a></li></ul>",
   "cssComponent": false

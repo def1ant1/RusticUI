@@ -27,7 +27,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiAccordionDetails",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/AccordionDetails/AccordionDetails.js",
+  "filename": "/archives/mui-packages/mui-material/src/AccordionDetails/AccordionDetails.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-accordion/\">Accordion</a></li></ul>",
   "cssComponent": false

@@ -45,7 +45,7 @@
   "themeDefaultProps": false,
   "muiName": "MuiMenuList",
   "forwardsRefTo": "HTMLUListElement",
-  "filename": "/packages/mui-material/src/MenuList/MenuList.js",
+  "filename": "/archives/mui-packages/mui-material/src/MenuList/MenuList.js",
   "inheritance": { "component": "List", "pathname": "/material-ui/api/list/" },
   "demos": "<ul><li><a href=\"/material-ui/react-menu/\">Menu</a></li></ul>",
   "cssComponent": false

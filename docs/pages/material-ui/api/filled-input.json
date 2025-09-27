@@ -150,7 +150,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiFilledInput",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/FilledInput/FilledInput.js",
+  "filename": "/archives/mui-packages/mui-material/src/FilledInput/FilledInput.js",
   "inheritance": { "component": "InputBase", "pathname": "/material-ui/api/input-base/" },
   "demos": "<ul><li><a href=\"/material-ui/react-text-field/\">Text Field</a></li></ul>",
   "cssComponent": false

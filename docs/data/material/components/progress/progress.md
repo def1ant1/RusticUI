@@ -4,7 +4,7 @@ title: Circular, Linear progress React components
 components: CircularProgress, LinearProgress
 githubLabel: 'scope: progress'
 materialDesign: https://m2.material.io/components/progress-indicators
-githubSource: packages/mui-material/src/LinearProgress
+githubSource: archives/mui-packages/mui-material/src/LinearProgress
 ---
 
 # Progress

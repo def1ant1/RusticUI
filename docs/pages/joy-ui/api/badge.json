@@ -203,7 +203,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyBadge",
   "forwardsRefTo": "HTMLSpanElement",
-  "filename": "/packages/mui-joy/src/Badge/Badge.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Badge/Badge.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-badge/\">Badge</a></li></ul>",
   "cssComponent": false

@@ -94,7 +94,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyMenuItem",
   "forwardsRefTo": "HTMLLIElement",
-  "filename": "/packages/mui-joy/src/MenuItem/MenuItem.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/MenuItem/MenuItem.tsx",
   "inheritance": { "component": "ListItemButton", "pathname": "/joy-ui/api/list-item-button/" },
   "demos": "<ul><li><a href=\"/joy-ui/react-menu/\">Menu</a></li></ul>",
   "cssComponent": false

@@ -3,7 +3,7 @@ productId: material-ui
 components: Link
 githubLabel: 'scope: link'
 waiAria: https://www.w3.org/WAI/ARIA/apg/patterns/link/
-githubSource: packages/mui-material/src/Link
+githubSource: archives/mui-packages/mui-material/src/Link
 ---
 
 # Links

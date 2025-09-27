@@ -25,7 +25,7 @@
   "themeDefaultProps": false,
   "muiName": "MuiZoom",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/Zoom/Zoom.js",
+  "filename": "/archives/mui-packages/mui-material/src/Zoom/Zoom.js",
   "inheritance": {
     "component": "Transition",
     "pathname": "https://reactcommunity.org/react-transition-group/transition/#Transition-props"

@@ -82,7 +82,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiStepConnector",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/StepConnector/StepConnector.js",
+  "filename": "/archives/mui-packages/mui-material/src/StepConnector/StepConnector.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-stepper/\">Stepper</a></li></ul>",
   "cssComponent": false

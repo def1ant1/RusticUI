@@ -5,7 +5,7 @@ components: Button, IconButton, ButtonBase
 materialDesign: https://m2.material.io/components/buttons
 githubLabel: 'scope: button'
 waiAria: https://www.w3.org/WAI/ARIA/apg/patterns/button/
-githubSource: packages/mui-material/src/Button
+githubSource: archives/mui-packages/mui-material/src/Button
 ---
 
 # Button

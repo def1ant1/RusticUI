@@ -18,9 +18,9 @@
 
     "types": ["node", "mocha"],
     "paths": {
-      "@mui/types": ["../../packages/mui-types"],
-      "@mui/utils": ["../../packages/mui-utils/src"],
-      "@mui/utils/*": ["../../packages/mui-utils/src/*"]
+      "@mui/types": ["../../archives/mui-packages/mui-types"],
+      "@mui/utils": ["../../archives/mui-packages/mui-utils/src"],
+      "@mui/utils/*": ["../../archives/mui-packages/mui-utils/src/*"]
     }
   },
   "include": ["./**/*.ts"]

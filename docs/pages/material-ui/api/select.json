@@ -160,7 +160,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiSelect",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/Select/Select.js",
+  "filename": "/archives/mui-packages/mui-material/src/Select/Select.js",
   "inheritance": { "component": "OutlinedInput", "pathname": "/material-ui/api/outlined-input/" },
   "demos": "<ul><li><a href=\"/material-ui/react-select/\">Select</a></li></ul>",
   "cssComponent": false

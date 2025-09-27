@@ -147,7 +147,7 @@
   "spread": true,
   "themeDefaultProps": true,
   "muiName": "MuiTextField",
-  "filename": "/packages/mui-material/src/TextField/TextField.js",
+  "filename": "/archives/mui-packages/mui-material/src/TextField/TextField.js",
   "inheritance": { "component": "FormControl", "pathname": "/material-ui/api/form-control/" },
   "demos": "<ul><li><a href=\"/material-ui/react-autocomplete/\">Autocomplete</a></li>\n<li><a href=\"/material-ui/react-text-field/\">Text Field</a></li></ul>",
   "cssComponent": false

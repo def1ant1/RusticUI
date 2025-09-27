@@ -25,7 +25,7 @@
   "themeDefaultProps": false,
   "muiName": "MuiFade",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/Fade/Fade.js",
+  "filename": "/archives/mui-packages/mui-material/src/Fade/Fade.js",
   "inheritance": {
     "component": "Transition",
     "pathname": "https://reactcommunity.org/react-transition-group/transition/#Transition-props"

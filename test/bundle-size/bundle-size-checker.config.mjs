@@ -14,7 +14,7 @@ const rootDir = path.resolve(import.meta.dirname, '../..');
  */
 export default defineConfig(async () => {
   // Discover Material UI components
-  const materialPackagePath = path.join(rootDir, 'packages/mui-material/build');
+  const materialPackagePath = path.join(rootDir, 'archives/mui-packages/mui-material/build');
   const materialFiles = await glob(path.join(materialPackagePath, '([A-Z])*/index.js'));
   const materialComponents = materialFiles.map((componentPath) => {
     const componentName = path.basename(path.dirname(componentPath));
@@ -22,7 +22,7 @@ export default defineConfig(async () => {
   });
 
   // Discover Lab components
-  const labPackagePath = path.join(rootDir, 'packages/mui-lab/build');
+  const labPackagePath = path.join(rootDir, 'archives/mui-packages/mui-lab/build');
   const labFiles = await glob(path.join(labPackagePath, '([A-Z])*/index.js'));
   const labComponents = labFiles.map((componentPath) => {
     const componentName = path.basename(path.dirname(componentPath));

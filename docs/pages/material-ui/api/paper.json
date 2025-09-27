@@ -202,7 +202,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiPaper",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/Paper/Paper.js",
+  "filename": "/archives/mui-packages/mui-material/src/Paper/Paper.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-card/\">Card</a></li>\n<li><a href=\"/material-ui/react-paper/\">Paper</a></li></ul>",
   "cssComponent": false

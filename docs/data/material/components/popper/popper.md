@@ -3,7 +3,7 @@ productId: material-ui
 title: React Popper component
 components: Popper
 githubLabel: 'component: Popper'
-githubSource: packages/mui-material/src/Popper
+githubSource: archives/mui-packages/mui-material/src/Popper
 ---
 
 # Popper

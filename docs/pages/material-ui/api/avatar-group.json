@@ -74,7 +74,7 @@
   "spread": true,
   "themeDefaultProps": true,
   "muiName": "MuiAvatarGroup",
-  "filename": "/packages/mui-material/src/AvatarGroup/AvatarGroup.js",
+  "filename": "/archives/mui-packages/mui-material/src/AvatarGroup/AvatarGroup.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-avatar/\">Avatar</a></li></ul>",
   "cssComponent": false

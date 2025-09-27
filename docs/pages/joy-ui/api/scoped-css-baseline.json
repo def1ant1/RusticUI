@@ -38,7 +38,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyScopedCssBaseline",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/ScopedCssBaseline/ScopedCssBaseline.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/ScopedCssBaseline/ScopedCssBaseline.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-css-baseline/\">CSS Baseline</a></li></ul>",
   "cssComponent": false

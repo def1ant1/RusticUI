@@ -3,7 +3,7 @@ productId: material-ui
 title: React Avatar component
 components: Avatar, AvatarGroup, Badge
 githubLabel: 'scope: avatar'
-githubSource: packages/mui-material/src/Avatar
+githubSource: archives/mui-packages/mui-material/src/Avatar
 ---
 
 # Avatar

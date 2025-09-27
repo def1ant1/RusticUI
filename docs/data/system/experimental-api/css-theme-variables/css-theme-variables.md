@@ -191,7 +191,7 @@ For framework or language specific setup, see [this](/material-ui/customization/
 
 <!-- #target-branch-reference -->
 
-See the complete usage of `createCssVarsProvider` in [Material UI](https://github.com/mui/material-ui/blob/master/packages/mui-material/src/styles/ThemeProviderWithVars.tsx) and [Joy UI](https://github.com/mui/material-ui/blob/master/packages/mui-joy/src/styles/CssVarsProvider.tsx).
+See the complete usage of `createCssVarsProvider` in [Material UI](https://github.com/RusticUI/RusticUI/blob/HEAD/archives/mui-packages/mui-material/src/styles/ThemeProviderWithVars.tsx) and [Joy UI](https://github.com/RusticUI/RusticUI/blob/HEAD/archives/mui-packages/mui-joy/src/styles/CssVarsProvider.tsx). These archive links keep the historical JavaScript references co-located with the Rust-first migration notes.
 
 ## API
 

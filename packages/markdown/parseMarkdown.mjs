@@ -397,9 +397,9 @@ function createRender(context) {
       }
 
       // This logic turns link like:
-      // https://github.com/mui/material-ui/blob/-/packages/mui-joy/src/styles/components.d.ts
+      // https://github.com/RusticUI/RusticUI/blob/-/archives/mui-packages/mui-joy/src/styles/components.d.ts
       // into a permalink:
-      // https://github.com/mui/material-ui/blob/v5.11.15/packages/mui-joy/src/styles/components.d.ts
+      // https://github.com/RusticUI/RusticUI/blob/v5.11.15/archives/mui-packages/mui-joy/src/styles/components.d.ts
       if (finalHref.startsWith(`${options.env.SOURCE_CODE_REPO}/blob/-/`)) {
         finalHref = finalHref.replace(
           `${options.env.SOURCE_CODE_REPO}/blob/-/`,

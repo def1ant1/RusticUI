@@ -5,7 +5,7 @@ components: Menu, MenuItem, MenuList, ClickAwayListener, Popover, Popper
 githubLabel: 'scope: menu'
 materialDesign: https://m2.material.io/components/menus
 waiAria: https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/
-githubSource: packages/mui-material/src/Menu
+githubSource: archives/mui-packages/mui-material/src/Menu
 ---
 
 # Menu

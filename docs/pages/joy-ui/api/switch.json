@@ -204,7 +204,7 @@
   "themeDefaultProps": true,
   "muiName": "JoySwitch",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/Switch/Switch.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Switch/Switch.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-switch/\">Switch</a></li></ul>",
   "cssComponent": false

@@ -104,7 +104,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiFab",
   "forwardsRefTo": "HTMLButtonElement",
-  "filename": "/packages/mui-material/src/Fab/Fab.js",
+  "filename": "/archives/mui-packages/mui-material/src/Fab/Fab.js",
   "inheritance": { "component": "ButtonBase", "pathname": "/material-ui/api/button-base/" },
   "demos": "<ul><li><a href=\"/material-ui/react-floating-action-button/\">Floating Action Button</a></li></ul>",
   "cssComponent": false

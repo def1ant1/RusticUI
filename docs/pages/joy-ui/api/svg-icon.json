@@ -169,7 +169,7 @@
   "themeDefaultProps": true,
   "muiName": "JoySvgIcon",
   "forwardsRefTo": "SVGSVGElement",
-  "filename": "/packages/mui-joy/src/SvgIcon/SvgIcon.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/SvgIcon/SvgIcon.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-avatar/\">Avatar</a></li></ul>",
   "cssComponent": false

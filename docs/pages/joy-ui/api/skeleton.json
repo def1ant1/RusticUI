@@ -167,7 +167,7 @@
   "themeDefaultProps": true,
   "muiName": "JoySkeleton",
   "forwardsRefTo": "HTMLSpanElement",
-  "filename": "/packages/mui-joy/src/Skeleton/Skeleton.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Skeleton/Skeleton.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-skeleton/\">Skeleton</a></li></ul>",
   "cssComponent": false

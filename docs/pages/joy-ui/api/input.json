@@ -179,7 +179,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyInput",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/Input/Input.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Input/Input.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-input/\">Input</a></li></ul>",
   "cssComponent": false

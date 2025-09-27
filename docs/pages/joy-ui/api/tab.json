@@ -162,7 +162,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyTab",
   "forwardsRefTo": "HTMLButtonElement",
-  "filename": "/packages/mui-joy/src/Tab/Tab.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/Tab/Tab.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-tabs/\">Tabs</a></li></ul>",
   "cssComponent": false

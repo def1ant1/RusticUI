@@ -119,7 +119,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyListSubheader",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/ListSubheader/ListSubheader.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/ListSubheader/ListSubheader.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-list/\">Lists</a></li></ul>",
   "cssComponent": false

@@ -13,7 +13,7 @@
   "spread": false,
   "themeDefaultProps": null,
   "muiName": "MuiPortal",
-  "filename": "/packages/mui-material/src/Portal/Portal.tsx",
+  "filename": "/archives/mui-packages/mui-material/src/Portal/Portal.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-portal/\">Portal</a></li></ul>",
   "cssComponent": false

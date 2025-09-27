@@ -4,7 +4,7 @@ title: React Card component
 components: Card, CardActionArea, CardActions, CardContent, CardHeader, CardMedia, Collapse, Paper
 githubLabel: 'scope: card'
 materialDesign: https://m2.material.io/components/cards
-githubSource: packages/mui-material/src/Card
+githubSource: archives/mui-packages/mui-material/src/Card
 ---
 
 # Card

@@ -5,7 +5,7 @@ components: Tooltip
 githubLabel: 'scope: tooltip'
 materialDesign: https://m2.material.io/components/tooltips
 waiAria: https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/
-githubSource: packages/mui-material/src/Tooltip
+githubSource: archives/mui-packages/mui-material/src/Tooltip
 ---
 
 # Tooltip

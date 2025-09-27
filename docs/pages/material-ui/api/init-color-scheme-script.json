@@ -24,7 +24,7 @@
   "spread": true,
   "themeDefaultProps": null,
   "muiName": "MuiInitColorSchemeScript",
-  "filename": "/packages/mui-material/src/InitColorSchemeScript/InitColorSchemeScript.tsx",
+  "filename": "/archives/mui-packages/mui-material/src/InitColorSchemeScript/InitColorSchemeScript.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-init-color-scheme-script/\">InitColorSchemeScript</a></li></ul>",
   "cssComponent": false

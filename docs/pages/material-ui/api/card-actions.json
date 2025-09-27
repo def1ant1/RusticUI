@@ -34,7 +34,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiCardActions",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/CardActions/CardActions.js",
+  "filename": "/archives/mui-packages/mui-material/src/CardActions/CardActions.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-card/\">Card</a></li></ul>",
   "cssComponent": false

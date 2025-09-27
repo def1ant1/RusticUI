@@ -45,7 +45,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyCardActions",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/CardActions/CardActions.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/CardActions/CardActions.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-card/\">Card</a></li></ul>",
   "cssComponent": false

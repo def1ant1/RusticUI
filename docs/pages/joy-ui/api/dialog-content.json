@@ -41,7 +41,7 @@
   "themeDefaultProps": true,
   "muiName": "JoyDialogContent",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-joy/src/DialogContent/DialogContent.tsx",
+  "filename": "/archives/mui-packages/mui-joy/src/DialogContent/DialogContent.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/joy-ui/react-drawer/\">Drawer</a></li>\n<li><a href=\"/joy-ui/react-modal/\">Modal</a></li></ul>",
   "cssComponent": false

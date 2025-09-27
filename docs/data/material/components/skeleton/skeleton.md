@@ -3,7 +3,7 @@ productId: material-ui
 title: React Skeleton component
 components: Skeleton
 githubLabel: 'scope: skeleton'
-githubSource: packages/mui-material/src/Skeleton
+githubSource: archives/mui-packages/mui-material/src/Skeleton
 ---
 
 # Skeleton

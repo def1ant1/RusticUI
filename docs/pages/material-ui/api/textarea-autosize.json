@@ -15,7 +15,7 @@
   "spread": true,
   "themeDefaultProps": null,
   "muiName": "MuiTextareaAutosize",
-  "filename": "/packages/mui-material/src/TextareaAutosize/TextareaAutosize.tsx",
+  "filename": "/archives/mui-packages/mui-material/src/TextareaAutosize/TextareaAutosize.tsx",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-textarea-autosize/\">Textarea Autosize</a></li></ul>",
   "cssComponent": false

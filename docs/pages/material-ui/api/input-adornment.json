@@ -88,7 +88,7 @@
   "themeDefaultProps": true,
   "muiName": "MuiInputAdornment",
   "forwardsRefTo": "HTMLDivElement",
-  "filename": "/packages/mui-material/src/InputAdornment/InputAdornment.js",
+  "filename": "/archives/mui-packages/mui-material/src/InputAdornment/InputAdornment.js",
   "inheritance": null,
   "demos": "<ul><li><a href=\"/material-ui/react-text-field/\">Text Field</a></li></ul>",
   "cssComponent": false
