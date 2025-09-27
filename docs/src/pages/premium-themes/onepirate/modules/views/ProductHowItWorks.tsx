@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Theme } from '@mui/material/styles';
 import { SxProps } from '@mui/system';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import Container from '@mui/material/Container';
 import Button from '../components/Button';
 import Typography from '../components/Typography';
@@ -58,7 +58,8 @@ function ProductHowItWorks() {
         </Typography>
         <div>
           <Grid container spacing={5}>
-            <Grid item xs={12} md={4}>
+            {/* Align each step with Grid v2's `size` prop to retain responsive balance. */}
+            <Grid size={{ xs: 12, md: 4 }}>
               <Box sx={item}>
                 <Box sx={number}>1.</Box>
                 <Box
@@ -72,7 +73,7 @@ function ProductHowItWorks() {
                 </Typography>
               </Box>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Box sx={item}>
                 <Box sx={number}>2.</Box>
                 <Box
@@ -87,7 +88,7 @@ function ProductHowItWorks() {
                 </Typography>
               </Box>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Box sx={item}>
                 <Box sx={number}>3.</Box>
                 <Box

@@ -25,7 +25,6 @@ import {
 } from './gridGenerator';
 import { CreateMUIStyled } from '../createStyled';
 import { GridTypeMap, GridOwnerState, GridProps, GridOffset, GridSize } from './GridProps';
-import deleteLegacyGridProps from './deleteLegacyGridProps';
 
 const defaultTheme = createTheme();
 
@@ -123,9 +122,19 @@ export default function createGrid(
     const themeProps = useThemeProps<typeof inProps & { component?: React.ElementType }>(inProps);
     const props = extendSxProp(themeProps) as Omit<typeof themeProps, 'color'> & GridOwnerState; // `color` type conflicts with html color attribute.
 
-    // TODO v8: Remove when removing the legacy Grid component
-    deleteLegacyGridProps(props, theme.breakpoints);
+    /**
+     * The legacy Grid shim previously removed v1-only props at runtime via `deleteLegacyGridProps`.
+     * With the legacy component gone we deliberately keep the object untouched here so that
+     * downstream logic works with the canonical v2 API surface (`size`, `offset`, `columns`, etc.).
+     * If new props are introduced they should be modeled explicitly in the owner state instead of
+     * relying on implicit cleanup of unknown values.
+     */
 
+    /**
+     * Consumers interact with the v2 API exclusively through the layout-centric props below.
+     * Deprecated flags such as `item`, `zeroMinWidth`, or breakpoint shorthands are intentionally
+     * absent—callers should migrate to `size`/`offset` and responsive spacing props instead.
+     */
     const {
       className,
       children,

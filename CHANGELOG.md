@@ -3,6 +3,22 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-03-25 – GridLegacy removal and Grid v2 consolidation
+
+### Highlights
+
+- Removed the deprecated `@mui/material/GridLegacy` entry point, deleting its implementation, documentation, and tests while
+  expanding inline Grid v2 documentation to clarify the streamlined API.
+- Updated premium theme showcases, migration guides, and codemod fixtures to demonstrate the modern `Grid` layout patterns and
+  direct readers to the automated migration tooling.
+- Documented the breaking change across the migration guides and release notes so downstream teams can schedule codemod runs
+  and CI validation before upgrading.
+
+### Backlog
+
+- [ ] Evaluate additional codemod coverage for wrapped or styled Grid usages that fall outside the current `grid-props`
+  transform.
+
 ## 2025-03-18 – Rustic crate rename docs complete
 
 ### Highlights

@@ -1,6 +1,5 @@
 import GridA from '@org/ui/material/Grid';
-import GridLegacyA from '@org/ui/material/GridLegacy';
-import { Grid as GridD, GridLegacy as GridLegacyB } from '@org/ui/material';
+import { Grid as GridD } from '@org/ui/material';
 
 // Transforms on all the possible imports
 <GridA size={2} />;
@@ -68,6 +67,4 @@ import { Grid as GridD, GridLegacy as GridLegacyB } from '@org/ui/material';
     sm: 2
   }} />;
 
-// Doesn't transform Grid v1
-<GridLegacyA xs={2} />;
-<GridLegacyB xs={2} />;
+// GridLegacy call sites should already be migrated via tooling in consumer repositories.

@@ -1,6 +1,5 @@
 import GridA from '@org/ui/material/Grid';
-import GridLegacyA from '@org/ui/material/GridLegacy';
-import { Grid as GridD, GridLegacy as GridLegacyB } from '@org/ui/material';
+import { Grid as GridD } from '@org/ui/material';
 
 // Transforms on all the possible imports
 <GridA xs={2} />;
@@ -35,6 +34,4 @@ import { Grid as GridD, GridLegacy as GridLegacyB } from '@org/ui/material';
 // Transforms spread props
 <GridA {...{ xs: 2, sm: 4, xsOffset: 0, smOffset: 2 }} />;
 
-// Doesn't transform Grid v1
-<GridLegacyA xs={2} />;
-<GridLegacyB xs={2} />;
+// GridLegacy was deleted upstream; partner packages should migrate via the codemod.

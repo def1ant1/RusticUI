@@ -1,8 +1,7 @@
 import GridA from '@mui/material/Grid';
-import GridLegacyA from '@mui/material/GridLegacy';
 import GridB from '@mui/system/Grid';
 import GridC from '@mui/joy/Grid';
-import { Grid as GridD, GridLegacy as GridLegacyB } from '@mui/material';
+import { Grid as GridD } from '@mui/material';
 import { Grid as GridE } from '@mui/system';
 import { Grid as GridF } from '@mui/joy';
 
@@ -76,6 +75,4 @@ import { Grid as GridF } from '@mui/joy';
     sm: 2
   }} />;
 
-// Doesn't transform Grid v1
-<GridLegacyA xs={2} />;
-<GridLegacyB xs={2} />;
+// GridLegacy no longer exists, so only the modern Grid results remain relevant.
