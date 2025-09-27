@@ -19,6 +19,22 @@ All of those flows are replaced by Rust-first crates plus automation in `scripts
 `scripts/migrate-crate-prefix.sh`, `scripts/build.mjs`, and `scripts/validateTypescriptDeclarations.mts`). These scripts
 keep any remaining Node-based interop reproducible while avoiding the hand-maintained bundle sprawl that existed before.
 
+## Archive manifest contract
+
+Every new snapshot under `archives/mui-packages/<package-name>/` must ship with an
+`archive.manifest.toml` file. The manifest is the single automation contract consumed by
+enterprise orchestrators so they can build, test, publish, or resync the snapshot without
+sprinkling bespoke scripts throughout CI pipelines.
+
+- Copy the scaffold in `archives/mui-packages/_template/archive.manifest.toml` whenever a package
+  snapshot is committed. Replace the placeholder values with real command invocations, upstream
+  Git metadata, and successor Rust crates.
+- Keep the inline comments up to date. They document how downstream teams can override the
+  automation by editing only the manifest (or layering a checked-in override file).
+- If a package relies on shared tooling, reference the canonical script under `scripts/` or
+  `tools/`. This keeps every manifest consistent and allows orchestrators to route jobs to the
+  correct shared automation entrypoint.
+
 ## Automation notes for legacy packages
 
 Archived packages should remain inert unless a resurrection is warranted. To minimize manual toil:
