@@ -1,0 +1,82 @@
+# archive.manifest.toml codifies the orchestration contract for a legacy Material UI package.
+# Copy this file into every new `archives/mui-packages/<package-name>/` directory and replace the
+# placeholder values. Because the manifest is single-source-of-truth, enterprise automation teams
+# can override workflows by editing only this file (or layering an override file in CI) instead of
+# touching multiple scripts spread across the repository.
+
+[package]
+# The package name should match the directory name. This helps orchestrators emit consistent log
+# streams and route notifications. For example: "mui-material".
+name = "mui-<package-name>"
+# The runtime of every archive package remains JavaScript/TypeScript, but by documenting it here
+# tooling can automatically choose the correct build container.
+language = "typescript"
+# The status keeps downstream dashboards aware that this folder is frozen unless a migration is
+# underway. Automation pipelines can require manual approval when status != "archived".
+status = "archived"
+# Link to a primary owner (Slack group, email, or GitHub team) so incident tooling knows who to
+# page when build/test/publish steps fail. Replace this with a real contact when instantiating.
+owner = "@rustic-ui/archives"
+
+[commands.build]
+# `run` should lean on the centralized tooling under `scripts/` or `tools/`. For example, the
+# default points to the legacy pnpm filter which ultimately delegates to `scripts/build.mjs`.
+run = "pnpm --filter mui-<package-name> build"
+# `uses` anchors the command to a reusable script. Orchestrators can swap this value to redirect the
+# build to an internal runner without editing the command string. Keep the reference stable.
+uses = "scripts/build.mjs"
+# Optional environment variables are captured inline to avoid shell wrappers. Replace with
+# `['CI=1', 'NODE_OPTIONS=--max-old-space-size=8192']` when custom behavior is required.
+env = []
+
+[commands.test]
+# Keep the test run aligned with the workspace-level runner. Downstream systems can override the
+# command (e.g., to use `make wasm-test`) by editing the manifest in deployment pipelines.
+run = "pnpm --filter mui-<package-name> test"
+# Document the canonical script reference for test orchestration. This ensures programmatic
+# consumers know that `scripts/test.mjs` already wires coverage and environment bootstrapping.
+uses = "scripts/test.mjs"
+# Flag optional test suites that orchestrators may toggle on/off. Common values: ["unit", "e2e"].
+tags = ["unit"]
+
+[commands.publish]
+# Publishing from the archive should happen rarely and only through automation. Keep the command
+# pointed at `release:pack` so that dry-runs stay reproducible. Replace `<package-name>` when
+# copying the manifest into a real package.
+run = "pnpm --filter mui-<package-name> exec pnpm release:pack"
+# `channel` communicates which npm dist-tag automation should push. Internal mirrors can swap this
+# to `nightly` or `internal` without rewriting the entire publish block.
+channel = "legacy"
+# Attach the supporting script so the orchestrator can resolve dependencies and read usage docs.
+uses = "scripts/releasePack.mts"
+
+[[sync.sources]]
+# Enumerate every upstream location that can rehydrate this archive. Most packages will point to the
+# original Material UI monorepo and a commit SHA that produced the snapshot.
+name = "material-ui"
+# `type` lets automation choose the correct sync strategy (git mirror, tarball, artifact registry).
+type = "git"
+# `url` references the canonical upstream repository.
+url = "https://github.com/mui/material-ui"
+# `revision` captures the commit or tag that aligns with the archived snapshot. Replace with a real
+# value when instantiating (for example, `v5.15.20`).
+revision = "<commit-or-tag>"
+# `path` points to the package folder inside the upstream repository, enabling partial checkouts.
+path = "packages/<package-name>"
+
+[[relationships.crates]]
+# Link to successor Rust crates so migration tooling can suggest the modern replacement when
+# developers inspect this archive. Add multiple entries if several crates supersede the package.
+name = "crates/rustic-ui-<crate-name>"
+# `role` clarifies how the crate relates to the archive (e.g., "successor", "shim", "dependency").
+role = "successor"
+# Provide context so automation can surface guidance in dashboards and documentation.
+notes = "Tracks the Rust-first port of the legacy component library."
+
+[relationships.compatibility]
+# Document compatibility guarantees (semver ranges, browser support) so automated diffing can
+# detect regressions when syncing upstream. Adjust when the archive is instantiated.
+target_semver = "^5"
+# Capture any feature flags required to run the legacy bundle. Orchestrators can reuse this list to
+# prime test environments without custom scripting.
+feature_flags = []
