@@ -17,14 +17,16 @@
 
 use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
+use rustic_ui_design_tokens::ArtifactBundleBuilder;
 use rustic_ui_system::{
     theme::{ColorScheme, JoyTheme, Theme},
     theme_provider,
 };
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use walkdir::WalkDir;
 
 /// Entry point for the `cargo xtask` command.
 #[derive(Parser)]
@@ -68,6 +70,16 @@ enum Commands {
     /// Refresh the Rustic icon bindings.
     #[command(name = "icon-update")]
     RefreshIcons,
+    /// Package refreshed icon assets into reproducible archives and manifests.
+    #[command(name = "icons-bundle")]
+    IconsBundle {
+        /// Copy the generated bundle into `archives/assets/icons` for legacy consumers.
+        #[arg(long)]
+        compat: bool,
+        /// Override the output directory used for bundle staging.
+        #[arg(long = "out-dir")]
+        out_dir: Option<PathBuf>,
+    },
     /// Generate an `lcov.info` report using grcov.
     Coverage,
     /// Execute Criterion benchmarks. Succeeds even if none exist.
@@ -97,6 +109,25 @@ enum Commands {
         #[arg(long)]
         joy: bool,
     },
+    /// Generate theme artifacts and wrap them in distribution-ready bundles.
+    #[command(name = "themes-bundle")]
+    ThemesBundle {
+        /// Optional path to a JSON or TOML fixture that overrides the base theme.
+        #[arg(long)]
+        overrides: Option<PathBuf>,
+        /// Output format written to disk before bundling.
+        #[arg(long, value_enum, default_value_t = ThemeFormat::Json)]
+        format: ThemeFormat,
+        /// Emit Joy-specific payloads alongside the Material artifacts.
+        #[arg(long)]
+        joy: bool,
+        /// Copy the generated bundle into `archives/assets/themes` for legacy consumers.
+        #[arg(long)]
+        compat: bool,
+        /// Override the output directory used for bundle staging.
+        #[arg(long = "out-dir")]
+        out_dir: Option<PathBuf>,
+    },
     /// Recompute the RusticUI Material component parity dashboard.
     MaterialParity,
     /// Recompute the RusticUI Joy inventory to highlight missing Rust bindings.
@@ -113,6 +144,7 @@ fn main() -> Result<()> {
         Commands::WasmTest => wasm_test(),
         Commands::Doc => doc(),
         Commands::RefreshIcons => refresh_icons(),
+        Commands::IconsBundle { compat, out_dir } => icons_bundle(out_dir, compat),
         Commands::Coverage => coverage(),
         Commands::Bench => bench(),
         Commands::UpdateComponents => update_components(),
@@ -124,6 +156,13 @@ fn main() -> Result<()> {
             format,
             joy,
         } => generate_theme(overrides, format, joy),
+        Commands::ThemesBundle {
+            overrides,
+            format,
+            joy,
+            compat,
+            out_dir,
+        } => themes_bundle(overrides, format, joy, compat, out_dir),
         Commands::MaterialParity => material_parity(),
         Commands::JoyParity => joy_parity(),
     }
@@ -134,6 +173,15 @@ fn main() -> Result<()> {
 enum ThemeFormat {
     Json,
     Toml,
+}
+
+impl ThemeFormat {
+    fn as_str(&self) -> &'static str {
+        match self {
+            ThemeFormat::Json => "json",
+            ThemeFormat::Toml => "toml",
+        }
+    }
 }
 
 /// Returns the workspace root so automation can run from a stable location.
@@ -288,6 +336,93 @@ fn refresh_icons() -> Result<()> {
         .arg("--bin")
         .arg("update_features");
     run(features)
+}
+
+fn icons_bundle(out_dir: Option<PathBuf>, compat: bool) -> Result<()> {
+    println!("[xtask] assembling distributable RusticUI icon archives");
+    if let Err(error) = refresh_icons() {
+        eprintln!(
+            "[xtask][icons-bundle] icon refresh failed: {error:?}. proceeding with existing assets"
+        );
+    }
+
+    let workspace = workspace_root();
+    let artifact_root = out_dir.unwrap_or_else(|| workspace.join("target/artifacts/icons"));
+    let bundle_root = artifact_root.join("icons");
+    println!("[xtask] staging icon payload in {}", bundle_root.display());
+
+    let mut builder = ArtifactBundleBuilder::new(&bundle_root, "icons")?;
+    let icon_sources = [
+        (
+            workspace.join("crates/rustic-ui-icons/icons/material"),
+            PathBuf::from("rustic-ui-icons/material"),
+            "rustic-ui-icons-material",
+        ),
+        (
+            workspace.join("crates/rustic-ui-icons-material/material-icons"),
+            PathBuf::from("rustic-ui-icons-material"),
+            "rustic-ui-icons-material-sys",
+        ),
+    ];
+
+    for (source, relative_root, label) in icon_sources {
+        if !source.exists() {
+            println!(
+                "[xtask][icons-bundle] skipping missing source {}",
+                source.display()
+            );
+            continue;
+        }
+        builder.ingest_directory(
+            &source,
+            &relative_root,
+            "icon-svg",
+            "image/svg+xml",
+            move |path| {
+                json!({
+                    "legacy_packages": ["@mui/icons-material"],
+                    "icon_family": label,
+                    "file_stem": path
+                        .file_stem()
+                        .and_then(|stem| stem.to_str())
+                        .unwrap_or_default(),
+                })
+            },
+        )?;
+    }
+
+    let summary = builder.finalize(json!({
+        "legacy_packages": ["@mui/icons-material"],
+        "bundle_kind": "icon-assets",
+        "schema": "rustic-ui-design-tokens/v1",
+    }))?;
+
+    let summary_payload = json!({
+        "bundle": "icons",
+        "manifest": relative_display(&workspace, &summary.manifest),
+        "archives": summary
+            .archives
+            .iter()
+            .map(|path| relative_display(&workspace, path))
+            .collect::<Vec<_>>(),
+        "entries": summary.entries.len(),
+        "legacy_packages": ["@mui/icons-material"],
+    });
+    println!(
+        "[xtask][icons-bundle] summary={}",
+        serde_json::to_string(&summary_payload)?
+    );
+
+    if compat {
+        let destination = workspace.join("archives/assets/icons");
+        let synced = summary.sync_to(&destination)?;
+        println!(
+            "[xtask][icons-bundle] compat-sync={}",
+            relative_display(&workspace, &synced)
+        );
+    }
+
+    Ok(())
 }
 
 fn update_components() -> Result<()> {
@@ -553,6 +688,130 @@ fn generate_theme(overrides: Option<PathBuf>, format: ThemeFormat, joy: bool) ->
     Ok(())
 }
 
+fn themes_bundle(
+    overrides: Option<PathBuf>,
+    format: ThemeFormat,
+    joy: bool,
+    compat: bool,
+    out_dir: Option<PathBuf>,
+) -> Result<()> {
+    println!(
+        "[xtask] preparing themed asset bundle (format: {}, joy fixtures: {joy})",
+        format.as_str()
+    );
+    let overrides_snapshot = overrides.clone();
+    generate_theme(overrides, format, joy)?;
+
+    let workspace = workspace_root();
+    let artifact_root = out_dir.unwrap_or_else(|| workspace.join("target/artifacts/themes"));
+    let bundle_root = artifact_root.join("themes");
+    println!("[xtask] staging theme payload in {}", bundle_root.display());
+
+    let templates_dir = workspace.join("crates/rustic-ui-system/templates");
+    let mut builder = ArtifactBundleBuilder::new(&bundle_root, "themes")?;
+    for entry in WalkDir::new(&templates_dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+
+        let file_name = entry.file_name().to_string_lossy();
+        let relative = Path::new("templates").join(
+            entry.path().strip_prefix(&templates_dir).with_context(|| {
+                format!(
+                    "failed to compute relative path for template {}",
+                    entry.path().display()
+                )
+            })?,
+        );
+
+        let extension = entry
+            .path()
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("");
+
+        let scheme = scheme_from_filename(&file_name);
+        let (kind, media_type, metadata) = if file_name.starts_with("material_theme") {
+            (
+                format!("material-theme-{extension}"),
+                manifest_media_type(extension),
+                json!({
+                    "legacy_packages": ["@mui/material", "@mui/system"],
+                    "scheme": scheme,
+                    "format": extension,
+                }),
+            )
+        } else if file_name.starts_with("material_css_baseline") {
+            (
+                "material-css-baseline".to_string(),
+                "text/css",
+                json!({
+                    "legacy_packages": ["@mui/material", "@mui/system"],
+                    "scheme": scheme,
+                    "format": "css",
+                }),
+            )
+        } else if file_name.starts_with("joy_theme") {
+            (
+                "joy-theme-json".to_string(),
+                "application/json",
+                json!({
+                    "legacy_packages": ["@mui/joy"],
+                    "scheme": scheme,
+                    "format": extension,
+                }),
+            )
+        } else {
+            continue;
+        };
+
+        builder.ingest_file(entry.path(), &relative, kind, media_type, metadata)?;
+    }
+
+    let override_path = overrides_snapshot
+        .as_ref()
+        .map(|path| relative_display(&workspace, path));
+    let summary = builder.finalize(json!({
+        "legacy_packages": ["@mui/material", "@mui/system"],
+        "bundle_kind": "theme-assets",
+        "schema": "rustic-ui-design-tokens/v1",
+        "format": format.as_str(),
+        "joy": joy,
+        "overrides": override_path,
+    }))?;
+
+    let summary_payload = json!({
+        "bundle": "themes",
+        "manifest": relative_display(&workspace, &summary.manifest),
+        "archives": summary
+            .archives
+            .iter()
+            .map(|path| relative_display(&workspace, path))
+            .collect::<Vec<_>>(),
+        "entries": summary.entries.len(),
+        "format": format.as_str(),
+        "joy": joy,
+    });
+    println!(
+        "[xtask][themes-bundle] summary={}",
+        serde_json::to_string(&summary_payload)?
+    );
+
+    if compat {
+        let destination = workspace.join("archives/assets/themes");
+        let synced = summary.sync_to(&destination)?;
+        println!(
+            "[xtask][themes-bundle] compat-sync={}",
+            relative_display(&workspace, &synced)
+        );
+    }
+
+    Ok(())
+}
+
 /// Parses an override fixture into a [`serde_json::Value`] so we can merge it with the default
 /// theme irrespective of the original file format.
 fn parse_overrides(path: &Path, raw: &str) -> Result<Value> {
@@ -584,6 +843,28 @@ fn merge_values(base: &mut Value, overrides: &Value) {
     } else {
         *base = overrides.clone();
     }
+}
+
+fn scheme_from_filename(file_name: &str) -> String {
+    let mut parts = file_name.split('.');
+    let _prefix = parts.next();
+    parts.next().unwrap_or("default").to_string()
+}
+
+fn manifest_media_type(extension: &str) -> &'static str {
+    match extension {
+        "json" => "application/json",
+        "toml" => "application/toml",
+        "css" => "text/css",
+        _ => "application/octet-stream",
+    }
+}
+
+fn relative_display(root: &Path, target: &Path) -> String {
+    target
+        .strip_prefix(root)
+        .map(|relative| relative.display().to_string())
+        .unwrap_or_else(|_| target.display().to_string())
 }
 
 fn material_parity() -> Result<()> {

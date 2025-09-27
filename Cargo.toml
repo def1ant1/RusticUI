@@ -39,8 +39,9 @@ members = [
     "crates/rustic-ui-material",
     "crates/rustic-ui-joy",
     "crates/rustic-ui-lab",
-    "crates/rustic-ui-icons",
+    "crates/rustic-ui-icons", 
     "crates/rustic-ui-icons-material",
+    "crates/rustic-ui-design-tokens",
     "crates/rustic-ui-utils",
     "crates/xtask",
     "tools/material-parity",
@@ -107,6 +108,8 @@ zip = { version = "0.6", default-features = false, features = ["deflate"] }
 walkdir = "2.5"
 sha2 = { version = "0.10", default-features = false }
 heck = "0.5"
+tar = { version = "0.4", default-features = false }
+flate2 = "1.0"
 
 [profile.dev]
 # Development builds prioritize compile time over runtime performance.
