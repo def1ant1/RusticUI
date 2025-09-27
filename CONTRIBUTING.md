@@ -23,8 +23,8 @@ Before starting large efforts, open a GitHub discussion or issue so the maintain
 ## Development setup
 
 1. Install the latest stable Rust toolchain and ensure `wasm32-unknown-unknown` is available via `rustup target add`.
-2. Install supporting CLI tools with Cargo: `cargo install mdbook grcov wasm-pack` (the automation will leverage them when
-   present).
+2. Install supporting CLI tools with Cargo: `cargo install mdbook grcov wasm-pack cargo-deny` (the automation will leverage
+   them when present).
 3. Run `make bootstrap` to install workspace prerequisites and run quick smoke tests.
 
 > **Important:** The root pnpm workspace has been retired. Do not run `pnpm install` from the repository root and ignore any
@@ -141,8 +141,9 @@ changes so CI stays green and local developers avoid manual cleanup.
 
 - Fork the repository and branch from `main`.
 - Ensure commits are logically grouped and reference any related issues.
-- Run `make fmt lint test` to execute the standard formatting, linting, and test suite. The command fan-outs to Rust, TypeScript,
-  and Markdown checks as appropriate.
+- Run `make fmt clippy deny test` to execute formatting, linting, supply-chain auditing, and the full test suite. The `deny`
+  target wraps `cargo xtask deny` so dependency advisories or license drift fail fast before review. Execute the command prior
+  to pushing branches so CI mirrors a known-good local run.
 - Fill in the PR template, summarizing the change, testing evidence, and migration considerations.
 
 Pull requests must pass CI and include relevant documentation updates. Enterprise consumers rely on our docs to automate upgrades,

@@ -8,9 +8,9 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 yew.workspace = true
 wasm-bindgen.workspace = true
-rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["yew"] }
-rustic-ui-joy = { path = "../../crates/rustic-ui-joy", features = ["yew"] }
-joy-workflows-core = { path = "../joy-workflows-core" }
+rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["yew"] , version = "0.1.0"}
+rustic-ui-joy = { path = "../../crates/rustic-ui-joy", features = ["yew"] , version = "0.1.0"}
+joy-workflows-core = { path = "../joy-workflows-core", version = "0.1.0"}
 tokio = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true, features = ["HtmlInputElement"] }
 

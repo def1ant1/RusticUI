@@ -2,6 +2,7 @@
 name = "rustic-ui-system"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 description = "Foundational styling primitives for the Material UI Rust ecosystem."
 repository = "https://github.com/apotheon-ai/rusticui"
 homepage = "https://apotheon.ai/rusticui"
@@ -20,8 +21,8 @@ maintenance = { status = "experimental" }
 serde.workspace = true
 serde_json.workspace = true
 stylist = { version = "0.13", default-features = false, features = ["macros", "parser", "ssr"] }
-rustic-ui-styled-engine-macros = { path = "../rustic-ui-styled-engine-macros" }
-rustic-ui-utils = { path = "../rustic-ui-utils" }
+rustic-ui-styled-engine-macros = { path = "../rustic-ui-styled-engine-macros", version = "0.1.0" }
+rustic-ui-utils = { path = "../rustic-ui-utils", version = "0.1.0" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }

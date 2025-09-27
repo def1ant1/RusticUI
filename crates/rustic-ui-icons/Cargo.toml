@@ -2,6 +2,7 @@
 name = "rustic-ui-icons"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 description = "Bindings to Material UI's SVG icon set for Rust front-end frameworks."
 # Build script converts SVGs into memoized Rust functions.
 build = "build.rs"

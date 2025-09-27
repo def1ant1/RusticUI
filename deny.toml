@@ -1,0 +1,92 @@
+# Supply-chain policy for the RusticUI workspace.
+#
+# The configuration focuses on actionable guardrails instead of copying the
+# full cargo-deny template. Each section is documented so contributors know how
+# CI evaluates advisories, licenses, and crate bans when `cargo xtask deny`
+# runs locally or inside automation.
+
+[graph]
+# Evaluate every workspace target so audit coverage mirrors `cargo clippy` and
+# `cargo test`. Explicit targets can be added as the workspace grows.
+all-features = false
+no-default-features = false
+
+[advisories]
+# The default lint levels already deny vulnerabilities and yanked crates while
+# warning on unmaintained packages. Keeping the field list short makes future
+# upgrades less error-prone. Document every exception directly in the ignore
+# array with rationale comments.
+# paste and proc-macro-error are still required by upstream framework
+# dependencies (Leptos/Sycamore/Yew). Track the advisories and remove these
+# entries once upstream releases replacements.
+ignore = [
+    { id = "RUSTSEC-2024-0436", reason = "Leptos/Sycamore still depend on paste; track upstream issue before removing" },
+    { id = "RUSTSEC-2024-0370", reason = "Stylist/yew depend on proc-macro-error; revisit when upstream swaps to proc-macro-error2" },
+]
+# Use the system git binary so corporate proxies and SSH configs are honoured
+# consistently across developer machines and CI runners.
+git-fetch-with-cli = true
+
+[licenses]
+# Only permit well-understood permissive and weak-copyleft licenses. This list
+# matches Apotheon.ai's internal supply-chain policy and keeps runtime
+# dependencies aligned with enterprise compliance baselines.
+allow = [
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Unlicense",
+    "Zlib",
+]
+# Flag strong copyleft usage so legal review can weigh in without blocking
+# day-to-day development. The allow list acts as the explicit permit list,
+# and anything else will surface as an error. Unknown licenses fail the check
+# once cargo-deny cannot map them confidently.
+confidence-threshold = 0.8
+exceptions = []
+
+[licenses.private]
+# Workspace crates inherit the root dual license. Ignoring private members keeps
+# cargo-deny focused on third-party dependencies while we gradually backfill
+# explicit `license` metadata crate-by-crate.
+ignore = true
+registries = []
+
+[bans]
+# Surface duplicate dependencies without failing immediately so maintainers can
+# de-duplicate in follow-up PRs. Wildcard requirements are denied since they
+# make supply-chain audits non-deterministic.
+multiple-versions = "allow"
+wildcards = "deny"
+allow = []
+deny = []
+skip = [
+    { crate = "windows-targets", reason = "Upstream tokio/winit dependencies still mix 0.52 and 0.53" },
+    { crate = "winnow", reason = "Toml tooling depends on both 0.5 and 0.7; awaiting ecosystem convergence" },
+    { crate = "wasi", reason = "Web tooling still pulls both legacy and preview wasi shims" },
+    { crate = "windows_x86_64_msvc", reason = "Downstream windows crates require multiple subtargets during transition" },
+]
+skip-tree = []
+
+[sources]
+# Block any registry or git source that isn't explicitly trusted. This keeps
+# CI from pulling crates hosted outside crates.io or the workspace itself.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+
+[sources.allow-org]
+# Git hosts that are cleared for direct dependencies. Keep the lists empty until
+# we intentionally approve an organization and document the reasoning.
+github = []
+gitlab = []
+bitbucket = []

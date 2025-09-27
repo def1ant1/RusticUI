@@ -8,10 +8,10 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 leptos = { workspace = true, default-features = false }
 wasm-bindgen.workspace = true
-joy-workflows-core = { path = "../joy-workflows-core" }
-rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
-rustic-ui-joy = { path = "../../crates/rustic-ui-joy", default-features = false, features = ["leptos"] }
-rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["leptos"] }
+joy-workflows-core = { path = "../joy-workflows-core", version = "0.1.0"}
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", version = "0.1.0"}
+rustic-ui-joy = { path = "../../crates/rustic-ui-joy", default-features = false, features = ["leptos"] , version = "0.1.0"}
+rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["leptos"] , version = "0.1.0"}
 tokio = { workspace = true, optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
 

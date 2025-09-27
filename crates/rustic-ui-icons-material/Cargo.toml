@@ -2,6 +2,7 @@
 name = "rustic-ui-icons-material"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 description = "Material Icons auto-generated from SVGs for Rust front-end frameworks."
 
 # Build script performs SVG -> Rust conversion.

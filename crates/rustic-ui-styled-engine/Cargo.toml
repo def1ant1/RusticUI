@@ -2,6 +2,7 @@
 name = "rustic-ui-styled-engine"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 description = "Styling engine for Material UI Rust components providing theme primitives."
 repository = "https://github.com/apotheon-ai/rusticui"
 homepage = "https://apotheon.ai/rusticui"
@@ -13,11 +14,11 @@ categories = ["gui"]
 maintenance = { status = "experimental" }
 
 [dependencies]
-rustic-ui-system = { path = "../rustic-ui-system" }
+rustic-ui-system = { path = "../rustic-ui-system", version = "0.1.0" }
 stylist = { version = "0.13", default-features = false, features = ["macros", "parser", "yew_integration", "ssr"] }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
-rustic-ui-styled-engine-macros = { path = "../rustic-ui-styled-engine-macros" }
+rustic-ui-styled-engine-macros = { path = "../rustic-ui-styled-engine-macros", version = "0.1.0" }
 
 [features]
 default = []

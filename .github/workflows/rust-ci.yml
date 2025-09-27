@@ -34,10 +34,15 @@ jobs:
           components: rustfmt, clippy
       # Cache dependencies to speed up repeated CI runs
       - uses: Swatinem/rust-cache@v2
+      # Install cargo-deny so the xtask supply-chain audit can execute
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
       # Enforce consistent style across the workspace
       - run: cargo xtask fmt --check
       # Fail on any warnings to keep code quality high
       - run: cargo xtask clippy
+      # Audit the dependency graph for advisories, bans, and license drift
+      - run: cargo xtask deny
 
   test:
     name: Test and Coverage
