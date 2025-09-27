@@ -466,35 +466,83 @@ The component definitions in the theme were restructured under the `components` 
  });
 ```
 
-## @mui/styles
+## @mui/styles (removed)
 
-### Update ThemeProvider import
+:::danger
+The `@mui/styles` package and every JSS-powered helper (`makeStyles`, `withStyles`, `withTheme`, `createStyles`, etc.) have been removed from RusticUI. Depending on the deprecated bundle now fails the build. Use the automated pathway below to migrate without manual edits.
+:::
 
-If you are using the utilities from `@mui/styles` together with the `@mui/material`, you should replace the use of `ThemeProvider` from `@mui/styles` with the one exported from `@mui/material/styles`.
+### Automation-first migration
 
-This way, the `theme` provided in the context will be available in both the styling utilities exported from `@mui/styles`, like `makeStyles`, `withStyles`, etc., along with the Material UI components.
+1. **Run the scripted rewrite** – Execute `scripts/migrate-crate-prefix.sh --rewrite-styles` (or the equivalent `cargo xtask migrate-styles`) from the repository root. The script scans for `@mui/styles` imports and rewrites them to RusticUI-first patterns based on `rustic_ui_styled_engine::css_with_theme!`.
+2. **Commit the codemod output** – The automation leaves extensive comments explaining each transformation and highlights any remaining manual follow-up with `TODO(rustic-ui)` markers.
+3. **Verify clean builds** – Re-run the script with `--verify-clean` to ensure no stray `@mui/styles` references remain before enabling the new release channel.
+
+Refer to the [RusticUI compatibility guide](/mui-compatibility/) for enterprise roll-out plans, CI integration examples, and remediation playbooks.
+
+### Replace ThemeProvider imports
+
+After the codemod runs, the only supported `ThemeProvider` is the one from `@mui/material/styles`:
 
 ```diff
 -import { ThemeProvider } from '@mui/styles';
 +import { ThemeProvider } from '@mui/material/styles';
 ```
 
-Make sure to add a `ThemeProvider` at the root of your application, as the `defaultTheme` is no longer available in the utilities coming from `@mui/styles`.
+Ensure your root layout and tests wrap components in this provider before invoking any styling helpers.
 
-### ✅ Add module augmentation for DefaultTheme (TypeScript)
+### Converting legacy helpers
 
-The `@mui/styles` package is no longer part of `@mui/material/styles`.
+The automation rewrites `makeStyles`/`withStyles`/`withTheme` usage to the RusticUI macros. The resulting pattern keeps theme awareness without JSS:
 
-If you are using `@mui/styles` together with `@mui/material` you need to add a module augmentation for the `DefaultTheme`.
+```diff
+-import { makeStyles } from '@mui/styles';
++import { css_with_theme } from 'rustic_ui_styled_engine';
 
-```ts
-// in the file where you are creating the theme (invoking the function `createTheme()`)
-import { Theme } from '@mui/material/styles';
+-const useStyles = makeStyles((theme) => ({
+-  root: {
+-    padding: theme.spacing(2),
+-  },
+-}));
++const styles = css_with_theme!(theme, {
++  root: {
++    padding: theme.spacing(2),
++  },
++});
 
-declare module '@mui/styles' {
-  interface DefaultTheme extends Theme {}
-}
+ function Component() {
+-  const classes = useStyles();
+-  return <div className={classes.root} />;
++  return <div className={styles.root.clone()} />;
+ }
 ```
+
+If any bespoke patterns require human input, the script logs actionable instructions so you can address them quickly without resorting to `@mui/styles`.
+
+### ✅ Update createStyles usage
+
+`createStyles` no longer exists in RusticUI. When the codemod encounters it, the helper inlines the returned object into the surrounding `css_with_theme!` invocation. If you still find stray references, replace them manually with a direct object literal inside the macro:
+
+```diff
+-const styles = createStyles({
+-  root: { display: 'flex' },
+-});
++const styles = css_with_theme!(theme, {
++  root: { display: 'flex' },
++});
+```
+
+### ✅ Update createGenerateClassName usage
+
+`createGenerateClassName` should be removed entirely. Theme-aware class name generation is handled by the RusticUI styled engine. Drop the import and rely on the defaults provided by `css_with_theme!`. If you need bespoke naming, see [ClassName Generator](/material-ui/experimental-api/classname-generator/) for a maintained alternative.
+
+### ✅ Update ServerStyleSheets usage
+
+`ServerStyleSheets` and `StylesProvider` were tightly coupled to the JSS runtime. Remove those imports and rely on the RusticUI styled engine when performing SSR. The codemod drops these symbols automatically; double-check that no `@mui/styles` entry points remain.
+
+### ✅ Replace withStyles/withTheme
+
+Higher-order components from `@mui/styles` disappear entirely. The script converts them to hook-free helper functions that leverage `css_with_theme!`. If you stumble on code the codemod could not convert, prefer inline styled components or the `styled` API from `@mui/system`.
 
 ## @mui/material/colors
 
@@ -525,26 +573,13 @@ The previous name caused confusion when the input color already had an alpha val
   }));
 ```
 
-### ✅ Update createStyles import
+### ✅ Remove createStyles imports
 
-The `createStyles` function from `@mui/material/styles` was moved to the one exported from `@mui/styles`. It is necessary for removing the dependency on `@mui/styles` in the Material UI npm package.
+`createStyles` is no longer exported anywhere. Delete the import and inline the returned object inside `css_with_theme!` (see the automation guidance above) to keep type inference intact without reintroducing `@mui/styles`.
 
-```diff
--import { createStyles } from '@mui/material/styles';
-+import { createStyles } from '@mui/styles';
-```
+### ✅ Drop createGenerateClassName
 
-### ✅ Update createGenerateClassName import
-
-The `createGenerateClassName` function is no longer exported from `@mui/material/styles`.
-You can import it from the deprecated `@mui/styles` package if you need to continue using it.
-
-```diff
--import { createGenerateClassName } from '@mui/material/styles';
-+import { createGenerateClassName } from '@mui/styles';
-```
-
-To generate custom class names without using `@mui/styles`, check out [ClassName Generator](/material-ui/experimental-api/classname-generator/) for more details.
+`createGenerateClassName` relied on the removed JSS runtime. Delete the symbol and use the RusticUI styled engine defaults or the [ClassName Generator](/material-ui/experimental-api/classname-generator/) utilities when custom naming is required.
 
 ### ✅ Rename createMuiTheme
 
@@ -567,167 +602,41 @@ The `MuiThemeProvider` component is no longer exported from `@mui/material/style
 +import { ThemeProvider } from '@mui/material/styles';
 ```
 
-### ✅ Update jssPreset import
+### ✅ Retire jssPreset
 
-The `jssPreset` object is no longer exported from `@mui/material/styles`.
-You can import it from the deprecated `@mui/styles` package if you need to continue using it.
+`jssPreset` is obsolete now that the RusticUI styled engine owns class name generation. Remove the import and rely on the macros or CSS variables documented in the compatibility guide.
 
-```diff
--import { jssPreset } from '@mui/material/styles';
-+import { jssPreset } from '@mui/styles';
-```
+### ✅ Replace makeStyles usage
 
-### ✅ Update `makeStyles` import
+`makeStyles` has been superseded by `css_with_theme!`. Rely on the migration script to rewrite hooks to static style maps and remove the helper entirely.
 
-Since Material UI v5 doesn't use JSS, the JSS-based `makeStyles` utility is no longer exported by `@mui/material/styles`.
-While migrating your app away from JSS, you can temporarily import this deprecated utility from `@mui/styles/makeStyles` before refactoring your components further.
+### ✅ Remove ServerStyleSheets
 
-Make sure to add a `ThemeProvider` at the root of your application, as the `defaultTheme` is no longer available.
-
-If you are using this utility together with `@mui/material`, it's recommended that you use the `ThemeProvider` component from `@mui/material/styles` instead.
-
-```diff
--import { makeStyles } from '@mui/material/styles';
-+import { makeStyles } from '@mui/styles';
-+import { createTheme, ThemeProvider } from '@mui/material/styles';
-
-+const theme = createTheme();
-  const useStyles = makeStyles((theme) => ({
-    background: theme.palette.primary.main,
-  }));
-  function Component() {
-    const classes = useStyles();
-    return <div className={classes.root} />
-  }
-
-  // In the root of your app
-  function App(props) {
--  return <Component />;
-+  return <ThemeProvider theme={theme}><Component {...props} /></ThemeProvider>;
-  }
-```
-
-### ✅ Update ServerStyleSheets import
-
-The `ServerStyleSheets` component is no longer exported from `@mui/material/styles`.
-You can import it from the deprecated `@mui/styles` package if you need to continue using it.
-
-```diff
--import { ServerStyleSheets } from '@mui/material/styles';
-+import { ServerStyleSheets } from '@mui/styles';
-```
+`ServerStyleSheets` depended on the JSS renderer. Use the RusticUI SSR helpers bundled with the styled engine instead of attempting to import the deleted module.
 
 ### styled
 
-Since Material UI v5 doesn't use JSS, the JSS-based `styled` utility exported by `@mui/material/styles` has been replaced with an equivalent Emotion-based utility that's not backwards compatible.
-While migrating your app away from JSS, you can temporarily import the JSS-based utility from the deprecated `@mui/styles` package before refactoring your components further.
+The RusticUI styled engine provides the Emotion-compatible `styled` helper directly from `@mui/system`. Prefer that export or the macros when you need dynamic classes instead of reaching for the removed JSS variant.
 
-Make sure to add a `ThemeProvider` at the root of your application, as the `defaultTheme` is no longer available.
+### ✅ Remove StylesProvider
 
-If you are using this utility together with `@mui/material`, it's recommended you use the `ThemeProvider` component from `@mui/material/styles` instead.
+`StylesProvider` only applied to the removed JSS infrastructure. Delete the component and rely on the RusticUI styled engine context (provided automatically by `ThemeProvider`).
 
-```diff
--import { styled } from '@mui/material/styles';
-+import { styled } from '@mui/styles';
-+import { createTheme, ThemeProvider } from '@mui/material/styles';
+### ✅ Replace useThemeVariants
 
-+const theme = createTheme();
-  const MyComponent = styled('div')(({ theme }) => ({ background: theme.palette.primary.main }));
+`useThemeVariants` was part of the JSS theming bridge. Migrate the logic to component-level `ownerState` patterns or `css_with_theme!` selectors instead of importing from `@mui/styles`.
 
-  function App(props) {
--  return <MyComponent />;
-+  return <ThemeProvider theme={theme}><MyComponent {...props} /></ThemeProvider>;
-  }
-```
+### ✅ Replace withStyles HOCs
 
-### ✅ Update StylesProvider import
-
-The `StylesProvider` component is no longer exported from `@mui/material/styles`.
-You can import it from the deprecated `@mui/styles` package if you need to continue using it.
-
-```diff
--import { StylesProvider } from '@mui/material/styles';
-+import { StylesProvider } from '@mui/styles';
-```
-
-### ✅ Update useThemeVariants import
-
-The `useThemeVariants` hook is no longer exported from `@mui/material/styles`.
-You can import it from the deprecated `@mui/styles` package if you need to continue using it.
-
-```diff
--import { useThemeVariants } from '@mui/material/styles';
-+import { useThemeVariants } from '@mui/styles';
-```
-
-### ✅ Update withStyles import
-
-Since Material UI v5 doesn't use JSS, the JSS-based `withStyles` utility is no longer exported by `@mui/material/styles`.
-While migrating your app away from JSS, you can temporarily import this deprecated utility from `@mui/styles/withStyles` before refactoring your components further.
-
-Make sure to add a `ThemeProvider` at the root of your application, as the `defaultTheme` is no longer available.
-
-If you are using this utility together with `@mui/material`, you should use the `ThemeProvider` component from `@mui/material/styles` instead.
-
-```diff
--import { withStyles } from '@mui/material/styles';
-+import { withStyles } from '@mui/styles';
-+import { createTheme, ThemeProvider } from '@mui/material/styles';
-
-+const defaultTheme = createTheme();
-  const MyComponent = withStyles((props) => {
-    const { classes, className, ...other } = props;
-    return <div className={clsx(className, classes.root)} {...other} />
-  })(({ theme }) => ({ root: { background: theme.palette.primary.main }}));
-
-  function App() {
--  return <MyComponent />;
-+  return <ThemeProvider theme={defaultTheme}><MyComponent /></ThemeProvider>;
-  }
-```
+`withStyles` should be rewritten to functional components that read from `css_with_theme!` outputs. The migration script handles the majority of transformations and flags any follow-up work with TODO markers.
 
 ### ✅ Replace innerRef with ref
 
-Replace the `innerRef` prop with the `ref` prop. Refs are now automatically forwarded to the inner component.
+If you maintain bespoke wrappers that the codemod could not convert, update them to forward `ref` directly (for example via `React.forwardRef`) once the styles live inside `css_with_theme!` output objects. Legacy `innerRef` props no longer exist.
 
-```diff
-  import * as React from 'react';
-  import { withStyles } from '@mui/styles';
+### Update withTheme usage
 
-  const MyComponent = withStyles({
-    root: {
-      backgroundColor: 'red',
-    },
-  })(({ classes }) => <div className={classes.root} />);
-
-  function MyOtherComponent(props) {
-    const ref = React.useRef();
--  return <MyComponent innerRef={ref} />;
-+  return <MyComponent ref={ref} />;
-  }
-```
-
-### Update withTheme import
-
-The `withTheme` HOC utility has been removed from the `@mui/material/styles` package. You can use `@mui/styles/withTheme` instead.
-
-Make sure to add a `ThemeProvider` at the root of your application, as the `defaultTheme` is no longer available.
-
-If you are using this utility together with `@mui/material`, it's recommended you use the `ThemeProvider` component from `@mui/material/styles` instead.
-
-```diff
--import { withTheme } from '@mui/material/styles';
-+import { withTheme } from '@mui/styles';
-+import { createTheme, ThemeProvider } from '@mui/material/styles';
-
-+const theme = createTheme();
-  const MyComponent = withTheme(({ theme }) => <div>{theme.direction}</div>);
-
-  function App(props) {
--  return <MyComponent />;
-+  return <ThemeProvider theme={theme}><MyComponent {...props} /></ThemeProvider>;
-  }
-```
+`withTheme` was removed. Convert any remaining wrappers to hooks (`useTheme`) or inline props passed through `css_with_theme!` definitions rather than importing from legacy packages.
 
 ### ✅ Remove withWidth
 

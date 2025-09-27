@@ -14,8 +14,9 @@
 
 One of the biggest changes in v5 is the replacement of JSS for [Emotion](https://emotion.sh/docs/introduction) (or [styled-components](https://styled-components.com/) as an alternative) as a default styling solution .
 
-Note that you may continue to use JSS for adding overrides for the components (for example `makeStyles`, `withStyles`) even after migrating to v5.
-Then, if at any point you want to move over to the new styling engine, you can refactor your components progressively.
+:::warning
+RusticUI no longer ships the `@mui/styles` package. Run `scripts/migrate-crate-prefix.sh --rewrite-styles` before you begin so the codemod can replace `makeStyles`, `withStyles`, and `withTheme` with `rustic_ui_styled_engine::css_with_theme!` powered constructs. This keeps the migration deterministic and avoids any manual edits to legacy styling utilities.
+:::
 
 :::info
 Need a maintained SSR reference? The `material-ui-nextjs-pages-router` samples show the latest Emotion configuration for both [JavaScript](https://github.com/mui/material-ui/tree/master/examples/material-ui-nextjs-pages-router) and [TypeScript](https://github.com/mui/material-ui/tree/master/examples/material-ui-nextjs-pages-router-ts) workspaces.
@@ -456,19 +457,7 @@ You can also [submit an issue](https://github.com/garronej/tss-react/issues/new)
 
 ## Complete the migration
 
-Once you migrate all of the styling, remove unnecessary `@mui/styles` by uninstalling the package.
-
-With npm:
-
-```bash
-npm uninstall @mui/styles
-```
-
-With yarn:
-
-```bash
-yarn remove @mui/styles
-```
+Once you migrate all of the styling, rerun `scripts/migrate-crate-prefix.sh --verify-clean`. The verification mode fails if any `@mui/styles` dependency remains and automatically removes the package entry from your manifests, so no manual uninstall commands are required.
 
 :::warning
 `@emotion/styled` is a peer dependency of `@mui/material`.

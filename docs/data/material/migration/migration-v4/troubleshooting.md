@@ -163,38 +163,7 @@ For more details, checkout [this issue](https://github.com/mui/material-ui/issue
 
 ## [Types] Property "palette", "spacing" does not exist on type 'DefaultTheme'
 
-This error arises because `makeStyles` is now exported from the `@mui/styles` package, which does not know about `Theme` in the core package.
-
-To fix this, you need to augment the `DefaultTheme` (empty object) in `@mui/styles` with `Theme` from the core.
-
-Read more about module augmentation in [the official TypeScript docs](https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation).
-
-### TypeScript
-
-Add this snippet to your theme file:
-
-```ts
-// it could be your App.tsx file or theme file that is included in your tsconfig.json
-import { Theme } from '@mui/material/styles';
-
-declare module '@mui/styles/defaultTheme' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface (remove this line if you don't have the rule enabled)
-  interface DefaultTheme extends Theme {}
-}
-```
-
-### JavaScript
-
-If you are using an IDE like VS Code which is able to infer types from a `d.ts` file, create `index.d.ts` in your `src` folder and add the following lines of code:
-
-```js
-// index.d.ts
-declare module '@mui/private-theming' {
-  import type { Theme } from '@mui/material/styles';
-
-  interface DefaultTheme extends Theme {}
-}
-```
+This error means parts of your workspace still import `@mui/styles`. Instead of augmenting legacy types, rerun `scripts/migrate-crate-prefix.sh --rewrite-styles` and `--verify-clean` to purge the dependency. The codemod rewrites the offending files to use `rustic_ui_styled_engine::css_with_theme!`, ensuring `Theme` is sourced from `@mui/material/styles` automatically.
 
 ## [Jest] SyntaxError: Unexpected token 'export'
 

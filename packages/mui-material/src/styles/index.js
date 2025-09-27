@@ -26,7 +26,6 @@ export function experimental_sx() {
 }
 export { default as createTheme } from './createTheme';
 export { default as unstable_createMuiStrictModeTheme } from './createMuiStrictModeTheme';
-export { default as createStyles } from './createStyles';
 export { getUnit as unstable_getUnit, toUnitless as unstable_toUnitless } from './cssUtils';
 export { default as responsiveFontSizes } from './responsiveFontSizes';
 export { default as createTransitions, duration, easing } from './createTransitions';
@@ -36,11 +35,9 @@ export { default as useThemeProps } from './useThemeProps';
 export { default as styled } from './styled';
 export { default as ThemeProvider } from './ThemeProvider';
 export { StyledEngineProvider } from '@mui/system';
-// The legacy utilities from @mui/styles
-// These are just empty functions that throws when invoked
-export { default as makeStyles } from './makeStyles';
-export { default as withStyles } from './withStyles';
-export { default as withTheme } from './withTheme';
+// Legacy styling shims were removed in favor of automation-first flows.
+// Developers should migrate to the RusticUI styling macros, e.g. `rustic_ui_styled_engine::css_with_theme!`,
+// or other supported styling approaches documented in `docs/mui-compatibility.md`.
 
 export * from './ThemeProviderWithVars';
 export { default as extendTheme } from './createThemeWithVars';

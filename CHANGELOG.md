@@ -3,6 +3,18 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-04-22 – RusticUI styling macros only
+
+### Highlights
+
+- Removed the final `@mui/styles` shims (`makeStyles`, `withStyles`, `withTheme`, and `createStyles`) from `@mui/material/styles` so RusticUI depends exclusively on the macro-based styling engine.
+- Updated the v4→v5 migration docs, troubleshooting guide, and error-code catalog to direct enterprises to the automated `scripts/migrate-crate-prefix.sh` workflow rather than manual package installs.
+- Documented the breaking change across the changelog and upgrade playbooks so downstream teams can schedule codemod runs and CI verification before upgrading.
+
+### Backlog
+
+- [ ] Extend `scripts/migrate-crate-prefix.sh` with a dry-run reporter that lists every remaining JSS artifact before the rewrite executes, making change management sign-off easier for regulated environments.
+
 ## 2025-04-01 – Regression harness styling migration guardrails
 
 ### Highlights

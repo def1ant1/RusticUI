@@ -25,7 +25,6 @@ export {
   Color,
 } from './createPalette';
 export { default as createColorScheme } from './createColorScheme';
-export { default as createStyles } from './createStyles';
 export {
   TypographyVariants,
   TypographyVariantsOptions,
@@ -117,9 +116,9 @@ export namespace PropTypes {
   type Color = 'inherit' | 'primary' | 'secondary' | 'default';
 }
 
-export { default as makeStyles } from './makeStyles';
-export { default as withStyles } from './withStyles';
-export { default as withTheme } from './withTheme';
+// Legacy styling shims were removed in favor of automation-first flows.
+// Migrate to the RusticUI styling macros (e.g. `rustic_ui_styled_engine::css_with_theme!`) or
+// other supported options documented in `docs/mui-compatibility.md`.
 
 export * from './ThemeProviderWithVars';
 export type { StorageManager } from '@mui/system/cssVars';

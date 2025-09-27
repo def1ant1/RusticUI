@@ -118,25 +118,25 @@ Make sure that your application is still running without errors, and commit the 
 
 Before upgrading to v5, please make sure that `ThemeProvider` is defined at the root of your application and in tests—even if you are using the default theme—and `useStyles` is _not_ called before `ThemeProvider`.
 
-Eventually you will want to [migrate from JSS to Emotion](/material-ui/migration/migrating-from-jss/), but in the meantime you can continue to use the older JSS-based utilities with the deprecated `@mui/styles` package.
-This package requires `ThemeProvider`.
+:::warning
+RusticUI removes the deprecated `@mui/styles` entry points. Prior to enabling v5 in production, execute `scripts/migrate-crate-prefix.sh --rewrite-styles` so every `makeStyles`, `withStyles`, or `withTheme` usage is rewritten to `rustic_ui_styled_engine::css_with_theme!` powered alternatives. The automation is described in detail in the [RusticUI compatibility guide](/mui-compatibility/).
+:::
 
-The root of your application should look something like this:
+The root of your application should resemble the following structure once the migration script runs:
 
 ```js
-import { ThemeProvider, createMuiTheme, makeStyles } from '@material-ui/core/styles';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { css_with_theme } from 'rustic_ui_styled_engine';
 
-const theme = createMuiTheme();
+const theme = createTheme();
 
-const useStyles = makeStyles((theme) => {
+const styles = css_with_theme!(theme, {
   root: {
-    // some CSS that accesses the theme
-  }
+    // automated migrations inline theme-aware styles here
+  },
 });
 
 function App() {
-  const classes = useStyles(); // ❌ If you have this, consider moving it
-  // inside of a component wrapped with <ThemeProvider />
   return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
 }
 ```
@@ -149,15 +149,19 @@ Make sure that your application is still running without errors, and commit the 
 
 ### Material UI v5 and `@mui/styles`
 
+:::danger
+Do not install `@mui/styles`. The package has been removed from RusticUI distributions and continuing to depend on it will block upgrades. Instead, run `scripts/migrate-crate-prefix.sh --rewrite-styles` (or the equivalent `cargo xtask migrate-styles`) to codemod legacy styling helpers to supported APIs. Once the automation completes, the only runtime dependency you need is `@mui/material`.
+:::
+
 Install the Material UI v5 packages.
 
 <codeblock storageKey="package-manager">
 ```bash npm
-npm install @mui/material @mui/styles
+npm install @mui/material
 ```
 
 ```bash yarn
-yarn add @mui/material @mui/styles
+yarn add @mui/material
 ```
 
 </codeblock>
@@ -235,7 +239,7 @@ With the release of v5, the names of all related packages were changed from `@ma
 @material-ui/core -> @mui/material
 @material-ui/unstyled -> @mui/base
 @material-ui/icons -> @mui/icons-material
-@material-ui/styles -> @mui/styles
+@material-ui/styles -> (removed – migrate via scripts/migrate-crate-prefix.sh)
 @material-ui/system -> @mui/system
 @material-ui/lab -> @mui/lab
 @material-ui/types -> @mui/types
