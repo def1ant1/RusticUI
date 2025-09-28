@@ -58,10 +58,16 @@ enum Commands {
     Deny,
     /// Execute the default test suites for all crates.
     ///
-    /// After the workspace tests finish we compile the `joy-*` WebAssembly
-    /// examples (`examples/joy-yew`, `examples/joy-leptos`, etc.) to guarantee
-    /// each renderer remains compatible with the shared RusticUI APIs.
-    Test,
+    /// Pass `--examples` to also compile every Rust example (`examples/mui-*`,
+    /// `examples/select-menu-*`, etc.) for `wasm32-unknown-unknown`. This keeps
+    /// the example gallery aligned with the published crates without forcing
+    /// every contributor to pay the additional compile time unless they
+    /// explicitly opt in.
+    Test {
+        /// Also compile every Rust example crate for `wasm32-unknown-unknown`.
+        #[arg(long)]
+        examples: bool,
+    },
     /// Run WebAssembly tests via `wasm-pack` for selected crates.
     ///
     /// This exercises the `rustic-ui-material` and `rustic-ui-joy` crates across
@@ -156,7 +162,7 @@ fn main() -> Result<()> {
         Commands::Fmt { check } => fmt(check),
         Commands::Clippy => clippy(),
         Commands::Deny => deny(),
-        Commands::Test => test(),
+        Commands::Test { examples } => test(examples),
         Commands::WasmTest => wasm_test(),
         Commands::Doc => doc(),
         Commands::RefreshIcons => refresh_icons(),
@@ -261,30 +267,132 @@ fn deny() -> Result<()> {
     run(cmd)
 }
 
-fn test() -> Result<()> {
+fn test(include_examples: bool) -> Result<()> {
     let mut cmd = Command::new("cargo");
     cmd.arg("test").arg("--workspace").arg("--all-features");
     run(cmd)?;
-    // Also ensure each example still compiles for the WebAssembly target.
-    // We prioritise the joy-* demos because they double as regression
-    // coverage for the RusticUI bindings across all supported renderers.
-    let examples = [
-        "examples/joy-yew",
-        "examples/joy-leptos",
-        "examples/joy-dioxus",
-        "examples/joy-sycamore",
-    ];
-    for ex in &examples {
+
+    if !include_examples {
+        return Ok(());
+    }
+
+    let workspace = workspace_root();
+    let examples_root = workspace.join("examples");
+    let example_crates = discover_example_crates(&examples_root)?;
+
+    if example_crates.is_empty() {
+        println!(
+            "[xtask][examples] no Rust example manifests found under {}",
+            examples_root.display()
+        );
+        return Ok(());
+    }
+
+    println!(
+        "[xtask][examples] validating {} Rust example(s) for wasm32-unknown-unknown",
+        example_crates.len()
+    );
+
+    for example in example_crates {
+        println!(
+            "[xtask][examples] verifying `{}` against wasm32-unknown-unknown",
+            example.name
+        );
+
         let mut check = Command::new("cargo");
         check
             .arg("check")
             .arg("--target")
             .arg("wasm32-unknown-unknown")
             .arg("--manifest-path")
-            .arg(format!("{ex}/Cargo.toml"));
-        run(check)?;
+            .arg(&example.manifest);
+        run(check).with_context(|| {
+            format!(
+                "wasm cargo check failed for example `{}` at {}",
+                example.name,
+                example.manifest.display()
+            )
+        })?;
+        println!(
+            "[xtask][examples] `{}` passed cargo check for wasm32-unknown-unknown",
+            example.name
+        );
+
+        let mut test = Command::new("cargo");
+        test.arg("test")
+            .arg("--target")
+            .arg("wasm32-unknown-unknown")
+            .arg("--no-run")
+            .arg("--manifest-path")
+            .arg(&example.manifest);
+        run(test).with_context(|| {
+            format!(
+                "wasm cargo test --no-run failed for example `{}` at {}",
+                example.name,
+                example.manifest.display()
+            )
+        })?;
+        println!(
+            "[xtask][examples] `{}` passed cargo test --no-run for wasm32-unknown-unknown",
+            example.name
+        );
     }
+
+    println!(
+        "[xtask][examples] all Rust examples compiled successfully for wasm32-unknown-unknown"
+    );
     Ok(())
+}
+
+/// Metadata for a Rust example crate under `examples/`.
+///
+/// Capturing both the human-readable name and the `Cargo.toml` path keeps the
+/// logging consistent across CI and local runs while avoiding repetitive path
+/// joins throughout the verification loop.
+#[derive(Debug, Clone)]
+struct ExampleCrate {
+    name: String,
+    manifest: PathBuf,
+}
+
+/// Enumerate Rust example crates that opt into the automation pipeline.
+///
+/// We intentionally restrict the search to direct children of `examples/` so the
+/// task remains predictable even as the gallery evolves with supporting assets
+/// (React shells, screenshots, etc.). Only directories that expose a
+/// `Cargo.toml` are returned, allowing hybrid demo folders to coexist without
+/// tripping the Rust verification logic.
+fn discover_example_crates(examples_root: &Path) -> Result<Vec<ExampleCrate>> {
+    if !examples_root.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut crates = Vec::new();
+    let entries = fs::read_dir(examples_root).with_context(|| {
+        format!(
+            "failed to read examples directory at {}",
+            examples_root.display()
+        )
+    })?;
+
+    for entry in entries {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() {
+            continue;
+        }
+
+        let manifest = entry.path().join("Cargo.toml");
+        if !manifest.exists() {
+            continue;
+        }
+
+        let name = entry.file_name().to_string_lossy().to_string();
+
+        crates.push(ExampleCrate { name, manifest });
+    }
+
+    crates.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(crates)
 }
 
 fn wasm_test() -> Result<()> {
@@ -544,7 +652,7 @@ fn build_docs() -> Result<()> {
 
 fn coverage() -> Result<()> {
     // Run tests first so that coverage data is produced.
-    test()?;
+    test(false)?;
     let mut cmd = Command::new("grcov");
     cmd.arg(".")
         .arg("--binary-path")

@@ -164,6 +164,7 @@ The Rust workspace CI expects every pull request to validate the full adapter ma
 
 ```bash
 cargo test --workspace --all-features
+cargo xtask test --examples
 cargo xtask wasm-test
 cargo test -p mui-material --test joy_yew --features yew
 cargo test -p mui-material --test joy_leptos --features leptos

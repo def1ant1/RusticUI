@@ -215,7 +215,7 @@ jobs:
           cargo xtask fmt --check
           cargo xtask clippy
       - name: Test workspace
-        run: cargo xtask test
+        run: cargo xtask test --examples
       - name: Component metadata
         run: cargo xtask update-components
       - name: Bundle icons

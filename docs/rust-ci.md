@@ -35,7 +35,15 @@ Running `cargo xtask fmt --check` mirrors the CI lint job by wrapping the two co
 cargo test --workspace --all-features
 ```
 
-This is the quickest way to surface failures in the shared headless state machines, Material adapter suites, and the Joy headless unit tests under `crates/rustic-ui-joy/tests/headless_state_tests.rs`. CI calls the same entrypoint via `cargo xtask test`, which additionally checks that each example still compiles for `wasm32-unknown-unknown`.
+This is the quickest way to surface failures in the shared headless state machines, Material adapter suites, and the Joy headless unit tests under `crates/rustic-ui-joy/tests/headless_state_tests.rs`. CI calls the same entrypoint via `cargo xtask test --examples`, which additionally compiles every Rust example crate for `wasm32-unknown-unknown`.
+
+To reproduce the example verification locally (mirroring CI), install the WebAssembly target and run:
+
+```bash
+cargo xtask test --examples
+```
+
+The command enumerates every `examples/*/Cargo.toml`, runs `cargo check --target wasm32-unknown-unknown`, and executes `cargo test --target wasm32-unknown-unknown --no-run` for deterministic build coverage. Each example logs its own status block and the task exits non-zero if any example fails to compile.
 
 ### Joy snapshot parity suites
 Joy UI ships SSR renderers for every supported framework. The parity suites compare each adapter to the canonical React output so teams can guarantee hydration-safe markup whenever Joy tokens evolve. Target a single framework or run the whole matrix:
