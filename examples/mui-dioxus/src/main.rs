@@ -153,7 +153,7 @@ struct ModeController {
 /// Root application component wiring the router, shared theme blueprint, and
 /// automation identifiers provided by `mui-shared`.
 #[component]
-fn App() -> Element {
+fn App(cx: Scope) -> Element {
     // Provide the shared Material theme blueprint and mode state so every route
     // can tap into deterministic SSR data and hydration aware state.
     use_shared_state_provider(cx, material_example_theme);
@@ -435,17 +435,17 @@ fn render_route(cx: Scope, route: AppRoute) -> Element {
 }
 
 #[component]
-fn Home() -> Element {
+fn Home(cx: Scope) -> Element {
     render_route(cx, AppRoute::Home {})
 }
 
 #[component]
-fn About() -> Element {
+fn About(cx: Scope) -> Element {
     render_route(cx, AppRoute::About {})
 }
 
 #[component]
-fn NotFound(_segments: Vec<String>) -> Element {
+fn NotFound(cx: Scope, _segments: Vec<String>) -> Element {
     render_route(cx, AppRoute::NotFound { _segments })
 }
 
@@ -460,7 +460,11 @@ fn NotFound(_segments: Vec<String>) -> Element {
 ///   `matchMedia`. From that point the select behaves like the archived client
 ///   component and dispatches `ModeAction::Select` for automation to observe.
 #[component]
-fn ModeSwitch(automation: AutomationIdBuilder, availability: ColorSchemeAvailability) -> Element {
+fn ModeSwitch(
+    cx: Scope,
+    automation: AutomationIdBuilder,
+    availability: ColorSchemeAvailability,
+) -> Element {
     let mode_state = use_shared_state::<ModeState>(cx).expect("mode state should exist");
     let controller = use_context::<ModeController>(cx).expect("mode controller should exist");
     let container_attr = automation.value();
