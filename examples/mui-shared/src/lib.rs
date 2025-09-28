@@ -93,12 +93,16 @@
 //! intentionally avoid real rendering to keep CI fast while still guaranteeing
 //! API stability for automation tooling.
 
+#[cfg(feature = "theme")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "theme")]
 use std::borrow::Cow;
 
+#[cfg(feature = "theme")]
 use rustic_ui_system::theme::{ColorScheme, PaletteScheme, Theme};
 
 /// Utilities for deterministic automation identifiers.
+#[cfg(feature = "automation")]
 pub mod automation {
     use super::sanitise_segment;
 
@@ -203,6 +207,7 @@ pub mod automation {
 }
 
 /// Route descriptors for the demo.
+#[cfg(feature = "routes")]
 pub mod routes {
     use super::automation::AutomationIdBuilder;
 
@@ -292,6 +297,7 @@ pub mod routes {
 }
 
 /// Layout primitives that mirror the archived Container + ProTip shell.
+#[cfg(feature = "layout")]
 pub mod layout {
     use super::{automation::AutomationIdBuilder, routes, theme::MaterialExampleTheme};
     use routes::RouteDescriptor;
@@ -442,6 +448,7 @@ pub mod layout {
 }
 
 /// Theme utilities bridging the archived TypeScript configuration with Rust.
+#[cfg(feature = "theme")]
 pub mod theme {
     use super::*;
 
@@ -583,6 +590,7 @@ pub mod theme {
     }
 }
 
+#[cfg(feature = "automation")]
 fn sanitise_segment(input: &str) -> String {
     let mut output = String::new();
     let mut prev_dash = false;
@@ -604,7 +612,7 @@ fn sanitise_segment(input: &str) -> String {
     output.trim_matches('-').to_string()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "automation"))]
 mod tests {
     use super::automation::AutomationIdBuilder;
 
