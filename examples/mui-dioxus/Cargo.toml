@@ -4,11 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dioxus.workspace = true
-dioxus-web.workspace = true
+dioxus = { workspace = true, features = ["macro", "hooks", "html"] }
+dioxus-web = { workspace = true, features = ["file_engine"] }
+dioxus-router = "0.4"
 rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["dioxus"] }
 dioxus-ssr = { workspace = true, optional = true }
-mui-shared = { path = "../mui-shared" }
+mui-shared = { path = "../mui-shared", features = ["automation", "routes", "layout", "theme", "csr", "ssr"] }
 
 [features]
 default = ["csr"]
