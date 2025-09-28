@@ -7,6 +7,7 @@ edition = "2021"
 sycamore.workspace = true
 rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["sycamore"] }
 tokio = { workspace = true, optional = true }
+mui-shared = { path = "../mui-shared" }
 
 [features]
 default = ["csr"]

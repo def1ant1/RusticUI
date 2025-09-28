@@ -8,6 +8,7 @@ dioxus.workspace = true
 dioxus-web.workspace = true
 rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["dioxus"] }
 dioxus-ssr = { workspace = true, optional = true }
+mui-shared = { path = "../mui-shared" }
 
 [features]
 default = ["csr"]
