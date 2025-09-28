@@ -63,6 +63,27 @@ cargo xtask icons-bundle --compat
 
 - `icons-bundle` pulls the upstream Material icon metadata, normalizes SVGs, and emits Rust-ready lookup tables.
 - `--compat` copies the bundle into `archives/assets/icons` so legacy JavaScript pipelines and design tools can continue consuming the archived format during their final migration window.
+- The generated manifest advertises a `packages` array pointing at the RusticUI crates and a `legacy_packages` array for the historical npm names, allowing downstream automation to pivot without rewriting parsers.
+
+Follow up with the component metadata generator so the Rust crates expose a machine-readable manifest that mirrors the legacy PropTypes:
+
+```bash
+cargo xtask update-components
+```
+
+- `update-components` parses the upstream TypeScript declarations and writes `target/component-metadata/component-metadata.json` with every component interface, property, and type signature.
+- Each entry includes both the RusticUI crate identifiers (`packages`) and historical npm package names (`legacy_packages`) so large repositories can straddle ecosystems until their migration plan completes.
+- Set `RUSTIC_UI_COMPONENT_CONFIG` if you need to scope the scan to bespoke directories during CI dry runs or fixture tests. Pair it with `RUSTIC_UI_COMPONENT_OUT_DIR` to store manifests alongside other build artifacts.
+
+When documentation changes land, lint the Markdown corpus with the automated accessibility audit:
+
+```bash
+cargo xtask accessibility-audit
+```
+
+- The audit enforces descriptive alt text, validates heading structure, and fails CI on regression.
+- Nightly jobs can call `cargo xtask accessibility-nightly` to expand the crawl across the full docs tree without custom Playwright scripts.
+- To exercise bespoke fixtures, set `RUSTIC_UI_A11Y_CONFIG` to a JSON manifest describing the Markdown files or directories to scan.
 
 If your project depended on other static payloads that lived in the npm packages (fonts, locale bundles, codemod templates), fetch them from `archives/mui-packages/`. For example, the Roboto font artifacts remain available under `archives/mui-packages/mui-material/public/static/fonts/`. Copy the required assets into your crate’s `build/` folder and commit them alongside the Rust sources.
 
@@ -190,13 +211,19 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
       - name: Format & lint
-        run: pnpm lint
+        run: |
+          cargo xtask fmt --check
+          cargo xtask clippy
       - name: Test workspace
-        run: pnpm test
+        run: cargo xtask test
+      - name: Component metadata
+        run: cargo xtask update-components
       - name: Bundle icons
         run: cargo xtask icons-bundle --compat
+      - name: Accessibility smoke test
+        run: cargo xtask accessibility-audit
       - name: Build docs
-        run: pnpm docs:build
+        run: cargo xtask build-docs
 ```
 
 ## 7. Audit the Rust supply chain

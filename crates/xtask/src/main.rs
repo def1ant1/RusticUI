@@ -73,7 +73,11 @@ enum Commands {
     #[command(name = "icon-update")]
     RefreshIcons,
     /// Package refreshed icon assets into reproducible archives and manifests.
-    #[command(name = "icons-bundle")]
+    #[command(
+        name = "icons-bundle",
+        about = "Package refreshed icon assets into reproducible archives and manifests.",
+        long_about = "Package refreshed icon assets into reproducible archives and manifests. The Rust-native bundler emits both RusticUI crate identifiers via the `packages` field and retains the historical npm names under `legacy_packages` so CI pipelines can bridge ecosystems during phased migrations."
+    )]
     IconsBundle {
         /// Copy the generated bundle into `archives/assets/icons` for legacy consumers.
         #[arg(long)]
@@ -86,15 +90,24 @@ enum Commands {
     Coverage,
     /// Execute Criterion benchmarks. Succeeds even if none exist.
     Bench,
-    /// Regenerate component scaffolding and associated metadata.
+    /// Regenerate the Rust-native component metadata manifest from TypeScript declarations.
+    #[command(
+        about = "Regenerate the Rust-native component metadata manifest from TypeScript declarations.",
+        long_about = "Regenerate the Rust-native component metadata manifest by parsing the upstream TypeScript declarations directly in Rust. The manifest records both `packages` (RusticUI crate identifiers) and `legacy_packages` (historical npm names) so downstream tools can pivot without pnpm. Override the scan targets with `RUSTIC_UI_COMPONENT_CONFIG` and customize the output directory via `RUSTIC_UI_COMPONENT_OUT_DIR`."
+    )]
     UpdateComponents,
-    /// Run automated accessibility smoke tests against the docs site.
+    /// Run Markdown-first accessibility smoke tests against the docs corpus.
+    #[command(
+        about = "Run Markdown-first accessibility smoke tests against the docs corpus.",
+        long_about = "Run Markdown-first accessibility smoke tests against the docs corpus without invoking external Playwright or pnpm scripts. Provide a JSON manifest through `RUSTIC_UI_A11Y_CONFIG` to focus on bespoke directories during CI dry runs."
+    )]
     AccessibilityAudit,
-    /// Execute the long running nightly accessibility coverage suite.
-    ///
-    /// The command exports `RUSTIC_UI_A11Y_MODE=nightly` so Playwright can
-    /// widen its crawl. This is a dry-run friendly hook for upcoming fixtures.
-    #[command(name = "accessibility-nightly")]
+    /// Execute the extended nightly accessibility coverage suite across every docs section.
+    #[command(
+        name = "accessibility-nightly",
+        about = "Execute the extended nightly accessibility coverage suite across every docs section.",
+        long_about = "Execute the extended nightly accessibility coverage suite across every docs section. This variant mirrors the standard audit but widens the default target list so enterprise CI jobs can run a comprehensive scan without custom Playwright harnesses."
+    )]
     AccessibilityNightly,
     /// Build the Rust-first documentation site and supporting API docs.
     BuildDocs,
@@ -394,6 +407,7 @@ fn icons_bundle(out_dir: Option<PathBuf>, compat: bool) -> Result<()> {
             "image/svg+xml",
             move |path| {
                 json!({
+                    "packages": ["rustic-ui-icons"],
                     "legacy_packages": ["@mui/icons-material"],
                     "icon_family": label,
                     "file_stem": path
@@ -405,7 +419,11 @@ fn icons_bundle(out_dir: Option<PathBuf>, compat: bool) -> Result<()> {
         )?;
     }
 
+    // The manifest now records both the new RusticUI crate identifiers and the legacy npm
+    // packages so downstream automation can straddle ecosystems during migrations. This keeps the
+    // schema backwards compatible for archival tooling while exposing the Rust-native contract.
     let summary = builder.finalize(json!({
+        "packages": ["rustic-ui-icons"],
         "legacy_packages": ["@mui/icons-material"],
         "bundle_kind": "icon-assets",
         "schema": "rustic-ui-design-tokens/v1",
@@ -413,6 +431,7 @@ fn icons_bundle(out_dir: Option<PathBuf>, compat: bool) -> Result<()> {
 
     let summary_payload = json!({
         "bundle": "icons",
+        "packages": ["rustic-ui-icons"],
         "manifest": relative_display(&workspace, &summary.manifest),
         "archives": summary
             .archives
@@ -440,33 +459,67 @@ fn icons_bundle(out_dir: Option<PathBuf>, compat: bool) -> Result<()> {
 }
 
 fn update_components() -> Result<()> {
-    // Rebuild component metadata such as PropTypes or other generated
-    // artifacts. This leverages the existing Node script so contributors
-    // do not need to remember the exact incantation.
-    let mut cmd = Command::new("pnpm");
-    cmd.arg("proptypes");
-    run(cmd)
+    let workspace = workspace_root();
+    let config_override = std::env::var_os("RUSTIC_UI_COMPONENT_CONFIG").map(PathBuf::from);
+    let out_dir_override = std::env::var_os("RUSTIC_UI_COMPONENT_OUT_DIR").map(PathBuf::from);
+
+    let summary = component_metadata::generate_manifest(
+        &workspace,
+        config_override.as_deref(),
+        out_dir_override.as_deref(),
+    )?;
+
+    println!(
+        "[xtask][update-components] manifest={} packages={} components={} interfaces={} props={}",
+        relative_display(&workspace, &summary.manifest),
+        summary.package_count,
+        summary.component_count,
+        summary.interface_count,
+        summary.prop_count,
+    );
+
+    Ok(())
 }
 
 fn accessibility_audit() -> Result<()> {
-    // Execute the fast Playwright based accessibility smoke tests that crawl
-    // the primary documentation entry points. Any violation bubbles up as a
-    // command failure ensuring CI visibility for release gating.
-    let mut cmd = Command::new("pnpm");
-    cmd.arg("test:e2e-website");
-    run(cmd)
+    run_accessibility(accessibility::AuditMode::Standard)
 }
 
 fn accessibility_nightly() -> Result<()> {
-    // Delegate to the same Playwright test suite but toggle the extended
-    // coverage mode so nightly jobs exercise every section of the content
-    // tree. The `RUSTIC_UI_A11Y_MODE` variable is consumed by upcoming
-    // Playwright fixtures that widen the crawl scope.
-    println!("[xtask] running nightly accessibility sweeps with extended Playwright coverage");
-    let mut cmd = Command::new("pnpm");
-    cmd.arg("test:e2e-website");
-    cmd.env("RUSTIC_UI_A11Y_MODE", "nightly");
-    run(cmd)
+    println!(
+        "[xtask] running nightly accessibility sweeps across the expanded documentation corpus"
+    );
+    run_accessibility(accessibility::AuditMode::Nightly)
+}
+
+fn run_accessibility(mode: accessibility::AuditMode) -> Result<()> {
+    let workspace = workspace_root();
+    let config_override = std::env::var_os("RUSTIC_UI_A11Y_CONFIG").map(PathBuf::from);
+    let summary = accessibility::run(&workspace, mode, config_override.as_deref())?;
+
+    println!(
+        "[xtask][accessibility] mode={} scanned_files={} issues={}",
+        mode.as_str(),
+        summary.files_scanned,
+        summary.issues.len(),
+    );
+
+    if summary.issues.is_empty() {
+        println!("[xtask][accessibility] all markdown documents cleared the automated checks");
+        Ok(())
+    } else {
+        for finding in &summary.issues {
+            println!(
+                "[xtask][accessibility][finding] file={} message={}",
+                relative_display(&workspace, &finding.path),
+                finding.message
+            );
+        }
+        Err(anyhow!(
+            "{} accessibility finding(s) detected. See the log above for remediation details.",
+            summary.issues.len()
+        ))
+    }
 }
 
 fn build_docs() -> Result<()> {
@@ -879,6 +932,859 @@ fn relative_display(root: &Path, target: &Path) -> String {
         .strip_prefix(root)
         .map(|relative| relative.display().to_string())
         .unwrap_or_else(|_| target.display().to_string())
+}
+
+mod component_metadata {
+    use super::relative_display;
+    use anyhow::{anyhow, Context, Result};
+    use chrono::{SecondsFormat, Utc};
+    use once_cell::sync::Lazy;
+    use regex::Regex;
+    use serde::{Deserialize, Serialize};
+    use std::collections::BTreeMap;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use swc_common::{sync::Lrc, Globals, SourceMap, GLOBALS};
+    use swc_ecma_ast::{
+        Decl, ExportDecl, Expr, Ident, Lit, Module, ModuleItem, Stmt, TsEntityName,
+        TsInterfaceDecl, TsKeywordTypeKind, TsLit, TsType, TsTypeElement, TsTypeRef,
+        TsUnionOrIntersectionType,
+    };
+    use swc_ecma_parser::{lexer::Lexer, Parser as SwcParser, StringInput, Syntax, TsSyntax};
+    use walkdir::WalkDir;
+
+    const MANIFEST_SCHEMA: &str = "rustic-ui/component-metadata@v1";
+
+    static COMPONENT_INTERFACE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r"^(?P<name>[A-Z][A-Za-z0-9]+?)(?:Own)?Props$")
+            .expect("component metadata interface regex")
+    });
+
+    const IGNORED_PATTERNS: &[&str] = &[
+        "Override",
+        "Overrides",
+        "Classes",
+        "OwnerState",
+        "TypeMap",
+        "Slot",
+        "Slots",
+    ];
+
+    const DEFAULT_SOURCES: &[(&str, &[&str], &str)] = &[
+        (
+            "rustic-ui-material",
+            &["@mui/material"],
+            "packages/mui-material/src",
+        ),
+        ("rustic-ui-joy", &["@mui/joy"], "packages/mui-joy/src"),
+        ("rustic-ui-lab", &["@mui/lab"], "packages/mui-lab/src"),
+    ];
+
+    #[derive(Debug, Clone, Serialize)]
+    struct ComponentManifest {
+        schema: String,
+        generated_at: String,
+        packages: Vec<ComponentPackage>,
+    }
+
+    #[derive(Debug, Clone, Serialize)]
+    struct ComponentPackage {
+        package: String,
+        packages: Vec<String>,
+        legacy_packages: Vec<String>,
+        source_root: String,
+        components: Vec<ComponentEntry>,
+    }
+
+    #[derive(Debug, Clone, Serialize)]
+    struct ComponentEntry {
+        component: String,
+        interfaces: Vec<ComponentInterface>,
+    }
+
+    #[derive(Debug, Clone, Serialize)]
+    struct ComponentInterface {
+        interface: String,
+        file: String,
+        props: Vec<ComponentProp>,
+    }
+
+    #[derive(Debug, Clone, Serialize)]
+    struct ComponentProp {
+        name: String,
+        optional: bool,
+        #[serde(rename = "type")]
+        type_repr: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ComponentSourceConfig {
+        package: String,
+        #[serde(default)]
+        legacy_packages: Vec<String>,
+        path: PathBuf,
+    }
+
+    #[derive(Debug)]
+    struct ComponentSource {
+        package: String,
+        legacy_packages: Vec<String>,
+        root: PathBuf,
+        relative_root: String,
+    }
+
+    #[derive(Debug, Default)]
+    struct ComponentEntryBuilder {
+        interfaces: Vec<ComponentInterface>,
+    }
+
+    #[derive(Debug)]
+    pub struct ComponentSummary {
+        pub manifest: PathBuf,
+        pub package_count: usize,
+        pub component_count: usize,
+        pub interface_count: usize,
+        pub prop_count: usize,
+    }
+
+    pub fn generate_manifest(
+        workspace: &Path,
+        config_override: Option<&Path>,
+        out_dir_override: Option<&Path>,
+    ) -> Result<ComponentSummary> {
+        let sources = load_sources(workspace, config_override)?;
+        if sources.is_empty() {
+            return Err(anyhow!(
+                "no component sources discovered; check the configuration overrides"
+            ));
+        }
+
+        let out_dir = resolve_out_dir(workspace, out_dir_override);
+        fs::create_dir_all(&out_dir).with_context(|| {
+            format!(
+                "failed to create component metadata output directory at {}",
+                out_dir.display()
+            )
+        })?;
+
+        let mut packages = Vec::new();
+        let mut component_count = 0usize;
+        let mut interface_count = 0usize;
+        let mut prop_count = 0usize;
+
+        for source in sources {
+            let package = scan_package(workspace, &source)?;
+            if package.components.is_empty() {
+                continue;
+            }
+
+            component_count += package.components.len();
+            interface_count += package
+                .components
+                .iter()
+                .map(|component| component.interfaces.len())
+                .sum::<usize>();
+            prop_count += package
+                .components
+                .iter()
+                .flat_map(|component| component.interfaces.iter())
+                .map(|interface| interface.props.len())
+                .sum::<usize>();
+            packages.push(package);
+        }
+
+        if packages.is_empty() {
+            return Err(anyhow!(
+                "component scanner completed without discovering any interfaces"
+            ));
+        }
+
+        packages.sort_by(|a, b| a.package.cmp(&b.package));
+
+        let manifest = ComponentManifest {
+            schema: MANIFEST_SCHEMA.to_string(),
+            generated_at: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
+            packages,
+        };
+
+        let manifest_path = out_dir.join("component-metadata.json");
+        let json = serde_json::to_string_pretty(&manifest)? + "\n";
+        fs::write(&manifest_path, json).with_context(|| {
+            format!(
+                "failed to write component manifest to {}",
+                manifest_path.display()
+            )
+        })?;
+
+        Ok(ComponentSummary {
+            manifest: manifest_path,
+            package_count: manifest.packages.len(),
+            component_count,
+            interface_count,
+            prop_count,
+        })
+    }
+
+    fn resolve_out_dir(workspace: &Path, override_path: Option<&Path>) -> PathBuf {
+        match override_path {
+            Some(path) if path.is_absolute() => path.to_path_buf(),
+            Some(path) => workspace.join(path),
+            None => workspace.join("target/component-metadata"),
+        }
+    }
+
+    fn load_sources(
+        workspace: &Path,
+        config_override: Option<&Path>,
+    ) -> Result<Vec<ComponentSource>> {
+        if let Some(path) = config_override {
+            load_sources_from_config(workspace, path)
+        } else {
+            Ok(DEFAULT_SOURCES
+                .iter()
+                .filter_map(|(package, legacy, relative)| {
+                    let absolute = workspace.join(relative);
+                    if !absolute.exists() {
+                        println!(
+                            "[xtask][update-components] skipping missing source {}",
+                            absolute.display()
+                        );
+                        return None;
+                    }
+                    Some(ComponentSource {
+                        package: (*package).to_string(),
+                        legacy_packages: legacy.iter().map(|value| value.to_string()).collect(),
+                        root: absolute.clone(),
+                        relative_root: relative_display(workspace, &absolute),
+                    })
+                })
+                .collect())
+        }
+    }
+
+    fn load_sources_from_config(workspace: &Path, path: &Path) -> Result<Vec<ComponentSource>> {
+        let raw = fs::read_to_string(path)
+            .with_context(|| format!("failed to read component config {}", path.display()))?;
+        let configs: Vec<ComponentSourceConfig> =
+            serde_json::from_str(&raw).with_context(|| {
+                format!(
+                    "failed to parse component source configuration from {}",
+                    path.display()
+                )
+            })?;
+
+        let mut sources = Vec::new();
+        for entry in configs {
+            let absolute = if entry.path.is_absolute() {
+                entry.path.clone()
+            } else {
+                workspace.join(&entry.path)
+            };
+
+            if !absolute.exists() {
+                println!(
+                    "[xtask][update-components] skipping configured source that does not exist: {}",
+                    absolute.display()
+                );
+                continue;
+            }
+
+            sources.push(ComponentSource {
+                package: entry.package,
+                legacy_packages: entry.legacy_packages,
+                root: absolute.clone(),
+                relative_root: relative_display(workspace, &absolute),
+            });
+        }
+
+        Ok(sources)
+    }
+
+    fn scan_package(workspace: &Path, source: &ComponentSource) -> Result<ComponentPackage> {
+        let cm: Lrc<SourceMap> = Lrc::new(SourceMap::default());
+        let globals = Globals::new();
+        let mut components: BTreeMap<String, ComponentEntryBuilder> = BTreeMap::new();
+
+        GLOBALS
+            .set(&globals, || -> Result<()> {
+                for entry in WalkDir::new(&source.root)
+                    .into_iter()
+                    .filter_map(|e| e.ok())
+                {
+                    if !entry.file_type().is_file() {
+                        continue;
+                    }
+
+                    let path = entry.path();
+                    if !is_declaration_file(path) {
+                        continue;
+                    }
+
+                    let module = parse_module(&cm, path)?;
+                    collect_interfaces(workspace, path, &module, &mut components);
+                }
+                Ok(())
+            })
+            .with_context(|| {
+                format!(
+                    "failed to scan TypeScript declarations under {}",
+                    source.root.display()
+                )
+            })?;
+
+        let mut component_entries: Vec<ComponentEntry> = components
+            .into_iter()
+            .map(|(component, mut builder)| {
+                builder
+                    .interfaces
+                    .sort_by(|a, b| a.interface.cmp(&b.interface));
+                ComponentEntry {
+                    component,
+                    interfaces: builder.interfaces,
+                }
+            })
+            .collect();
+
+        component_entries.sort_by(|a, b| a.component.cmp(&b.component));
+
+        Ok(ComponentPackage {
+            package: source.package.clone(),
+            packages: vec![source.package.clone()],
+            legacy_packages: source.legacy_packages.clone(),
+            source_root: source.relative_root.clone(),
+            components: component_entries,
+        })
+    }
+
+    fn is_declaration_file(path: &Path) -> bool {
+        let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+            return false;
+        };
+        file_name.ends_with(".d.ts")
+            || file_name.ends_with(".d.tsx")
+            || file_name.ends_with("Props.ts")
+            || file_name.ends_with("Props.tsx")
+            || file_name.ends_with("OwnProps.ts")
+            || file_name.ends_with("OwnProps.tsx")
+    }
+
+    fn parse_module(cm: &Lrc<SourceMap>, path: &Path) -> Result<Module> {
+        let fm = cm
+            .load_file(path)
+            .with_context(|| format!("failed to load {}", path.display()))?;
+
+        let extension = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.to_ascii_lowercase());
+        let is_jsx = matches!(extension.as_deref(), Some("tsx"));
+        let is_d_ts = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(|name| name.ends_with(".d.ts") || name.ends_with(".d.tsx"))
+            .unwrap_or(false);
+
+        let syntax = Syntax::Typescript(TsSyntax {
+            tsx: is_jsx,
+            dts: is_d_ts,
+            ..Default::default()
+        });
+
+        let lexer = Lexer::new(syntax, Default::default(), StringInput::from(&*fm), None);
+        let mut parser = SwcParser::new_from(lexer);
+        let module = parser
+            .parse_module()
+            .map_err(|err| anyhow!("{:?}", err))
+            .with_context(|| format!("failed to parse {}", path.display()))?;
+
+        let errors: Vec<_> = parser.take_errors();
+        if !errors.is_empty() {
+            let joined = errors
+                .into_iter()
+                .map(|err| format!("{:?}", err))
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(anyhow!("{joined}"))
+                .with_context(|| format!("syntax errors detected in {}", path.display()));
+        }
+
+        Ok(module)
+    }
+
+    fn collect_interfaces(
+        workspace: &Path,
+        path: &Path,
+        module: &Module,
+        components: &mut BTreeMap<String, ComponentEntryBuilder>,
+    ) {
+        for item in &module.body {
+            match item {
+                ModuleItem::Stmt(Stmt::Decl(Decl::TsInterface(decl))) => {
+                    ingest_interface(workspace, path, decl, components);
+                }
+                ModuleItem::ModuleDecl(swc_ecma_ast::ModuleDecl::ExportDecl(ExportDecl {
+                    decl,
+                    ..
+                })) => {
+                    if let Decl::TsInterface(decl) = decl {
+                        ingest_interface(workspace, path, decl, components);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn ingest_interface(
+        workspace: &Path,
+        path: &Path,
+        decl: &TsInterfaceDecl,
+        components: &mut BTreeMap<String, ComponentEntryBuilder>,
+    ) {
+        let name = decl.id.sym.to_string();
+        if !is_component_interface(&name) {
+            return;
+        }
+
+        let component_name = component_name_from_interface(&name);
+        let props = collect_props(&decl.body.body);
+        if props.is_empty() {
+            return;
+        }
+
+        let entry = ComponentInterface {
+            interface: name,
+            file: relative_display(workspace, path),
+            props,
+        };
+
+        components
+            .entry(component_name)
+            .or_default()
+            .interfaces
+            .push(entry);
+    }
+
+    fn is_component_interface(name: &str) -> bool {
+        if IGNORED_PATTERNS
+            .iter()
+            .any(|pattern| name.contains(pattern))
+        {
+            return false;
+        }
+        COMPONENT_INTERFACE.is_match(name)
+    }
+
+    fn component_name_from_interface(name: &str) -> String {
+        COMPONENT_INTERFACE
+            .captures(name)
+            .and_then(|captures| captures.name("name"))
+            .map(|capture| capture.as_str().to_string())
+            .unwrap_or_else(|| name.to_string())
+    }
+
+    fn collect_props(elements: &[TsTypeElement]) -> Vec<ComponentProp> {
+        let mut props = Vec::new();
+        for element in elements {
+            if let TsTypeElement::TsPropertySignature(signature) = element {
+                let Some(name) = property_name(&signature.key) else {
+                    continue;
+                };
+                let type_repr = signature
+                    .type_ann
+                    .as_ref()
+                    .map(|ann| format_ts_type(&ann.type_ann))
+                    .unwrap_or_else(|| "unknown".to_string());
+                props.push(ComponentProp {
+                    name,
+                    optional: signature.optional,
+                    type_repr,
+                });
+            }
+        }
+        props.sort_by(|a, b| a.name.cmp(&b.name));
+        props
+    }
+
+    fn property_name(expr: &Expr) -> Option<String> {
+        match expr {
+            Expr::Ident(Ident { sym, .. }) => Some(sym.to_string()),
+            Expr::Lit(Lit::Str(value)) => Some(value.value.to_string()),
+            _ => None,
+        }
+    }
+
+    fn format_ts_type(ty: &TsType) -> String {
+        match ty {
+            TsType::TsKeywordType(keyword) => match keyword.kind {
+                TsKeywordTypeKind::TsStringKeyword => "string".to_string(),
+                TsKeywordTypeKind::TsNumberKeyword => "number".to_string(),
+                TsKeywordTypeKind::TsBooleanKeyword => "boolean".to_string(),
+                TsKeywordTypeKind::TsAnyKeyword => "any".to_string(),
+                TsKeywordTypeKind::TsVoidKeyword => "void".to_string(),
+                TsKeywordTypeKind::TsUndefinedKeyword => "undefined".to_string(),
+                TsKeywordTypeKind::TsNullKeyword => "null".to_string(),
+                TsKeywordTypeKind::TsNeverKeyword => "never".to_string(),
+                TsKeywordTypeKind::TsUnknownKeyword => "unknown".to_string(),
+                TsKeywordTypeKind::TsObjectKeyword => "object".to_string(),
+                TsKeywordTypeKind::TsBigIntKeyword => "bigint".to_string(),
+                TsKeywordTypeKind::TsSymbolKeyword => "symbol".to_string(),
+                _ => format!("{keyword:?}"),
+            },
+            TsType::TsArrayType(array) => {
+                format!("{}[]", format_ts_type(&array.elem_type))
+            }
+            TsType::TsUnionOrIntersectionType(union) => match union {
+                TsUnionOrIntersectionType::TsUnionType(union) => union
+                    .types
+                    .iter()
+                    .map(|ty| format_ts_type(ty))
+                    .collect::<Vec<_>>()
+                    .join(" | "),
+                TsUnionOrIntersectionType::TsIntersectionType(intersection) => intersection
+                    .types
+                    .iter()
+                    .map(|ty| format_ts_type(ty))
+                    .collect::<Vec<_>>()
+                    .join(" & "),
+            },
+            TsType::TsTypeRef(reference) => format_type_reference(reference),
+            TsType::TsParenthesizedType(inner) => {
+                format!("({})", format_ts_type(&inner.type_ann))
+            }
+            TsType::TsLitType(literal) => match &literal.lit {
+                TsLit::Str(value) => format!("'{}'", value.value),
+                TsLit::Bool(value) => value.value.to_string(),
+                TsLit::Number(value) => value.value.to_string(),
+                TsLit::BigInt(value) => value.value.to_string(),
+                TsLit::Tpl(value) => {
+                    let cooked = value
+                        .quasis
+                        .iter()
+                        .map(|part| part.raw.to_string())
+                        .collect::<String>();
+                    format!("`{cooked}`")
+                }
+            },
+            TsType::TsThisType(_) => "this".to_string(),
+            TsType::TsIndexedAccessType(indexed) => format!(
+                "{}[{}]",
+                format_ts_type(&indexed.obj_type),
+                format_ts_type(&indexed.index_type)
+            ),
+            TsType::TsTypeLit(_) => "{ ... }".to_string(),
+            TsType::TsFnOrConstructorType(_) => "function".to_string(),
+            TsType::TsConditionalType(cond) => format!(
+                "{} extends {} ? {} : {}",
+                format_ts_type(&cond.check_type),
+                format_ts_type(&cond.extends_type),
+                format_ts_type(&cond.true_type),
+                format_ts_type(&cond.false_type)
+            ),
+            _ => format!("{ty:?}"),
+        }
+    }
+
+    fn format_type_reference(reference: &TsTypeRef) -> String {
+        let mut name = format_entity_name(&reference.type_name);
+        if let Some(params) = &reference.type_params {
+            if !params.params.is_empty() {
+                let formatted = params
+                    .params
+                    .iter()
+                    .map(|param| format_ts_type(param))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                name.push('<');
+                name.push_str(&formatted);
+                name.push('>');
+            }
+        }
+        name
+    }
+
+    fn format_entity_name(name: &TsEntityName) -> String {
+        match name {
+            TsEntityName::Ident(ident) => ident.sym.to_string(),
+            TsEntityName::TsQualifiedName(qualified) => format!(
+                "{}.{}",
+                format_entity_name(&qualified.left),
+                qualified.right.sym
+            ),
+        }
+    }
+}
+
+mod accessibility {
+    use anyhow::{anyhow, Context, Result};
+    use pulldown_cmark::{Event, Options, Parser, Tag};
+    use serde::Deserialize;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use walkdir::WalkDir;
+
+    #[derive(Debug, Clone, Copy)]
+    pub enum AuditMode {
+        Standard,
+        Nightly,
+    }
+
+    impl AuditMode {
+        pub fn as_str(&self) -> &'static str {
+            match self {
+                AuditMode::Standard => "standard",
+                AuditMode::Nightly => "nightly",
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct AuditSummary {
+        pub files_scanned: usize,
+        pub issues: Vec<AuditFinding>,
+    }
+
+    #[derive(Debug)]
+    pub struct AuditFinding {
+        pub path: PathBuf,
+        pub message: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct AccessibilityConfig {
+        targets: Vec<AccessibilityTargetConfig>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct AccessibilityTargetConfig {
+        path: PathBuf,
+        #[serde(default)]
+        kind: Option<String>,
+    }
+
+    #[derive(Debug, Clone)]
+    struct AccessibilityTarget {
+        path: PathBuf,
+        kind: TargetKind,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum TargetKind {
+        File,
+        Directory,
+    }
+
+    pub fn run(
+        workspace: &Path,
+        mode: AuditMode,
+        config_override: Option<&Path>,
+    ) -> Result<AuditSummary> {
+        let targets = if let Some(config_path) = config_override {
+            load_targets_from_config(workspace, config_path)?
+        } else {
+            default_targets(workspace, mode)
+        };
+
+        if targets.is_empty() {
+            return Err(anyhow!("no accessibility targets resolved"));
+        }
+
+        let mut files = Vec::new();
+        for target in targets {
+            gather_markdown_files(&target, &mut files)?;
+        }
+        files.sort();
+        files.dedup();
+
+        let mut issues = Vec::new();
+        for file in &files {
+            issues.extend(audit_markdown(file)?);
+        }
+
+        Ok(AuditSummary {
+            files_scanned: files.len(),
+            issues,
+        })
+    }
+
+    fn default_targets(workspace: &Path, mode: AuditMode) -> Vec<AccessibilityTarget> {
+        let mut targets = vec![
+            AccessibilityTarget::directory(workspace.join("docs/migrations")),
+            AccessibilityTarget::directory(workspace.join("docs/data/material")),
+            AccessibilityTarget::directory(workspace.join("docs/data/joy")),
+            AccessibilityTarget::file(workspace.join("README.md")),
+        ];
+
+        if matches!(mode, AuditMode::Nightly) {
+            targets.push(AccessibilityTarget::directory(
+                workspace.join("docs/data/system"),
+            ));
+            targets.push(AccessibilityTarget::directory(workspace.join("docs/docs")));
+        }
+
+        targets
+            .into_iter()
+            .filter(|target| target.path.exists())
+            .collect()
+    }
+
+    fn load_targets_from_config(
+        workspace: &Path,
+        config_path: &Path,
+    ) -> Result<Vec<AccessibilityTarget>> {
+        let raw = fs::read_to_string(config_path).with_context(|| {
+            format!(
+                "failed to read accessibility configuration from {}",
+                config_path.display()
+            )
+        })?;
+        let config: AccessibilityConfig = serde_json::from_str(&raw).with_context(|| {
+            format!(
+                "failed to parse accessibility configuration {}",
+                config_path.display()
+            )
+        })?;
+
+        let mut targets = Vec::new();
+        for entry in config.targets {
+            let absolute = if entry.path.is_absolute() {
+                entry.path.clone()
+            } else {
+                workspace.join(&entry.path)
+            };
+            let inferred_kind = infer_target_kind(&absolute, entry.kind.as_deref());
+            if inferred_kind.is_none() {
+                println!(
+                    "[xtask][accessibility] skipping target that could not be classified: {}",
+                    absolute.display()
+                );
+                continue;
+            }
+            targets.push(AccessibilityTarget {
+                path: absolute,
+                kind: inferred_kind.unwrap(),
+            });
+        }
+
+        Ok(targets)
+    }
+
+    fn infer_target_kind(path: &Path, hint: Option<&str>) -> Option<TargetKind> {
+        match hint.map(|value| value.to_ascii_lowercase()) {
+            Some(ref value) if value == "file" => Some(TargetKind::File),
+            Some(ref value) if value == "directory" => Some(TargetKind::Directory),
+            _ => {
+                if path.is_dir() {
+                    Some(TargetKind::Directory)
+                } else if path.is_file() {
+                    Some(TargetKind::File)
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    impl AccessibilityTarget {
+        fn file(path: PathBuf) -> Self {
+            Self {
+                path,
+                kind: TargetKind::File,
+            }
+        }
+
+        fn directory(path: PathBuf) -> Self {
+            Self {
+                path,
+                kind: TargetKind::Directory,
+            }
+        }
+    }
+
+    fn gather_markdown_files(target: &AccessibilityTarget, files: &mut Vec<PathBuf>) -> Result<()> {
+        match target.kind {
+            TargetKind::File => {
+                if is_markdown(&target.path) {
+                    files.push(target.path.clone());
+                }
+            }
+            TargetKind::Directory => {
+                if !target.path.exists() {
+                    return Ok(());
+                }
+                for entry in WalkDir::new(&target.path)
+                    .into_iter()
+                    .filter_map(|e| e.ok())
+                {
+                    if !entry.file_type().is_file() {
+                        continue;
+                    }
+                    if is_markdown(entry.path()) {
+                        files.push(entry.path().to_path_buf());
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn is_markdown(path: &Path) -> bool {
+        matches!(
+            path.extension().and_then(|ext| ext.to_str()).map(|ext| ext.to_ascii_lowercase()),
+            Some(ref ext) if ext == "md" || ext == "mdx"
+        )
+    }
+
+    fn audit_markdown(path: &Path) -> Result<Vec<AuditFinding>> {
+        let raw = fs::read_to_string(path)
+            .with_context(|| format!("failed to read markdown file {}", path.display()))?;
+        let mut findings = Vec::new();
+        let mut headings: Vec<u32> = Vec::new();
+        let mut collecting_image_alt = false;
+        let mut image_alt = String::new();
+        let mut image_destination = String::new();
+
+        let options =
+            Options::ENABLE_TABLES | Options::ENABLE_FOOTNOTES | Options::ENABLE_STRIKETHROUGH;
+        let parser = Parser::new_ext(&raw, options);
+
+        for event in parser {
+            match event {
+                Event::Start(Tag::Heading(level, _, _)) => headings.push(level as u32),
+                Event::Start(Tag::Image(_, destination, _)) => {
+                    collecting_image_alt = true;
+                    image_alt.clear();
+                    image_destination = destination.to_string();
+                }
+                Event::Text(text) | Event::Code(text) if collecting_image_alt => {
+                    image_alt.push_str(&text);
+                }
+                Event::End(Tag::Image(_, _, _)) => {
+                    if image_alt.trim().is_empty() {
+                        findings.push(AuditFinding {
+                            path: path.to_path_buf(),
+                            message: format!(
+                                "image '{}' is missing descriptive alt text",
+                                image_destination
+                            ),
+                        });
+                    }
+                    collecting_image_alt = false;
+                    image_destination.clear();
+                }
+                _ => {}
+            }
+        }
+
+        if !headings.iter().any(|level| *level <= 2) {
+            findings.push(AuditFinding {
+                path: path.to_path_buf(),
+                message: "document is missing a level-one or level-two heading".to_string(),
+            });
+        }
+
+        Ok(findings)
+    }
 }
 
 fn material_parity() -> Result<()> {

@@ -1,0 +1,7 @@
+[
+  {
+    "package": "rustic-ui-fixture",
+    "legacy_packages": ["@mui/fixture"],
+    "path": "crates/xtask/tests/fixtures/component_scope"
+  }
+]
