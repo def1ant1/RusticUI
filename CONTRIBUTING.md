@@ -151,14 +151,18 @@ so keeping them accurate is a release gate.
 
 ## Documentation and demo workflow
 
-Use the scripted scaffolding to avoid manual setup:
+Use the automation shipped with each example to avoid manual setup:
 
-```bash
-cargo xtask scaffold-demo --component button --framework leptos
-```
-
-The generator produces the doc page, localized strings, Playwright tests, and analytics markers. Update the generated markdown
-with narrative context, but keep the structural conventions intact so the translation pipeline succeeds.
+1. Pick the closest blueprint in [`examples/`](examples/). The
+   [Rust example gallery](docs/src/pages/examples/index.md) lists every demo,
+   their automation hooks, and parity guarantees.
+2. Run the documented bootstrap command (for example
+   `./examples/navigation-tabs-yew/scripts/bootstrap.sh` or `cargo run --bin bootstrap --manifest-path examples/feedback-tooltips/Cargo.toml`).
+   These scripts materialise a ready-to-run workspace with SSR snapshots,
+   hydration stubs, analytics markers, and framework manifests.
+3. Update the generated markdown or README copy with narrative context, keeping
+   the automation IDs and translation scaffolding intact so localisation and QA
+   pipelines remain deterministic.
 
 ## Component development checklist
 

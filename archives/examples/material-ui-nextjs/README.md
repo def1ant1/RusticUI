@@ -13,6 +13,8 @@ The maintained, automation-friendly replacements are designed for enterprise sca
 - [Sycamore SPA baseline](../../../examples/mui-sycamore) – Provides an alternative reactive runtime while preserving our design tokens and accessibility harnesses.
 - [SSR + accessibility harness](../../../examples/mui-ssr-accessibility) – Covers server-rendering, hydration, and analytics wiring so the multi-tenant governance model remains intact.
 
+- [Rust example gallery overview](../../../docs/src/pages/examples/index.md) – Summarises automation hooks, parity expectations, and bootstrap commands for every maintained Rust demo.
+
 Each crate ships extensive inline notes, integration tests, and automation hooks so teams can extend them without reinventing the pipeline. Reuse those crates instead of copying legacy React templates.
 
 ---

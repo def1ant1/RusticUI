@@ -17,8 +17,11 @@ Package managers other than pnpm (like npm or Yarn) are not supported and will n
 
 1. Open a discussion in the [RusticUI RFC board](https://github.com/apotheon-ai/rusticui/discussions/categories/rfcs) describing the
    problem the demo should solve.
-2. Once approved, use `cargo xtask scaffold-component` or `cargo xtask scaffold-demo` to generate the baseline files. The script
-   injects accessibility tests, analytics tags, and translation scaffolding automatically to minimize manual wiring.
+2. Once approved, start from the closest Rust blueprint in [`examples/`](../examples) and follow its bootstrap instructions
+   (for example `./examples/navigation-tabs-yew/scripts/bootstrap.sh` or `cargo run --bin bootstrap --manifest-path examples/feedback-tooltips/Cargo.toml`).
+   These scripts hydrate deterministic automation IDs, SSR snapshots, and framework manifests so you avoid manual wiring.
+   The [Rust example gallery](src/pages/examples/index.md) documents the available demos, parity guarantees, and
+   follow-up verification steps.
 3. Commit the generated files and update the appropriate page inside `docs/src/pages`.
 
 ## How do I help to improve the translations?
