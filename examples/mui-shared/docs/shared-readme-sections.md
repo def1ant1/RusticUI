@@ -1,45 +1,3 @@
-# MUI Yew Example
-
-## Overview
-
-The Yew adapter composes [`mui-shared`](../mui-shared) primitives with `yew` and `yew_router` to reproduce the Material UI marketing page in Rust. Shared route descriptors, layout chrome, automation IDs, and theme tokens keep this implementation aligned with Dioxus, Leptos, Sycamore, and the SSR reference.
-
-## Framework-specific workflows
-
-### Client-side development (CSR)
-
-```bash
-(cd examples/mui-yew && trunk serve --open)
-```
-
-The client bundle hydrates SSR output produced below and exposes deterministic `data-rustic-*` automation markers for QA and monitoring harnesses.
-
-### Server-side rendering (SSR)
-
-```bash
-cargo run --manifest-path examples/mui-yew/Cargo.toml --features ssr > prerendered.html
-```
-
-Serve `prerendered.html` and point the CSR bundle at it for hydration. `mui_shared::layout::AppShell::render_ssr_document` injects the correct hydration root and automation attributes.
-
-### Release bundle (WASM)
-
-```bash
-(cd examples/mui-yew && trunk build --release)
-```
-
-Deploy the resulting assets with the SSR HTML to replicate the archival Next.js experience in production.
-
-## Example-specific verification
-
-```bash
-cargo test --package rustic_ui_yew_example
-```
-
-These tests guarantee router parity, automation ID determinism, and hydration-safe theme switching.
-
-<!-- BEGIN_SHARED_SECTIONS -->
-
 ## Available routes
 
 | Route | Purpose | Automation anchor |
@@ -105,10 +63,3 @@ The adapter-specific README sections below extend this checklist with framework 
 - **Theming:** Override tokens by wrapping `material_example_theme` with framework-specific providers. Keep changes inside `mui-shared` so palettes and typography stay synchronised across runtimes.
 
 When extending the shared crate, re-run the verification checklist above and regenerate documentation so downstream adapters pull in the new APIs without drift.
-<!-- END_SHARED_SECTIONS -->
-
-## Cross-framework parity notes
-
-- `yew_router` consumes the shared descriptors verbatim so navigation renders identical copy, CTA links, and automation markers.
-- Showcase components (`Alert`, `Slider`, `Popover`) reuse the shared automation helpers, enabling QA to execute the same scripts built for Sycamore or Leptos.
-- Extending the microsite starts in `mui-shared`; once new descriptors exist the Yew adapter only needs an additional router variant and view mapping.
