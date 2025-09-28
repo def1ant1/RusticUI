@@ -257,6 +257,28 @@ Html::from_html_unchecked(AttrValue::from(html));
 The Leptos example mirrors the pattern with `RwSignal`s, ensuring the same state
 machine drives both SSR and CSR paths without duplicating logic.【F:examples/select-menu-leptos/src/main.rs†L13-L84】
 
+## Archived React examples
+
+The historical Material UI React starters now live under [`archives/examples/`](archives/examples). Each README documents the Rust-first blueprints that supersede the JavaScript stacks and should be used for any new work.【F:archives/examples/README.md†L1-L16】 For example, the [`material-ui-nextjs` archive](archives/examples/material-ui-nextjs/README.md) points teams at the Yew, Leptos, Dioxus, Sycamore, and SSR harnesses that ship with automation-ready `cargo xtask` flows.【F:archives/examples/material-ui-nextjs/README.md†L1-L27】
+
+Direct archive links:
+
+- [`material-ui-express-ssr`](archives/examples/material-ui-express-ssr/README.md)
+- [`material-ui-gatsby`](archives/examples/material-ui-gatsby/README.md)
+- [`material-ui-nextjs`](archives/examples/material-ui-nextjs/README.md)
+- [`material-ui-nextjs-pages-router`](archives/examples/material-ui-nextjs-pages-router/README.md)
+- [`material-ui-nextjs-pages-router-ts`](archives/examples/material-ui-nextjs-pages-router-ts/README.md)
+- [`material-ui-nextjs-ts`](archives/examples/material-ui-nextjs-ts/README.md)
+- [`material-ui-pigment-css-nextjs-ts`](archives/examples/material-ui-pigment-css-nextjs-ts/README.md)
+- [`material-ui-pigment-css-vite-ts`](archives/examples/material-ui-pigment-css-vite-ts/README.md)
+- [`material-ui-preact`](archives/examples/material-ui-preact/README.md)
+- [`material-ui-react-router-ts`](archives/examples/material-ui-react-router-ts/README.md)
+- [`material-ui-remix-ts`](archives/examples/material-ui-remix-ts/README.md)
+- [`material-ui-via-cdn`](archives/examples/material-ui-via-cdn/README.md)
+- [`material-ui-vite`](archives/examples/material-ui-vite/README.md)
+- [`material-ui-vite-tailwind-ts`](archives/examples/material-ui-vite-tailwind-ts/README.md)
+- [`material-ui-vite-ts`](archives/examples/material-ui-vite-ts/README.md)
+
 ## Workspace layout
 
 The workspace is organized under the `crates/` directory:

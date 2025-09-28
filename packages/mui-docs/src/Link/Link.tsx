@@ -10,15 +10,16 @@ import { useDocsConfig } from '../DocsProvider';
  * File to keep in sync with:
  *
  * - /packages/mui-docs/src/Link/Link.tsx
- * - /examples/material-ui-nextjs-pages-router/src/Link.js
- * - /examples/material-ui-nextjs-pages-router-ts/src/Link.tsx
+ * - /archives/examples/material-ui-nextjs-pages-router/src/Link.js
+ * - /archives/examples/material-ui-nextjs-pages-router-ts/src/Link.tsx
  *
  * Legacy note:
- * The historical `material-ui-nextjs-ts-v4-v5-migration` sample has been retired
- * in favour of the actively maintained `material-ui-nextjs-pages-router`
- * examples above. Contributors should rely on those automation-ready samples
- * when validating cross-environment SSR behaviour.
- */
+ * The historical React samples now live under `archives/examples/`.
+ * Use the Yew and Leptos SSR harnesses in `examples/mui-ssr-accessibility`
+ * instead of copying the archived JavaScript when validating cross-environment
+ * SSR behaviour. The archived files exist purely for historical reference so
+ * comments stay in sync with the successor crates.
+*/
 
 interface NextLinkComposedProps
   extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>,
