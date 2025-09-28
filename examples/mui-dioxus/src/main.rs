@@ -153,7 +153,7 @@ struct ModeController {
 /// Root application component wiring the router, shared theme blueprint, and
 /// automation identifiers provided by `mui-shared`.
 #[component]
-fn App(cx: Scope) -> Element {
+fn App(cx: Scope<'_>) -> Element {
     // Provide the shared Material theme blueprint and mode state so every route
     // can tap into deterministic SSR data and hydration aware state.
     use_shared_state_provider(cx, material_example_theme);
@@ -182,7 +182,7 @@ fn App(cx: Scope) -> Element {
 }
 
 /// Renders the shared shell for the provided `AppRoute`.
-fn render_route(cx: Scope, route: AppRoute) -> Element {
+fn render_route(cx: Scope<'_>, route: AppRoute) -> Element {
     let theme_blueprint = use_shared_state::<MaterialExampleTheme>(cx)
         .expect("theme blueprint should be provided");
     let mode_state = use_shared_state::<ModeState>(cx).expect("mode state should exist");
@@ -435,17 +435,17 @@ fn render_route(cx: Scope, route: AppRoute) -> Element {
 }
 
 #[component]
-fn Home(cx: Scope) -> Element {
+fn Home(cx: Scope<'_>) -> Element {
     render_route(cx, AppRoute::Home {})
 }
 
 #[component]
-fn About(cx: Scope) -> Element {
+fn About(cx: Scope<'_>) -> Element {
     render_route(cx, AppRoute::About {})
 }
 
 #[component]
-fn NotFound(cx: Scope, _segments: Vec<String>) -> Element {
+fn NotFound(cx: Scope<'_>, _segments: Vec<String>) -> Element {
     render_route(cx, AppRoute::NotFound { _segments })
 }
 
@@ -461,7 +461,7 @@ fn NotFound(cx: Scope, _segments: Vec<String>) -> Element {
 ///   component and dispatches `ModeAction::Select` for automation to observe.
 #[component]
 fn ModeSwitch(
-    cx: Scope,
+    cx: Scope<'_>,
     automation: AutomationIdBuilder,
     availability: ColorSchemeAvailability,
 ) -> Element {
