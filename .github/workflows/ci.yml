@@ -41,6 +41,6 @@ jobs:
       - name: Lint with Clippy
         run: cargo xtask clippy
       - name: Run workspace tests
-        run: cargo xtask test
+        run: cargo xtask test --examples
       - name: Build Rust-first docs
         run: cargo xtask build-docs

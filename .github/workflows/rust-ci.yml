@@ -55,8 +55,11 @@ jobs:
         with:
           toolchain: stable
           components: llvm-tools-preview
+          target: wasm32-unknown-unknown
       # Reuse build artifacts between runs
       - uses: Swatinem/rust-cache@v2
+      # Compile the workspace and wasm examples before collecting coverage
+      - run: cargo xtask test --examples
       # Execute tests and generate coverage in one step
       - run: cargo xtask coverage
       # Publish coverage statistics to external service

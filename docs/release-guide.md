@@ -10,7 +10,7 @@ repeatable and low-friction.
 2. Ensure the repository is clean and tests pass:
 
    ```bash
-   cargo xtask test
+   cargo xtask test --examples
    ```
 
 3. Validate the package manifests via dry run:
