@@ -131,7 +131,6 @@ For fine-grained routines the repository exposes a companion CLI via `cargo xtas
 binary:
 
 ```bash
-cargo xtask scaffold-component    # scaffold a fully-instrumented component package
 cargo xtask icon-update           # pull the latest Rustic icon sets
 cargo xtask update-components     # emit the Rust-native component metadata manifest
 cargo xtask accessibility-audit   # lint Markdown docs for accessibility regressions
@@ -173,6 +172,34 @@ cargo test -p mui-material --test joy_sycamore --features sycamore
 ```
 
 Use the parity suites above to chase snapshot mismatches: rerun the failing test with `-- --nocapture --exact` to inspect the React versus adapter markup before refreshing fixtures or renderers. The [Rust CI guide](docs/rust-ci.md) documents deeper troubleshooting steps, snapshot refresh flows, and coverage tooling so teams can keep automation green without guesswork.
+
+## Rust example gallery
+
+Every maintained demo lives under `examples/` and ships automation hooks plus
+framework-specific bootstrap flows. The new
+[Rust example gallery](docs/src/pages/examples/index.md) summarises the
+supported use cases, parity guarantees, and scaffolding steps for each
+blueprint. Highlights include:
+
+- **Marketing microsite** – [`examples/mui-yew`](examples/mui-yew) and its sister
+  crates recreate the archived React marketing site with shared automation IDs,
+  SSR parity, and exhaustive inline documentation.【F:examples/mui-yew/README.md†L1-L91】【F:examples/mui-ssr-accessibility/README.md†L1-L95】
+- **Navigation bundles** – [`examples/navigation-drawer-*`](examples/navigation-drawer-yew/README.md)
+  and [`examples/navigation-tabs-*`](examples/navigation-tabs-yew/README.md)
+  include bootstrap scripts that materialise ready-to-run projects with trunk
+  manifests, axe-core wiring, and deterministic automation metadata.【F:examples/navigation-drawer-yew/README.md†L1-L52】【F:examples/navigation-tabs-yew/README.md†L1-L58】
+- **Async data entry** – [`examples/select-menu-*`](examples/select-menu-yew/README.md)
+  demonstrate controlled state, asynchronous loaders, and SSR smoke tests so
+  enterprise dashboards can reuse the automation contracts without drift.【F:examples/select-menu-yew/README.md†L1-L56】【F:examples/select-menu-yew/README.md†L80-L94】
+- **Automation-first utilities** – the feedback, data-display, Joy workflows,
+  and shared dialog blueprints emit SSR snapshots, hydration stubs, and test
+  suites to guarantee parity across frameworks while exposing stable
+  `data-rustic-*` identifiers.【F:examples/feedback-tooltips/README.md†L1-L56】【F:examples/data-display-avatar/README.md†L1-L36】【F:examples/joy-yew/README.md†L1-L42】【F:examples/shared-dialog-state-yew/README.md†L1-L33】
+
+To spin up a new example, start from the closest blueprint in `examples/`, run
+its bootstrap command (if provided), and follow the automation checklist in the
+gallery page. This keeps SSR snapshots, hydration behaviour, and analytics IDs
+aligned before adding bespoke features.
 
 ## Select and menu reference implementations
 
