@@ -5,9 +5,10 @@ edition = "2021"
 
 [dependencies]
 leptos.workspace = true
+leptos_router.workspace = true
 rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["leptos"] }
 tokio = { workspace = true, optional = true }
-mui-shared = { path = "../mui-shared" }
+mui-shared = { path = "../mui-shared", features = ["automation", "routes", "layout", "theme"] }
 
 [features]
 default = ["csr"]
