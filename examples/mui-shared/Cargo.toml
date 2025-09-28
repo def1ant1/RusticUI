@@ -17,6 +17,14 @@ html-escape = "0.2"
 [dev-dependencies]
 
 [features]
-default = []
+# Keep the crate lean by allowing consumers to opt into only the modules they
+# require.  The defaults mirror the historical behaviour (all primitives
+# enabled) so existing examples continue to compile while newer ones can
+# cherry-pick the exact surfaces they consume.
+default = ["automation", "routes", "layout", "theme"]
+automation = []
+routes = ["automation"]
+layout = ["routes", "automation", "theme"]
+theme = []
 ssr = []
 csr = []

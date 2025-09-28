@@ -7,7 +7,11 @@ edition = "2021"
 yew.workspace = true
 rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["yew"] }
 tokio = { workspace = true, optional = true }
-mui-shared = { path = "../mui-shared" }
+mui-shared = { path = "../mui-shared", features = ["automation", "routes", "layout", "theme"] }
+yew-router = "0.18"
+serde_json.workspace = true
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["Window", "MediaQueryList", "HtmlSelectElement"] }
 
 [features]
 default = ["csr"]
