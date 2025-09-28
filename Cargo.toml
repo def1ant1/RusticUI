@@ -49,6 +49,7 @@ members = [
     "examples/feedback-tooltips",
     "examples/feedback-chips",
     "examples/data-display-avatar",
+    "examples/mui-shared",
     "examples/shared-dialog-state-core",
     "examples/joy-workflows-core",
     "examples/joy-yew",

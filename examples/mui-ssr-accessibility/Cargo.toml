@@ -9,3 +9,4 @@ yew.workspace = true
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 rustic-ui-material = { path = "../../crates/rustic-ui-material", features = ["yew"] }
 rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["yew"] }
+mui-shared = { path = "../mui-shared" }

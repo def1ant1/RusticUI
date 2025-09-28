@@ -1,0 +1,22 @@
+[package]
+name = "mui-shared"
+version = "0.1.0"
+edition = "2021"
+description = "Shared Material UI example primitives for multi-framework RusticUI demos."
+license = "MIT OR Apache-2.0"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+rustic-ui-system = { path = "../../crates/rustic-ui-system" }
+html-escape = "0.2"
+
+[dev-dependencies]
+
+[features]
+default = []
+ssr = []
+csr = []
