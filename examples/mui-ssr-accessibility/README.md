@@ -1,46 +1,116 @@
 # MUI SSR Accessibility Example
 
-This example demonstrates how the shared Material UI primitives from
-[`mui_shared`](../mui-shared) orchestrate a full server-side render (SSR) while
-preserving the automation markers consumed by the client-side hydration (CSR)
-examples.
+## Overview
 
-## Architecture overview
+This example demonstrates the fully server-rendered flow that backs the Material UI marketing site. It composes [`mui-shared`](../mui-shared) layout primitives with Yew components and the Rustic UI styled engine so the HTML snapshot matches the CSR adapters pixel-for-pixel. Automation hooks, copy, and theming remain centralised in `mui-shared`, allowing QA teams to diff SSR output against Leptos, Yew, Sycamore, or Dioxus hydration without custom locators.
 
-- [`mui_shared::layout::AppShell`](../mui-shared/src/lib.rs) renders the
-  deterministic container, headline copy, and automation markers used by every
-  framework variant.
-- [`mui_shared::theme::material_example_theme`](../mui-shared/src/lib.rs) keeps
-  the colour palette in sync with the CSR demos so `StyledEngineProvider` emits
-  the same CSS.
-- The SSR entry point renders the header and navigation with Yew so components
-  like [`AppBar`](../../crates/rustic-ui-material/src/app_bar.rs) inherit the
-  correct ARIA metadata.
+## Framework-specific workflows
 
-Because the HTML document is composed from the shared shell, the output embeds
-identical `data-rustic-*` attributes as the CSR counterparts. Automation suites
-can diff the SSR snapshot against hydrated DOM trees and assert parity without
-framework-specific locators.
-
-## Running the example
+### Server-side rendering pipeline
 
 ```bash
-cd examples/mui-ssr-accessibility
-cargo run
+cargo run --manifest-path examples/mui-ssr-accessibility/Cargo.toml > prerendered.html
 ```
 
-The command prints a complete HTML document that can be embedded directly into a
-response body.
+The binary emits a full HTML document containing the shared navigation, hero copy, and automation markers. Serve it directly or pipe it into your HTTP framework. Because the markup is sourced from `mui_shared::layout::AppShell`, the hydration hooks match the CSR adapters.
 
-## Regression tests
+### Hydrating with a CSR adapter
 
-Execute the parity checks with:
+Pair the SSR document with any of the CSR bundles (for example Yew) to validate parity:
 
 ```bash
-cd examples/mui-ssr-accessibility
-cargo test
+(cd examples/mui-yew && trunk build --release)
 ```
 
-The tests render the document through the same `render_document` helper and
-assert that critical `data-rustic-*` markers (shell container, hydration root,
-and action block) match the CSR expectations from `examples/mui-yew`.
+Deploy the resulting `dist/` assets alongside `prerendered.html`. Hydration attaches to the shared `data-rustic-app-hydration-root` marker so interactions come online without DOM churn.
+
+### Release validation snapshot
+
+```bash
+cargo run --manifest-path examples/mui-ssr-accessibility/Cargo.toml --release > prerendered-release.html
+```
+
+Capture this HTML artifact as part of accessibility and localisation regression suites; the deterministic automation IDs make it safe to diff against CSR DOM dumps.
+
+## Example-specific verification
+
+```bash
+cargo test --package rustic_ui_ssr_accessibility
+```
+
+The tests assert that the SSR renderer stamps deterministic automation identifiers, wires shared routes correctly, and exports ARIA metadata that mirrors the CSR adapters.
+
+<!-- BEGIN_SHARED_SECTIONS -->
+
+## Available routes
+
+| Route | Purpose | Automation anchor |
+| --- | --- | --- |
+| `/` | Material UI home experience with hero, CTA buttons, and feature highlights. | `data-rustic-app-navigation="app-home-navigation"` for the navigation link and matching `data-rustic-app-route="home"` markers in the content areas. |
+| `/about` | Secondary page replicating the archival Next.js demo copy to validate router parity. | `data-rustic-app-navigation="app-about-navigation"` and companion `data-rustic-app-route="about"` markers. |
+
+The descriptors for these routes live in [`mui_shared::routes`](../mui-shared/src/routes.rs) so every framework consumes an identical definition. New routes or microsite forms should be registered there first, then surfaced through the adapter-specific router described below.
+
+## Shared layout, theming, and parity guarantees
+
+All frameworks compose [`mui_shared::layout::AppShell`](../mui-shared/src/layout.rs) with [`rustic_ui_system`](../../crates/rustic-ui-system) primitives. The crate exports:
+
+- the responsive page shell (hero copy, ProTip footer, CTA buttons),
+- the [`material_example_theme`](../mui-shared/src/theme.rs) palette so light/dark modes stay visually consistent, and
+- the [`AutomationIdBuilder`](../mui-shared/src/automation.rs) helpers that stamp deterministic `data-rustic-*` attributes.
+
+This shared surface ensures the Leptos, Yew, Dioxus, Sycamore, and pure SSR adapters render pixel-identical markup. It also keeps localisation strings and analytics tags inside a single crate, simplifying governance reviews.
+
+## Automation hook strategy
+
+Automation metadata follows the `data-rustic-<surface>-<semantic>` pattern. Example selectors include:
+
+- `data-rustic-app-navigation="app-home-navigation"` for primary nav links,
+- `data-rustic-theme-toggle="mode-select"` on the light/dark/system switcher, and
+- `data-rustic-showcase="alert-demo"` for component showcases.
+
+These attributes are generated by [`AutomationIdBuilder`](../mui-shared/src/automation.rs) so QA engineers can target selectors that are stable across frameworks and render modes. Synthetic monitors can diff SSR output against CSR hydration using the same selectors because the IDs are emitted from the shared crate.
+
+## Shared setup and verification
+
+Run the following from the repository root before opening a pull request. They keep the shared crate and each framework adapter aligned:
+
+```bash
+cargo fmt --all
+```
+
+```bash
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+```
+
+```bash
+cargo test --package mui_shared
+```
+
+```bash
+cargo doc --no-deps --package mui_shared
+```
+
+The adapter-specific README sections below extend this checklist with framework builds, end-to-end bundles, and targeted unit/integration tests.
+
+## QA automation workflow
+
+1. Use the deterministic `data-rustic-*` attributes to select navigation, showcase widgets, and the theme switcher.
+2. Observe the `HydrationPhase` annotations in source comments to understand when events become interactive; SSR output intentionally renders inert controls until hydration completes.
+3. Drive parity audits by comparing the shared SSR snapshot (produced via the commands below) with the hydrated CSR DOM. The automation IDs remain identical, so diff tooling can ignore positional noise.
+4. Feed any additional automation needs back into [`mui_shared::automation`](../mui-shared/src/automation.rs) so all frameworks inherit the new selectors simultaneously.
+
+## Extension points
+
+- **Additional routes:** Extend [`mui_shared::routes`](../mui-shared/src/routes.rs) with new descriptors, then map them through each adapter's router enum. The shared layout automatically renders CTA buttons and navigation based on those descriptors.
+- **New forms or showcases:** Compose new components inside [`mui_shared::showcases`](../mui-shared/src/showcases) (or an adjacent module) so their copy, automation IDs, and theme tokens remain centralised. Each adapter can expose them by wiring the shared descriptors into its view function.
+- **Theming:** Override tokens by wrapping `material_example_theme` with framework-specific providers. Keep changes inside `mui-shared` so palettes and typography stay synchronised across runtimes.
+
+When extending the shared crate, re-run the verification checklist above and regenerate documentation so downstream adapters pull in the new APIs without drift.
+<!-- END_SHARED_SECTIONS -->
+
+## Cross-framework parity notes
+
+- The SSR renderer invokes the same `AppShell` helpers as every CSR adapter, guaranteeing identical structure and automation hooks.
+- Accessibility snapshots produced here can be replayed against the CSR bundles because ARIA attributes and automation IDs originate from `mui-shared`.
+- Extending the marketing site with additional forms or pages should begin in `mui-shared`; once descriptors exist, the SSR renderer simply streams the shared shell with the new content slots.

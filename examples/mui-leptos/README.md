@@ -1,72 +1,114 @@
 # MUI Leptos Example
 
-This example composes `rustic_ui_system` with the [Leptos](https://leptos.dev)
-framework and mirrors the archival Material UI Next.js demo using the new
-`mui-shared` integration crate. Routes, layout copy, automation identifiers, and
-theme metadata now flow from a single source of truth so the Leptos, Yew,
-Dioxus, and Sycamore adapters remain perfectly aligned.
+## Overview
 
-## Prerequisites
-- Rust nightly or stable with the `wasm32-unknown-unknown` target installed
-- [`trunk`](https://trunkrs.dev) for bundling and serving the client build
+The Leptos adapter wires [`mui-shared`](../mui-shared) descriptors into [`leptos`](https://leptos.dev) and `leptos_router` so the Material UI marketing site renders identically to the Dioxus, Sycamore, Yew, and SSR variants. Layout chrome, automation IDs, and theme metadata all originate from the shared crate, keeping localisation copy and analytics probes centralised.
 
-## Running the demo
+## Framework-specific workflows
 
-### Client side rendering
+### Client-side development (CSR)
+
 ```bash
-trunk serve --open
+(cd examples/mui-leptos && trunk serve --open)
 ```
-The client bundle hydrates the SSR markup by default. Every navigation element
-and layout node exposes deterministic automation identifiers (for example
-`data-rustic-app-navigation="app-home-navigation"`). The Mode switch renders
-inert markup during SSR and upgrades to a fully interactive select once the
-browser hydrates the page.
 
-### Server side rendering
+The Trunk dev server emits a WASM bundle that hydrates any SSR document produced below. Automation IDs such as `data-rustic-app-navigation` remain stable because they are generated inside `mui-shared`.
+
+### Server-side rendering (SSR)
+
 ```bash
 cargo run --manifest-path examples/mui-leptos/Cargo.toml --features ssr > prerendered.html
-# Then in another terminal build the hydrated client bundle
-trunk build --release
 ```
-`mui_shared::layout::AppShell::render_ssr_document` composes the deterministic
-HTML skeleton (including hero copy, ProTip content, and automation attributes)
-with the Leptos markup. The resulting document embeds a
-`data-rustic-app-hydration-root` marker scoped to the Leptos framework so the
-client runtime can hydrate without DOM drift.
 
-## Routing orchestration
+Serve `prerendered.html` over HTTP and point the CSR bundle at it. `mui_shared::layout::AppShell::render_ssr_document` injects the deterministic hydration root so client upgrades land without DOM drift.
 
-`leptos_router` is wired to the shared `HOME`/`ABOUT` descriptors. The router
-feeds those descriptors into `mui_shared::layout::AppShell` so the SSR and CSR
-code paths render identical markup. Navigation links, CTAs, and showcases reuse
-the same automation IDs across frameworks which keeps localisation and
-observability reviews centralised in the shared crate.
+### Release bundle (WASM)
 
-## Mode switch state machine
+```bash
+(cd examples/mui-leptos && trunk build --release)
+```
 
-The theme switcher is implemented as a documented state machine. During SSR the
-component renders inert markup in the `HydrationPhase::Server` state so the
-output is deterministic. Once hydrated the effect transitions to
-`HydrationPhase::Client`, captures the system colour preference via
-`matchMedia`, and dispatches events so automation can observe
-`ModeAction::Select` transitions. The machine preserves the recorded system
-preference when toggling back to the "System" option, mirroring the original
-React behaviour.
+This command emits `dist/` assets that mirror the archival Next.js reference. Publish those assets alongside the SSR HTML to deliver optimal first paint times.
 
-## Showcase parity
-
-Alert, slider, and popover demos consume the shared automation helpers so QA
-suites can assert behaviour parity across frameworks. The slider updates a
-signal that hydrates cleanly, and the popover toggles deterministic content so
-enterprise monitoring can diff SSR vs CSR output without flakiness.
-
-## Testing
+## Example-specific verification
 
 ```bash
 cargo test --package rustic_ui_leptos_example
 ```
 
-The unit tests validate the router-to-descriptor mapping, automation identifier
-determinism, and the mode switch state transitions. These guardrails ensure
-future refactors continue to hydrate cleanly while keeping automation hooks
-stable for synthetic monitoring.
+The integration tests validate router parity, automation ID determinism, and the hydration-aware mode switch state machine.
+
+<!-- BEGIN_SHARED_SECTIONS -->
+
+## Available routes
+
+| Route | Purpose | Automation anchor |
+| --- | --- | --- |
+| `/` | Material UI home experience with hero, CTA buttons, and feature highlights. | `data-rustic-app-navigation="app-home-navigation"` for the navigation link and matching `data-rustic-app-route="home"` markers in the content areas. |
+| `/about` | Secondary page replicating the archival Next.js demo copy to validate router parity. | `data-rustic-app-navigation="app-about-navigation"` and companion `data-rustic-app-route="about"` markers. |
+
+The descriptors for these routes live in [`mui_shared::routes`](../mui-shared/src/routes.rs) so every framework consumes an identical definition. New routes or microsite forms should be registered there first, then surfaced through the adapter-specific router described below.
+
+## Shared layout, theming, and parity guarantees
+
+All frameworks compose [`mui_shared::layout::AppShell`](../mui-shared/src/layout.rs) with [`rustic_ui_system`](../../crates/rustic-ui-system) primitives. The crate exports:
+
+- the responsive page shell (hero copy, ProTip footer, CTA buttons),
+- the [`material_example_theme`](../mui-shared/src/theme.rs) palette so light/dark modes stay visually consistent, and
+- the [`AutomationIdBuilder`](../mui-shared/src/automation.rs) helpers that stamp deterministic `data-rustic-*` attributes.
+
+This shared surface ensures the Leptos, Yew, Dioxus, Sycamore, and pure SSR adapters render pixel-identical markup. It also keeps localisation strings and analytics tags inside a single crate, simplifying governance reviews.
+
+## Automation hook strategy
+
+Automation metadata follows the `data-rustic-<surface>-<semantic>` pattern. Example selectors include:
+
+- `data-rustic-app-navigation="app-home-navigation"` for primary nav links,
+- `data-rustic-theme-toggle="mode-select"` on the light/dark/system switcher, and
+- `data-rustic-showcase="alert-demo"` for component showcases.
+
+These attributes are generated by [`AutomationIdBuilder`](../mui-shared/src/automation.rs) so QA engineers can target selectors that are stable across frameworks and render modes. Synthetic monitors can diff SSR output against CSR hydration using the same selectors because the IDs are emitted from the shared crate.
+
+## Shared setup and verification
+
+Run the following from the repository root before opening a pull request. They keep the shared crate and each framework adapter aligned:
+
+```bash
+cargo fmt --all
+```
+
+```bash
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+```
+
+```bash
+cargo test --package mui_shared
+```
+
+```bash
+cargo doc --no-deps --package mui_shared
+```
+
+The adapter-specific README sections below extend this checklist with framework builds, end-to-end bundles, and targeted unit/integration tests.
+
+## QA automation workflow
+
+1. Use the deterministic `data-rustic-*` attributes to select navigation, showcase widgets, and the theme switcher.
+2. Observe the `HydrationPhase` annotations in source comments to understand when events become interactive; SSR output intentionally renders inert controls until hydration completes.
+3. Drive parity audits by comparing the shared SSR snapshot (produced via the commands below) with the hydrated CSR DOM. The automation IDs remain identical, so diff tooling can ignore positional noise.
+4. Feed any additional automation needs back into [`mui_shared::automation`](../mui-shared/src/automation.rs) so all frameworks inherit the new selectors simultaneously.
+
+## Extension points
+
+- **Additional routes:** Extend [`mui_shared::routes`](../mui-shared/src/routes.rs) with new descriptors, then map them through each adapter's router enum. The shared layout automatically renders CTA buttons and navigation based on those descriptors.
+- **New forms or showcases:** Compose new components inside [`mui_shared::showcases`](../mui-shared/src/showcases) (or an adjacent module) so their copy, automation IDs, and theme tokens remain centralised. Each adapter can expose them by wiring the shared descriptors into its view function.
+- **Theming:** Override tokens by wrapping `material_example_theme` with framework-specific providers. Keep changes inside `mui-shared` so palettes and typography stay synchronised across runtimes.
+
+When extending the shared crate, re-run the verification checklist above and regenerate documentation so downstream adapters pull in the new APIs without drift.
+<!-- END_SHARED_SECTIONS -->
+
+## Cross-framework parity notes
+
+- `leptos_router` consumes the shared descriptors directly, ensuring `/` and `/about` render with matching CTA copy and `data-rustic-app-route` attributes.
+- SSR output intentionally renders inert controls until hydration completes, mirroring the behaviour in the other adapters so automation scripts can share expectations.
+- Adding a new route involves updating `mui-shared` and teaching the Leptos router enum about the new descriptor; the layout automatically renders navigation links and CTA buttons for you.

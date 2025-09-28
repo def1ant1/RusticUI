@@ -1,53 +1,114 @@
 # MUI Sycamore Example
 
-This example consumes the shared `mui-shared` crate to render the Material UI
-hero layout with Sycamore. Routes, layout copy, automation identifiers, and the
-dual light/dark theme blueprint are all sourced from the shared primitives so
-the Sycamore surface stays in lock-step with the Leptos/Yew/Dioxus adapters.
+## Overview
 
-## Highlights
+Sycamore consumes the [`mui-shared`](../mui-shared) crate to render the Material UI marketing site with fine-grained reactivity. Route descriptors, layout chrome, automation hooks, and theme tokens are provided by the shared crate so the Sycamore adapter stays aligned with Dioxus, Leptos, Yew, and the SSR reference implementation.
 
-- **Typed routing:** `sycamore-router` drives both CSR navigation and the SSR
-  fallback via `StaticRouter`, ensuring `/` and `/about` emit identical markup
-  regardless of render mode.
-- **Deterministic automation:** Every `data-rustic-*` attribute is generated via
-  `mui_shared::automation::AutomationIdBuilder`, matching the selectors used by
-  other frameworks and the archival Next.js reference.
-- **Hydration-aware theme switch:** The `ModeSwitch` component implements a
-  two-phase state machine (`HydrationPhase::Server` → `HydrationPhase::Client`)
-  so the markup remains inert during SSR yet reacts immediately after client
-  hydration.
-- **Showcase parity:** Alert, slider, and popover samples mirror the shared
-  demo content with explicit comments documenting SSR/CSR behaviour for QA
-  automation.
+## Framework-specific workflows
 
-## Usage
-
-### Client-side hydration
+### Client-side development (CSR)
 
 ```bash
-trunk serve --open
+(cd examples/mui-sycamore && trunk serve --open)
 ```
 
-The CSR bundle will hydrate any SSR markup emitted by the server build; when no
-markup is present it renders from scratch.
+Trunk builds and serves the WASM bundle, hydrating SSR markup when available. Shared automation IDs (`data-rustic-*`) expose consistent selectors for smoke and regression suites.
 
-### Server-side rendering
+### Server-side rendering (SSR)
 
 ```bash
-cargo run --manifest-path examples/mui-sycamore/Cargo.toml --features ssr
+cargo run --manifest-path examples/mui-sycamore/Cargo.toml --features ssr > prerendered.html
 ```
 
-The process prints a full HTML document using the shared `AppShell` helper. Pipe
-the output into your preferred response writer and allow the CSR build above to
-hydrate it in the browser.
+Serve this HTML alongside the CSR bundle for instant paint and hydration. The SSR code path uses the same route descriptors and layout helpers as the CSR entry point.
 
-### Tests
+### Release bundle (WASM)
 
 ```bash
-cargo test --manifest-path examples/mui-sycamore/Cargo.toml
+(cd examples/mui-sycamore && trunk build --release)
 ```
 
-Unit tests cover the typed route descriptors, automation builder determinism,
-and the mode switch state transitions to guarantee SSR/CSR parity across
-refactors.
+Publish the resulting assets to match the archival Next.js experience. The automation hooks allow monitoring pipelines to assert parity across frameworks.
+
+## Example-specific verification
+
+```bash
+cargo test --package rustic_ui_sycamore_example
+```
+
+Tests assert route-to-descriptor mapping, automation ID determinism, and hydration-aware theme switching.
+
+<!-- BEGIN_SHARED_SECTIONS -->
+
+## Available routes
+
+| Route | Purpose | Automation anchor |
+| --- | --- | --- |
+| `/` | Material UI home experience with hero, CTA buttons, and feature highlights. | `data-rustic-app-navigation="app-home-navigation"` for the navigation link and matching `data-rustic-app-route="home"` markers in the content areas. |
+| `/about` | Secondary page replicating the archival Next.js demo copy to validate router parity. | `data-rustic-app-navigation="app-about-navigation"` and companion `data-rustic-app-route="about"` markers. |
+
+The descriptors for these routes live in [`mui_shared::routes`](../mui-shared/src/routes.rs) so every framework consumes an identical definition. New routes or microsite forms should be registered there first, then surfaced through the adapter-specific router described below.
+
+## Shared layout, theming, and parity guarantees
+
+All frameworks compose [`mui_shared::layout::AppShell`](../mui-shared/src/layout.rs) with [`rustic_ui_system`](../../crates/rustic-ui-system) primitives. The crate exports:
+
+- the responsive page shell (hero copy, ProTip footer, CTA buttons),
+- the [`material_example_theme`](../mui-shared/src/theme.rs) palette so light/dark modes stay visually consistent, and
+- the [`AutomationIdBuilder`](../mui-shared/src/automation.rs) helpers that stamp deterministic `data-rustic-*` attributes.
+
+This shared surface ensures the Leptos, Yew, Dioxus, Sycamore, and pure SSR adapters render pixel-identical markup. It also keeps localisation strings and analytics tags inside a single crate, simplifying governance reviews.
+
+## Automation hook strategy
+
+Automation metadata follows the `data-rustic-<surface>-<semantic>` pattern. Example selectors include:
+
+- `data-rustic-app-navigation="app-home-navigation"` for primary nav links,
+- `data-rustic-theme-toggle="mode-select"` on the light/dark/system switcher, and
+- `data-rustic-showcase="alert-demo"` for component showcases.
+
+These attributes are generated by [`AutomationIdBuilder`](../mui-shared/src/automation.rs) so QA engineers can target selectors that are stable across frameworks and render modes. Synthetic monitors can diff SSR output against CSR hydration using the same selectors because the IDs are emitted from the shared crate.
+
+## Shared setup and verification
+
+Run the following from the repository root before opening a pull request. They keep the shared crate and each framework adapter aligned:
+
+```bash
+cargo fmt --all
+```
+
+```bash
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+```
+
+```bash
+cargo test --package mui_shared
+```
+
+```bash
+cargo doc --no-deps --package mui_shared
+```
+
+The adapter-specific README sections below extend this checklist with framework builds, end-to-end bundles, and targeted unit/integration tests.
+
+## QA automation workflow
+
+1. Use the deterministic `data-rustic-*` attributes to select navigation, showcase widgets, and the theme switcher.
+2. Observe the `HydrationPhase` annotations in source comments to understand when events become interactive; SSR output intentionally renders inert controls until hydration completes.
+3. Drive parity audits by comparing the shared SSR snapshot (produced via the commands below) with the hydrated CSR DOM. The automation IDs remain identical, so diff tooling can ignore positional noise.
+4. Feed any additional automation needs back into [`mui_shared::automation`](../mui-shared/src/automation.rs) so all frameworks inherit the new selectors simultaneously.
+
+## Extension points
+
+- **Additional routes:** Extend [`mui_shared::routes`](../mui-shared/src/routes.rs) with new descriptors, then map them through each adapter's router enum. The shared layout automatically renders CTA buttons and navigation based on those descriptors.
+- **New forms or showcases:** Compose new components inside [`mui_shared::showcases`](../mui-shared/src/showcases) (or an adjacent module) so their copy, automation IDs, and theme tokens remain centralised. Each adapter can expose them by wiring the shared descriptors into its view function.
+- **Theming:** Override tokens by wrapping `material_example_theme` with framework-specific providers. Keep changes inside `mui-shared` so palettes and typography stay synchronised across runtimes.
+
+When extending the shared crate, re-run the verification checklist above and regenerate documentation so downstream adapters pull in the new APIs without drift.
+<!-- END_SHARED_SECTIONS -->
+
+## Cross-framework parity notes
+
+- `sycamore-router` pulls the shared route descriptors, ensuring navigation renders identical copy and automation attributes to the other adapters.
+- Showcase components use the shared automation builder so QA scripts written for Leptos or Yew can be replayed unchanged against Sycamore.
+- New descriptors added to `mui-shared` automatically surface in the Sycamore app shell; only the router enum requires an additional match arm.
