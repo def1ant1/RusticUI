@@ -3412,6 +3412,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustic_ui_ssr_accessibility"
+version = "0.1.0"
+dependencies = [
+ "html-escape",
+ "mui-shared",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "tokio",
+ "yew",
+]
+
+[[package]]
 name = "rustic_ui_yew_example"
 version = "0.1.0"
 dependencies = [

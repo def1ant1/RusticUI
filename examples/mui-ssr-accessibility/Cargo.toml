@@ -3,10 +3,15 @@ name = "rustic_ui_ssr_accessibility"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "mui_ssr_accessibility"
+path = "src/lib.rs"
+
 [dependencies]
 yew.workspace = true
+html-escape = "0.2"
 # Tokio runtime enables async server side rendering.
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 rustic-ui-material = { path = "../../crates/rustic-ui-material", features = ["yew"] }
 rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["yew"] }
-mui-shared = { path = "../mui-shared" }
+mui-shared = { path = "../mui-shared", features = ["automation", "layout", "routes", "theme"] }
