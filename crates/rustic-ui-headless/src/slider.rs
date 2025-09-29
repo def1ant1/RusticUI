@@ -121,6 +121,12 @@ impl SliderState {
         self.config.disabled
     }
 
+    /// Returns the configured orientation.
+    #[inline]
+    pub fn orientation(&self) -> SliderOrientation {
+        self.config.orientation
+    }
+
     /// Update the disabled flag.
     pub fn set_disabled(&mut self, disabled: bool) {
         self.config.disabled = disabled;

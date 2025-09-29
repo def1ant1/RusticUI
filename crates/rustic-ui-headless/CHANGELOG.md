@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
+- Form control, input adornment, alert, backdrop, circular progress, linear
+  progress, and skeleton state machines with exhaustive ARIA documentation and
+  controlled/uncontrolled ergonomics for automation driven adapters.
 - Checkbox toggles now leverage a tri-state enum (`Off`/`On`/`Indeterminate`)
   with helpers for programmatically setting and clearing the indeterminate
   state while preserving controlled/uncontrolled ergonomics.

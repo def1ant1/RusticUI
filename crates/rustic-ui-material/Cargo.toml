@@ -31,10 +31,13 @@ insta.workspace = true
 serde_json.workspace = true
 
 [features]
-default = []
+default = ["forms", "feedback", "progress"]
 compat-mui = []
 react = []
 yew = ["dep:yew", "dep:wasm-bindgen", "rustic-ui-system/yew", "rustic-ui-styled-engine/yew", "dep:web-sys"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "rustic-ui-system/leptos"]
 dioxus = ["rustic-ui-system/dioxus", "rustic-ui-styled-engine/dioxus"]
 sycamore = ["rustic-ui-system/sycamore", "rustic-ui-styled-engine/sycamore"]
+forms = ["rustic-ui-headless/forms"]
+feedback = ["rustic-ui-headless/feedback"]
+progress = ["rustic-ui-headless/progress"]
