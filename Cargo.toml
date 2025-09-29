@@ -62,6 +62,11 @@ members = [
     "examples/layout-box-leptos",
     "examples/inputs-slider-yew",
     "examples/feedback-progress-leptos",
+    "examples/utils-trap-focus-core",
+    "examples/utils-trap-focus-yew",
+    "examples/utils-trap-focus-leptos",
+    "examples/utils-trap-focus-dioxus",
+    "examples/utils-trap-focus-sycamore",
 ]
 
 # Use Cargo's second feature resolver so optional dependencies don't

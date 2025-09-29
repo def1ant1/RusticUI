@@ -369,12 +369,15 @@ struct ExamplesArgs {
 enum ExampleGroup {
     /// Layout demos that validate multi-surface grid and box flows.
     Layout,
+    /// Focus trap utilities shared across framework adapters.
+    Utilities,
 }
 
 impl ExampleGroup {
     fn as_str(&self) -> &'static str {
         match self {
             ExampleGroup::Layout => "layout",
+            ExampleGroup::Utilities => "utilities",
         }
     }
 }
@@ -457,6 +460,7 @@ fn examples(args: ExamplesArgs) -> Result<()> {
 
     let crates = match args.group {
         ExampleGroup::Layout => layout_examples(&workspace)?,
+        ExampleGroup::Utilities => utilities_examples(&workspace)?,
     };
 
     if crates.is_empty() {
@@ -526,6 +530,49 @@ fn layout_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
         if !manifest_path.exists() {
             return Err(anyhow!(
                 "layout example `{}` manifest missing at {}",
+                name,
+                manifest_path.display()
+            ));
+        }
+
+        crates.push(ExampleCrate {
+            name: (*name).to_string(),
+            manifest: manifest_path,
+        });
+    }
+
+    Ok(crates)
+}
+
+fn utilities_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
+    // The focus trap utilities exercise automation-heavy bootstrap scripts across
+    // every supported renderer. Centralising the manifests here lets CI toggle
+    // the entire suite with `cargo xtask examples --group utilities`.
+    const UTILITIES_MANIFESTS: &[(&str, &str)] = &[
+        (
+            "utils-trap-focus-dioxus",
+            "examples/utils-trap-focus-dioxus/Cargo.toml",
+        ),
+        (
+            "utils-trap-focus-leptos",
+            "examples/utils-trap-focus-leptos/Cargo.toml",
+        ),
+        (
+            "utils-trap-focus-sycamore",
+            "examples/utils-trap-focus-sycamore/Cargo.toml",
+        ),
+        (
+            "utils-trap-focus-yew",
+            "examples/utils-trap-focus-yew/Cargo.toml",
+        ),
+    ];
+
+    let mut crates = Vec::with_capacity(UTILITIES_MANIFESTS.len());
+    for (name, manifest) in UTILITIES_MANIFESTS {
+        let manifest_path = workspace.join(manifest);
+        if !manifest_path.exists() {
+            return Err(anyhow!(
+                "utilities example `{}` manifest missing at {}",
                 name,
                 manifest_path.display()
             ));

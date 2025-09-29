@@ -4817,6 +4817,59 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
+name = "utils-trap-focus-core"
+version = "0.1.0"
+dependencies = [
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "rustic-ui-system",
+]
+
+[[package]]
+name = "utils-trap-focus-dioxus"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "dioxus-ssr",
+ "dioxus-web",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "utils-trap-focus-core",
+]
+
+[[package]]
+name = "utils-trap-focus-leptos"
+version = "0.1.0"
+dependencies = [
+ "leptos",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "utils-trap-focus-core",
+]
+
+[[package]]
+name = "utils-trap-focus-sycamore"
+version = "0.1.0"
+dependencies = [
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "sycamore",
+ "utils-trap-focus-core",
+]
+
+[[package]]
+name = "utils-trap-focus-yew"
+version = "0.1.0"
+dependencies = [
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "utils-trap-focus-core",
+ "wasm-bindgen",
+ "yew",
+]
+
+[[package]]
 name = "uuid"
 version = "1.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

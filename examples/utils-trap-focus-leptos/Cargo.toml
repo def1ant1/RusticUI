@@ -1,0 +1,21 @@
+[package]
+name = "utils-trap-focus-leptos"
+version = "0.1.0"
+edition = "2021"
+description = "Leptos harness mirroring the rustic-ui focus trap utilities."
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "utils_trap_focus_leptos"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bootstrap"
+path = "src/bin/bootstrap.rs"
+
+[dependencies]
+utils-trap-focus-core = { path = "../utils-trap-focus-core" }
+leptos.workspace = true
+rustic-ui-material = { path = "../../crates/rustic-ui-material", version = "0.1.0", features = ["leptos"] }
+rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", version = "0.1.0", features = ["leptos"] }
