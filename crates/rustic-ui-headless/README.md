@@ -267,3 +267,56 @@ text_field.commit(|snapshot| assert!(snapshot.has_errors));
 The example mirrors the automation-centric blueprints in
 `examples/shared-dialog-state-*` by combining dialog transitions, popover
 geometry, and text-field validation into a single deterministic flow.
+
+## Architectural rationale for the new utility suite
+
+- **Click-away orchestration** – `click_away::ClickAwayState` holds a lazily
+  initialised event subscription that toggles pointer capture on demand. We keep
+  the subscription detached until `arm()` is called so SSR snapshots do not
+  attempt to access global browser primitives. The state exposes `should_close`
+  rather than firing ad-hoc closures which keeps hydration deterministic across
+  Yew, Leptos, Dioxus, and Sycamore adapters.
+- **Focus trap timelines** – `focus_trap::FocusTrapState` mirrors the dialog
+  lifecycle but records a full transition timeline (`Opening`, `Open`,
+  `Closing`). Material renderers serialise this into `data-transition` markers so
+  Playwright and axe-core audits can assert the same order without waiting on
+  animation frames. We purposefully separate intent (`request_focus_within`) from
+  the reconciliation (`commit_focus_within`) so tests can time-travel through the
+  state machine.
+- **Global telemetry** – `telemetry::EventStream` centralises the capture of
+  high-value analytics (open counts, dismissal reasons, focus violations) and
+  exposes pure data records. Adapters forward the records to framework-specific
+  loggers, but the core utility stays `no_std` friendly for server-side runs.
+
+These decisions guarantee the utilities stay cloneable, replayable, and easily
+serialised for SSR pipelines while still exposing the hooks Material renderers
+expect.
+
+## Troubleshooting the utility suite
+
+1. **Unexpected focus escapes** – enable `FocusTrapState::diagnostics()` to
+   return the last known active element and transition timeline. In adapters, log
+   the diagnostics whenever a trap is re-armed to confirm hydration captured the
+   correct node.
+2. **Click-away loops** – confirm `ClickAwayState::is_armed()` returns `false`
+   before hydration. If server renders initialise the state too early, gate the
+   call behind `is_hydrated` or reuse the adapters' `arm_on_mount` helper so the
+   subscription is deferred until the browser API becomes available.
+3. **Telemetry gaps** – when analytics dashboards miss events, run the
+   automation example `cargo xtask examples --group automation --release` and
+   inspect the generated `automation-events.ndjson`. The headless crate emits the
+   stream into `target/rustic-ui-automation/` so you can diff the expected
+   records against your integration.
+
+## Observability and automation hooks
+
+- Every state machine exposes `automation_attributes()` that return ready-to-log
+  `(&'static str, String)` tuples. Material adapters extend the tuples with
+  component-specific IDs before rendering, keeping SSR/CSR diffs flat.
+- `EventStream::drain_with` is intentionally synchronous. Feed the drained batch
+  into your logging sink inside the render loop (for SSR) or schedule it via
+  microtasks (for CSR) to avoid reordering analytics events.
+- Run `cargo test -p rustic-ui-headless -- --include-ignored` locally when adding
+  new instrumentation. The ignored tests replay hydration edge cases (for
+  example `focus_trap_replay.rs`) and ensure that new logging does not introduce
+  borrow conflicts or timing issues.

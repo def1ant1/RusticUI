@@ -9,6 +9,12 @@ _Last updated 2025-09-19T13:05:32.393450968+00:00 via `cargo xtask material-pari
 ## Coverage snapshot
 
 - React exports analyzed: 146\n- `mui-material` coverage: 6 (4.1%)\n- `mui-headless` coverage: 1 (0.7%)\n
+> **New:** Headless automation utilities (click-away, focus trap, telemetry) and
+> the Material adapters that consume them are tracked separately in the
+> automation example group. Run `cargo xtask examples --group automation --release`
+> alongside the parity generator when validating new surfaces so telemetry and
+> SSR attributes stay aligned across frameworks.
+
 ## Highest priority gaps
 
 | Rank | Component | Source |
