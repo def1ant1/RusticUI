@@ -72,6 +72,7 @@ pub mod slider;
 pub mod snackbar;
 pub mod speed_dial;
 pub mod stack;
+pub mod stepper;
 mod style_helpers;
 pub mod switch;
 pub mod tab;
@@ -148,6 +149,7 @@ pub use speed_dial::{
     SpeedDialRenderOutput, SpeedDialTriggerDescriptor,
 };
 pub use stack::{render_stack, StackAdapterProps, StackRenderOutput};
+pub use stepper::{render_stepper, StepRenderStep, StepperAdapterProps, StepperRenderOutput};
 pub use telemetry::{TelemetryContext, TelemetryError, TelemetryHooks};
 pub use typography::{render_typography, TypographyRenderOutput};
 

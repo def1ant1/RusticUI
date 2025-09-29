@@ -92,6 +92,19 @@ The [`feedback-chips`](../../examples/feedback-chips) demo bootstraps the same
 multi-framework scaffolding with dismissible and non-dismissible variants so QA
 teams can validate automation flows with a single command.
 
+## Stepper workflow renderer
+
+`render_stepper` translates the shared [`StepperState`](../rustic-ui-headless/src/stepper.rs)
+into themed classes, ARIA attributes, and automation IDs so Material steppers
+maintain parity across React, Yew, Leptos, Dioxus, and Sycamore adapters.  The
+renderer surfaces deterministic `id`/`data-*` selectors derived from the
+`rustic-stepper` automation prefix, allowing Playwright or Cypress suites to pin
+against the same DOM contract regardless of rendering mode.  Controlled hooks
+(`use_state`, signals, etc.) and uncontrolled flows (per-render constructors)
+share the same [`StepperAdapterProps`](src/stepper.rs) ensuring SSR snapshots and
+hydrated DOM trees remain byte-identical while analytics streams reuse the
+automation metadata without additional boilerplate.
+
 ### Theming and automation hooks
 
 Both components pull palette, typography, and spacing tokens from
