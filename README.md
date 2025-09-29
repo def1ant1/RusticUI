@@ -176,10 +176,17 @@ Use the parity suites above to chase snapshot mismatches: rerun the failing test
 ## Rust example gallery
 
 Every maintained demo lives under `examples/` and ships automation hooks plus
-framework-specific bootstrap flows. The new
-[Rust example gallery](docs/src/pages/examples/index.md) summarises the
-supported use cases, parity guarantees, and scaffolding steps for each
-blueprint. Highlights include:
+framework-specific bootstrap flows. The local
+[`examples/README.md`](examples/README.md) catalogue documents renderer support,
+automation expectations, and bootstrap commands—including the new responsive
+layout blueprints—while the
+[Rust example gallery](docs/src/pages/examples/index.md) captures the same
+matrix for the documentation site. Highlights include:
+
+- **Responsive layout blueprints** – [`examples/layout-box-leptos`](examples/layout-box-leptos/README.md)
+  and [`examples/layout-grid-yew`](examples/layout-grid-yew/README.md) expose
+  the shared breakpoint blueprints, SSR pipelines, and `just` automation targets
+  backing hydration-safe layout demos.【F:examples/layout-box-leptos/README.md†L10-L61】【F:examples/layout-box-leptos/src/blueprint.rs†L32-L90】【F:examples/layout-grid-yew/README.md†L11-L80】【F:examples/layout-grid-yew/src/blueprint.rs†L54-L135】
 
 - **Marketing microsite** – [`examples/mui-yew`](examples/mui-yew) and its sister
   crates recreate the archived React marketing site with shared automation IDs,
