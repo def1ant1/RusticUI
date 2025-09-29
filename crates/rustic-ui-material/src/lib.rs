@@ -23,12 +23,15 @@
 //! ```
 
 pub mod app_bar;
+pub mod r#box;
 pub mod button;
 pub mod card;
 pub mod checkbox;
 pub mod chip;
+pub mod container;
 pub mod dialog;
 pub mod drawer;
+pub mod grid;
 pub mod list;
 pub mod macros;
 pub mod menu;
@@ -37,6 +40,7 @@ mod render_helpers;
 pub mod select;
 mod selection_control;
 pub mod snackbar;
+pub mod stack;
 mod style_helpers;
 pub mod switch;
 pub mod tab;
@@ -47,6 +51,11 @@ pub mod text_field;
 pub mod tooltip;
 
 pub use rustic_ui_styled_engine::Theme;
+
+pub use crate::r#box::{render_box, BoxRenderOutput};
+pub use container::{render_container, ContainerRenderOutput};
+pub use grid::{render_grid, GridRenderOutput};
+pub use stack::{render_stack, StackRenderOutput};
 
 /// Confirms that the crate links to `rustic_ui_styled_engine` and compiles.
 pub fn placeholder() {
