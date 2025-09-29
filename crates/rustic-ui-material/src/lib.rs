@@ -37,10 +37,13 @@ pub mod checkbox;
 pub mod chip;
 #[cfg(feature = "progress")]
 pub mod circular_progress;
+pub mod click_away;
+pub mod collapsible;
 pub mod container;
 pub mod dialog;
 pub mod divider;
 pub mod drawer;
+pub mod focus_trap;
 #[cfg(feature = "forms")]
 pub mod form_control;
 pub mod grid;
@@ -90,8 +93,19 @@ pub use badge::{render_badge, BadgeRenderOutput};
 pub use circular_progress::{
     render_circular_progress, CircularProgressAdapterProps, CircularProgressRenderOutput,
 };
+pub use click_away::{
+    click_away_root_attributes, render_click_away_boundary_html, ClickAwayBoundaryOptions,
+};
+pub use collapsible::{
+    collapsible_region_attributes, collapsible_trigger_attributes, render_collapsible_region_html,
+    render_collapsible_trigger_html, CollapsibleRegionOptions, CollapsibleTriggerOptions,
+};
 pub use container::{render_container, ContainerAdapterProps, ContainerRenderOutput};
 pub use divider::{render_divider, DividerAdapterProps, DividerRenderOutput};
+pub use focus_trap::{
+    focus_trap_sentinel_attributes, render_focus_trap_sentinel_html, FocusTrapSentinelKind,
+    FocusTrapSentinelOptions,
+};
 #[cfg(feature = "forms")]
 pub use form_control::{render_form_control, FormControlAdapterProps, FormControlRenderOutput};
 pub use grid::{render_grid, GridAdapterProps, GridRenderOutput};
@@ -112,6 +126,15 @@ pub use skeleton::{render_skeleton, SkeletonAdapterProps, SkeletonRenderOutput};
 pub use slider::{render_slider, SliderAdapterProps, SliderRenderOutput};
 pub use stack::{render_stack, StackAdapterProps, StackRenderOutput};
 pub use typography::{render_typography, TypographyRenderOutput};
+
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore",
+    feature = "react",
+))]
+pub use click_away::{dialog_click_away_automation, drawer_click_away_automation};
 
 /// Confirms that the crate links to `rustic_ui_styled_engine` and compiles.
 pub fn placeholder() {
