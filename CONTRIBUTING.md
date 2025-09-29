@@ -14,7 +14,7 @@ before interacting with the community. Violations can be reported confidentially
 RusticUI thrives on a wide range of contributions:
 
 - **Crates & components** – Implement new components, fix bugs, or improve performance in any crate under `crates/`.
-- **Documentation & demos** – Expand the docs hosted in `docs/` or add examples in `examples/`.
+- **Documentation & demos** – Expand the docs hosted in `docs/` or add examples in `examples/`. Consult [`examples/README.md`](examples/README.md) for the automation matrix, renderer coverage, and bootstrap commands that each demo must maintain.
 - **Automation** – Enhance the `cargo xtask` CLI, CI workflows, and observability pipelines.
 - **Community** – Review pull requests, triage issues, or mentor newcomers in the [discussion board](https://github.com/apotheon-ai/rusticui/discussions).
 
