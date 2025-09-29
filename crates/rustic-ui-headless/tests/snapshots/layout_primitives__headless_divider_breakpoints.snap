@@ -1,0 +1,63 @@
+---
+source: crates/rustic-ui-headless/tests/layout_primitives.rs
+expression: snapshot
+---
+{
+  "attributes": {
+    "class": "rustic-divider",
+    "data_orientation@1920": "horizontal",
+    "data_orientation@480": "horizontal",
+    "id": "analytics-divider",
+    "role": "presentation"
+  },
+  "evaluations": [
+    {
+      "breakpoint": "base",
+      "inset": "0",
+      "min_width": 0,
+      "orientation": "horizontal",
+      "role": "presentation",
+      "thickness": "1px"
+    },
+    {
+      "breakpoint": "sm",
+      "inset": "8px",
+      "min_width": 600,
+      "orientation": "horizontal",
+      "role": "presentation",
+      "thickness": "1px"
+    },
+    {
+      "breakpoint": "md",
+      "inset": "8px",
+      "min_width": 900,
+      "orientation": "vertical",
+      "role": "presentation",
+      "thickness": "1px"
+    },
+    {
+      "breakpoint": "lg",
+      "inset": "8px",
+      "min_width": 1200,
+      "orientation": "vertical",
+      "role": "presentation",
+      "thickness": "2px"
+    },
+    {
+      "breakpoint": "xl",
+      "inset": "16px",
+      "min_width": 1536,
+      "orientation": "horizontal",
+      "role": "presentation",
+      "thickness": "2px"
+    },
+    {
+      "breakpoint": "xxl",
+      "inset": "16px",
+      "min_width": 1800,
+      "orientation": "horizontal",
+      "role": "presentation",
+      "thickness": "2px"
+    }
+  ]
+}

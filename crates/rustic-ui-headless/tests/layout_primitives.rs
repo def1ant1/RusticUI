@@ -201,6 +201,60 @@ fn stack_breakpoint_evaluations_snapshot() {
 }
 
 #[test]
+fn divider_breakpoint_evaluations_snapshot() {
+    use rustic_ui_headless::divider::{
+        DividerOrientation, DividerRole, DividerState, DividerTokens,
+    };
+
+    let tokens = DividerTokens {
+        orientation: ResponsiveValue::new(DividerOrientation::Horizontal)
+            .with_override(Breakpoint::Md, DividerOrientation::Vertical)
+            .with_override(Breakpoint::Xl, DividerOrientation::Horizontal),
+        thickness: ResponsiveValue::new(String::from("1px"))
+            .with_override(Breakpoint::Lg, String::from("2px")),
+        inset: ResponsiveValue::new(String::from("0"))
+            .with_override(Breakpoint::Sm, String::from("8px"))
+            .with_override(Breakpoint::Xl, String::from("16px")),
+    };
+
+    let state = DividerState::new(tokens, BreakpointConfig::material())
+        .with_role(DividerRole::Presentation);
+    let attrs = state
+        .attributes()
+        .id("analytics-divider")
+        .class("rustic-divider");
+
+    let evaluations = state
+        .breakpoints()
+        .iter()
+        .map(|(breakpoint, min_width)| {
+            let evaluation = state.evaluate_for(breakpoint);
+            json!({
+                "breakpoint": breakpoint.as_token(),
+                "min_width": min_width,
+                "orientation": evaluation.orientation.as_str(),
+                "thickness": evaluation.thickness,
+                "inset": evaluation.inset,
+                "role": evaluation.role.as_str(),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let snapshot = json!({
+        "attributes": {
+            "role": attrs.role().1,
+            "id": attrs.id_attr().map(|(_, value)| value.to_string()),
+            "class": attrs.class_attr().map(|(_, value)| value.to_string()),
+            "data_orientation@480": attrs.data_orientation(480).1,
+            "data_orientation@1920": attrs.data_orientation(1920).1,
+        },
+        "evaluations": evaluations,
+    });
+
+    assert_json_snapshot!("headless_divider_breakpoints", snapshot);
+}
+
+#[test]
 fn image_list_breakpoint_evaluations_snapshot() {
     use rustic_ui_headless::image_list::{
         ImageListRole, ImageListState, ImageListTokens, ImageListVariant,
