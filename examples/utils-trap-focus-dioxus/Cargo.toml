@@ -1,0 +1,23 @@
+[package]
+name = "utils-trap-focus-dioxus"
+version = "0.1.0"
+edition = "2021"
+description = "Dioxus harness demonstrating rustic-ui focus trap sentinels."
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "utils_trap_focus_dioxus"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bootstrap"
+path = "src/bin/bootstrap.rs"
+
+[dependencies]
+utils-trap-focus-core = { path = "../utils-trap-focus-core" }
+dioxus = { workspace = true, features = ["macro", "hooks", "html"] }
+dioxus-web = { workspace = true, features = ["file_engine"] }
+dioxus-ssr = { workspace = true }
+rustic-ui-material = { path = "../../crates/rustic-ui-material", version = "0.1.0", features = ["dioxus"] }
+rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", version = "0.1.0", features = ["dioxus"] }

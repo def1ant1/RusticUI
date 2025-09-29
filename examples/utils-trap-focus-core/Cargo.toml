@@ -1,0 +1,13 @@
+[package]
+name = "utils-trap-focus-core"
+version = "0.1.0"
+edition = "2021"
+description = "Shared focus trap utilities powering multi-framework RusticUI examples."
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+rustic-ui-material = { path = "../../crates/rustic-ui-material", version = "0.1.0" }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", version = "0.1.0" }
+rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", version = "0.1.0" }
+rustic-ui-system = { path = "../../crates/rustic-ui-system", version = "0.1.0" }
