@@ -30,7 +30,9 @@ pub mod avatar;
 #[cfg(feature = "feedback")]
 pub mod backdrop;
 pub mod badge;
+pub mod bottom_navigation;
 pub mod r#box;
+pub mod breadcrumbs;
 pub mod button;
 pub mod card;
 pub mod checkbox;
@@ -53,9 +55,11 @@ pub mod image_list;
 pub mod input_adornment;
 #[cfg(feature = "progress")]
 pub mod linear_progress;
+pub mod link;
 pub mod list;
 pub mod macros;
 pub mod menu;
+pub mod pagination;
 pub mod paper;
 pub mod radio;
 mod render_helpers;
@@ -66,6 +70,7 @@ pub mod skeleton;
 #[cfg(feature = "forms")]
 pub mod slider;
 pub mod snackbar;
+pub mod speed_dial;
 pub mod stack;
 mod style_helpers;
 pub mod switch;
@@ -90,6 +95,14 @@ pub use avatar::{render_avatar, AvatarRenderOutput};
 #[cfg(feature = "feedback")]
 pub use backdrop::{render_backdrop, BackdropAdapterProps, BackdropRenderOutput};
 pub use badge::{render_badge, BadgeRenderOutput};
+pub use bottom_navigation::{
+    render_bottom_navigation, render_bottom_navigation_html, BottomNavigationAdapterProps,
+    BottomNavigationItemDescriptor, BottomNavigationRenderOutput,
+};
+pub use breadcrumbs::{
+    render_breadcrumbs, render_breadcrumbs_html, BreadcrumbItemDescriptor, BreadcrumbRenderOutput,
+    BreadcrumbsAdapterProps,
+};
 #[cfg(feature = "progress")]
 pub use circular_progress::{
     render_circular_progress, CircularProgressAdapterProps, CircularProgressRenderOutput,
@@ -120,11 +133,20 @@ pub use input_adornment::{
 pub use linear_progress::{
     render_linear_progress, LinearProgressAdapterProps, LinearProgressRenderOutput,
 };
+pub use link::{render_link, render_link_html, LinkAdapterProps, LinkRenderOutput};
+pub use pagination::{
+    render_pagination, render_pagination_html, PaginationAdapterProps, PaginationItemDescriptor,
+    PaginationRenderOutput,
+};
 pub use paper::{render_paper, PaperRenderOutput};
 #[cfg(feature = "progress")]
 pub use skeleton::{render_skeleton, SkeletonAdapterProps, SkeletonRenderOutput};
 #[cfg(feature = "forms")]
 pub use slider::{render_slider, SliderAdapterProps, SliderRenderOutput};
+pub use speed_dial::{
+    render_speed_dial, render_speed_dial_html, SpeedDialActionDescriptor, SpeedDialAdapterProps,
+    SpeedDialRenderOutput, SpeedDialTriggerDescriptor,
+};
 pub use stack::{render_stack, StackAdapterProps, StackRenderOutput};
 pub use telemetry::{TelemetryContext, TelemetryError, TelemetryHooks};
 pub use typography::{render_typography, TypographyRenderOutput};

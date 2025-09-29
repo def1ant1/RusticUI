@@ -34,7 +34,9 @@ pub mod avatar;
 #[cfg(feature = "feedback")]
 pub mod backdrop;
 pub mod badge;
+pub mod bottom_navigation;
 pub mod r#box;
+pub mod breadcrumbs;
 pub mod button;
 pub mod checkbox;
 pub mod chip;
@@ -58,8 +60,10 @@ pub mod interaction;
 pub mod layout;
 #[cfg(feature = "progress")]
 pub mod linear_progress;
+pub mod link;
 pub mod list;
 pub mod menu;
+pub mod pagination;
 pub mod paper;
 pub mod popover;
 pub mod radio;
@@ -68,6 +72,7 @@ pub mod select;
 pub mod skeleton;
 pub mod slider;
 pub mod snackbar;
+pub mod speed_dial;
 pub mod stack;
 pub mod stepper;
 pub mod switch;
@@ -82,6 +87,8 @@ pub mod typography;
 
 mod selection;
 mod toggle;
+
+pub use selection::ControlStrategy;
 
 #[cfg(feature = "compat-mui")]
 #[doc = "Deprecated compatibility shim exposing the crate under the legacy `mui_headless` name.\n\

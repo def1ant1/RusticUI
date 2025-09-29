@@ -52,6 +52,36 @@ pub const fn role_button() -> &'static str {
     "button"
 }
 
+/// Returns the ARIA role for anchor style links.
+#[inline]
+pub const fn role_link() -> &'static str {
+    "link"
+}
+
+/// Returns the ARIA role for navigation landmarks.
+#[inline]
+pub const fn role_navigation() -> &'static str {
+    "navigation"
+}
+
+/// Returns the ARIA role for generic list containers.
+#[inline]
+pub const fn role_list() -> &'static str {
+    "list"
+}
+
+/// Returns the ARIA role for list items.
+#[inline]
+pub const fn role_listitem() -> &'static str {
+    "listitem"
+}
+
+/// Returns the ARIA role for separator glyphs.
+#[inline]
+pub const fn role_separator() -> &'static str {
+    "separator"
+}
+
 /// Returns the ARIA role for the listbox container element.
 #[inline]
 pub const fn role_listbox() -> &'static str {
@@ -207,6 +237,12 @@ pub fn aria_controls(id: &str) -> (&'static str, &str) {
 #[inline]
 pub fn aria_labelledby(id: &str) -> (&'static str, &str) {
     ("aria-labelledby", id)
+}
+
+/// Compute the `aria-current` attribute describing the current page or step.
+#[inline]
+pub fn aria_current(value: &str) -> (&'static str, &str) {
+    ("aria-current", value)
 }
 
 /// Compute the `aria-describedby` attribute linking to additional context.
