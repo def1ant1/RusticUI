@@ -141,6 +141,24 @@ fn SaveButton() -> impl IntoView {
 }
 ```
 
+## Deterministic focus and disclosure primitives
+
+The headless crate now ships dedicated state machines for disclosure-heavy widgets and modal surfaces. Each primitive ships with
+copious documentation and attribute builders so adapters remain declarative:
+
+- **`click_away`** – [`ClickAwayState`](crates/rustic-ui-headless/src/click_away.rs) coordinates pointer and focus intents using a deterministic [`BTreeSet`], ensuring
+  overlays only emit a single close notification even when multiple pointers are active. The accompanying attribute builder exposes stable
+  `data-rustic-click-away` hooks so enterprise telemetry systems can centralize listeners without per-component glue code.【F:crates/rustic-ui-headless/src/click_away.rs†L1-L178】
+- **`collapsible_region`** – [`CollapsibleRegionState`](crates/rustic-ui-headless/src/collapsible_region.rs) standardizes controlled/uncontrolled behaviour and
+  serializes async transitions via caller-supplied tokens. Trigger and region builders emit `aria-expanded`, `aria-controls`, and
+  automation-first `data-rustic-collapsible` markers to keep accessibility and analytics hooks synchronized.【F:crates/rustic-ui-headless/src/collapsible_region.rs†L1-L226】
+- **`focus_trap`** – [`FocusTrapState`](crates/rustic-ui-headless/src/focus_trap.rs) translates [`interaction::ControlKey`](crates/rustic-ui-headless/src/interaction.rs)
+  navigation into deterministic focus loops while exposing sentinel attribute builders for DOM adapters. Looping behaviour is purely data-driven,
+  making it trivial to hydrate traps across async boundaries without race conditions.【F:crates/rustic-ui-headless/src/focus_trap.rs†L1-L206】
+
+Pair these primitives with the existing dialog/popover state machines to build modals that are concurrency-safe, WCAG-compliant, and instrumented
+for large-scale QA suites.
+
 ## Workspace automation
 
 Automation is consolidated in the root `Makefile` and `cargo xtask` binary so teams can wire CI once and scale confidently.
