@@ -35,6 +35,8 @@
     "/system/styles": "Styles",
     "https://v6.mui.com/system/styles/basics/": "Basics",
     "https://v6.mui.com/system/styles/advanced/": "Advanced",
+    "/examples": "Examples",
+    "/examples/automation": "Automation blueprints",
     "/material-ui/getting-started-group": "Getting started",
     "/material-ui/getting-started": "Overview",
     "/material-ui/getting-started/installation": "Installation",

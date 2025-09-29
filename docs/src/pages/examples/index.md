@@ -149,3 +149,20 @@ enterprise QA pipelines.【F:examples/shared-dialog-state-yew/README.md†L1-L47
 By following these automation-first workflows and verifying changes through the
 shared `cargo xtask` entry points, teams can add or extend examples without
 reintroducing manual scaffolding or diverging automation hooks.
+
+## Automation-focused blueprints
+
+The `automation` example group exercises the headless click-away, focus trap, and
+telemetry utilities alongside the Material renderers and adapters:
+
+- Review [Automation blueprints](./automation.md) for an end-to-end checklist of
+  commands, telemetry expectations, and diagnostic hooks before running CI.
+- Run `cargo xtask examples --group automation --release` to regenerate the
+  shared SSR snapshots, telemetry ndjson, and hydration manifests that back the
+  observability workflows.【F:crates/rustic-ui-headless/README.md†L297-L305】
+- Inspect `target/rustic-ui-automation/automation-events.ndjson` after the run to
+  validate that click-away dismissals, focus trap transitions, and snackbar queue
+  events are logged for every framework adapter.【F:crates/rustic-ui-material/README.md†L268-L275】
+- Feed the drained telemetry into your enterprise monitoring stack using the
+  adapter helpers described in the Material README so browser, server, and test
+  harnesses share the same automation contract.【F:crates/rustic-ui-material/README.md†L255-L267】

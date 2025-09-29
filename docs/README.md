@@ -1,7 +1,10 @@
 # Docs
 
 This directory powers the RusticUI documentation site maintained by Apotheon.ai. It covers the RusticUI component families,
-headless primitives, automation tooling, and migration paths.
+headless primitives, automation tooling, and migration paths. The latest update
+introduces dedicated coverage for the automation utilities (click-away
+listeners, focus traps, telemetry streams) plus the Material renderers and
+examples that exercise them end-to-end.
 
 To start the docs site in development mode, from the project root, run:
 
@@ -37,3 +40,17 @@ Start with [`crates/rustic-ui-system/README.md`](../crates/rustic-ui-system/READ
 `rustic-ui-*` crates are published. That guide documents the automation steps such as `cargo xtask generate-theme`, the
 `compat-mui` feature flag used during migrations, and the `scripts/migrate-crate-prefix.sh` helper that rewrites imports at
 scale before the compatibility layer is removed.
+
+## Automation utility playbooks
+
+- **Headless rationale and observability** – See
+  [`crates/rustic-ui-headless/README.md`](../crates/rustic-ui-headless/README.md#architectural-rationale-for-the-new-utility-suite)
+  for architectural notes, troubleshooting guidance, and observability hooks.
+- **Material adapter deep dives** –
+  [`crates/rustic-ui-material/README.md`](../crates/rustic-ui-material/README.md#architectural-rationale-for-the-new-renderers-and-adapters)
+  now records how each framework adapter consumes the utilities and how to wire
+  telemetry into enterprise monitoring stacks.
+- **Example automation harnesses** – The refreshed
+  [Rust example gallery](src/pages/examples/index.md#automation-focused-blueprints)
+  calls out which blueprints exercise the utilities and which `cargo xtask`
+  groups to run when validating telemetry output.

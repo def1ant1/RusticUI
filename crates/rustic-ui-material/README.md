@@ -218,3 +218,55 @@ fn app() -> Html {
 
 Additional enterprise patterns such as server side rendering can be found under
 [`exampl../rustic-ui-ssr-accessibility`](../../exampl../rustic-ui-ssr-accessibility).
+
+## Architectural rationale for the new renderers and adapters
+
+- **Shared render helpers** – The new automation utilities rely on
+  `render_helpers::AutomationAttributes` to ensure click-away, focus trap, and
+  telemetry metadata emit the same `data-rustic-*` selectors regardless of the
+  adapter.  Keeping these helpers in a single module means downstream frameworks
+  inherit identical SSR output and hydration fingerprints.
+- **Portal lifecycle alignment** – Dialog, popover, and snackbar renderers now
+  share a `PortalLifecycleController`.  It defers DOM mutations until hydration,
+  allowing headless state machines to run during SSR without referencing window
+  APIs.  Material adapters register callbacks through this controller so CSR
+  updates feed the same analytics hooks.
+- **Telemetry streaming** – Adapter-specific modules (`dialog::yew`,
+  `dialog::leptos`, etc.) ingest the headless `EventStream` and forward records
+  into the framework’s preferred logging primitive (tracing spans for Yew,
+  console batching for Leptos, and signal-aware loggers for Dioxus and Sycamore).
+  This keeps observability uniform even though each framework exposes different
+  runtime ergonomics.
+
+## Troubleshooting Material adapters for the utilities
+
+1. **Mismatched SSR attributes** – Regenerate the automation fixtures via
+   `cargo test -p rustic-ui-material -- --ignored --test automation_examples`. The
+   ignored suite snapshots SSR and CSR output from every adapter to confirm that
+   the new utilities emit identical `data-*` markers.
+2. **Focus trap regressions** – Enable the adapter-level `LogFocusDiagnostics`
+   feature (gated behind `cfg(feature = "diagnostics")`) to print the headless
+   focus timeline.  Compare the timestamps with the telemetry ndjson emitted by
+   `cargo xtask examples --group automation --release` to confirm the renderer is
+   consuming the stream correctly.
+3. **Click-away listeners firing twice** – Ensure the adapter defers
+   `ClickAwayState::arm()` until the framework confirms hydration.  Yew exposes
+   this via `use_effect_with`, Leptos via `on_mount`, Dioxus via `use_future`, and
+   Sycamore via `on_mount`.  The shared documentation at the top of each module
+   calls out the pattern so the behaviour stays consistent.
+
+## Observability guidance
+
+- Opt into the `telemetry` Cargo feature when you need high-cardinality logging
+  for overlays or transient surfaces.  The feature wires the headless
+  `EventStream` directly into the Material adapters and surfaces a
+  `TelemetrySubscriber` prop so applications can batch or forward events into
+  enterprise monitoring stacks.
+- Every adapter exposes a `with_analytics_layer` helper that wraps the rendered
+  HTML in data attributes mirroring the headless metadata (for example
+  `data-rustic-focus-trap="active"`).  Capture these markers in Playwright or
+  Cypress to guarantee the utilities stay observable without DOM spelunking.
+- The automation blueprints under `examples/` stream telemetry into
+  `target/rustic-ui-automation/automation-events.ndjson`.  Tail the file while
+  running your harness to confirm click-away dismissals, focus hand-offs, and
+  snackbar queue transitions are accounted for end-to-end.

@@ -28,3 +28,17 @@ Once the initial migration compiles, audit any usage of legacy `mui_*` layout
 helpers. The [responsive layout primitives](./layout-primitives.md) chapter
 documents how to port those calls to the new headless states, wire the Material
 renderers, and update CI so breakpoint snapshots stay fresh across adapters.
+
+### Automating focus, click-away, and telemetry utilities
+
+With layouts migrated, enable the automation utilities that coordinate overlays
+and analytics across frameworks:
+
+1. Read through the headless utility guide to understand how click-away, focus
+   trap, and telemetry state machines expose deterministic hooks for SSR and
+   hydration.【F:crates/rustic-ui-headless/README.md†L241-L305】
+2. Mirror the Material adapter recommendations so each framework integrates the
+   utilities without diverging telemetry or attribute wiring.【F:crates/rustic-ui-material/README.md†L233-L275】
+3. Add `cargo xtask examples --group automation --release` to your migration
+   checklist so every release replays the blueprint harnesses that validate the
+   shared utilities end-to-end.【F:crates/rustic-ui-headless/README.md†L297-L305】

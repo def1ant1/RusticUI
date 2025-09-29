@@ -3,6 +3,30 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-06-02 – Headless utility expansion and observability rails
+
+### Highlights
+
+- Published automation-friendly headless utilities for click-away listeners,
+  focus traps, ARIA transitions, and global event telemetry so downstream
+  renderers can reuse the deterministic orchestration without copying
+  lifetimes or analytics wiring.
+- Landed Material renderers and multi-framework adapters (Yew, Leptos,
+  Dioxus, Sycamore) for the new utilities, consolidating shared markup helpers
+  and documenting the portal/backdrop lifecycle so SSR and hydration stay in
+  lockstep.
+- Refreshed the example gallery with blueprint updates that showcase the
+  utilities in automation harnesses, including deterministic logging hooks and
+  environment variable toggles for enterprise monitoring stacks.
+
+### Verification
+
+- `cargo fmt`
+- `cargo clippy --workspace --all-targets -D warnings --all-features`
+- `cargo test --workspace --all-features`
+- `cargo test --workspace --all-features --target wasm32-unknown-unknown`
+- `cargo xtask examples --group automation --release`
+
 ## 2025-05-25 – Feedback primitives automation harnesses
 
 ### Highlights
