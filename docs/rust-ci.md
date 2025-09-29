@@ -97,6 +97,25 @@ CI relies on this command to build and run WebAssembly tests for both `rustic-ui
 
 The `--no-default-features` flag mirrors CI by ensuring optional adapters declare their dependencies explicitly. When a run fails because Chrome cannot be located, set `CHROME` or `CHROMIUM` to the browser executable path. Browser console output is captured automatically, so rerun with `-- --nocapture` to view detailed logs.
 
+### Overlay automation suites
+The click-away detector and focus-trap state machines now back every modal, drawer and menu overlay. To keep telemetry hooks and accessibility metadata aligned across frameworks, CI exercises a dedicated set of suites:
+
+```bash
+# Headless state machine concurrency + property checks
+cargo test -p rustic-ui-headless --test click_away_state --test focus_trap_state
+
+# Material adapter parity assertions for Dioxus/Sycamore renderers
+cargo test -p rustic-ui-material --test click_away_parity --features dioxus
+cargo test -p rustic-ui-material --test click_away_parity --features sycamore
+cargo test -p rustic-ui-material --test focus_trap_parity --features dioxus
+cargo test -p rustic-ui-material --test focus_trap_parity --features sycamore
+
+# WebAssembly verification for Yew adapters (mirrors CI via wasm-pack)
+wasm-pack test --headless --chrome crates/rustic-ui-material -- --features yew --test wasm
+```
+
+The parity suites emit Insta snapshots so changes to automation IDs or scoped classes require an intentional snapshot review. The wasm harness mounts the Yew adapters in a headless Chrome instance and performs an `axe-core` audit, eliminating manual accessibility smoke tests.
+
 ### Snapshot maintenance workflow
 When a Joy snapshot test fails, the panic message includes both the framework-specific markup and the React baseline. Use `-- --nocapture --exact` to focus on the failing test:
 

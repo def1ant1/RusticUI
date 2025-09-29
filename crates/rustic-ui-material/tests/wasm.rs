@@ -2,8 +2,10 @@
 
 use rustic_ui_headless::checkbox::CheckboxState;
 use rustic_ui_headless::chip::{ChipConfig, ChipState};
+use rustic_ui_headless::click_away::ClickAwayState;
 use rustic_ui_headless::dialog::DialogState;
 use rustic_ui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
+use rustic_ui_headless::focus_trap::FocusTrapState;
 use rustic_ui_headless::list::{ListState, SelectionMode};
 use rustic_ui_headless::menu::MenuState;
 use rustic_ui_headless::popover::{PopoverPlacement, PopoverState};
@@ -15,8 +17,10 @@ use rustic_ui_headless::text_field::TextFieldState;
 use rustic_ui_headless::tooltip::{TooltipConfig, TooltipState};
 use rustic_ui_material::checkbox::{self, CheckboxProps};
 use rustic_ui_material::chip::{self, ChipProps};
+use rustic_ui_material::click_away::{self, ClickAwayBoundaryOptions};
 use rustic_ui_material::dialog::{self as dialog_adapter, DialogSurfaceOptions};
 use rustic_ui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
+use rustic_ui_material::focus_trap::{self, FocusTrapSentinelKind, FocusTrapSentinelOptions};
 use rustic_ui_material::menu::{self, MenuItem, MenuProps};
 use rustic_ui_material::radio::{self, RadioGroupProps};
 use rustic_ui_material::switch::{self, SwitchProps};
@@ -1150,5 +1154,135 @@ async fn text_field_validation_accessibility_audit() {
         .dyn_into()
         .unwrap();
     reset_button.click();
+    axe_check(&mount).await;
+}
+
+#[wasm_bindgen_test(async)]
+async fn click_away_boundary_attributes_and_accessibility() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let state = use_state(|| {
+            let mut state = ClickAwayState::new();
+            state.set_root_id(Some("wasm-click-away"));
+            state.engage();
+            Rc::new(state)
+        });
+
+        let options = ClickAwayBoundaryOptions {
+            id: Some("wasm-click-away".into()),
+            analytics_id: Some("wasm-analytics".into()),
+            automation_id: None,
+        };
+
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                <click_away::ClickAwayBoundary
+                    state={(*state).clone()}
+                    options={options}
+                    automation_fallback={AttrValue::from("dialog::wasm-click-away")}
+                >
+                    <button id="click-away-inner" type="button">{"Dismiss"}</button>
+                </click_away::ClickAwayBoundary>
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let boundary = mount
+        .query_selector("[data-rustic-click-away='root']")
+        .unwrap()
+        .expect("click-away boundary rendered");
+    assert_eq!(boundary.id(), "wasm-click-away");
+    assert_eq!(
+        boundary.get_attribute("data-automation-id").unwrap(),
+        "dialog::wasm-click-away"
+    );
+    assert_eq!(
+        boundary.get_attribute("data-rustic-analytics-id").unwrap(),
+        "wasm-analytics"
+    );
+    let class_list = boundary.get_attribute("class").unwrap_or_default();
+    assert!(
+        !class_list.is_empty(),
+        "styled engine should attach scoped class"
+    );
+
+    axe_check(&mount).await;
+}
+
+#[wasm_bindgen_test(async)]
+async fn focus_trap_sentinels_emit_automation_hooks() {
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    #[function_component(App)]
+    fn app() -> Html {
+        let trap = use_state(|| {
+            let mut state = FocusTrapState::new(true);
+            state.set_analytics_tag(Some("dialog-focus"));
+            state.set_focusables(["primary".into(), "secondary".into()]);
+            Rc::new(state)
+        });
+
+        let options = FocusTrapSentinelOptions {
+            automation_prefix: Some("dialog::primary".into()),
+        };
+
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                <div id="focus-trap-shell">
+                    <focus_trap::FocusTrapSentinel
+                        state={(*trap).clone()}
+                        kind={FocusTrapSentinelKind::Start}
+                        options={options.clone()}
+                        fallback_prefix={AttrValue::from("dialog")}
+                    />
+                    <button id="focus-target" type="button">{"Focusable"}</button>
+                    <focus_trap::FocusTrapSentinel
+                        state={(*trap).clone()}
+                        kind={FocusTrapSentinelKind::End}
+                        options={options}
+                        fallback_prefix={AttrValue::from("dialog")}
+                    />
+                </div>
+            </ThemeProvider>
+        }
+    }
+
+    Renderer::<App>::with_root(mount.clone()).render();
+
+    let start = mount
+        .query_selector("[data-rustic-focus-trap='sentinel-start']")
+        .unwrap()
+        .expect("start sentinel rendered");
+    assert_eq!(
+        start.get_attribute("data-automation-id").unwrap(),
+        "dialog::primary::focus-trap-start"
+    );
+    assert_eq!(
+        start.get_attribute("data-rustic-analytics-id").unwrap(),
+        "dialog-focus"
+    );
+    let start_class = start.get_attribute("class").unwrap_or_default();
+    assert!(
+        !start_class.is_empty(),
+        "start sentinel should include scoped class"
+    );
+
+    let end = mount
+        .query_selector("[data-rustic-focus-trap='sentinel-end']")
+        .unwrap()
+        .expect("end sentinel rendered");
+    assert_eq!(
+        end.get_attribute("data-automation-id").unwrap(),
+        "dialog::primary::focus-trap-end"
+    );
+
     axe_check(&mount).await;
 }
