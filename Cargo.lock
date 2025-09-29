@@ -3401,6 +3401,7 @@ dependencies = [
  "rustic-ui-utils",
  "serde_json",
  "stylist",
+ "tracing",
  "wasm-bindgen",
  "wasm-bindgen-test",
  "web-sys",

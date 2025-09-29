@@ -50,7 +50,8 @@
     feature = "sycamore"
 ))]
 use rustic_ui_headless::text_field::{
-    TextFieldChangeEvent, TextFieldCommitEvent, TextFieldResetEvent, TextFieldState,
+    TextFieldAttributes, TextFieldChangeEvent, TextFieldCommitEvent, TextFieldResetEvent,
+    TextFieldState,
 };
 #[cfg(any(
     feature = "yew",

@@ -12,6 +12,7 @@
 //! exact same identifiers regardless of whether the consumer is
 //! running Yew, Leptos, Dioxus, Sycamore, or a server-side renderer.
 
+use crate::telemetry::{instrument_render, TelemetryContext, TelemetryHooks};
 use rustic_ui_headless::click_away::{ClickAwayRootAttributes, ClickAwayState};
 use rustic_ui_styled_engine::{css_with_theme, Style};
 
@@ -29,6 +30,29 @@ pub struct ClickAwayBoundaryOptions {
     pub analytics_id: Option<String>,
     /// Optional automation identifier surfaced via `data-automation-id`.
     pub automation_id: Option<String>,
+}
+
+fn merge_boundary_options(
+    options: &ClickAwayBoundaryOptions,
+    telemetry: &TelemetryHooks,
+) -> ClickAwayBoundaryOptions {
+    let mut merged = options.clone();
+    if merged.analytics_id.is_none() {
+        merged.analytics_id = telemetry.analytics_id.clone();
+    }
+    if merged.automation_id.is_none() {
+        merged.automation_id = telemetry.automation_id.clone();
+    }
+    merged
+}
+
+fn resolved_automation_id(options: &ClickAwayBoundaryOptions, fallback: &str) -> String {
+    options
+        .automation_id
+        .as_deref()
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| fallback.to_string())
 }
 
 fn apply_boundary_options<'a>(
@@ -141,7 +165,7 @@ pub fn drawer_click_away_automation(props: &crate::drawer::DrawerProps<'_>) -> S
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "yew")]
-mod yew_impl {
+pub mod yew {
     use super::*;
     use std::rc::Rc;
     use yew::prelude::*;
@@ -164,6 +188,9 @@ mod yew_impl {
         /// Render subtree managed by the click-away detector.
         #[prop_or_default]
         pub children: Children,
+        /// Optional telemetry hooks executed around render.
+        #[prop_or_default]
+        pub telemetry: TelemetryHooks,
     }
 
     impl PartialEq for ClickAwayBoundaryProps {
@@ -172,40 +199,47 @@ mod yew_impl {
                 && self.options == other.options
                 && self.automation_fallback == other.automation_fallback
                 && self.children == other.children
+                && self.telemetry == other.telemetry
         }
     }
 
     #[function_component(ClickAwayBoundary)]
     pub fn click_away_boundary(props: &ClickAwayBoundaryProps) -> Html {
-        // The component simply renders attributes; all pointer subscriptions are
-        // owned by whichever orchestration layer toggles `ClickAwayState`.
-        let attrs = props.state.root_attributes();
-        let attrs = apply_boundary_options(attrs, &props.options);
-        let pairs =
-            click_away_root_attributes(attrs, props.automation_fallback.as_str(), &props.options);
-        let mut node = html! { <div>{ for props.children.iter() }</div> };
-        if let Html::VTag(ref mut tag) = node {
-            for (key, value) in pairs {
-                tag.add_attribute(key, value);
+        let options = merge_boundary_options(&props.options, &props.telemetry);
+        let automation = resolved_automation_id(&options, props.automation_fallback.as_str());
+        let context =
+            TelemetryContext::new("rustic_ui_material::click_away::yew::ClickAwayBoundary")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            let attrs = props.state.root_attributes();
+            let attrs = apply_boundary_options(attrs, &options);
+            let pairs =
+                click_away_root_attributes(attrs, props.automation_fallback.as_str(), &options);
+            let mut node = html! { <div>{ for props.children.iter() }</div> };
+            if let Html::VTag(ref mut tag) = node {
+                for (key, value) in pairs {
+                    tag.add_attribute(key, value);
+                }
+                tag.add_attribute(
+                    "class",
+                    crate::style_helpers::themed_class(boundary_style()),
+                );
             }
-            tag.add_attribute(
-                "class",
-                crate::style_helpers::themed_class(boundary_style()),
-            );
-        }
-        node
+            node
+        })
     }
 }
 
 #[cfg(feature = "yew")]
-pub use yew_impl::{ClickAwayBoundary, ClickAwayBoundaryProps};
+pub use yew::{ClickAwayBoundary, ClickAwayBoundaryProps};
 
 // ---------------------------------------------------------------------------
 // Leptos adapter
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "leptos")]
-mod leptos_impl {
+pub mod leptos {
     use super::*;
     use leptos::prelude::*;
     use std::sync::Arc;
@@ -222,6 +256,8 @@ mod leptos_impl {
         pub automation_fallback: String,
         /// Child nodes rendered inside the boundary.
         pub children: Box<dyn Fn() -> View + Send + Sync>,
+        /// Optional telemetry hooks executed around render.
+        pub telemetry: TelemetryHooks,
     }
 
     impl Default for ClickAwayBoundaryProps {
@@ -231,6 +267,7 @@ mod leptos_impl {
                 options: ClickAwayBoundaryOptions::default(),
                 automation_fallback: "rustic-ui::click-away".into(),
                 children: Box::new(|| View::empty()),
+                telemetry: TelemetryHooks::default(),
             }
         }
     }
@@ -240,25 +277,35 @@ mod leptos_impl {
             Arc::ptr_eq(&self.state, &other.state)
                 && self.options == other.options
                 && self.automation_fallback == other.automation_fallback
+                && self.telemetry == other.telemetry
         }
     }
 
     #[component]
     pub fn ClickAwayBoundary(props: ClickAwayBoundaryProps) -> impl IntoView {
-        let attrs = props.state.root_attributes();
-        let attrs = apply_boundary_options(attrs, &props.options);
-        let pairs = click_away_root_attributes(attrs, &props.automation_fallback, &props.options);
-        let mut element = leptos::html::div();
-        element = element.class(crate::style_helpers::themed_class(boundary_style()));
-        for (key, value) in pairs {
-            element = element.attr(key, value);
-        }
-        element.child((props.children)()).into_view()
+        let options = merge_boundary_options(&props.options, &props.telemetry);
+        let automation = resolved_automation_id(&options, props.automation_fallback.as_str());
+        let context =
+            TelemetryContext::new("rustic_ui_material::click_away::leptos::ClickAwayBoundary")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            let attrs = props.state.root_attributes();
+            let attrs = apply_boundary_options(attrs, &options);
+            let pairs =
+                click_away_root_attributes(attrs, props.automation_fallback.as_str(), &options);
+            let mut element = leptos::html::div();
+            element = element.class(crate::style_helpers::themed_class(boundary_style()));
+            for (key, value) in pairs {
+                element = element.attr(key, value);
+            }
+            element.child((props.children)()).into_view()
+        })
     }
 }
 
 #[cfg(feature = "leptos")]
-pub use leptos_impl::{ClickAwayBoundary, ClickAwayBoundaryProps};
+pub use leptos::{ClickAwayBoundary, ClickAwayBoundaryProps};
 
 // ---------------------------------------------------------------------------
 // Dioxus adapter
@@ -269,7 +316,7 @@ pub mod dioxus {
     use super::*;
 
     /// Properties consumed by the Dioxus renderer.
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone)]
     pub struct ClickAwayBoundaryProps {
         /// Click-away state machine mirrored from the application layer.
         pub state: ClickAwayState,
@@ -279,6 +326,17 @@ pub mod dioxus {
         pub automation_fallback: String,
         /// Serialized children rendered inside the boundary.
         pub children: String,
+        /// Optional telemetry hooks executed around render.
+        pub telemetry: TelemetryHooks,
+    }
+
+    impl PartialEq for ClickAwayBoundaryProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.options == other.options
+                && self.automation_fallback == other.automation_fallback
+                && self.children == other.children
+                && self.telemetry == other.telemetry
+        }
     }
 
     impl Default for ClickAwayBoundaryProps {
@@ -288,6 +346,7 @@ pub mod dioxus {
                 options: ClickAwayBoundaryOptions::default(),
                 automation_fallback: "rustic-ui::click-away".into(),
                 children: String::new(),
+                telemetry: TelemetryHooks::default(),
             }
         }
     }
@@ -295,12 +354,20 @@ pub mod dioxus {
     /// Render the boundary into HTML so Dioxus SSR and client renderers stay in
     /// lockstep with the Yew/Leptos adapters.
     pub fn render(props: &ClickAwayBoundaryProps) -> String {
-        render_click_away_boundary_html(
-            &props.state,
-            &props.options,
-            &props.automation_fallback,
-            &props.children,
-        )
+        let options = merge_boundary_options(&props.options, &props.telemetry);
+        let automation = resolved_automation_id(&options, props.automation_fallback.as_str());
+        let context =
+            TelemetryContext::new("rustic_ui_material::click_away::dioxus::ClickAwayBoundary")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            render_click_away_boundary_html(
+                &props.state,
+                &options,
+                props.automation_fallback.as_str(),
+                &props.children,
+            )
+        })
     }
 }
 
@@ -313,7 +380,7 @@ pub mod sycamore {
     use super::*;
 
     /// Sycamore renderer mirroring the Dioxus properties for API consistency.
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone)]
     pub struct ClickAwayBoundaryProps {
         /// Click-away state machine mirrored from the application layer.
         pub state: ClickAwayState,
@@ -323,6 +390,17 @@ pub mod sycamore {
         pub automation_fallback: String,
         /// Serialized children rendered inside the boundary.
         pub children: String,
+        /// Optional telemetry hooks executed around render.
+        pub telemetry: TelemetryHooks,
+    }
+
+    impl PartialEq for ClickAwayBoundaryProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.options == other.options
+                && self.automation_fallback == other.automation_fallback
+                && self.children == other.children
+                && self.telemetry == other.telemetry
+        }
     }
 
     impl Default for ClickAwayBoundaryProps {
@@ -332,17 +410,26 @@ pub mod sycamore {
                 options: ClickAwayBoundaryOptions::default(),
                 automation_fallback: "rustic-ui::click-away".into(),
                 children: String::new(),
+                telemetry: TelemetryHooks::default(),
             }
         }
     }
 
     /// Render the boundary into HTML string form.
     pub fn render(props: &ClickAwayBoundaryProps) -> String {
-        render_click_away_boundary_html(
-            &props.state,
-            &props.options,
-            &props.automation_fallback,
-            &props.children,
-        )
+        let options = merge_boundary_options(&props.options, &props.telemetry);
+        let automation = resolved_automation_id(&options, props.automation_fallback.as_str());
+        let context =
+            TelemetryContext::new("rustic_ui_material::click_away::sycamore::ClickAwayBoundary")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            render_click_away_boundary_html(
+                &props.state,
+                &options,
+                props.automation_fallback.as_str(),
+                &props.children,
+            )
+        })
     }
 }
