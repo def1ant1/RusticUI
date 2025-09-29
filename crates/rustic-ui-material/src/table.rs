@@ -227,7 +227,11 @@ fn render_html(props: &TableProps, state: &ListState) -> String {
 }
 
 fn automation_base(props: &TableProps) -> String {
-    crate::style_helpers::automation_id("table", props.automation_id.as_deref(), [])
+    crate::style_helpers::automation_id(
+        "table",
+        props.automation_id.as_deref(),
+        crate::style_helpers::EMPTY_SEGMENTS,
+    )
 }
 
 fn column_id(props: &TableProps, index: usize) -> String {
@@ -239,25 +243,28 @@ fn column_id(props: &TableProps, index: usize) -> String {
 }
 
 fn row_id(props: &TableProps, index: usize) -> String {
+    let segment = format!("row-{index}");
     crate::style_helpers::automation_id(
         "table",
         props.automation_id.as_deref(),
-        [format!("row-{index}")],
+        &[segment.as_str()],
     )
 }
 
 fn cell_automation_id(props: &TableProps, row: usize, col: usize, column: &TableColumn) -> String {
     if let Some(id) = &column.automation_id {
+        let row_segment = format!("row-{row}");
         crate::style_helpers::automation_id(
             "table",
             props.automation_id.as_deref(),
-            [id.as_str(), format!("row-{row}")],
+            &[id.as_str(), row_segment.as_str()],
         )
     } else {
+        let segment = format!("cell-{row}-{col}");
         crate::style_helpers::automation_id(
             "table",
             props.automation_id.as_deref(),
-            [format!("cell-{row}-{col}")],
+            &[segment.as_str()],
         )
     }
 }
@@ -266,7 +273,11 @@ fn table_attributes(props: &TableProps, state: &ListState) -> Vec<(String, Strin
     let mut attrs = vec![
         (
             "data-component".to_string(),
-            crate::style_helpers::automation_id("table", None, []),
+            crate::style_helpers::automation_id(
+                "table",
+                None,
+                crate::style_helpers::EMPTY_SEGMENTS,
+            ),
         ),
         (
             "data-density".to_string(),

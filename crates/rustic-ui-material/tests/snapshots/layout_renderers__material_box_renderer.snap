@@ -1,0 +1,39 @@
+---
+source: crates/rustic-ui-material/tests/layout_renderers.rs
+expression: snapshot
+---
+{
+  "breakpoints": {
+    "viewport_1366": "lg",
+    "viewport_480": "base"
+  },
+  "css_variables": {
+    "--rustic_ui_box_active_breakpoint": "base",
+    "--rustic_ui_box_background": "var(--surface-elevated)",
+    "--rustic_ui_box_background-lg": "var(--surface-elevated)",
+    "--rustic_ui_box_background-md": "var(--surface-elevated)",
+    "--rustic_ui_box_background-sm": "var(--surface-elevated)",
+    "--rustic_ui_box_background-xl": "var(--surface-elevated)",
+    "--rustic_ui_box_background-xxl": "var(--surface-elevated)",
+    "--rustic_ui_box_margin": "0",
+    "--rustic_ui_box_margin-lg": "auto",
+    "--rustic_ui_box_margin-md": "0",
+    "--rustic_ui_box_margin-sm": "0",
+    "--rustic_ui_box_margin-xl": "auto",
+    "--rustic_ui_box_margin-xxl": "auto",
+    "--rustic_ui_box_padding": "8px",
+    "--rustic_ui_box_padding-lg": "24px",
+    "--rustic_ui_box_padding-md": "24px",
+    "--rustic_ui_box_padding-sm": "8px",
+    "--rustic_ui_box_padding-xl": "48px",
+    "--rustic_ui_box_padding-xxl": "48px",
+    "--rustic_ui_box_role": "region",
+    "--rustic_ui_box_role-lg": "region",
+    "--rustic_ui_box_role-md": "region",
+    "--rustic_ui_box_role-sm": "region",
+    "--rustic_ui_box_role-xl": "region",
+    "--rustic_ui_box_role-xxl": "region"
+  },
+  "html": "<div id=\"layout-shell\" class=\"rustic-box surface\" role=\"region\" style=\"--rustic_ui_box_active_breakpoint: base; --rustic_ui_box_background: var(--surface-elevated); --rustic_ui_box_background-lg: var(--surface-elevated); --rustic_ui_box_background-md: var(--surface-elevated); --rustic_ui_box_background-sm: var(--surface-elevated); --rustic_ui_box_background-xl: var(--surface-elevated); --rustic_ui_box_background-xxl: var(--surface-elevated); --rustic_ui_box_margin: 0; --rustic_ui_box_margin-lg: auto; --rustic_ui_box_margin-md: 0; --rustic_ui_box_margin-sm: 0; --rustic_ui_box_margin-xl: auto; --rustic_ui_box_margin-xxl: auto; --rustic_ui_box_padding: 8px; --rustic_ui_box_padding-lg: 24px; --rustic_ui_box_padding-md: 24px; --rustic_ui_box_padding-sm: 8px; --rustic_ui_box_padding-xl: 48px; --rustic_ui_box_padding-xxl: 48px; --rustic_ui_box_role: region; --rustic_ui_box_role-lg: region; --rustic_ui_box_role-md: region; --rustic_ui_box_role-sm: region; --rustic_ui_box_role-xl: region; --rustic_ui_box_role-xxl: region;\"></div>",
+  "inline_style": "--rustic_ui_box_active_breakpoint: base; --rustic_ui_box_background: var(--surface-elevated); --rustic_ui_box_background-lg: var(--surface-elevated); --rustic_ui_box_background-md: var(--surface-elevated); --rustic_ui_box_background-sm: var(--surface-elevated); --rustic_ui_box_background-xl: var(--surface-elevated); --rustic_ui_box_background-xxl: var(--surface-elevated); --rustic_ui_box_margin: 0; --rustic_ui_box_margin-lg: auto; --rustic_ui_box_margin-md: 0; --rustic_ui_box_margin-sm: 0; --rustic_ui_box_margin-xl: auto; --rustic_ui_box_margin-xxl: auto; --rustic_ui_box_padding: 8px; --rustic_ui_box_padding-lg: 24px; --rustic_ui_box_padding-md: 24px; --rustic_ui_box_padding-sm: 8px; --rustic_ui_box_padding-xl: 48px; --rustic_ui_box_padding-xxl: 48px; --rustic_ui_box_role: region; --rustic_ui_box_role-lg: region; --rustic_ui_box_role-md: region; --rustic_ui_box_role-sm: region; --rustic_ui_box_role-xl: region; --rustic_ui_box_role-xxl: region;"
+}

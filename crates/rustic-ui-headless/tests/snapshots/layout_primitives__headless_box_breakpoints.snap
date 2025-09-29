@@ -1,0 +1,63 @@
+---
+source: crates/rustic-ui-headless/tests/layout_primitives.rs
+expression: snapshot
+---
+{
+  "attributes": {
+    "class": "rustic-box surface",
+    "data_breakpoint@1280": "lg",
+    "data_breakpoint@480": "base",
+    "id": "analytics-shell",
+    "role": "region"
+  },
+  "evaluations": [
+    {
+      "background": "var(--surface)",
+      "breakpoint": "base",
+      "margin": "0",
+      "min_width": 0,
+      "padding": "8px",
+      "role": "region"
+    },
+    {
+      "background": "var(--surface)",
+      "breakpoint": "sm",
+      "margin": "0",
+      "min_width": 600,
+      "padding": "8px",
+      "role": "region"
+    },
+    {
+      "background": "var(--surface)",
+      "breakpoint": "md",
+      "margin": "0",
+      "min_width": 900,
+      "padding": "16px",
+      "role": "region"
+    },
+    {
+      "background": "var(--surface)",
+      "breakpoint": "lg",
+      "margin": "auto",
+      "min_width": 1200,
+      "padding": "16px",
+      "role": "region"
+    },
+    {
+      "background": "var(--surface)",
+      "breakpoint": "xl",
+      "margin": "auto",
+      "min_width": 1536,
+      "padding": "32px",
+      "role": "region"
+    },
+    {
+      "background": "var(--surface)",
+      "breakpoint": "xxl",
+      "margin": "auto",
+      "min_width": 1800,
+      "padding": "32px",
+      "role": "region"
+    }
+  ]
+}

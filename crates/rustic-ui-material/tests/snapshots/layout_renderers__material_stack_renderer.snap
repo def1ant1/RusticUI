@@ -1,0 +1,38 @@
+---
+source: crates/rustic-ui-material/tests/layout_renderers.rs
+expression: snapshot
+---
+{
+  "breakpoints": {
+    "viewport_1600": "horizontal",
+    "viewport_480": "vertical"
+  },
+  "css_variables": {
+    "--rustic_ui_stack_direction": "vertical",
+    "--rustic_ui_stack_direction-lg": "horizontal",
+    "--rustic_ui_stack_direction-md": "vertical",
+    "--rustic_ui_stack_direction-sm": "vertical",
+    "--rustic_ui_stack_direction-xl": "horizontal",
+    "--rustic_ui_stack_direction-xxl": "horizontal",
+    "--rustic_ui_stack_divider": "1px solid var(--border)",
+    "--rustic_ui_stack_divider-lg": "none",
+    "--rustic_ui_stack_divider-md": "none",
+    "--rustic_ui_stack_divider-sm": "1px solid var(--border)",
+    "--rustic_ui_stack_divider-xl": "none",
+    "--rustic_ui_stack_divider-xxl": "none",
+    "--rustic_ui_stack_gap": "12px",
+    "--rustic_ui_stack_gap-lg": "16px",
+    "--rustic_ui_stack_gap-md": "16px",
+    "--rustic_ui_stack_gap-sm": "16px",
+    "--rustic_ui_stack_gap-xl": "16px",
+    "--rustic_ui_stack_gap-xxl": "16px",
+    "--rustic_ui_stack_role": "list",
+    "--rustic_ui_stack_role-lg": "list",
+    "--rustic_ui_stack_role-md": "list",
+    "--rustic_ui_stack_role-sm": "list",
+    "--rustic_ui_stack_role-xl": "list",
+    "--rustic_ui_stack_role-xxl": "list"
+  },
+  "html": "<ul id=\"stack-shell\" class=\"rustic-stack\" role=\"list\" style=\"--rustic_ui_stack_direction: vertical; --rustic_ui_stack_direction-lg: horizontal; --rustic_ui_stack_direction-md: vertical; --rustic_ui_stack_direction-sm: vertical; --rustic_ui_stack_direction-xl: horizontal; --rustic_ui_stack_direction-xxl: horizontal; --rustic_ui_stack_divider: 1px solid var(--border); --rustic_ui_stack_divider-lg: none; --rustic_ui_stack_divider-md: none; --rustic_ui_stack_divider-sm: 1px solid var(--border); --rustic_ui_stack_divider-xl: none; --rustic_ui_stack_divider-xxl: none; --rustic_ui_stack_gap: 12px; --rustic_ui_stack_gap-lg: 16px; --rustic_ui_stack_gap-md: 16px; --rustic_ui_stack_gap-sm: 16px; --rustic_ui_stack_gap-xl: 16px; --rustic_ui_stack_gap-xxl: 16px; --rustic_ui_stack_role: list; --rustic_ui_stack_role-lg: list; --rustic_ui_stack_role-md: list; --rustic_ui_stack_role-sm: list; --rustic_ui_stack_role-xl: list; --rustic_ui_stack_role-xxl: list;\"></ul>",
+  "inline_style": "--rustic_ui_stack_direction: vertical; --rustic_ui_stack_direction-lg: horizontal; --rustic_ui_stack_direction-md: vertical; --rustic_ui_stack_direction-sm: vertical; --rustic_ui_stack_direction-xl: horizontal; --rustic_ui_stack_direction-xxl: horizontal; --rustic_ui_stack_divider: 1px solid var(--border); --rustic_ui_stack_divider-lg: none; --rustic_ui_stack_divider-md: none; --rustic_ui_stack_divider-sm: 1px solid var(--border); --rustic_ui_stack_divider-xl: none; --rustic_ui_stack_divider-xxl: none; --rustic_ui_stack_gap: 12px; --rustic_ui_stack_gap-lg: 16px; --rustic_ui_stack_gap-md: 16px; --rustic_ui_stack_gap-sm: 16px; --rustic_ui_stack_gap-xl: 16px; --rustic_ui_stack_gap-xxl: 16px; --rustic_ui_stack_role: list; --rustic_ui_stack_role-lg: list; --rustic_ui_stack_role-md: list; --rustic_ui_stack_role-sm: list; --rustic_ui_stack_role-xl: list; --rustic_ui_stack_role-xxl: list;"
+}

@@ -233,7 +233,11 @@ fn render_html(props: &ListProps, state: &ListState) -> String {
 }
 
 fn automation_base(props: &ListProps) -> String {
-    crate::style_helpers::automation_id("list", props.automation_id.as_deref(), [])
+    crate::style_helpers::automation_id(
+        "list",
+        props.automation_id.as_deref(),
+        crate::style_helpers::EMPTY_SEGMENTS,
+    )
 }
 
 fn item_automation_id(props: &ListProps, item: &ListItem, index: usize) -> String {
@@ -260,7 +264,7 @@ fn root_attributes(props: &ListProps, state: &ListState) -> Vec<(String, String)
     let mut attrs = vec![
         (
             "data-component".into(),
-            crate::style_helpers::automation_id("list", None, []),
+            crate::style_helpers::automation_id("list", None, crate::style_helpers::EMPTY_SEGMENTS),
         ),
         ("data-density".into(), props.density.data_value().into()),
         (
