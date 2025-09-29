@@ -22,7 +22,10 @@
 //! }
 //! ```
 
+pub mod accordion;
 pub mod app_bar;
+pub mod avatar;
+pub mod badge;
 pub mod r#box;
 pub mod button;
 pub mod card;
@@ -38,6 +41,7 @@ pub mod image_list;
 pub mod list;
 pub mod macros;
 pub mod menu;
+pub mod paper;
 pub mod radio;
 mod render_helpers;
 pub mod select;
@@ -52,16 +56,24 @@ pub mod table;
 pub mod tabs;
 pub mod text_field;
 pub mod tooltip;
+pub mod typography;
 
 pub use rustic_ui_styled_engine::Theme;
 
 pub use crate::r#box::{render_box, BoxAdapterProps, BoxRenderOutput};
+pub use accordion::{
+    render_accordion, AccordionAdapterProps, AccordionItemDescriptor, AccordionRenderOutput,
+};
+pub use avatar::{render_avatar, AvatarRenderOutput};
+pub use badge::{render_badge, BadgeRenderOutput};
 pub use container::{render_container, ContainerAdapterProps, ContainerRenderOutput};
 pub use divider::{render_divider, DividerAdapterProps, DividerRenderOutput};
 pub use grid::{render_grid, GridAdapterProps, GridRenderOutput};
 pub use hidden::{render_hidden, HiddenAdapterProps, HiddenRenderOutput};
 pub use image_list::{render_image_list, ImageListAdapterProps, ImageListRenderOutput};
+pub use paper::{render_paper, PaperRenderOutput};
 pub use stack::{render_stack, StackAdapterProps, StackRenderOutput};
+pub use typography::{render_typography, TypographyRenderOutput};
 
 /// Confirms that the crate links to `rustic_ui_styled_engine` and compiles.
 pub fn placeholder() {

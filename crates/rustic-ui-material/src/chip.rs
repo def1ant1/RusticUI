@@ -202,7 +202,7 @@ fn root_attributes(
     ));
     attrs.push((
         "data-component".into(),
-        crate::style_helpers::automation_id("chip", None, crate::style_helpers::EMPTY_SEGMENTS),
+        crate::style_helpers::component_marker("chip"),
     ));
     attrs.push(("data-visible".into(), state.is_visible().to_string()));
     attrs.push((
@@ -244,20 +244,21 @@ fn delete_attributes(
     state: &ChipState,
     delete_id: &str,
 ) -> Vec<(String, String)> {
-    let mut builder =
+    let builder =
         ChipDeleteAttributes::new(state).label(props.delete_label.as_deref().unwrap_or("Remove"));
 
-    let mut attrs = Vec::new();
-    attrs.push(("id".into(), delete_id.to_string()));
-    attrs.push(("type".into(), "button".into()));
-    attrs.push(("data-chip-slot".into(), "delete".into()));
-    attrs.push(("data-visible".into(), state.controls_visible().to_string()));
-    attrs.push((
-        "data-deletion-pending".into(),
-        state.deletion_pending().to_string(),
-    ));
-    attrs.push(("data-disabled".into(), state.disabled().to_string()));
-    attrs.push(("role".into(), builder.role().into()));
+    let mut attrs = vec![
+        ("id".into(), delete_id.to_string()),
+        ("type".into(), "button".into()),
+        ("data-chip-slot".into(), "delete".into()),
+        ("data-visible".into(), state.controls_visible().to_string()),
+        (
+            "data-deletion-pending".into(),
+            state.deletion_pending().to_string(),
+        ),
+        ("data-disabled".into(), state.disabled().to_string()),
+        ("role".into(), builder.role().into()),
+    ];
     let (hidden_key, hidden_value) = builder.hidden();
     attrs.push((hidden_key.into(), hidden_value.into()));
     if let Some((key, value)) = builder.aria_label() {

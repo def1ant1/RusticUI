@@ -156,7 +156,7 @@ fn root_attributes(
     ));
     attrs.push((
         "data-component".into(),
-        crate::style_helpers::automation_id("select", None, crate::style_helpers::EMPTY_SEGMENTS),
+        crate::style_helpers::component_marker("select"),
     ));
     attrs.push(("data-open".into(), state.is_open().to_string()));
     attrs.push((

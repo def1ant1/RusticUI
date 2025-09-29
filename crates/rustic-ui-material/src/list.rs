@@ -287,8 +287,19 @@ fn root_attributes(props: &ListProps, state: &ListState) -> Vec<(String, String)
             if props.selection_mode == SelectionMode::Multiple {
                 attrs.push(("aria-multiselectable".into(), "true".into()));
             }
-            if let Some(highlight) = state.highlighted() {
-                attrs.push(("aria-activedescendant".into(), item_id(props, highlight)));
+            let current_highlight = state.highlighted();
+            let fallback_highlight = if current_highlight.is_none() && !props.items.is_empty() {
+                Some(0)
+            } else {
+                None
+            };
+            if let Some(highlight) = current_highlight.or(fallback_highlight) {
+                let descendant_id = props
+                    .automation_id
+                    .as_deref()
+                    .map(|id| format!("{id}-option-{highlight}"))
+                    .unwrap_or_else(|| item_id(props, highlight));
+                attrs.push(("aria-activedescendant".into(), descendant_id));
             }
         }
     }

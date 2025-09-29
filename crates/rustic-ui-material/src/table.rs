@@ -184,7 +184,7 @@ fn render_html(props: &TableProps, state: &ListState) -> String {
         vec![
             (
                 String::from("data-component"),
-                crate::style_helpers::automation_id("table", None, ["header-row"]),
+                crate::style_helpers::component_marker("table-header_row"),
             ),
             (
                 crate::style_helpers::automation_data_attr("table", ["header-row"]),
@@ -244,11 +244,7 @@ fn column_id(props: &TableProps, index: usize) -> String {
 
 fn row_id(props: &TableProps, index: usize) -> String {
     let segment = format!("row-{index}");
-    crate::style_helpers::automation_id(
-        "table",
-        props.automation_id.as_deref(),
-        &[segment.as_str()],
-    )
+    crate::style_helpers::automation_id("table", props.automation_id.as_deref(), [segment.as_str()])
 }
 
 fn cell_automation_id(props: &TableProps, row: usize, col: usize, column: &TableColumn) -> String {
@@ -257,14 +253,14 @@ fn cell_automation_id(props: &TableProps, row: usize, col: usize, column: &Table
         crate::style_helpers::automation_id(
             "table",
             props.automation_id.as_deref(),
-            &[id.as_str(), row_segment.as_str()],
+            [id.as_str(), row_segment.as_str()],
         )
     } else {
         let segment = format!("cell-{row}-{col}");
         crate::style_helpers::automation_id(
             "table",
             props.automation_id.as_deref(),
-            &[segment.as_str()],
+            [segment.as_str()],
         )
     }
 }
@@ -273,11 +269,7 @@ fn table_attributes(props: &TableProps, state: &ListState) -> Vec<(String, Strin
     let mut attrs = vec![
         (
             "data-component".to_string(),
-            crate::style_helpers::automation_id(
-                "table",
-                None,
-                crate::style_helpers::EMPTY_SEGMENTS,
-            ),
+            crate::style_helpers::component_marker("table"),
         ),
         (
             "data-density".to_string(),
@@ -298,11 +290,19 @@ fn table_attributes(props: &TableProps, state: &ListState) -> Vec<(String, Strin
             if props.selection_mode == SelectionMode::Multiple {
                 attrs.push(("aria-multiselectable".to_string(), String::from("true")));
             }
-            if let Some(highlight) = state.highlighted() {
-                attrs.push((
-                    "aria-activedescendant".to_string(),
-                    row_id(props, highlight),
-                ));
+            let current_highlight = state.highlighted();
+            let fallback_highlight = if current_highlight.is_none() && !props.rows.is_empty() {
+                Some(0)
+            } else {
+                None
+            };
+            if let Some(highlight) = current_highlight.or(fallback_highlight) {
+                let descendant_id = props
+                    .automation_id
+                    .as_deref()
+                    .map(|id| format!("{id}-row-{highlight}"))
+                    .unwrap_or_else(|| row_id(props, highlight));
+                attrs.push(("aria-activedescendant".to_string(), descendant_id));
             }
         }
     }
