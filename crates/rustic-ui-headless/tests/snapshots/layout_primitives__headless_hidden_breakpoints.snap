@@ -1,0 +1,58 @@
+---
+source: crates/rustic-ui-headless/tests/layout_primitives.rs
+expression: snapshot
+---
+{
+  "attributes": {
+    "class": "rustic-hidden",
+    "data_hidden@1024": "true",
+    "data_hidden@360": "false",
+    "id": "inline-ad",
+    "inert": "true",
+    "role": "group"
+  },
+  "evaluations": [
+    {
+      "breakpoint": "base",
+      "hidden": false,
+      "inert": true,
+      "min_width": 0,
+      "role": "group"
+    },
+    {
+      "breakpoint": "sm",
+      "hidden": true,
+      "inert": true,
+      "min_width": 600,
+      "role": "group"
+    },
+    {
+      "breakpoint": "md",
+      "hidden": true,
+      "inert": true,
+      "min_width": 900,
+      "role": "group"
+    },
+    {
+      "breakpoint": "lg",
+      "hidden": true,
+      "inert": true,
+      "min_width": 1200,
+      "role": "group"
+    },
+    {
+      "breakpoint": "xl",
+      "hidden": false,
+      "inert": true,
+      "min_width": 1536,
+      "role": "group"
+    },
+    {
+      "breakpoint": "xxl",
+      "hidden": false,
+      "inert": true,
+      "min_width": 1800,
+      "role": "group"
+    }
+  ]
+}

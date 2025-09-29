@@ -21,3 +21,10 @@ migration incremental.
 
 > Tip: WebAssembly modules are immutable and cacheable.  Enable HTTP cache
 > headers so repeat visitors avoid re‑downloading the module.
+
+### Next steps: responsive layouts
+
+Once the initial migration compiles, audit any usage of legacy `mui_*` layout
+helpers. The [responsive layout primitives](./layout-primitives.md) chapter
+documents how to port those calls to the new headless states, wire the Material
+renderers, and update CI so breakpoint snapshots stay fresh across adapters.

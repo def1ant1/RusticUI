@@ -1,0 +1,50 @@
+---
+source: crates/rustic-ui-material/tests/layout_renderers.rs
+expression: snapshot
+---
+{
+  "breakpoints": {
+    "viewport_1920": "xxl",
+    "viewport_640": "sm"
+  },
+  "css_variables": {
+    "--rustic_ui_grid_auto_flow": "row dense",
+    "--rustic_ui_grid_auto_flow-lg": "row dense",
+    "--rustic_ui_grid_auto_flow-md": "row dense",
+    "--rustic_ui_grid_auto_flow-sm": "row dense",
+    "--rustic_ui_grid_auto_flow-xl": "row dense",
+    "--rustic_ui_grid_auto_flow-xxl": "row dense",
+    "--rustic_ui_grid_column_gap": "16px",
+    "--rustic_ui_grid_column_gap-lg": "24px",
+    "--rustic_ui_grid_column_gap-md": "24px",
+    "--rustic_ui_grid_column_gap-sm": "16px",
+    "--rustic_ui_grid_column_gap-xl": "24px",
+    "--rustic_ui_grid_column_gap-xxl": "24px",
+    "--rustic_ui_grid_columns": "2",
+    "--rustic_ui_grid_columns-lg": "6",
+    "--rustic_ui_grid_columns-md": "4",
+    "--rustic_ui_grid_columns-sm": "4",
+    "--rustic_ui_grid_columns-xl": "6",
+    "--rustic_ui_grid_columns-xxl": "6",
+    "--rustic_ui_grid_role": "grid",
+    "--rustic_ui_grid_role-lg": "grid",
+    "--rustic_ui_grid_role-md": "grid",
+    "--rustic_ui_grid_role-sm": "grid",
+    "--rustic_ui_grid_role-xl": "grid",
+    "--rustic_ui_grid_role-xxl": "grid",
+    "--rustic_ui_grid_row_gap": "32px",
+    "--rustic_ui_grid_row_gap-lg": "32px",
+    "--rustic_ui_grid_row_gap-md": "32px",
+    "--rustic_ui_grid_row_gap-sm": "32px",
+    "--rustic_ui_grid_row_gap-xl": "32px",
+    "--rustic_ui_grid_row_gap-xxl": "32px",
+    "--rustic_ui_grid_template": "repeat(2, minmax(0, 1fr))",
+    "--rustic_ui_grid_template-lg": "repeat(6, minmax(0, 1fr))",
+    "--rustic_ui_grid_template-md": "repeat(4, minmax(0, 1fr))",
+    "--rustic_ui_grid_template-sm": "repeat(4, minmax(0, 1fr))",
+    "--rustic_ui_grid_template-xl": "repeat(6, minmax(0, 1fr))",
+    "--rustic_ui_grid_template-xxl": "repeat(6, minmax(0, 1fr))"
+  },
+  "html": "<div id=\"grid-shell\" class=\"rustic-grid\" data-grid-density=\"dense\" role=\"grid\" data-breakpoint=\"lg\" style=\"--rustic_ui_grid_auto_flow: row dense; --rustic_ui_grid_auto_flow-lg: row dense; --rustic_ui_grid_auto_flow-md: row dense; --rustic_ui_grid_auto_flow-sm: row dense; --rustic_ui_grid_auto_flow-xl: row dense; --rustic_ui_grid_auto_flow-xxl: row dense; --rustic_ui_grid_column_gap: 16px; --rustic_ui_grid_column_gap-lg: 24px; --rustic_ui_grid_column_gap-md: 24px; --rustic_ui_grid_column_gap-sm: 16px; --rustic_ui_grid_column_gap-xl: 24px; --rustic_ui_grid_column_gap-xxl: 24px; --rustic_ui_grid_columns: 2; --rustic_ui_grid_columns-lg: 6; --rustic_ui_grid_columns-md: 4; --rustic_ui_grid_columns-sm: 4; --rustic_ui_grid_columns-xl: 6; --rustic_ui_grid_columns-xxl: 6; --rustic_ui_grid_role: grid; --rustic_ui_grid_role-lg: grid; --rustic_ui_grid_role-md: grid; --rustic_ui_grid_role-sm: grid; --rustic_ui_grid_role-xl: grid; --rustic_ui_grid_role-xxl: grid; --rustic_ui_grid_row_gap: 32px; --rustic_ui_grid_row_gap-lg: 32px; --rustic_ui_grid_row_gap-md: 32px; --rustic_ui_grid_row_gap-sm: 32px; --rustic_ui_grid_row_gap-xl: 32px; --rustic_ui_grid_row_gap-xxl: 32px; --rustic_ui_grid_template: repeat(2, minmax(0, 1fr)); --rustic_ui_grid_template-lg: repeat(6, minmax(0, 1fr)); --rustic_ui_grid_template-md: repeat(4, minmax(0, 1fr)); --rustic_ui_grid_template-sm: repeat(4, minmax(0, 1fr)); --rustic_ui_grid_template-xl: repeat(6, minmax(0, 1fr)); --rustic_ui_grid_template-xxl: repeat(6, minmax(0, 1fr));\"></div>",
+  "inline_style": "--rustic_ui_grid_auto_flow: row dense; --rustic_ui_grid_auto_flow-lg: row dense; --rustic_ui_grid_auto_flow-md: row dense; --rustic_ui_grid_auto_flow-sm: row dense; --rustic_ui_grid_auto_flow-xl: row dense; --rustic_ui_grid_auto_flow-xxl: row dense; --rustic_ui_grid_column_gap: 16px; --rustic_ui_grid_column_gap-lg: 24px; --rustic_ui_grid_column_gap-md: 24px; --rustic_ui_grid_column_gap-sm: 16px; --rustic_ui_grid_column_gap-xl: 24px; --rustic_ui_grid_column_gap-xxl: 24px; --rustic_ui_grid_columns: 2; --rustic_ui_grid_columns-lg: 6; --rustic_ui_grid_columns-md: 4; --rustic_ui_grid_columns-sm: 4; --rustic_ui_grid_columns-xl: 6; --rustic_ui_grid_columns-xxl: 6; --rustic_ui_grid_role: grid; --rustic_ui_grid_role-lg: grid; --rustic_ui_grid_role-md: grid; --rustic_ui_grid_role-sm: grid; --rustic_ui_grid_role-xl: grid; --rustic_ui_grid_role-xxl: grid; --rustic_ui_grid_row_gap: 32px; --rustic_ui_grid_row_gap-lg: 32px; --rustic_ui_grid_row_gap-md: 32px; --rustic_ui_grid_row_gap-sm: 32px; --rustic_ui_grid_row_gap-xl: 32px; --rustic_ui_grid_row_gap-xxl: 32px; --rustic_ui_grid_template: repeat(2, minmax(0, 1fr)); --rustic_ui_grid_template-lg: repeat(6, minmax(0, 1fr)); --rustic_ui_grid_template-md: repeat(4, minmax(0, 1fr)); --rustic_ui_grid_template-sm: repeat(4, minmax(0, 1fr)); --rustic_ui_grid_template-xl: repeat(6, minmax(0, 1fr)); --rustic_ui_grid_template-xxl: repeat(6, minmax(0, 1fr));"
+}

@@ -114,7 +114,11 @@ fn render_html(props: &SelectProps, state: &SelectState) -> String {
 
 /// Resolve the automation identifier used for data hooks and DOM ids.
 fn automation_base(props: &SelectProps) -> String {
-    crate::style_helpers::automation_id("select", props.automation_id.as_deref(), [])
+    crate::style_helpers::automation_id(
+        "select",
+        props.automation_id.as_deref(),
+        crate::style_helpers::EMPTY_SEGMENTS,
+    )
 }
 
 /// Compute the DOM id for the option list.
@@ -152,7 +156,7 @@ fn root_attributes(
     ));
     attrs.push((
         "data-component".into(),
-        crate::style_helpers::automation_id("select", None, []),
+        crate::style_helpers::automation_id("select", None, crate::style_helpers::EMPTY_SEGMENTS),
     ));
     attrs.push(("data-open".into(), state.is_open().to_string()));
     attrs.push((

@@ -124,7 +124,11 @@ fn render_html(props: &MenuProps, menu_state: &MenuState, popover_state: &Popove
 }
 
 fn automation_base(props: &MenuProps) -> String {
-    crate::style_helpers::automation_id("menu", props.automation_id.as_deref(), [])
+    crate::style_helpers::automation_id(
+        "menu",
+        props.automation_id.as_deref(),
+        crate::style_helpers::EMPTY_SEGMENTS,
+    )
 }
 
 fn surface_id(props: &MenuProps) -> String {
@@ -158,7 +162,7 @@ fn root_attributes(
     ));
     attrs.push((
         "data-component".into(),
-        crate::style_helpers::automation_id("menu", None, []),
+        crate::style_helpers::automation_id("menu", None, crate::style_helpers::EMPTY_SEGMENTS),
     ));
     let (open_key, open_value) = surface_meta.data_open();
     attrs.push((open_key.into(), open_value.into()));

@@ -142,7 +142,11 @@ fn render_html(props: &ChipProps, state: &ChipState) -> String {
 
 /// Resolve the automation identifier base.
 fn automation_base(props: &ChipProps) -> String {
-    crate::style_helpers::automation_id("chip", props.automation_id.as_deref(), [])
+    crate::style_helpers::automation_id(
+        "chip",
+        props.automation_id.as_deref(),
+        crate::style_helpers::EMPTY_SEGMENTS,
+    )
 }
 
 /// DOM id for the label span.
@@ -198,7 +202,7 @@ fn root_attributes(
     ));
     attrs.push((
         "data-component".into(),
-        crate::style_helpers::automation_id("chip", None, []),
+        crate::style_helpers::automation_id("chip", None, crate::style_helpers::EMPTY_SEGMENTS),
     ));
     attrs.push(("data-visible".into(), state.is_visible().to_string()));
     attrs.push((

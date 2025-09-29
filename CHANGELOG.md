@@ -3,6 +3,35 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-05-20 – Responsive layout regression harness
+
+### Highlights
+
+- Added snapshot-driven coverage for the new `Box`, `Container`, `Grid`, `Stack`,
+  `Hidden`, and `ImageList` headless state machines under
+  `crates/rustic-ui-headless/tests/layout_primitives.rs`, guaranteeing
+  deterministic breakpoint behaviour and automation hooks across viewports.
+- Mirrored the coverage in `crates/rustic-ui-material/tests/layout_renderers.rs`
+  so React, Yew, Leptos, Sycamore, and Dioxus adapters render identical CSS
+  variables and inline styles during SSR and hydration.
+- Documented the migration workflow in the README and Rust book, including
+  guidance on the new `EMPTY_SEGMENTS` helper, accessibility data attributes, and
+  CI guardrails (`cargo fmt`, `cargo clippy --workspace --all-features`,
+  `INSTA_UPDATE=always cargo test …`, and `cargo xtask build-docs`).
+
+### Backlog
+
+- [ ] Extend the responsive docs with framework-specific code samples once the
+  adapters expose high-level JSX/Yew components.
+
+### Verification
+
+- `cargo fmt`
+- `cargo clippy --workspace --all-features`
+- `INSTA_UPDATE=always cargo test -p rustic-ui-headless --test layout_primitives`
+- `INSTA_UPDATE=always cargo test -p rustic-ui-material --test layout_renderers`
+- `cargo xtask build-docs`
+
 ## 2025-05-06 – Supply-chain automation and archive governance
 
 ### Highlights

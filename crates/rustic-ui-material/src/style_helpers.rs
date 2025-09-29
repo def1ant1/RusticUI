@@ -16,6 +16,7 @@ use rustic_ui_utils::{attributes_to_html, collect_attributes};
 /// renders while dramatically reducing the risk of typos when new components are
 /// introduced.
 pub(crate) const COMPONENT_PREFIX: &str = "rustic";
+pub(crate) const EMPTY_SEGMENTS: [&str; 0] = [];
 
 /// Consumes a [`Style`] and returns the scoped class name produced by the
 /// styled engine.

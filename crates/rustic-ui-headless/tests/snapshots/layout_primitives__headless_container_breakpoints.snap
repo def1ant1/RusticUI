@@ -1,0 +1,65 @@
+---
+source: crates/rustic-ui-headless/tests/layout_primitives.rs
+expression: snapshot
+---
+{
+  "attributes": {
+    "class": "rustic-container",
+    "data_breakpoint@1440": "lg",
+    "data_breakpoint@768": "sm",
+    "density": "comfortable",
+    "fixed": "true",
+    "id": "marketing-container",
+    "role": "presentation"
+  },
+  "evaluations": [
+    {
+      "breakpoint": "base",
+      "fixed": true,
+      "max_width": "540px",
+      "min_width": 0,
+      "padding_inline": "16px",
+      "role": "presentation"
+    },
+    {
+      "breakpoint": "sm",
+      "fixed": true,
+      "max_width": "540px",
+      "min_width": 600,
+      "padding_inline": "16px",
+      "role": "presentation"
+    },
+    {
+      "breakpoint": "md",
+      "fixed": true,
+      "max_width": "960px",
+      "min_width": 900,
+      "padding_inline": "16px",
+      "role": "presentation"
+    },
+    {
+      "breakpoint": "lg",
+      "fixed": true,
+      "max_width": "960px",
+      "min_width": 1200,
+      "padding_inline": "32px",
+      "role": "presentation"
+    },
+    {
+      "breakpoint": "xl",
+      "fixed": true,
+      "max_width": "1280px",
+      "min_width": 1536,
+      "padding_inline": "32px",
+      "role": "presentation"
+    },
+    {
+      "breakpoint": "xxl",
+      "fixed": true,
+      "max_width": "1280px",
+      "min_width": 1800,
+      "padding_inline": "32px",
+      "role": "presentation"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+---
+source: crates/rustic-ui-material/tests/layout_renderers.rs
+expression: snapshot
+---
+{
+  "breakpoints": {
+    "viewport_1600": "xl",
+    "viewport_768": "sm"
+  },
+  "css_variables": {
+    "--rustic_ui_container_fixed": "true",
+    "--rustic_ui_container_fixed-lg": "true",
+    "--rustic_ui_container_fixed-md": "true",
+    "--rustic_ui_container_fixed-sm": "true",
+    "--rustic_ui_container_fixed-xl": "true",
+    "--rustic_ui_container_fixed-xxl": "true",
+    "--rustic_ui_container_max_width": "540px",
+    "--rustic_ui_container_max_width-lg": "960px",
+    "--rustic_ui_container_max_width-md": "960px",
+    "--rustic_ui_container_max_width-sm": "540px",
+    "--rustic_ui_container_max_width-xl": "1280px",
+    "--rustic_ui_container_max_width-xxl": "1280px",
+    "--rustic_ui_container_padding_inline": "16px",
+    "--rustic_ui_container_padding_inline-lg": "32px",
+    "--rustic_ui_container_padding_inline-md": "16px",
+    "--rustic_ui_container_padding_inline-sm": "16px",
+    "--rustic_ui_container_padding_inline-xl": "32px",
+    "--rustic_ui_container_padding_inline-xxl": "32px",
+    "--rustic_ui_container_role": "presentation",
+    "--rustic_ui_container_role-lg": "presentation",
+    "--rustic_ui_container_role-md": "presentation",
+    "--rustic_ui_container_role-sm": "presentation",
+    "--rustic_ui_container_role-xl": "presentation",
+    "--rustic_ui_container_role-xxl": "presentation"
+  },
+  "html": "<section id=\"content-hub\" class=\"rustic-container\" data-density=\"comfortable\" data-fixed=\"true\" role=\"presentation\" data-breakpoint=\"lg\" style=\"--rustic_ui_container_fixed: true; --rustic_ui_container_fixed-lg: true; --rustic_ui_container_fixed-md: true; --rustic_ui_container_fixed-sm: true; --rustic_ui_container_fixed-xl: true; --rustic_ui_container_fixed-xxl: true; --rustic_ui_container_max_width: 540px; --rustic_ui_container_max_width-lg: 960px; --rustic_ui_container_max_width-md: 960px; --rustic_ui_container_max_width-sm: 540px; --rustic_ui_container_max_width-xl: 1280px; --rustic_ui_container_max_width-xxl: 1280px; --rustic_ui_container_padding_inline: 16px; --rustic_ui_container_padding_inline-lg: 32px; --rustic_ui_container_padding_inline-md: 16px; --rustic_ui_container_padding_inline-sm: 16px; --rustic_ui_container_padding_inline-xl: 32px; --rustic_ui_container_padding_inline-xxl: 32px; --rustic_ui_container_role: presentation; --rustic_ui_container_role-lg: presentation; --rustic_ui_container_role-md: presentation; --rustic_ui_container_role-sm: presentation; --rustic_ui_container_role-xl: presentation; --rustic_ui_container_role-xxl: presentation;\"></section>",
+  "inline_style": "--rustic_ui_container_fixed: true; --rustic_ui_container_fixed-lg: true; --rustic_ui_container_fixed-md: true; --rustic_ui_container_fixed-sm: true; --rustic_ui_container_fixed-xl: true; --rustic_ui_container_fixed-xxl: true; --rustic_ui_container_max_width: 540px; --rustic_ui_container_max_width-lg: 960px; --rustic_ui_container_max_width-md: 960px; --rustic_ui_container_max_width-sm: 540px; --rustic_ui_container_max_width-xl: 1280px; --rustic_ui_container_max_width-xxl: 1280px; --rustic_ui_container_padding_inline: 16px; --rustic_ui_container_padding_inline-lg: 32px; --rustic_ui_container_padding_inline-md: 16px; --rustic_ui_container_padding_inline-sm: 16px; --rustic_ui_container_padding_inline-xl: 32px; --rustic_ui_container_padding_inline-xxl: 32px; --rustic_ui_container_role: presentation; --rustic_ui_container_role-lg: presentation; --rustic_ui_container_role-md: presentation; --rustic_ui_container_role-sm: presentation; --rustic_ui_container_role-xl: presentation; --rustic_ui_container_role-xxl: presentation;"
+}

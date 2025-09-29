@@ -80,6 +80,28 @@ working for `@mui/*` imports, reload your IDE so it re-parses the updated config
 Rust crates (`crates/rustic-ui-*`) and exposes automated TypeScript shims via `cargo xtask build-docs`; the archived
 files remain as read-only references for parity investigations.
 
+## Responsive layout primitives
+
+Enterprise adopters migrating from the legacy `mui_*` layout helpers can now rely on the Rust-first
+`Box`, `Container`, `Grid`, `Stack`, `Hidden`, and `ImageList` state machines shipped in
+`rustic-ui-headless`. Each primitive exposes:
+
+- **Responsive breakpoint APIs** – Every state machine accepts a shared `BreakpointConfig` and `ResponsiveValue`
+  tokens so SSR and CSR adapters resolve layout consistently across viewports. The new regression
+  suite under `crates/rustic-ui-headless/tests/layout_primitives.rs` snapshots the evaluated metadata for every
+  breakpoint to guarantee deterministic automation hooks and spacing semantics.【F:crates/rustic-ui-headless/tests/layout_primitives.rs†L1-L209】
+- **Deterministic DOM contracts** – Material adapters mirror the headless evaluation pipeline. The integration
+  tests in `crates/rustic-ui-material/tests/layout_renderers.rs` snapshot the generated CSS variables, inline styles,
+  and automation attributes across frameworks so React/Yew/Leptos renderers hydrate with byte-for-byte parity.【F:crates/rustic-ui-material/tests/layout_renderers.rs†L1-L126】
+- **Accessibility-forward defaults** – Attribute builders attach stable `role`, `aria-*`, and `data-*` markers for
+  QA pipelines. When migrating from custom wrappers, prefer the fluent builders exposed on each state machine and
+  pipe the resulting tuples into your adapter’s attribute map. Hidden content can opt into `data-inert` markers so
+  focus management remains deterministic even when sections collapse at specific breakpoints.【F:crates/rustic-ui-headless/src/hidden.rs†L1-L120】
+
+Refer to the new migration notes in the Rust book for a step-by-step walkthrough that maps legacy layout props to
+the responsive primitives, demonstrates the new automation helpers (`EMPTY_SEGMENTS` and friends), and codifies
+the CI guardrails required to keep server-rendered snapshots fresh.【F:docs/rust-book/src/layout-primitives.md†L1-L120】
+
 ## Design system automation with `css_with_theme!`
 
 Enterprise teams demand consistent design tokens without repetitive wiring. The RusticUI theming macros automatically inject the

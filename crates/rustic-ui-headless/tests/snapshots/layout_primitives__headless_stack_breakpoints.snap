@@ -1,0 +1,63 @@
+---
+source: crates/rustic-ui-headless/tests/layout_primitives.rs
+expression: snapshot
+---
+{
+  "attributes": {
+    "class": "rustic-stack",
+    "data_direction@1600": "horizontal",
+    "data_direction@480": "vertical",
+    "id": "action-stack",
+    "role": "list"
+  },
+  "evaluations": [
+    {
+      "breakpoint": "base",
+      "direction": "vertical",
+      "divider": "1px solid var(--border)",
+      "gap": "12px",
+      "min_width": 0,
+      "role": "list"
+    },
+    {
+      "breakpoint": "sm",
+      "direction": "vertical",
+      "divider": "1px solid var(--border)",
+      "gap": "16px",
+      "min_width": 600,
+      "role": "list"
+    },
+    {
+      "breakpoint": "md",
+      "direction": "vertical",
+      "divider": null,
+      "gap": "16px",
+      "min_width": 900,
+      "role": "list"
+    },
+    {
+      "breakpoint": "lg",
+      "direction": "horizontal",
+      "divider": null,
+      "gap": "16px",
+      "min_width": 1200,
+      "role": "list"
+    },
+    {
+      "breakpoint": "xl",
+      "direction": "horizontal",
+      "divider": null,
+      "gap": "16px",
+      "min_width": 1536,
+      "role": "list"
+    },
+    {
+      "breakpoint": "xxl",
+      "direction": "horizontal",
+      "divider": null,
+      "gap": "16px",
+      "min_width": 1800,
+      "role": "list"
+    }
+  ]
+}

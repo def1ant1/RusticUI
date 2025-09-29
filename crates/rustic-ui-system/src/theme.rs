@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::ops::{Deref, DerefMut};
 
 /// Enumerates the supported Material color schemes.
 ///
@@ -239,6 +240,20 @@ impl Palette {
             ColorScheme::Light => &mut self.light,
             ColorScheme::Dark => &mut self.dark,
         }
+    }
+}
+
+impl Deref for Palette {
+    type Target = PaletteScheme;
+
+    fn deref(&self) -> &Self::Target {
+        self.active()
+    }
+}
+
+impl DerefMut for Palette {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.active_mut()
     }
 }
 

@@ -160,7 +160,11 @@ fn render_html(props: &TooltipProps, state: &TooltipState) -> String {
 
 /// Resolve the base automation identifier used to derive ids and data hooks.
 fn automation_base(props: &TooltipProps) -> String {
-    crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), [])
+    crate::style_helpers::automation_id(
+        "tooltip",
+        props.automation_id.as_deref(),
+        crate::style_helpers::EMPTY_SEGMENTS,
+    )
 }
 
 /// Compute the DOM id for the trigger element.
@@ -203,7 +207,7 @@ fn root_attributes(
     ));
     attrs.push((
         "data-component".into(),
-        crate::style_helpers::automation_id("tooltip", None, []),
+        crate::style_helpers::automation_id("tooltip", None, crate::style_helpers::EMPTY_SEGMENTS),
     ));
     attrs.push(("data-visible".into(), state.visible().to_string()));
     attrs.push((

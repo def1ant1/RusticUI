@@ -1,0 +1,70 @@
+---
+source: crates/rustic-ui-headless/tests/layout_primitives.rs
+expression: snapshot
+---
+{
+  "attributes": {
+    "class": "rustic-grid",
+    "data_breakpoint@1920": "xxl",
+    "data_breakpoint@600": "sm",
+    "dense": "dense",
+    "id": "dashboard-grid",
+    "role": "grid"
+  },
+  "evaluations": [
+    {
+      "breakpoint": "base",
+      "column_gap": "16px",
+      "columns": 2,
+      "dense": true,
+      "min_width": 0,
+      "role": "grid",
+      "row_gap": "32px"
+    },
+    {
+      "breakpoint": "sm",
+      "column_gap": "16px",
+      "columns": 4,
+      "dense": true,
+      "min_width": 600,
+      "role": "grid",
+      "row_gap": "32px"
+    },
+    {
+      "breakpoint": "md",
+      "column_gap": "24px",
+      "columns": 4,
+      "dense": true,
+      "min_width": 900,
+      "role": "grid",
+      "row_gap": "32px"
+    },
+    {
+      "breakpoint": "lg",
+      "column_gap": "24px",
+      "columns": 6,
+      "dense": true,
+      "min_width": 1200,
+      "role": "grid",
+      "row_gap": "32px"
+    },
+    {
+      "breakpoint": "xl",
+      "column_gap": "24px",
+      "columns": 6,
+      "dense": true,
+      "min_width": 1536,
+      "role": "grid",
+      "row_gap": "32px"
+    },
+    {
+      "breakpoint": "xxl",
+      "column_gap": "24px",
+      "columns": 6,
+      "dense": true,
+      "min_width": 1800,
+      "role": "grid",
+      "row_gap": "32px"
+    }
+  ]
+}
