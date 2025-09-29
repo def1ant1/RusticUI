@@ -96,6 +96,14 @@ In order to display the modal, you need to disable the portal feature with the `
 
 The modal moves the focus back to the body of the component if the focus tries to escape it.
 
+Enterprise deployments that need to study how often keyboard users loop through
+sentinels can opt into the feature-gated
+`rustic_ui_material::unstable_trap_focus` helpers.  The experimental API mirrors
+the stable focus trap but adds loop counters and direction telemetry so QA
+automation can observe behaviour before the instrumentation migrates into the
+core module.  Keep integrations thin—the `unstable_` prefix indicates the API
+may change between minor releases.
+
 This is done for accessibility purposes. However, it might create issues.
 In the event the users need to interact with another part of the page, for example with a chatbot window, you can disable the behavior:
 

@@ -141,6 +141,46 @@ cargo test -p rustic_ui_material --all-features
 - Callbacks are invoked only for enabled options ensuring analytics pipelines
   do not log interactions end users never saw.
 
+## Experimental focus loop instrumentation (`unstable_trap_focus`)
+
+Enterprise overlays often need to study how keyboard users interact with focus
+loops before locking the telemetry model into a long-lived API.  The
+`unstable_trap_focus` module wraps [`FocusTrapState`](src/focus_trap.rs) with
+loop counters, direction metadata, and optional observers so QA automation can
+feed the data into dashboards without sprinkling ad-hoc hooks across
+renderers.  The helper is intentionally behind the `unstable` feature flag and
+may change shape between releases – wire it in through thin integration layers
+so migrating back to the stable `focus_trap` APIs is a one-line change once the
+instrumentation hardens.
+
+```rust
+use rustic_ui_headless::interaction::ControlKey;
+use rustic_ui_headless::unstable_trap_focus::{
+    FocusLoopDirection, UnstableFocusTrapState,
+};
+
+let mut trap = UnstableFocusTrapState::new(true);
+trap.set_focusables(["trigger", "close"]);
+trap.register_focus(Some("close"));
+
+// Observe how users wrap between sentinels.
+trap.set_loop_observer(Some(|event| {
+    println!(
+        "loop #{}, direction: {:?}, analytics tag: {:?}",
+        event.occurrence, event.direction, event.analytics_tag
+    );
+}));
+
+let disposition = trap.handle_key(ControlKey::ArrowRight);
+assert!(matches!(disposition, rustic_ui_headless::focus_trap::FocusDisposition::Focus("trigger")));
+assert_eq!(trap.loop_event_count(), 1);
+```
+
+When the instrumentation stabilizes the observer hooks and data attributes will
+move into the canonical `focus_trap` module.  Until then we recommend keeping
+the wrapper isolated inside analytics services (or feature-gated crates) so the
+integration surface stays easy to refactor.
+
 ## Dialog state machine deep dive
 
 `DialogState` coordinates open/close transitions, focus trap bookkeeping, and

@@ -3,6 +3,25 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-06-28 – Experimental focus loop instrumentation
+
+### Highlights
+
+- Added `unstable_trap_focus` to `rustic-ui-headless`, layering loop counters,
+  direction metadata, and observer hooks on top of the stable focus trap so
+  enterprise teams can trial advanced analytics without forking renderers.【F:crates/rustic-ui-headless/src/unstable_trap_focus.rs†L1-L228】
+- Implemented Material renderers and multi-framework adapters that reuse the
+  existing sentinel helpers while emitting `data-rustic-focus-loop-*` telemetry
+  attributes and detailed ARIA documentation for assistive tech.【F:crates/rustic-ui-material/src/unstable_trap_focus.rs†L1-L246】
+- Documented the migration plan in the headless README and modal guidelines so
+  adopters know how to enable the `unstable` feature today and pivot back to the
+  stable focus trap once the instrumentation graduates.【F:crates/rustic-ui-headless/README.md†L63-L104】【F:docs/data/material/components/modal/modal.md†L94-L102】
+
+### Verification
+
+- `cargo fmt`
+- `cargo test --workspace --all-features`
+
 ## 2025-06-20 – Navigation example automation
 
 ### Highlights

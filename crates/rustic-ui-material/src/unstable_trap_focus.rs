@@ -1,101 +1,72 @@
 #![deny(missing_docs)]
-//! Focus trap renderers that decorate the headless [`FocusTrapState`]
-//! with automation identifiers and framework adapters. The helpers
-//! intentionally mirror the ergonomics of [`dialog`](crate::dialog)
-//! because most enterprise overlays compose a dialog surface with
-//! sentinels on either side to keep keyboard users within the modal
-//! while telemetry systems observe focus churn.
+//! Material renderers for the experimental focus trap instrumentation.
+//!
+//! The helpers in this module mirror [`crate::focus_trap`] but accept the
+//! telemetry-enhanced [`UnstableFocusTrapState`]
+//! (`rustic_ui_headless::unstable_trap_focus`).  While the API remains gated
+//! behind the `unstable` feature flag, adapters can observe how often keyboard
+//! users wrap between sentinels and feed the data into automation pipelines
+//! without rewriting markup across frameworks.
+//!
+//! The additional attributes are intentionally verbose:
+//! - `data-rustic-focus-loop-count` exposes a monotonically increasing counter
+//!   so QA tooling can assert how frequently loops occur while end-to-end tests
+//!   exercise overlays.
+//! - `data-rustic-focus-loop-last-direction` indicates whether the latest loop
+//!   happened while moving forward or backward, simplifying analytics queries.
+//! - `aria-roledescription="focus trap instrumentation sentinel"` documents to
+//!   assistive tech that the node exists purely for focus management research.
+//!
+//! As the API stabilizes the data attributes may migrate into the stable focus
+//! trap module, so downstream integrations should avoid hard-coding selectors
+//! against the `unstable` names.
 
-use rustic_ui_headless::focus_trap::{FocusTrapSentinelAttributes, FocusTrapState};
-use rustic_ui_styled_engine::{css_with_theme, Style};
+use crate::focus_trap::{
+    focus_trap_sentinel_attributes, sentinel_style, FocusTrapSentinelKind, FocusTrapSentinelOptions,
+};
+use rustic_ui_headless::unstable_trap_focus::UnstableFocusTrapState;
 
-/// Enumerates the sentinel nodes that bookend a focus trap.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum FocusTrapSentinelKind {
-    /// Sentinel rendered before the tabbable content.
-    Start,
-    /// Sentinel rendered after the tabbable content.
-    End,
-}
-
-impl FocusTrapSentinelKind {
-    fn automation_suffix(self) -> &'static str {
-        match self {
-            Self::Start => "start",
-            Self::End => "end",
-        }
-    }
-}
-
-/// Optional overrides shared by both sentinels.
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct FocusTrapSentinelOptions {
-    /// Optional automation prefix mirrored to `data-automation-id`.
-    pub automation_prefix: Option<String>,
-}
-
-/// Convert a sentinel attribute builder into automation-friendly pairs.
+/// Build automation-friendly attribute pairs for an unstable focus trap sentinel.
 #[must_use]
-pub fn focus_trap_sentinel_attributes(
-    attrs: FocusTrapSentinelAttributes<'_>,
+pub fn unstable_focus_trap_sentinel_attributes(
+    state: &UnstableFocusTrapState,
     kind: FocusTrapSentinelKind,
     options: &FocusTrapSentinelOptions,
     fallback_prefix: &str,
 ) -> Vec<(String, String)> {
-    let mut pairs = Vec::with_capacity(3);
-    let (key, value) = attrs.controller_attribute();
-    pairs.push((key.into(), value));
-    if let Some((key, value)) = attrs.analytics_attribute() {
-        pairs.push((key.into(), value.into()));
-    }
-    let prefix = options
-        .automation_prefix
-        .as_deref()
-        .filter(|value| !value.is_empty())
-        .unwrap_or(fallback_prefix);
-    pairs.push((
-        "data-automation-id".into(),
-        format!("{prefix}::focus-trap-{}", kind.automation_suffix()),
-    ));
-    pairs
-}
-
-/// Shared visually hidden style for sentinel markers.
-///
-/// The helper is intentionally `pub(crate)` so the experimental
-/// [`crate::unstable_trap_focus`] renderer can reuse the same CSS fragment
-/// without duplicating the SSR baseline.
-pub(crate) fn sentinel_style() -> Style {
-    css_with_theme!(
-        r#"
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        margin: -1px;
-        padding: 0;
-        border: 0;
-        clip: rect(0, 0, 0, 0);
-        overflow: hidden;
-        /* Sentinels should never steal layout real estate yet must remain */
-        /* discoverable for analytics, hence we isolate them visually. */
-        &[data-automation-id] { opacity: 0; }
-        "#
-    )
-}
-
-/// Render a sentinel as HTML so SSR retains the automation markers.
-#[must_use]
-pub fn render_focus_trap_sentinel_html(
-    state: &FocusTrapState,
-    kind: FocusTrapSentinelKind,
-    options: &FocusTrapSentinelOptions,
-    fallback_prefix: &str,
-) -> String {
     let attrs = match kind {
         FocusTrapSentinelKind::Start => state.start_sentinel_attributes(),
         FocusTrapSentinelKind::End => state.end_sentinel_attributes(),
     };
-    let pairs = focus_trap_sentinel_attributes(attrs, kind, options, fallback_prefix);
+    let mut pairs = focus_trap_sentinel_attributes(attrs, kind, options, fallback_prefix);
+    pairs.push((
+        "data-rustic-focus-loop-count".into(),
+        state.loop_event_count().to_string(),
+    ));
+    if let Some(event) = state.last_loop_event() {
+        pairs.push((
+            "data-rustic-focus-loop-last-direction".into(),
+            event.direction.as_str().into(),
+        ));
+    }
+    pairs
+}
+
+/// Render a sentinel as HTML including instrumentation-specific attributes.
+#[must_use]
+pub fn render_unstable_focus_trap_sentinel_html(
+    state: &UnstableFocusTrapState,
+    kind: FocusTrapSentinelKind,
+    options: &FocusTrapSentinelOptions,
+    fallback_prefix: &str,
+) -> String {
+    let mut pairs = unstable_focus_trap_sentinel_attributes(state, kind, options, fallback_prefix);
+    pairs.push(("tabindex".into(), "0".into()));
+    pairs.push(("aria-hidden".into(), "true".into()));
+    pairs.push((
+        "aria-roledescription".into(),
+        "focus trap instrumentation sentinel".into(),
+    ));
     crate::render_helpers::render_element_html("span", sentinel_style(), pairs, "")
 }
 
@@ -109,17 +80,14 @@ mod yew_impl {
     use std::rc::Rc;
     use yew::prelude::*;
 
-    /// Yew component rendering a focus trap sentinel.
+    /// Yew component rendering an unstable focus trap sentinel.
     #[derive(Properties, Clone)]
-    pub struct FocusTrapSentinelProps {
-        /// Shared focus trap state machine. The hosting overlay owns lifecycle
-        /// transitions (registering focus, rebuilding node lists, etc.) while
-        /// this adapter mirrors the analytics attributes.
-        pub state: Rc<FocusTrapState>,
+    pub struct UnstableFocusTrapSentinelProps {
+        /// Shared experimental focus trap state machine managed by the overlay controller.
+        pub state: Rc<UnstableFocusTrapState>,
         /// Whether this sentinel sits before or after the tabbable content.
         pub kind: FocusTrapSentinelKind,
-        /// Optional automation prefix. When omitted the component falls back to
-        /// the dialog automation prefix so telemetry streams remain stable.
+        /// Optional automation prefix. When omitted the dialog prefix is reused.
         #[prop_or_default]
         pub options: FocusTrapSentinelOptions,
         /// Fallback automation prefix used when `options.automation_prefix` is empty.
@@ -127,7 +95,7 @@ mod yew_impl {
         pub fallback_prefix: AttrValue,
     }
 
-    impl PartialEq for FocusTrapSentinelProps {
+    impl PartialEq for UnstableFocusTrapSentinelProps {
         fn eq(&self, other: &Self) -> bool {
             Rc::ptr_eq(&self.state, &other.state)
                 && self.kind == other.kind
@@ -136,26 +104,25 @@ mod yew_impl {
         }
     }
 
-    #[function_component(FocusTrapSentinel)]
-    pub fn focus_trap_sentinel(props: &FocusTrapSentinelProps) -> Html {
-        // Sentinels never subscribe to DOM events directly. Instead the overlay
-        // listens for focus/keyboard changes and mutates `FocusTrapState` which
-        // keeps teardown predictable during dialog unmounts.
-        let attrs = match props.kind {
-            FocusTrapSentinelKind::Start => props.state.start_sentinel_attributes(),
-            FocusTrapSentinelKind::End => props.state.end_sentinel_attributes(),
-        };
-        let pairs = focus_trap_sentinel_attributes(
-            attrs,
+    #[function_component(UnstableFocusTrapSentinel)]
+    pub fn unstable_focus_trap_sentinel(props: &UnstableFocusTrapSentinelProps) -> Html {
+        let pairs = unstable_focus_trap_sentinel_attributes(
+            &props.state,
             props.kind,
             &props.options,
             props.fallback_prefix.as_str(),
         );
-        let mut node = html! { <span tabindex="0" aria-hidden="true"></span> };
+        let mut node = html! { <span></span> };
         if let Html::VTag(ref mut tag) = node {
             tag.add_attribute(
                 "class",
                 crate::style_helpers::themed_class(sentinel_style()),
+            );
+            tag.add_attribute("tabindex", "0");
+            tag.add_attribute("aria-hidden", "true");
+            tag.add_attribute(
+                "aria-roledescription",
+                "focus trap instrumentation sentinel",
             );
             for (key, value) in pairs {
                 tag.add_attribute(key, value);
@@ -166,7 +133,7 @@ mod yew_impl {
 }
 
 #[cfg(feature = "yew")]
-pub use yew_impl::{FocusTrapSentinel, FocusTrapSentinelProps};
+pub use yew_impl::{UnstableFocusTrapSentinel, UnstableFocusTrapSentinelProps};
 
 // ---------------------------------------------------------------------------
 // Leptos adapter
@@ -178,11 +145,11 @@ mod leptos_impl {
     use leptos::prelude::*;
     use std::sync::Arc;
 
-    /// Leptos sentinel component mirroring the Yew API surface.
+    /// Leptos component mirroring the Yew API for the unstable sentinel.
     #[derive(Clone)]
-    pub struct FocusTrapSentinelProps {
-        /// Shared focus trap state machine managed by the overlay controller.
-        pub state: Arc<FocusTrapState>,
+    pub struct UnstableFocusTrapSentinelProps {
+        /// Shared experimental focus trap state machine.
+        pub state: Arc<UnstableFocusTrapState>,
         /// Sentinel position relative to the tabbable content.
         pub kind: FocusTrapSentinelKind,
         /// Optional automation prefix overriding the fallback.
@@ -191,10 +158,10 @@ mod leptos_impl {
         pub fallback_prefix: String,
     }
 
-    impl Default for FocusTrapSentinelProps {
+    impl Default for UnstableFocusTrapSentinelProps {
         fn default() -> Self {
             Self {
-                state: Arc::new(FocusTrapState::new(true)),
+                state: Arc::new(UnstableFocusTrapState::new(true)),
                 kind: FocusTrapSentinelKind::Start,
                 options: FocusTrapSentinelOptions::default(),
                 fallback_prefix: "dialog".into(),
@@ -202,7 +169,7 @@ mod leptos_impl {
         }
     }
 
-    impl PartialEq for FocusTrapSentinelProps {
+    impl PartialEq for UnstableFocusTrapSentinelProps {
         fn eq(&self, other: &Self) -> bool {
             Arc::ptr_eq(&self.state, &other.state)
                 && self.kind == other.kind
@@ -212,19 +179,19 @@ mod leptos_impl {
     }
 
     #[component]
-    pub fn FocusTrapSentinel(props: FocusTrapSentinelProps) -> impl IntoView {
-        let attrs = match props.kind {
-            FocusTrapSentinelKind::Start => props.state.start_sentinel_attributes(),
-            FocusTrapSentinelKind::End => props.state.end_sentinel_attributes(),
-        };
-        let pairs = focus_trap_sentinel_attributes(
-            attrs,
+    pub fn UnstableFocusTrapSentinel(props: UnstableFocusTrapSentinelProps) -> impl IntoView {
+        let pairs = unstable_focus_trap_sentinel_attributes(
+            &props.state,
             props.kind,
             &props.options,
             &props.fallback_prefix,
         );
         let mut element = leptos::html::span().attr("tabindex", "0");
         element = element.attr("aria-hidden", "true");
+        element = element.attr(
+            "aria-roledescription",
+            "focus trap instrumentation sentinel",
+        );
         element = element.class(crate::style_helpers::themed_class(sentinel_style()));
         for (key, value) in pairs {
             element = element.attr(key, value);
@@ -234,7 +201,7 @@ mod leptos_impl {
 }
 
 #[cfg(feature = "leptos")]
-pub use leptos_impl::{FocusTrapSentinel, FocusTrapSentinelProps};
+pub use leptos_impl::{UnstableFocusTrapSentinel, UnstableFocusTrapSentinelProps};
 
 // ---------------------------------------------------------------------------
 // Dioxus adapter
@@ -246,9 +213,9 @@ pub mod dioxus {
 
     /// Properties for the Dioxus sentinel renderer.
     #[derive(Clone)]
-    pub struct FocusTrapSentinelProps {
+    pub struct UnstableFocusTrapSentinelProps {
         /// Focus trap state machine mirrored from the controller.
-        pub state: FocusTrapState,
+        pub state: UnstableFocusTrapState,
         /// Sentinel position relative to the tabbable content.
         pub kind: FocusTrapSentinelKind,
         /// Optional automation prefix overriding the fallback.
@@ -257,7 +224,7 @@ pub mod dioxus {
         pub fallback_prefix: String,
     }
 
-    impl PartialEq for FocusTrapSentinelProps {
+    impl PartialEq for UnstableFocusTrapSentinelProps {
         fn eq(&self, other: &Self) -> bool {
             self.kind == other.kind
                 && self.options == other.options
@@ -265,10 +232,10 @@ pub mod dioxus {
         }
     }
 
-    impl Default for FocusTrapSentinelProps {
+    impl Default for UnstableFocusTrapSentinelProps {
         fn default() -> Self {
             Self {
-                state: FocusTrapState::new(true),
+                state: UnstableFocusTrapState::new(true),
                 kind: FocusTrapSentinelKind::Start,
                 options: FocusTrapSentinelOptions::default(),
                 fallback_prefix: "dialog".into(),
@@ -277,8 +244,8 @@ pub mod dioxus {
     }
 
     /// Render the sentinel into HTML.
-    pub fn render(props: &FocusTrapSentinelProps) -> String {
-        render_focus_trap_sentinel_html(
+    pub fn render(props: &UnstableFocusTrapSentinelProps) -> String {
+        render_unstable_focus_trap_sentinel_html(
             &props.state,
             props.kind,
             &props.options,
@@ -297,9 +264,9 @@ pub mod sycamore {
 
     /// Properties for the Sycamore sentinel renderer mirroring the Dioxus API.
     #[derive(Clone, PartialEq)]
-    pub struct FocusTrapSentinelProps {
+    pub struct UnstableFocusTrapSentinelProps {
         /// Focus trap state machine mirrored from the controller.
-        pub state: FocusTrapState,
+        pub state: UnstableFocusTrapState,
         /// Sentinel position relative to the tabbable content.
         pub kind: FocusTrapSentinelKind,
         /// Optional automation prefix overriding the fallback.
@@ -308,10 +275,10 @@ pub mod sycamore {
         pub fallback_prefix: String,
     }
 
-    impl Default for FocusTrapSentinelProps {
+    impl Default for UnstableFocusTrapSentinelProps {
         fn default() -> Self {
             Self {
-                state: FocusTrapState::new(true),
+                state: UnstableFocusTrapState::new(true),
                 kind: FocusTrapSentinelKind::Start,
                 options: FocusTrapSentinelOptions::default(),
                 fallback_prefix: "dialog".into(),
@@ -320,8 +287,8 @@ pub mod sycamore {
     }
 
     /// Render the sentinel into HTML.
-    pub fn render(props: &FocusTrapSentinelProps) -> String {
-        render_focus_trap_sentinel_html(
+    pub fn render(props: &UnstableFocusTrapSentinelProps) -> String {
+        render_unstable_focus_trap_sentinel_html(
             &props.state,
             props.kind,
             &props.options,
