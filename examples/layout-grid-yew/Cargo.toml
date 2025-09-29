@@ -1,0 +1,31 @@
+[package]
+name = "layout_grid_yew"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license.workspace = true
+
+[lib]
+name = "layout_grid_yew"
+path = "src/lib.rs"
+
+[[bin]]
+name = "layout-grid-yew"
+path = "src/main.rs"
+
+[dependencies]
+yew.workspace = true
+rustic-ui-system = { path = "../../crates/rustic-ui-system", features = ["yew"] }
+serde_json.workspace = true
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["Window", "MediaQueryList"] }
+tokio = { workspace = true, optional = true }
+
+[features]
+default = ["csr"]
+csr = []
+ssr = ["tokio"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+

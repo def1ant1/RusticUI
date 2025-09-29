@@ -1,0 +1,32 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+default := "test"
+
+framework := "layout-box-leptos"
+manifest := "Cargo.toml"
+package := "layout_box_leptos"
+binary := "layout-box-leptos"
+ensure_script := "../scripts/ensure-example-toolchain.sh"
+
+alias fmt := "cargo fmt --manifest-path {manifest}"
+
+recipe bootstrap:
+    {{ensure_script}} {{framework}} --wasm --ssr
+
+recipe check:
+    {{ensure_script}} {{framework}} --ssr
+    cargo check --manifest-path {manifest} --all-features
+
+recipe test:
+    {{ensure_script}} {{framework}} --ssr
+    cargo test --manifest-path {manifest} --no-default-features --features ssr
+    cargo test --manifest-path {manifest} --all-features
+
+recipe build-csr:
+    {{ensure_script}} {{framework}} --wasm
+    trunk build --manifest-path {manifest} --release
+
+recipe run-ssr:
+    {{ensure_script}} {{framework}} --ssr
+    cargo run --manifest-path {manifest} --features ssr --bin {binary}
+
