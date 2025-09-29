@@ -1,0 +1,46 @@
+[package]
+name = "navigation_bottom_navigation_yew"
+version = "0.1.0"
+edition = "2021"
+description = "Enterprise-ready RusticUI bottom navigation showcase for Yew"
+publish = false
+license.workspace = true
+
+[lib]
+name = "navigation_bottom_navigation_yew"
+path = "src/lib.rs"
+
+[[bin]]
+name = "navigation-bottom-navigation-yew"
+path = "src/main.rs"
+
+[dependencies]
+yew.workspace = true
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-material = { path = "../../crates/rustic-ui-material" }
+serde.workspace = true
+serde_json.workspace = true
+time = { workspace = true, features = ["serde"] }
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = [
+    "Window",
+    "Document",
+    "HtmlElement",
+] }
+tokio = { workspace = true, optional = true }
+htmlescape = "0.3"
+
+[features]
+default = ["csr"]
+csr = []
+ssr = ["tokio"]
+
+[dev-dependencies]
+insta.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[[test]]
+name = "ssr"
+path = "tests/ssr.rs"
+required-features = ["ssr"]
+

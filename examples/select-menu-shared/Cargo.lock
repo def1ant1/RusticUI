@@ -892,6 +892,7 @@ dependencies = [
  "rustic-ui-system",
  "rustic-ui-utils",
  "stylist",
+ "tracing",
 ]
 
 [[package]]

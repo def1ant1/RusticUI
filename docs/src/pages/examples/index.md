@@ -73,6 +73,25 @@ framework routers to keep orientation, selection, and analytics markers in sync.
 - **Parity:** The scaffolded code wires router callbacks and axe-core checks so
   teams can assert hydration parity without hand-written harnesses.【F:examples/navigation-tabs-yew/README.md†L35-L86】
 
+## Navigation controls (`examples/navigation-*-yew/leptos/dioxus`)
+
+Bottom navigation, pagination, and speed dial demos round out the navigation
+family with SSR parity, telemetry logging, and automation markers baked in for
+Yew, Leptos, and Dioxus adapters. Each README documents the command surface so
+teams can hydrate CSR builds, capture SSR fixtures, and stream analytics without
+manual wiring.【F:examples/navigation-bottom-navigation-yew/README.md†L9-L47】【F:examples/navigation-pagination-leptos/README.md†L9-L41】【F:examples/navigation-speed-dial-dioxus/README.md†L9-L43】
+
+- **Run locally:** `trunk serve --open` (Yew/Leptos) or `dx serve --open`
+  (Dioxus) hydrate the CSR bundles. `cargo run --features ssr` prints the same
+  markup used by hydration alongside newline-delimited telemetry logs.【F:examples/navigation-bottom-navigation-yew/README.md†L9-L24】【F:examples/navigation-pagination-leptos/README.md†L9-L24】【F:examples/navigation-speed-dial-dioxus/README.md†L9-L24】
+- **Automation:** Every example stamps deterministic `data-rustic-*` selectors
+  and analytics IDs, letting QA suites assert behaviour without bespoke DOM
+  queries.【F:examples/navigation-bottom-navigation-yew/README.md†L26-L47】【F:examples/navigation-pagination-leptos/README.md†L26-L41】【F:examples/navigation-speed-dial-dioxus/README.md†L26-L43】
+- **CI parity:** Invoke `just bootstrap`, `just test`, and `just run-ssr` before
+  committing changes, then exercise the full set via
+  `cargo xtask examples --group navigation --release` to validate native and
+  `wasm32` builds together.【F:examples/navigation-bottom-navigation-yew/README.md†L9-L24】【F:examples/navigation-pagination-leptos/README.md†L9-L24】【F:examples/navigation-speed-dial-dioxus/README.md†L9-L24】【F:crates/xtask/src/main.rs†L439-L516】
+
 ## Select menu suite (`examples/select-menu-*`)
 
 Controlled listboxes demonstrate asynchronous data loading, SSR mirroring, and

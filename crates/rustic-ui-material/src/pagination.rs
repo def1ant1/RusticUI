@@ -155,6 +155,9 @@ fn build_root_attributes(
     if let Some((key, value)) = attrs.aria_label_attr() {
         pairs.push((key.into(), value.into()));
     }
+    if let Some((key, value)) = attrs.labelledby() {
+        pairs.push((key.into(), value.into()));
+    }
     if let Some((key, value)) = attrs.analytics_attribute() {
         pairs.push((key.into(), value.into()));
     }

@@ -745,6 +745,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a41953f86f8a05768a6cda24def994fd2f424b04ec5c719cf89989779f199071"
 dependencies = [
  "powerfmt",
+ "serde_core",
 ]
 
 [[package]]
@@ -1726,6 +1727,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "htmlescape"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9025058dae765dee5070ec375f591e2ba14638c63feff74f13805a72e523163"
+
+[[package]]
 name = "http"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2583,6 +2590,55 @@ dependencies = [
  "rustic-ui-system",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "navigation_bottom_navigation_yew"
+version = "0.1.0"
+dependencies = [
+ "htmlescape",
+ "insta",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio",
+ "wasm-bindgen",
+ "web-sys",
+ "yew",
+]
+
+[[package]]
+name = "navigation_pagination_leptos"
+version = "0.1.0"
+dependencies = [
+ "htmlescape",
+ "insta",
+ "leptos",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "navigation_speed_dial_dioxus"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "dioxus-ssr",
+ "dioxus-web",
+ "htmlescape",
+ "insta",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "serde",
+ "serde_json",
+ "time",
 ]
 
 [[package]]

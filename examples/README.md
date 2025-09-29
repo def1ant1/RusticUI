@@ -95,6 +95,14 @@ scaffolding.
 | `navigation-tabs-dioxus` | Bootstrap notes keep the Dioxus markup contract aligned with Yew/Leptos for automation parity.【F:examples/navigation-tabs-dioxus/README.md†L1-L7】 | Emphasises shared markup so selectors remain reusable across renderers.【F:examples/navigation-tabs-dioxus/README.md†L1-L7】 | `./examples/navigation-tabs-dioxus/scripts/bootstrap.sh` emits the reference materials under `target/`.【F:examples/navigation-tabs-dioxus/README.md†L1-L7】 |
 | `navigation-tabs-sycamore` | Script deposits Sycamore-ready snippets with automation reminders and routing guidance.【F:examples/navigation-tabs-sycamore/README.md†L1-L12】 | Highlights deterministic automation metadata for Playwright/Cypress reuse.【F:examples/navigation-tabs-sycamore/README.md†L1-L12】 | `./examples/navigation-tabs-sycamore/scripts/bootstrap.sh` seeds the documentation bundle.【F:examples/navigation-tabs-sycamore/README.md†L1-L12】 |
 
+### Navigation controls (`examples/navigation-*`)
+
+| Example | Renderer coverage | Automation & telemetry focus | Bootstrap / build commands |
+| --- | --- | --- | --- |
+| `navigation-bottom-navigation-yew` | `trunk serve --open` hydrates the bottom navigation while `cargo run --features ssr` prints the SSR document with telemetry fixtures.【F:examples/navigation-bottom-navigation-yew/README.md†L9-L24】 | Controlled headless state propagates deterministic analytics tags and newline-delimited telemetry logs for incident dashboards.【F:examples/navigation-bottom-navigation-yew/README.md†L26-L47】 | `just bootstrap`, `just test`, and `just run-ssr` wire the shared toolchain plus regression checks.【F:examples/navigation-bottom-navigation-yew/README.md†L9-L24】 |
+| `navigation-pagination-leptos` | CSR hydration via `trunk serve --open` mirrors the SSR snapshot emitted by `cargo run --features ssr` for pagination flows.【F:examples/navigation-pagination-leptos/README.md†L9-L24】 | Pagination analytics emit RFC3339 JSON lines so observability stacks can diff SSR and CSR streams without bespoke glue.【F:examples/navigation-pagination-leptos/README.md†L26-L41】 | Invoke `just bootstrap`, `just check`, and `just test` to align with CI before streaming telemetry via `just run-ssr`.【F:examples/navigation-pagination-leptos/README.md†L9-L24】 |
+| `navigation-speed-dial-dioxus` | `dx serve --open` hydrates the speed dial, and `cargo run --features ssr` outputs the deterministic SSR + telemetry bundle.【F:examples/navigation-speed-dial-dioxus/README.md†L9-L24】 | Controlled open/highlight state plus analytics logging document how to integrate floating command launchers with enterprise observability.【F:examples/navigation-speed-dial-dioxus/README.md†L26-L43】 | `just bootstrap`, `just test`, and `just run-ssr` eliminate bespoke tooling; CSR builds run via `dx serve`.【F:examples/navigation-speed-dial-dioxus/README.md†L9-L24】 |
+
 ## Select menus
 
 | Example | Renderer coverage | Automation & test focus | Bootstrap / build commands |

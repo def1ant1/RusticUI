@@ -371,6 +371,8 @@ enum ExampleGroup {
     Layout,
     /// Focus trap utilities shared across framework adapters.
     Utilities,
+    /// Navigation surfaces spanning bottom nav, pagination, and speed dial.
+    Navigation,
 }
 
 impl ExampleGroup {
@@ -378,6 +380,7 @@ impl ExampleGroup {
         match self {
             ExampleGroup::Layout => "layout",
             ExampleGroup::Utilities => "utilities",
+            ExampleGroup::Navigation => "navigation",
         }
     }
 }
@@ -461,6 +464,7 @@ fn examples(args: ExamplesArgs) -> Result<()> {
     let crates = match args.group {
         ExampleGroup::Layout => layout_examples(&workspace)?,
         ExampleGroup::Utilities => utilities_examples(&workspace)?,
+        ExampleGroup::Navigation => navigation_examples(&workspace)?,
     };
 
     if crates.is_empty() {
@@ -573,6 +577,42 @@ fn utilities_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
         if !manifest_path.exists() {
             return Err(anyhow!(
                 "utilities example `{}` manifest missing at {}",
+                name,
+                manifest_path.display()
+            ));
+        }
+
+        crates.push(ExampleCrate {
+            name: (*name).to_string(),
+            manifest: manifest_path,
+        });
+    }
+
+    Ok(crates)
+}
+
+fn navigation_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
+    const NAVIGATION_MANIFESTS: &[(&str, &str)] = &[
+        (
+            "navigation-bottom-navigation-yew",
+            "examples/navigation-bottom-navigation-yew/Cargo.toml",
+        ),
+        (
+            "navigation-pagination-leptos",
+            "examples/navigation-pagination-leptos/Cargo.toml",
+        ),
+        (
+            "navigation-speed-dial-dioxus",
+            "examples/navigation-speed-dial-dioxus/Cargo.toml",
+        ),
+    ];
+
+    let mut crates = Vec::with_capacity(NAVIGATION_MANIFESTS.len());
+    for (name, manifest) in NAVIGATION_MANIFESTS {
+        let manifest_path = workspace.join(manifest);
+        if !manifest_path.exists() {
+            return Err(anyhow!(
+                "navigation example `{}` manifest missing at {}",
                 name,
                 manifest_path.display()
             ));

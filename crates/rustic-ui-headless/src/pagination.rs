@@ -68,6 +68,7 @@ pub struct PaginationRootAttributes<'a> {
     state: &'a PaginationState,
     id: Option<&'a str>,
     aria_label: Option<&'a str>,
+    labelled_by: Option<&'a str>,
 }
 
 impl<'a> PaginationRootAttributes<'a> {
@@ -77,6 +78,7 @@ impl<'a> PaginationRootAttributes<'a> {
             state,
             id: None,
             aria_label: Some("Pagination"),
+            labelled_by: None,
         }
     }
 
@@ -89,6 +91,17 @@ impl<'a> PaginationRootAttributes<'a> {
     /// Override the default `aria-label`.
     pub fn aria_label(mut self, value: &'a str) -> Self {
         self.aria_label = Some(value);
+        self
+    }
+
+    /// Link the navigation region to an external heading or description.
+    ///
+    /// Providing an `aria-labelledby` target clears the default `aria-label`
+    /// so the computed accessible name is driven exclusively by the supplied
+    /// heading element.
+    pub fn labelled_by(mut self, value: &'a str) -> Self {
+        self.aria_label = None;
+        self.labelled_by = Some(value);
         self
     }
 
@@ -105,6 +118,11 @@ impl<'a> PaginationRootAttributes<'a> {
     /// Optional `aria-label` tuple.
     pub fn aria_label_attr(&self) -> Option<(&'static str, &str)> {
         self.aria_label.map(|value| ("aria-label", value))
+    }
+
+    /// Optional `aria-labelledby` tuple when external labelling is configured.
+    pub fn labelledby(&self) -> Option<(&'static str, &str)> {
+        self.labelled_by.map(aria::aria_labelledby)
     }
 
     /// Optional analytics attribute.
