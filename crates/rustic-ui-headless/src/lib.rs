@@ -12,7 +12,11 @@
 //! shared across each state machine.  New Joy focused primitives including
 //! [`accordion`], [`autocomplete`], [`slider`], [`snackbar`], [`stepper`] and
 //! [`toggle_button_group`] build on the same deterministic rules so Material
-//! and Joy stay aligned.
+//! and Joy stay aligned.  Newly added infrastructure primitives –
+//! [`click_away`], [`collapsible_region`], and [`focus_trap`] – codify
+//! concurrency-safe focus orchestration for overlays and disclosure widgets.
+//! See the respective module documentation for detailed explanations of the
+//! concurrency guarantees, focus-loop handling, and accessibility contracts.
 //!
 //! The Material layer (`rustic_ui_material`) documents how these headless states are
 //! rendered with shared theming, automation identifiers, and SSR safe markup.
@@ -36,10 +40,13 @@ pub mod checkbox;
 pub mod chip;
 #[cfg(feature = "progress")]
 pub mod circular_progress;
+pub mod click_away;
+pub mod collapsible_region;
 pub mod container;
 pub mod dialog;
 pub mod divider;
 pub mod drawer;
+pub mod focus_trap;
 #[cfg(feature = "forms")]
 pub mod form_control;
 pub mod grid;
