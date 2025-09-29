@@ -9,7 +9,19 @@
 //! adapters and enables downstream automation to stitch together UX flows
 //! without rewriting presentation logic for every target runtime.
 
+use std::collections::BTreeMap;
+
+use rustic_ui_headless::layout::{Breakpoint, BreakpointConfig};
 use rustic_ui_styled_engine::Style;
+
+/// Ordered map of CSS custom properties emitted by layout renderers.
+///
+/// [`BTreeMap`] keeps the serialization deterministic which is important when
+/// SSR snapshots are compared against client renders in CI pipelines.  All
+/// layout renderers populate the map using the helpers in this module so
+/// adapters can trivially feed the result into attribute builders or inline
+/// `style="..."` strings without manually juggling ordering rules.
+pub(crate) type CssVariableMap = BTreeMap<String, String>;
 
 /// Render an element with the provided tag, [`Style`] and attribute pairs.
 ///
@@ -45,6 +57,101 @@ where
         attrs = attr_string,
         children = children
     )
+}
+
+/// Returns the canonical suffix attached to breakpoint scoped CSS variables.
+///
+/// `Breakpoint::Base` intentionally maps to an empty suffix so base styles read
+/// as `--rustic_ui_container_padding`.  Derived breakpoints follow the
+/// `--rustic_ui_container_padding-sm` convention which mirrors the naming used
+/// by the JavaScript adapters.  Centralising this logic eliminates the risk of
+/// typos whenever new layout primitives are introduced.
+#[must_use]
+pub(crate) const fn breakpoint_suffix(breakpoint: Breakpoint) -> &'static str {
+    match breakpoint {
+        Breakpoint::Base => "",
+        Breakpoint::Sm => "-sm",
+        Breakpoint::Md => "-md",
+        Breakpoint::Lg => "-lg",
+        Breakpoint::Xl => "-xl",
+        Breakpoint::Xxl => "-xxl",
+    }
+}
+
+/// Compose a custom property name for a given component/token/breakpoint
+/// combination.
+#[must_use]
+pub(crate) fn css_var(component: &str, token: &str, breakpoint: Breakpoint) -> String {
+    format!(
+        "--rustic_ui_{component}_{token}{suffix}",
+        component = component,
+        token = token,
+        suffix = breakpoint_suffix(breakpoint)
+    )
+}
+
+/// Insert CSS variables for every breakpoint in the configuration using the
+/// supplied callback.
+///
+/// Renderers frequently evaluate headless state per breakpoint.  Rather than
+/// repeat the iteration boilerplate for each component we provide a helper that
+/// feeds each [`Breakpoint`] into the caller supplied closure.  The closure is
+/// expected to return `(token, value)` pairs which are automatically prefixed
+/// following the [`css_var`] naming rules.
+pub(crate) fn collect_responsive_variables<F>(
+    map: &mut CssVariableMap,
+    component: &str,
+    breakpoints: &BreakpointConfig,
+    mut f: F,
+) where
+    F: FnMut(Breakpoint) -> Vec<(&'static str, String)>,
+{
+    for (breakpoint, _) in breakpoints.iter() {
+        for (token, value) in f(breakpoint) {
+            map.insert(css_var(component, token, breakpoint), value);
+        }
+    }
+}
+
+/// Normalise spacing tokens ensuring SSR always emits a concrete CSS value.
+///
+/// Some state machines allow empty strings to represent "no spacing".  CSS
+/// variables cannot contain the empty string, therefore this helper coerces
+/// blank inputs into `0px`.  Downstream adapters consistently rely on this
+/// helper which keeps server rendered markup aligned with the client side
+/// hydration pass.
+#[must_use]
+pub(crate) fn normalise_spacing_token(token: &str) -> String {
+    if token.trim().is_empty() {
+        String::from("0px")
+    } else {
+        token.to_string()
+    }
+}
+
+/// Normalise arbitrary CSS tokens while providing a semantic fallback.
+#[must_use]
+pub(crate) fn normalise_css_token(token: &str, fallback: &str) -> String {
+    if token.trim().is_empty() {
+        fallback.to_string()
+    } else {
+        token.to_string()
+    }
+}
+
+/// Convert a [`CssVariableMap`] into a SSR friendly inline style string.
+#[must_use]
+pub(crate) fn css_variables_to_style(map: &CssVariableMap) -> String {
+    map.iter()
+        .map(|(name, value)| format!("{name}: {value};"))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Build a CSS grid template string for the supplied column count.
+#[must_use]
+pub(crate) fn grid_template(columns: u16) -> String {
+    format!("repeat({columns}, minmax(0, 1fr))")
 }
 
 /// Render a self-closing `<div>` element for backdrop surfaces.
