@@ -276,6 +276,9 @@ fn deny() -> Result<()> {
 
 fn test(include_examples: bool) -> Result<()> {
     let mut cmd = Command::new("cargo");
+    println!(
+        "[xtask][test] running cargo test --workspace --all-features (includes `unstable` focus loop coverage)"
+    );
     cmd.arg("test").arg("--workspace").arg("--all-features");
     run(cmd)?;
 

@@ -15,6 +15,9 @@
 //! and Joy stay aligned.  Newly added infrastructure primitives –
 //! [`click_away`], [`collapsible_region`], and [`focus_trap`] – codify
 //! concurrency-safe focus orchestration for overlays and disclosure widgets.
+//! Experimental loop instrumentation lives in [`unstable_trap_focus`] behind an
+//! `unstable` feature gate so enterprise teams can evaluate telemetry-heavy
+//! behaviours before they harden into the stable focus APIs.
 //! See the respective module documentation for detailed explanations of the
 //! concurrency guarantees, focus-loop handling, and accessibility contracts.
 //!
@@ -84,6 +87,8 @@ pub mod timing;
 pub mod toggle_button_group;
 pub mod tooltip;
 pub mod typography;
+#[cfg(feature = "unstable")]
+pub mod unstable_trap_focus;
 
 mod selection;
 mod toggle;

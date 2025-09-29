@@ -83,6 +83,8 @@ mod telemetry;
 pub mod text_field;
 pub mod tooltip;
 pub mod typography;
+#[cfg(feature = "unstable")]
+pub mod unstable_trap_focus;
 
 pub use rustic_ui_styled_engine::Theme;
 
@@ -152,6 +154,24 @@ pub use stack::{render_stack, StackAdapterProps, StackRenderOutput};
 pub use stepper::{render_stepper, StepRenderStep, StepperAdapterProps, StepperRenderOutput};
 pub use telemetry::{TelemetryContext, TelemetryError, TelemetryHooks};
 pub use typography::{render_typography, TypographyRenderOutput};
+#[cfg(all(feature = "unstable", feature = "dioxus"))]
+pub use unstable_trap_focus::dioxus as unstable_focus_trap_dioxus;
+#[cfg(all(feature = "unstable", feature = "sycamore"))]
+pub use unstable_trap_focus::sycamore as unstable_focus_trap_sycamore;
+#[cfg(feature = "unstable")]
+pub use unstable_trap_focus::{
+    render_unstable_focus_trap_sentinel_html, unstable_focus_trap_sentinel_attributes,
+};
+#[cfg(all(feature = "unstable", feature = "yew"))]
+pub use unstable_trap_focus::{
+    UnstableFocusTrapSentinel as UnstableFocusTrapSentinelYew,
+    UnstableFocusTrapSentinelProps as UnstableFocusTrapSentinelYewProps,
+};
+#[cfg(all(feature = "unstable", feature = "leptos"))]
+pub use unstable_trap_focus::{
+    UnstableFocusTrapSentinel as UnstableFocusTrapSentinelLeptos,
+    UnstableFocusTrapSentinelProps as UnstableFocusTrapSentinelLeptosProps,
+};
 
 #[cfg(any(
     feature = "yew",
