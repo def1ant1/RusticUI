@@ -3,6 +3,26 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-06-10 – Navigation primitives and analytics alignment
+
+### Highlights
+
+- Added headless state machines for bottom navigation, breadcrumbs, link,
+  pagination, and speed dial widgets with controlled/uncontrolled flows,
+  deterministic keyboard handling, and structured analytics payloads.
+- Implemented Material renderers plus React, Yew, Leptos, Sycamore, and Dioxus
+  adapters for each primitive, emitting automation-focused data attributes and
+  SSR-safe inline styles that reuse the shared helper modules.
+- Expanded the Rust integration test suite with navigation-focused coverage so
+  telemetry hooks and accessibility contracts stay locked across frameworks and
+  server-side rendering pipelines.
+
+### Verification
+
+- `cargo fmt`
+- `cargo test -p rustic-ui-headless --test navigation_primitives`
+- `cargo test -p rustic-ui-material --lib`
+
 ## 2025-06-02 – Headless utility expansion and observability rails
 
 ### Highlights
