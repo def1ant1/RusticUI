@@ -84,6 +84,109 @@ fn grid_tokens_for_breakpoint(evaluation: &GridEvaluation<'_>) -> Vec<(&'static 
     tokens
 }
 
+/// Props passed to the framework specific adapters.
+///
+/// [`GridState`] encapsulates responsive evaluation along with the control
+/// strategy, so adapters merely borrow it.  Controlled integrations keep the
+/// state in a signal or hook while uncontrolled flows construct it on demand;
+/// both converge on the same renderer which reads the most recent evaluation.
+#[derive(Clone, Copy, Debug)]
+pub struct GridAdapterProps<'a> {
+    /// Headless grid state driving track and spacing values.
+    pub state: &'a GridState,
+}
+
+impl<'a> GridAdapterProps<'a> {
+    /// Helper for ergonomic construction in integration code.
+    #[inline]
+    pub fn new(state: &'a GridState) -> Self {
+        Self { state }
+    }
+}
+
+/// Internal helper shared by all adapter modules.
+#[cfg_attr(
+    not(any(
+        feature = "react",
+        feature = "yew",
+        feature = "leptos",
+        feature = "dioxus",
+        feature = "sycamore"
+    )),
+    allow(dead_code)
+)]
+fn render_grid_with_props(props: GridAdapterProps<'_>) -> GridRenderOutput {
+    // Delegate to the canonical renderer so SSR and hydration are byte-identical
+    // regardless of which framework hosts the layout component.
+    render_grid(props.state)
+}
+
+/// React adapter for grid rendering.
+#[cfg(feature = "react")]
+pub mod react {
+    use super::*;
+
+    /// Run the shared renderer during React's server-side render lifecycle.
+    /// Enterprises often stash the CSS variable map inside orchestration layers
+    /// so design systems can compose layouts without bespoke glue code.
+    pub fn render(props: GridAdapterProps<'_>) -> GridRenderOutput {
+        super::render_grid_with_props(props)
+    }
+}
+
+/// Yew adapter bridging to [`render_grid`].
+#[cfg(feature = "yew")]
+pub mod yew {
+    use super::*;
+
+    /// Produce deterministic grid CSS variables for Yew components.  By routing
+    /// through the shared renderer, controlled props (state stored in hooks) and
+    /// uncontrolled props (state created per render) both respect the same
+    /// headless evaluation.
+    pub fn render(props: GridAdapterProps<'_>) -> GridRenderOutput {
+        super::render_grid_with_props(props)
+    }
+}
+
+/// Leptos adapter mirroring other frameworks.
+#[cfg(feature = "leptos")]
+pub mod leptos {
+    use super::*;
+
+    /// Leptos signals trigger this renderer automatically when inputs change.
+    /// The inline style string can be injected into SSR templates to guarantee
+    /// hydration parity.
+    pub fn render(props: GridAdapterProps<'_>) -> GridRenderOutput {
+        super::render_grid_with_props(props)
+    }
+}
+
+/// Dioxus adapter for SSR/hydration pipelines.
+#[cfg(feature = "dioxus")]
+pub mod dioxus {
+    use super::*;
+
+    /// Dioxus orchestrators should call this during render to obtain the CSS
+    /// variables before streaming markup.  The shared helper keeps controlled and
+    /// uncontrolled ownership models aligned without extra bookkeeping.
+    pub fn render(props: GridAdapterProps<'_>) -> GridRenderOutput {
+        super::render_grid_with_props(props)
+    }
+}
+
+/// Sycamore adapter forwarding to the canonical renderer.
+#[cfg(feature = "sycamore")]
+pub mod sycamore {
+    use super::*;
+
+    /// Sycamore's signals or stored state can both drive this helper which then
+    /// formats the CSS variables for SSR snapshots.  Enterprise automation suites
+    /// can diff the resulting markup across frameworks with confidence.
+    pub fn render(props: GridAdapterProps<'_>) -> GridRenderOutput {
+        super::render_grid_with_props(props)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,5 +214,20 @@ mod tests {
             .css_variables()
             .contains_key("--rustic_ui_grid_template-lg"));
         assert!(output.inline_style().contains("--rustic_ui_grid_auto_flow"));
+    }
+
+    #[test]
+    fn adapter_mirrors_shared_renderer() {
+        let tokens = rustic_ui_headless::grid::GridTokens {
+            columns: ResponsiveValue::new(3),
+            column_gap: ResponsiveValue::from(String::from("8px")),
+            row_gap: ResponsiveValue::from(String::from("12px")),
+        };
+        let state = GridState::new(tokens, BreakpointConfig::material());
+
+        let base = render_grid(&state);
+        let adapter = super::render_grid_with_props(GridAdapterProps::new(&state));
+
+        assert_eq!(base.inline_style(), adapter.inline_style());
     }
 }

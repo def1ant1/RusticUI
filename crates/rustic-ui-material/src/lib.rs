@@ -52,10 +52,10 @@ pub mod tooltip;
 
 pub use rustic_ui_styled_engine::Theme;
 
-pub use crate::r#box::{render_box, BoxRenderOutput};
-pub use container::{render_container, ContainerRenderOutput};
-pub use grid::{render_grid, GridRenderOutput};
-pub use stack::{render_stack, StackRenderOutput};
+pub use crate::r#box::{render_box, BoxAdapterProps, BoxRenderOutput};
+pub use container::{render_container, ContainerAdapterProps, ContainerRenderOutput};
+pub use grid::{render_grid, GridAdapterProps, GridRenderOutput};
+pub use stack::{render_stack, StackAdapterProps, StackRenderOutput};
 
 /// Confirms that the crate links to `rustic_ui_styled_engine` and compiles.
 pub fn placeholder() {
