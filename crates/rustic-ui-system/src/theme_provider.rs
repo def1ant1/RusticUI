@@ -349,9 +349,9 @@ mod leptos_impl {
 
     /// Leptos variant of the [`ThemeProvider`].
     #[component]
-    pub fn ThemeProvider(theme: Theme, _children: Children) -> impl IntoView {
+    pub fn ThemeProvider(theme: Theme, children: Children) -> impl IntoView {
         provide_context(theme);
-        view! { _children() }
+        children()
     }
 
     /// Access the current [`Theme`] from context.

@@ -2113,6 +2113,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "layout_box_leptos"
+version = "0.1.0"
+dependencies = [
+ "leptos",
+ "rustic-ui-system",
+ "serde_json",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "layout_grid_yew"
+version = "0.1.0"
+dependencies = [
+ "rustic-ui-system",
+ "serde_json",
+ "tokio",
+ "wasm-bindgen",
+ "web-sys",
+ "yew",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3409,18 +3432,6 @@ dependencies = [
  "mui-shared",
  "rustic-ui-system",
  "tokio",
-]
-
-[[package]]
-name = "rustic_ui_ssr_accessibility"
-version = "0.1.0"
-dependencies = [
- "html-escape",
- "mui-shared",
- "rustic-ui-material",
- "rustic-ui-styled-engine",
- "tokio",
- "yew",
 ]
 
 [[package]]

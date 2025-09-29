@@ -8,11 +8,14 @@ use serde::{Deserialize, Serialize};
 /// duplicate the same `web_sys::window` boilerplate and keeps breakpoints
 /// consistent across frameworks.
 pub fn viewport_width() -> u32 {
-    #[cfg(any(
-        feature = "yew",
-        feature = "leptos",
-        feature = "dioxus",
-        feature = "sycamore",
+    #[cfg(all(
+        any(
+            feature = "yew",
+            feature = "leptos",
+            feature = "dioxus",
+            feature = "sycamore",
+        ),
+        target_arch = "wasm32",
     ))]
     {
         web_sys::window()
@@ -21,11 +24,14 @@ pub fn viewport_width() -> u32 {
             .unwrap_or(0.0) as u32
     }
 
-    #[cfg(not(any(
-        feature = "yew",
-        feature = "leptos",
-        feature = "dioxus",
-        feature = "sycamore",
+    #[cfg(not(all(
+        any(
+            feature = "yew",
+            feature = "leptos",
+            feature = "dioxus",
+            feature = "sycamore",
+        ),
+        target_arch = "wasm32",
     )))]
     {
         0

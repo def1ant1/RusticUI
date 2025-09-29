@@ -58,6 +58,8 @@ members = [
     "examples/joy-leptos",
     "examples/joy-dioxus",
     "examples/joy-sycamore",
+    "examples/layout-grid-yew",
+    "examples/layout-box-leptos",
 ]
 
 # Use Cargo's second feature resolver so optional dependencies don't
