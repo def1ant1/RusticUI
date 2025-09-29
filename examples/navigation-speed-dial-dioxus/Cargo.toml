@@ -1,0 +1,40 @@
+[package]
+name = "navigation_speed_dial_dioxus"
+version = "0.1.0"
+edition = "2021"
+description = "Dioxus speed dial showcase with RusticUI telemetry"
+publish = false
+license.workspace = true
+
+[lib]
+name = "navigation_speed_dial_dioxus"
+path = "src/lib.rs"
+
+[[bin]]
+name = "navigation-speed-dial-dioxus"
+path = "src/main.rs"
+
+[dependencies]
+dioxus = { workspace = true, features = ["macro", "hooks", "html"] }
+dioxus-web = { workspace = true, features = ["file_engine"] }
+dioxus-ssr = { workspace = true, optional = true }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-material = { path = "../../crates/rustic-ui-material" }
+serde.workspace = true
+serde_json.workspace = true
+time = { workspace = true, features = ["serde"] }
+htmlescape = "0.3"
+
+[features]
+default = ["csr"]
+csr = []
+ssr = ["dioxus-ssr"]
+
+[dev-dependencies]
+insta.workspace = true
+
+[[test]]
+name = "ssr"
+path = "tests/ssr.rs"
+required-features = ["ssr"]
+

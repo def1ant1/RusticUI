@@ -3,6 +3,27 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-06-20 – Navigation example automation
+
+### Highlights
+
+- Shipped enterprise-ready bottom navigation (Yew), pagination (Leptos), and
+  speed dial (Dioxus) examples with exhaustive inline documentation, telemetry
+  hooks, and SSR harnesses to exercise the new navigation primitives end-to-end.【F:examples/navigation-bottom-navigation-yew/README.md†L1-L47】【F:examples/navigation-pagination-leptos/README.md†L1-L41】【F:examples/navigation-speed-dial-dioxus/README.md†L1-L43】
+- Wired the trio into `cargo xtask examples --group navigation --release` so CI
+  and local runs compile native + `wasm32` targets together without bespoke
+  scripts.【F:crates/xtask/src/main.rs†L439-L516】
+- Added snapshot-based SSR tests for each demo to guard telemetry and markup
+  regressions in future releases.【F:examples/navigation-bottom-navigation-yew/tests/ssr.rs†L1-L7】【F:examples/navigation-pagination-leptos/tests/ssr.rs†L1-L7】【F:examples/navigation-speed-dial-dioxus/tests/ssr.rs†L1-L7】
+
+### Verification
+
+- `cargo fmt`
+- `INSTA_UPDATE=always cargo test --manifest-path examples/navigation-bottom-navigation-yew/Cargo.toml --all-features`
+- `INSTA_UPDATE=always cargo test --manifest-path examples/navigation-pagination-leptos/Cargo.toml --all-features`
+- `INSTA_UPDATE=always cargo test --manifest-path examples/navigation-speed-dial-dioxus/Cargo.toml --all-features`
+- `cargo xtask examples --group navigation --release`
+
 ## 2025-06-10 – Navigation primitives and analytics alignment
 
 ### Highlights
