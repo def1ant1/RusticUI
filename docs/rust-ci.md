@@ -45,6 +45,14 @@ cargo xtask test --examples
 
 The command enumerates every `examples/*/Cargo.toml`, runs `cargo check --target wasm32-unknown-unknown`, and executes `cargo test --target wasm32-unknown-unknown --no-run` for deterministic build coverage. Each example logs its own status block and the task exits non-zero if any example fails to compile.
 
+Compile the layout blueprints for both the native host and WebAssembly targets with:
+
+```bash
+cargo xtask examples --group layout --release
+```
+
+The curated command wraps `cargo build` for `examples/layout-box-leptos` and `examples/layout-grid-yew`, applies a consistent profile to native and wasm invocations, and fails fast if a manifest ever drifts or the cross-compile breaks.【F:crates/xtask/src/main.rs†L439-L576】
+
 ### Joy snapshot parity suites
 Joy UI ships SSR renderers for every supported framework. The parity suites compare each adapter to the canonical React output so teams can guarantee hydration-safe markup whenever Joy tokens evolve. Target a single framework or run the whole matrix:
 

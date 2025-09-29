@@ -42,5 +42,7 @@ jobs:
         run: cargo xtask clippy
       - name: Run workspace tests
         run: cargo xtask test --examples
+      - name: Compile layout demos
+        run: cargo xtask examples --group layout --release
       - name: Build Rust-first docs
         run: cargo xtask build-docs

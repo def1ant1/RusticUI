@@ -121,6 +121,26 @@ fn icons_bundle_help_mentions_schema_bridge() -> Result<()> {
 }
 
 #[test]
+fn examples_help_highlights_layout_group() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("examples")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("curated Rust example collections"))
+        .stdout(predicate::str::contains("layout-box-leptos"));
+
+    Ok(())
+}
+
+#[test]
 fn accessibility_audit_help_mentions_config_manifest() -> Result<()> {
     let workspace = workspace_root();
     let mut cmd = Command::new("cargo");

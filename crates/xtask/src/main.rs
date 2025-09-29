@@ -16,7 +16,7 @@
 //! examples, and documentation sites each task touches.
 
 use anyhow::{anyhow, Context, Result};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use rustic_ui_design_tokens::ArtifactBundleBuilder;
 use rustic_ui_system::{
     theme::{ColorScheme, JoyTheme, Theme},
@@ -59,7 +59,7 @@ enum Commands {
     /// Execute the default test suites for all crates.
     ///
     /// Pass `--examples` to also compile every Rust example (`examples/mui-*`,
-    /// `examples/select-menu-*`, etc.) for `wasm32-unknown-unknown`. This keeps
+    /// `examples/joy-yew`, `examples/joy-leptos`, `examples/select-menu-*`, etc.) for `wasm32-unknown-unknown`. This keeps
     /// the example gallery aligned with the published crates without forcing
     /// every contributor to pay the additional compile time unless they
     /// explicitly opt in.
@@ -68,6 +68,12 @@ enum Commands {
         #[arg(long)]
         examples: bool,
     },
+    /// Compile curated Rust example collections for native and WebAssembly targets.
+    #[command(
+        about = "Compile curated Rust example collections for native and WebAssembly targets.",
+        long_about = "Compile curated Rust example collections for native and WebAssembly targets without relying on ad-hoc shell scripts. Each group is centrally defined so new demos can be enrolled in CI by appending a manifest entry instead of wiring fresh workflows.\n\nLayout demos currently validated: examples/layout-box-leptos, examples/layout-grid-yew. Update the `layout_examples` helper when shipping new layouts so CI picks them up automatically."
+    )]
+    Examples(ExamplesArgs),
     /// Run WebAssembly tests via `wasm-pack` for selected crates.
     ///
     /// This exercises the `rustic-ui-material` and `rustic-ui-joy` crates across
@@ -163,6 +169,7 @@ fn main() -> Result<()> {
         Commands::Clippy => clippy(),
         Commands::Deny => deny(),
         Commands::Test { examples } => test(examples),
+        Commands::Examples(args) => examples(args),
         Commands::WasmTest => wasm_test(),
         Commands::Doc => doc(),
         Commands::RefreshIcons => refresh_icons(),
@@ -299,39 +306,27 @@ fn test(include_examples: bool) -> Result<()> {
             example.name
         );
 
-        let mut check = Command::new("cargo");
-        check
-            .arg("check")
-            .arg("--target")
-            .arg("wasm32-unknown-unknown")
-            .arg("--manifest-path")
-            .arg(&example.manifest);
-        run(check).with_context(|| {
-            format!(
-                "wasm cargo check failed for example `{}` at {}",
-                example.name,
-                example.manifest.display()
-            )
-        })?;
+        run_example_command(
+            &example,
+            "check",
+            Some("wasm32-unknown-unknown"),
+            None,
+            &[],
+            "wasm cargo check",
+        )?;
         println!(
             "[xtask][examples] `{}` passed cargo check for wasm32-unknown-unknown",
             example.name
         );
 
-        let mut test = Command::new("cargo");
-        test.arg("test")
-            .arg("--target")
-            .arg("wasm32-unknown-unknown")
-            .arg("--no-run")
-            .arg("--manifest-path")
-            .arg(&example.manifest);
-        run(test).with_context(|| {
-            format!(
-                "wasm cargo test --no-run failed for example `{}` at {}",
-                example.name,
-                example.manifest.display()
-            )
-        })?;
+        run_example_command(
+            &example,
+            "test",
+            Some("wasm32-unknown-unknown"),
+            None,
+            &["--no-run"],
+            "wasm cargo test --no-run",
+        )?;
         println!(
             "[xtask][examples] `{}` passed cargo test --no-run for wasm32-unknown-unknown",
             example.name
@@ -353,6 +348,52 @@ fn test(include_examples: bool) -> Result<()> {
 struct ExampleCrate {
     name: String,
     manifest: PathBuf,
+}
+
+/// CLI options accepted by the `examples` subcommand.
+#[derive(Args, Debug, Clone)]
+struct ExamplesArgs {
+    /// Curated collection of example manifests to compile.
+    #[arg(value_enum, default_value_t = ExampleGroup::Layout)]
+    group: ExampleGroup,
+    /// Build artifacts in release mode for both native and wasm targets.
+    #[arg(long, conflicts_with = "profile")]
+    release: bool,
+    /// Use a named Cargo profile instead of `--release`.
+    #[arg(long)]
+    profile: Option<String>,
+}
+
+/// Supported example collections.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum ExampleGroup {
+    /// Layout demos that validate multi-surface grid and box flows.
+    Layout,
+}
+
+impl ExampleGroup {
+    fn as_str(&self) -> &'static str {
+        match self {
+            ExampleGroup::Layout => "layout",
+        }
+    }
+}
+
+/// Build configuration flags shared across native and wasm invocations.
+#[derive(Debug, Clone, Default)]
+struct BuildOptions {
+    release: bool,
+    profile: Option<String>,
+}
+
+impl BuildOptions {
+    fn apply_to(&self, cmd: &mut Command) {
+        if let Some(profile) = &self.profile {
+            cmd.arg("--profile").arg(profile);
+        } else if self.release {
+            cmd.arg("--release");
+        }
+    }
 }
 
 /// Enumerate Rust example crates that opt into the automation pipeline.
@@ -393,6 +434,145 @@ fn discover_example_crates(examples_root: &Path) -> Result<Vec<ExampleCrate>> {
 
     crates.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(crates)
+}
+
+fn examples(args: ExamplesArgs) -> Result<()> {
+    let workspace = workspace_root();
+    let build_opts = BuildOptions {
+        release: args.release,
+        profile: args.profile.clone(),
+    };
+
+    println!(
+        "[xtask][examples] compiling `{}` group with {} profile",
+        args.group.as_str(),
+        if let Some(profile) = &build_opts.profile {
+            format!("profile `{}`", profile)
+        } else if build_opts.release {
+            "--release".to_string()
+        } else {
+            "default dev".to_string()
+        }
+    );
+
+    let crates = match args.group {
+        ExampleGroup::Layout => layout_examples(&workspace)?,
+    };
+
+    if crates.is_empty() {
+        println!(
+            "[xtask][examples] no example manifests registered for the `{}` group",
+            args.group.as_str()
+        );
+        return Ok(());
+    }
+
+    for example in crates {
+        println!(
+            "[xtask][examples] building `{}` for native host target",
+            example.name
+        );
+        run_example_command(
+            &example,
+            "build",
+            None,
+            Some(&build_opts),
+            &[],
+            "native cargo build",
+        )?;
+        println!(
+            "[xtask][examples] `{}` compiled successfully for the native host",
+            example.name
+        );
+
+        println!(
+            "[xtask][examples] building `{}` for wasm32-unknown-unknown",
+            example.name
+        );
+        run_example_command(
+            &example,
+            "build",
+            Some("wasm32-unknown-unknown"),
+            Some(&build_opts),
+            &[],
+            "wasm cargo build",
+        )?;
+        println!(
+            "[xtask][examples] `{}` compiled successfully for wasm32-unknown-unknown",
+            example.name
+        );
+    }
+
+    println!(
+        "[xtask][examples] completed `{}` compilation set",
+        args.group.as_str()
+    );
+
+    Ok(())
+}
+
+fn layout_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
+    // Add new layout demos here to keep CI coverage centralized. Keeping the
+    // manifests in a single list ensures that nightly pipelines only require a
+    // pull request touching this function, rather than bespoke workflow YAML.
+    const LAYOUT_MANIFESTS: &[(&str, &str)] = &[
+        ("layout-box-leptos", "examples/layout-box-leptos/Cargo.toml"),
+        ("layout-grid-yew", "examples/layout-grid-yew/Cargo.toml"),
+    ];
+
+    let mut crates = Vec::with_capacity(LAYOUT_MANIFESTS.len());
+    for (name, manifest) in LAYOUT_MANIFESTS {
+        let manifest_path = workspace.join(manifest);
+        if !manifest_path.exists() {
+            return Err(anyhow!(
+                "layout example `{}` manifest missing at {}",
+                name,
+                manifest_path.display()
+            ));
+        }
+
+        crates.push(ExampleCrate {
+            name: (*name).to_string(),
+            manifest: manifest_path,
+        });
+    }
+
+    Ok(crates)
+}
+
+fn run_example_command(
+    example: &ExampleCrate,
+    cargo_subcommand: &str,
+    target: Option<&str>,
+    build_opts: Option<&BuildOptions>,
+    extra_args: &[&str],
+    context: &str,
+) -> Result<()> {
+    let mut cmd = Command::new("cargo");
+    cmd.arg(cargo_subcommand);
+
+    if let Some(target) = target {
+        cmd.arg("--target").arg(target);
+    }
+
+    if let Some(opts) = build_opts {
+        opts.apply_to(&mut cmd);
+    }
+
+    for arg in extra_args {
+        cmd.arg(arg);
+    }
+
+    cmd.arg("--manifest-path").arg(&example.manifest);
+
+    run(cmd).with_context(|| {
+        format!(
+            "{} failed for example `{}` at {}",
+            context,
+            example.name,
+            example.manifest.display(),
+        )
+    })
 }
 
 fn wasm_test() -> Result<()> {
