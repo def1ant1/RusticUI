@@ -60,6 +60,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       # Compile the workspace and wasm examples before collecting coverage
       - run: cargo xtask test --examples
+      # Compile layout demos for native and wasm targets to keep gallery builds green
+      - run: cargo xtask examples --group layout --release
       # Execute tests and generate coverage in one step
       - run: cargo xtask coverage
       # Publish coverage statistics to external service

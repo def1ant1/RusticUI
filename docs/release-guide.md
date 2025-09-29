@@ -11,7 +11,9 @@ repeatable and low-friction.
 
    ```bash
    cargo xtask test --examples
+   cargo xtask examples --group layout --release
    ```
+   This ensures the curated layout demos build for both native and WebAssembly targets before publishing.【F:crates/xtask/src/main.rs†L439-L576】
 
 3. Validate the package manifests via dry run:
 

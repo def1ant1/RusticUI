@@ -216,6 +216,8 @@ jobs:
           cargo xtask clippy
       - name: Test workspace
         run: cargo xtask test --examples
+      - name: Layout demos
+        run: cargo xtask examples --group layout --release
       - name: Component metadata
         run: cargo xtask update-components
       - name: Bundle icons

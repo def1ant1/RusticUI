@@ -17,9 +17,10 @@ shipping changes.
    to materialise a ready-to-run workspace with SSR snapshots, hydration stubs,
    and analytics markers baked in.【F:examples/navigation-tabs-yew/README.md†L20-L33】【F:examples/feedback-tooltips/README.md†L9-L22】
 3. **Wire automation into CI.** Validate formatting and compile the workspace via
-   `cargo xtask fmt`, `cargo xtask clippy`, and
-   `cargo xtask test --examples` so the new blueprint participates in the shared
-   Wasm targets and parity checks.【F:crates/xtask/src/main.rs†L49-L70】
+   `cargo xtask fmt`, `cargo xtask clippy`, `cargo xtask test --examples`, and
+   `cargo xtask examples --group layout --release` so the new blueprint
+   participates in the shared Wasm targets, native layout builds, and parity
+   checks.【F:crates/xtask/src/main.rs†L59-L70】【F:crates/xtask/src/main.rs†L439-L576】
 4. **Document the flow.** Extend this gallery and the example README with any
    bespoke analytics requirements or parity notes before running
    `cargo xtask build-docs` to refresh the docs site for review.【F:crates/xtask/src/main.rs†L118-L119】
