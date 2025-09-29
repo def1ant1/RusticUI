@@ -162,7 +162,7 @@ fn root_attributes(
     ));
     attrs.push((
         "data-component".into(),
-        crate::style_helpers::automation_id("menu", None, crate::style_helpers::EMPTY_SEGMENTS),
+        crate::style_helpers::component_marker("menu"),
     ));
     let (open_key, open_value) = surface_meta.data_open();
     attrs.push((open_key.into(), open_value.into()));

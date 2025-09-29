@@ -62,7 +62,7 @@ fn render_html(props: &RadioGroupProps, state: &RadioGroupState) -> String {
     selection_control::render_radio_group(
         themed_radio_group_style(),
         group_attrs,
-        || themed_radio_option_style(),
+        themed_radio_option_style,
         &options,
     )
 }

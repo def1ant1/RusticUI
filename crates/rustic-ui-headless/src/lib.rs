@@ -24,6 +24,8 @@
 pub mod accordion;
 pub mod aria;
 pub mod autocomplete;
+pub mod avatar;
+pub mod badge;
 pub mod r#box;
 pub mod button;
 pub mod checkbox;
@@ -39,6 +41,7 @@ pub mod interaction;
 pub mod layout;
 pub mod list;
 pub mod menu;
+pub mod paper;
 pub mod popover;
 pub mod radio;
 pub mod select;
@@ -54,6 +57,7 @@ pub mod text_field;
 pub mod timing;
 pub mod toggle_button_group;
 pub mod tooltip;
+pub mod typography;
 
 mod selection;
 mod toggle;

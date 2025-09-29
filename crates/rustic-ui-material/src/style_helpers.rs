@@ -18,6 +18,17 @@ use rustic_ui_utils::{attributes_to_html, collect_attributes};
 pub(crate) const COMPONENT_PREFIX: &str = "rustic";
 pub(crate) const EMPTY_SEGMENTS: [&str; 0] = [];
 
+/// Marker string used by `data-component` attributes across Material renderers.
+///
+/// Historical automation suites expect the underscore separated format (for
+/// example `rustic_ui_chip`).  Keeping the helper centralised ensures new
+/// components follow the same convention while the newer automation ids may
+/// adopt hyphenated formats.
+#[must_use]
+pub(crate) fn component_marker(component: &str) -> String {
+    format!("rustic_ui_{}", sanitise(component).replace('-', "_"))
+}
+
 /// Consumes a [`Style`] and returns the scoped class name produced by the
 /// styled engine.
 ///
@@ -195,5 +206,11 @@ mod tests {
     fn automation_data_attr_excludes_user_segment() {
         let attr = automation_data_attr("tooltip", ["surface"]);
         assert_eq!(attr, "data-rustic-tooltip-surface");
+    }
+
+    #[test]
+    fn component_marker_preserves_legacy_format() {
+        assert_eq!(component_marker("chip"), "rustic_ui_chip");
+        assert_eq!(component_marker("table-row"), "rustic_ui_table_row");
     }
 }

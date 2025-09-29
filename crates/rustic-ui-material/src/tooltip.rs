@@ -195,41 +195,50 @@ fn root_attributes(
     trigger_id: &str,
     surface_id: &str,
 ) -> Vec<(String, String)> {
-    let mut attrs = Vec::new();
-    attrs.push(("id".into(), base_id.to_string()));
-    attrs.push((
-        crate::style_helpers::automation_data_attr("tooltip", ["id"]),
-        base_id.to_string(),
-    ));
-    attrs.push((
-        crate::style_helpers::automation_data_attr("tooltip", ["root"]),
-        crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), ["root"]),
-    ));
-    attrs.push((
-        "data-component".into(),
-        crate::style_helpers::automation_id("tooltip", None, crate::style_helpers::EMPTY_SEGMENTS),
-    ));
-    attrs.push(("data-visible".into(), state.visible().to_string()));
-    attrs.push((
-        "data-interactive".into(),
-        state.config().interactive.to_string(),
-    ));
-    attrs.push((
-        "data-dismissible".into(),
-        state.config().dismissible.to_string(),
-    ));
-    attrs.push((
-        "data-portal-layer".into(),
-        portal.layer().as_str().to_string(),
-    ));
-    attrs.push(("data-trigger-id".into(), trigger_id.to_string()));
-    attrs.push(("data-surface-id".into(), surface_id.to_string()));
-    attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
-    attrs.push(("data-portal-root".into(), portal.container_id()));
-    attrs.push((
-        crate::style_helpers::automation_data_attr("tooltip", ["portal"]),
-        crate::style_helpers::automation_id("tooltip", props.automation_id.as_deref(), ["popover"]),
-    ));
+    let attrs = vec![
+        ("id".into(), base_id.to_string()),
+        (
+            crate::style_helpers::automation_data_attr("tooltip", ["id"]),
+            base_id.to_string(),
+        ),
+        (
+            crate::style_helpers::automation_data_attr("tooltip", ["root"]),
+            crate::style_helpers::automation_id(
+                "tooltip",
+                props.automation_id.as_deref(),
+                ["root"],
+            ),
+        ),
+        (
+            "data-component".into(),
+            crate::style_helpers::component_marker("tooltip"),
+        ),
+        ("data-visible".into(), state.visible().to_string()),
+        (
+            "data-interactive".into(),
+            state.config().interactive.to_string(),
+        ),
+        (
+            "data-dismissible".into(),
+            state.config().dismissible.to_string(),
+        ),
+        (
+            "data-portal-layer".into(),
+            portal.layer().as_str().to_string(),
+        ),
+        ("data-trigger-id".into(), trigger_id.to_string()),
+        ("data-surface-id".into(), surface_id.to_string()),
+        ("data-portal-anchor".into(), portal.anchor_id()),
+        ("data-portal-root".into(), portal.container_id()),
+        (
+            crate::style_helpers::automation_data_attr("tooltip", ["portal"]),
+            crate::style_helpers::automation_id(
+                "tooltip",
+                props.automation_id.as_deref(),
+                ["popover"],
+            ),
+        ),
+    ];
     attrs
 }
 
@@ -264,7 +273,7 @@ fn trigger_attributes(
     attrs.push(("type".into(), "button".into()));
     attrs.push((
         "data-component".into(),
-        crate::style_helpers::automation_id("tooltip", None, ["trigger"]),
+        crate::style_helpers::component_marker("tooltip-trigger"),
     ));
     attrs.push(("data-visible".into(), state.visible().to_string()));
     attrs.push(("data-portal-anchor".into(), portal.anchor_id()));
@@ -300,7 +309,7 @@ fn surface_attributes(
     attrs.push((hidden_key.into(), hidden_value.into()));
     attrs.push((
         "data-component".into(),
-        crate::style_helpers::automation_id("tooltip", None, ["surface"]),
+        crate::style_helpers::component_marker("tooltip-surface"),
     ));
     attrs.push(("data-visible".into(), state.visible().to_string()));
     attrs.push((
