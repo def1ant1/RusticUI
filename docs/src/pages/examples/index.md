@@ -133,6 +133,14 @@ stepper, snackbar, and analytics behaviour across frameworks.【F:examples/joy-y
 - **SSR snapshot:** `cargo run --manifest-path examples/joy-*/Cargo.toml --features ssr`
   prints deterministic lifecycle summaries for parity verification.【F:examples/joy-yew/README.md†L30-L38】
 
+## Material workflows (`render_stepper`)
+
+`render_stepper` in `rustic_ui_material` now exposes the same automation-rich
+metadata used by the Joy examples, allowing Material experiences to wire Playwright
+and Cypress suites directly against shared selectors.  Run
+`cargo test -p rustic-ui-material stepper` to exercise the renderer and adapter
+parity checks before shipping workflow updates.【F:crates/rustic-ui-material/src/stepper.rs†L1-L318】
+
 ## Shared dialog state (`examples/shared-dialog-state-*`)
 
 Overlay demos rely on the `shared-dialog-state-core` crate to synchronise dialogs,
