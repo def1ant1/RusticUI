@@ -27,9 +27,12 @@ archived Material UI change history now lives in [`docs/archives/material-ui-cha
 ### Verification
 
 - `cargo fmt`
-- `cargo clippy --workspace --all-features`
+- `cargo clippy --workspace --all-targets -D warnings --all-features`
+- `cargo test --workspace --all-features`
 - `INSTA_UPDATE=always cargo test -p rustic-ui-headless --test layout_primitives`
 - `INSTA_UPDATE=always cargo test -p rustic-ui-material --test layout_renderers`
+- `cargo xtask examples --group layout --release`
+- `cargo xtask wasm-test`
 - `cargo xtask build-docs`
 
 ## 2025-05-06 – Supply-chain automation and archive governance
