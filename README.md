@@ -83,7 +83,7 @@ files remain as read-only references for parity investigations.
 ## Responsive layout primitives
 
 Enterprise adopters migrating from the legacy `mui_*` layout helpers can now rely on the Rust-first
-`Box`, `Container`, `Grid`, `Stack`, `Hidden`, and `ImageList` state machines shipped in
+`Box`, `Container`, `Grid`, `Stack`, `Hidden`, `Divider`, and `ImageList` state machines shipped in
 `rustic-ui-headless`. Each primitive exposes:
 
 - **Responsive breakpoint APIs** – Every state machine accepts a shared `BreakpointConfig` and `ResponsiveValue`
@@ -97,6 +97,8 @@ Enterprise adopters migrating from the legacy `mui_*` layout helpers can now rel
   QA pipelines. When migrating from custom wrappers, prefer the fluent builders exposed on each state machine and
   pipe the resulting tuples into your adapter’s attribute map. Hidden content can opt into `data-inert` markers so
   focus management remains deterministic even when sections collapse at specific breakpoints.【F:crates/rustic-ui-headless/src/hidden.rs†L1-L120】
+  Divider’s responsive orientation tokens automatically flip the computed `role` between block separators and
+  presentation-only dividers, so assistive technology can respect layout changes without extra glue code.
 
 Refer to the new migration notes in the Rust book for a step-by-step walkthrough that maps legacy layout props to
 the responsive primitives, demonstrates the new automation helpers (`EMPTY_SEGMENTS` and friends), and codifies

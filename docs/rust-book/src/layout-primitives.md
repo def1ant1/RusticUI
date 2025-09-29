@@ -7,8 +7,8 @@ adapter.
 ## Mapping legacy props to state machines
 
 1. **Import the headless state** matching your component (`BoxState`,
-   `ContainerState`, `GridState`, `StackState`, `HiddenState`, or
-   `ImageListState`). Each state accepts a shared
+   `ContainerState`, `GridState`, `StackState`, `HiddenState`,
+   `DividerState`, or `ImageListState`). Each state accepts a shared
    [`BreakpointConfig`](../../crates/rustic-ui-headless/src/layout.rs) and
    [`ResponsiveValue`](../../crates/rustic-ui-headless/src/layout.rs) so you can
    describe breakpoint overrides in a single place.
@@ -28,6 +28,31 @@ adapter.
    framework adapter. The integration tests in
    `crates/rustic-ui-material/tests/layout_renderers.rs` snapshot the generated
    markup to keep SSR and hydration in sync.【F:crates/rustic-ui-material/tests/layout_renderers.rs†L1-L126】
+
+   ```rust
+   use rustic_ui_headless::divider::{
+       DividerOrientation, DividerRole, DividerState, DividerTokens,
+   };
+   use rustic_ui_headless::layout::{Breakpoint, BreakpointConfig, ResponsiveValue};
+   use rustic_ui_material::divider::render_divider;
+
+   let tokens = DividerTokens {
+       orientation: ResponsiveValue::new(DividerOrientation::Horizontal)
+           .with_override(Breakpoint::Md, DividerOrientation::Vertical),
+       thickness: ResponsiveValue::from(String::from("1px")),
+       inset: ResponsiveValue::from(String::from("0px")),
+   };
+
+   let state = DividerState::new(tokens, BreakpointConfig::material())
+       .with_role(DividerRole::Presentation);
+
+   let evaluation = state.evaluate_for(Breakpoint::Md);
+   assert_eq!(evaluation.orientation, DividerOrientation::Vertical);
+   assert_eq!(evaluation.role.as_str(), "presentation");
+
+   let render_output = render_divider(&state);
+   // Feed `render_output` into your adapter's attribute map once implemented.
+   ```
 
 ## Automation and accessibility hooks
 
