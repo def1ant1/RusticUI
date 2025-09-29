@@ -1,0 +1,46 @@
+---
+source: crates/rustic-ui-material/tests/layout_renderers.rs
+assertion_line: 274
+expression: snapshot
+---
+{
+  "css_variables": {
+    "--rustic_ui_hidden_active_breakpoint": "base",
+    "--rustic_ui_hidden_aria_hidden": "false",
+    "--rustic_ui_hidden_aria_hidden-lg": "false",
+    "--rustic_ui_hidden_aria_hidden-md": "true",
+    "--rustic_ui_hidden_aria_hidden-sm": "true",
+    "--rustic_ui_hidden_aria_hidden-xl": "false",
+    "--rustic_ui_hidden_aria_hidden-xxl": "false",
+    "--rustic_ui_hidden_display": "revert-layer",
+    "--rustic_ui_hidden_display-lg": "revert-layer",
+    "--rustic_ui_hidden_display-md": "none",
+    "--rustic_ui_hidden_display-sm": "none",
+    "--rustic_ui_hidden_display-xl": "revert-layer",
+    "--rustic_ui_hidden_display-xxl": "revert-layer",
+    "--rustic_ui_hidden_inert": "true",
+    "--rustic_ui_hidden_inert-lg": "true",
+    "--rustic_ui_hidden_inert-md": "true",
+    "--rustic_ui_hidden_inert-sm": "true",
+    "--rustic_ui_hidden_inert-xl": "true",
+    "--rustic_ui_hidden_inert-xxl": "true",
+    "--rustic_ui_hidden_role": "group",
+    "--rustic_ui_hidden_role-lg": "group",
+    "--rustic_ui_hidden_role-md": "group",
+    "--rustic_ui_hidden_role-sm": "group",
+    "--rustic_ui_hidden_role-xl": "group",
+    "--rustic_ui_hidden_role-xxl": "group",
+    "--rustic_ui_hidden_visibility": "visible",
+    "--rustic_ui_hidden_visibility-lg": "visible",
+    "--rustic_ui_hidden_visibility-md": "hidden",
+    "--rustic_ui_hidden_visibility-sm": "hidden",
+    "--rustic_ui_hidden_visibility-xl": "visible",
+    "--rustic_ui_hidden_visibility-xxl": "visible"
+  },
+  "html": "<div id=\"hidden-region\" class=\"rustic-hidden\" data-inert=\"true\" role=\"group\" data-hidden=\"false\" style=\"--rustic_ui_hidden_active_breakpoint: base; --rustic_ui_hidden_aria_hidden: false; --rustic_ui_hidden_aria_hidden-lg: false; --rustic_ui_hidden_aria_hidden-md: true; --rustic_ui_hidden_aria_hidden-sm: true; --rustic_ui_hidden_aria_hidden-xl: false; --rustic_ui_hidden_aria_hidden-xxl: false; --rustic_ui_hidden_display: revert-layer; --rustic_ui_hidden_display-lg: revert-layer; --rustic_ui_hidden_display-md: none; --rustic_ui_hidden_display-sm: none; --rustic_ui_hidden_display-xl: revert-layer; --rustic_ui_hidden_display-xxl: revert-layer; --rustic_ui_hidden_inert: true; --rustic_ui_hidden_inert-lg: true; --rustic_ui_hidden_inert-md: true; --rustic_ui_hidden_inert-sm: true; --rustic_ui_hidden_inert-xl: true; --rustic_ui_hidden_inert-xxl: true; --rustic_ui_hidden_role: group; --rustic_ui_hidden_role-lg: group; --rustic_ui_hidden_role-md: group; --rustic_ui_hidden_role-sm: group; --rustic_ui_hidden_role-xl: group; --rustic_ui_hidden_role-xxl: group; --rustic_ui_hidden_visibility: visible; --rustic_ui_hidden_visibility-lg: visible; --rustic_ui_hidden_visibility-md: hidden; --rustic_ui_hidden_visibility-sm: hidden; --rustic_ui_hidden_visibility-xl: visible; --rustic_ui_hidden_visibility-xxl: visible;\"></div>",
+  "inline_style": "--rustic_ui_hidden_active_breakpoint: base; --rustic_ui_hidden_aria_hidden: false; --rustic_ui_hidden_aria_hidden-lg: false; --rustic_ui_hidden_aria_hidden-md: true; --rustic_ui_hidden_aria_hidden-sm: true; --rustic_ui_hidden_aria_hidden-xl: false; --rustic_ui_hidden_aria_hidden-xxl: false; --rustic_ui_hidden_display: revert-layer; --rustic_ui_hidden_display-lg: revert-layer; --rustic_ui_hidden_display-md: none; --rustic_ui_hidden_display-sm: none; --rustic_ui_hidden_display-xl: revert-layer; --rustic_ui_hidden_display-xxl: revert-layer; --rustic_ui_hidden_inert: true; --rustic_ui_hidden_inert-lg: true; --rustic_ui_hidden_inert-md: true; --rustic_ui_hidden_inert-sm: true; --rustic_ui_hidden_inert-xl: true; --rustic_ui_hidden_inert-xxl: true; --rustic_ui_hidden_role: group; --rustic_ui_hidden_role-lg: group; --rustic_ui_hidden_role-md: group; --rustic_ui_hidden_role-sm: group; --rustic_ui_hidden_role-xl: group; --rustic_ui_hidden_role-xxl: group; --rustic_ui_hidden_visibility: visible; --rustic_ui_hidden_visibility-lg: visible; --rustic_ui_hidden_visibility-md: hidden; --rustic_ui_hidden_visibility-sm: hidden; --rustic_ui_hidden_visibility-xl: visible; --rustic_ui_hidden_visibility-xxl: visible;",
+  "visibility": {
+    "viewport_1280": "false",
+    "viewport_360": "false"
+  }
+}
