@@ -1,0 +1,11 @@
+[package]
+name = "feedback-progress-leptos"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+rustic-ui-material = { path = "../../crates/rustic-ui-material", features = ["progress", "leptos"] }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", features = ["progress"] }
+leptos.workspace = true
+wasm-bindgen.workspace = true

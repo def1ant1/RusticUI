@@ -23,5 +23,8 @@ insta.workspace = true
 serde_json.workspace = true
 
 [features]
-default = []
+default = ["forms", "feedback", "progress"]
 compat-mui = []
+forms = []
+feedback = []
+progress = []

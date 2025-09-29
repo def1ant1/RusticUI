@@ -3,6 +3,27 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-05-25 – Feedback primitives automation harnesses
+
+### Highlights
+
+- Delivered headless state machines for enterprise feedback and skeleton
+  primitives (`form_control`, `input_adornment`, `alert`, `backdrop`,
+  `circular_progress`, `linear_progress`, `skeleton`) with controlled and
+  uncontrolled modes plus automation identifiers for integration harnesses.
+- Implemented Material renderers for the new primitives alongside the long
+  awaited slider renderer, consolidating shared HTML routines in
+  `render_helpers.rs` and documenting ARIA expectations inline.
+- Added Yew and Leptos automation examples that compile on both host and wasm
+  targets so CI can smoke test SSR output without manual QA.
+
+### Verification
+
+- `cargo fmt`
+- `cargo clippy --workspace --all-targets -D warnings --all-features`
+- `cargo test --workspace --all-features`
+- `cargo test --workspace --all-features --target wasm32-unknown-unknown`
+
 ## 2025-05-20 – Responsive layout regression harness
 
 ### Highlights

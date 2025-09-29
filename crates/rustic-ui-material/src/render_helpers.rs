@@ -211,6 +211,43 @@ where
     format!("<div {attrs}></div>", attrs = attr_string)
 }
 
+/// Render a progress container with nested indicator markup.
+///
+/// Progress components (linear and circular) share the pattern of a wrapper
+/// element that applies sizing/theming followed by child elements that animate
+/// according to the headless state.  Centralising the wrapper rendering keeps
+/// SSR snapshots identical across adapters.
+#[must_use]
+pub(crate) fn render_progress_shell_html<I, K, V>(
+    style: Style,
+    attrs: I,
+    indicator_markup: &str,
+) -> String
+where
+    I: IntoIterator<Item = (K, V)>,
+    K: Into<String>,
+    V: Into<String>,
+{
+    render_element_html("div", style, attrs, indicator_markup)
+}
+
+/// Render an inline block element used by skeleton placeholders and progress
+/// indicators.
+#[must_use]
+pub(crate) fn render_inline_block_html<I, K, V>(
+    tag: &str,
+    style: Style,
+    attrs: I,
+    children: &str,
+) -> String
+where
+    I: IntoIterator<Item = (K, V)>,
+    K: Into<String>,
+    V: Into<String>,
+{
+    render_element_html(tag, style, attrs, children)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

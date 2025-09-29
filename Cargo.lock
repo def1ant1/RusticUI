@@ -1022,6 +1022,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "feedback-progress-leptos"
+version = "0.1.0"
+dependencies = [
+ "leptos",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "feedback-tooltips"
 version = "0.1.0"
 dependencies = [
@@ -1908,6 +1918,18 @@ checksum = "4b0f83760fb341a774ed326568e19f5a863af4a952def8c39f9ab92fd95b88e5"
 dependencies = [
  "equivalent",
  "hashbrown 0.16.0",
+]
+
+[[package]]
+name = "inputs-slider-yew"
+version = "0.1.0"
+dependencies = [
+ "gloo-utils 0.2.0",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "wasm-bindgen",
+ "web-sys",
+ "yew",
 ]
 
 [[package]]

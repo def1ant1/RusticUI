@@ -23,21 +23,33 @@
 //! ```
 
 pub mod accordion;
+#[cfg(feature = "feedback")]
+pub mod alert;
 pub mod app_bar;
 pub mod avatar;
+#[cfg(feature = "feedback")]
+pub mod backdrop;
 pub mod badge;
 pub mod r#box;
 pub mod button;
 pub mod card;
 pub mod checkbox;
 pub mod chip;
+#[cfg(feature = "progress")]
+pub mod circular_progress;
 pub mod container;
 pub mod dialog;
 pub mod divider;
 pub mod drawer;
+#[cfg(feature = "forms")]
+pub mod form_control;
 pub mod grid;
 pub mod hidden;
 pub mod image_list;
+#[cfg(feature = "forms")]
+pub mod input_adornment;
+#[cfg(feature = "progress")]
+pub mod linear_progress;
 pub mod list;
 pub mod macros;
 pub mod menu;
@@ -46,6 +58,10 @@ pub mod radio;
 mod render_helpers;
 pub mod select;
 mod selection_control;
+#[cfg(feature = "progress")]
+pub mod skeleton;
+#[cfg(feature = "forms")]
+pub mod slider;
 pub mod snackbar;
 pub mod stack;
 mod style_helpers;
@@ -64,14 +80,36 @@ pub use crate::r#box::{render_box, BoxAdapterProps, BoxRenderOutput};
 pub use accordion::{
     render_accordion, AccordionAdapterProps, AccordionItemDescriptor, AccordionRenderOutput,
 };
+#[cfg(feature = "feedback")]
+pub use alert::{render_alert, AlertAdapterProps, AlertRenderOutput};
 pub use avatar::{render_avatar, AvatarRenderOutput};
+#[cfg(feature = "feedback")]
+pub use backdrop::{render_backdrop, BackdropAdapterProps, BackdropRenderOutput};
 pub use badge::{render_badge, BadgeRenderOutput};
+#[cfg(feature = "progress")]
+pub use circular_progress::{
+    render_circular_progress, CircularProgressAdapterProps, CircularProgressRenderOutput,
+};
 pub use container::{render_container, ContainerAdapterProps, ContainerRenderOutput};
 pub use divider::{render_divider, DividerAdapterProps, DividerRenderOutput};
+#[cfg(feature = "forms")]
+pub use form_control::{render_form_control, FormControlAdapterProps, FormControlRenderOutput};
 pub use grid::{render_grid, GridAdapterProps, GridRenderOutput};
 pub use hidden::{render_hidden, HiddenAdapterProps, HiddenRenderOutput};
 pub use image_list::{render_image_list, ImageListAdapterProps, ImageListRenderOutput};
+#[cfg(feature = "forms")]
+pub use input_adornment::{
+    render_input_adornment, InputAdornmentAdapterProps, InputAdornmentRenderOutput,
+};
+#[cfg(feature = "progress")]
+pub use linear_progress::{
+    render_linear_progress, LinearProgressAdapterProps, LinearProgressRenderOutput,
+};
 pub use paper::{render_paper, PaperRenderOutput};
+#[cfg(feature = "progress")]
+pub use skeleton::{render_skeleton, SkeletonAdapterProps, SkeletonRenderOutput};
+#[cfg(feature = "forms")]
+pub use slider::{render_slider, SliderAdapterProps, SliderRenderOutput};
 pub use stack::{render_stack, StackAdapterProps, StackRenderOutput};
 pub use typography::{render_typography, TypographyRenderOutput};
 
