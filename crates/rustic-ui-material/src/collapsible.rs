@@ -4,6 +4,7 @@
 //! keep orchestration consistent with [`accordion`](crate::accordion)
 //! while exposing telemetry hooks identical to our dialog/drawer stacks.
 
+use crate::telemetry::{instrument_render, TelemetryContext, TelemetryHooks};
 use rustic_ui_headless::collapsible_region::{
     CollapsibleContentAttributes, CollapsibleRegionState, CollapsibleTriggerAttributes,
 };
@@ -29,6 +30,34 @@ pub struct CollapsibleRegionOptions {
     pub analytics_id: Option<String>,
     /// Optional automation identifier surfaced via `data-automation-id`.
     pub automation_id: Option<String>,
+}
+
+fn merge_trigger_options(
+    options: &CollapsibleTriggerOptions,
+    telemetry: &TelemetryHooks,
+) -> CollapsibleTriggerOptions {
+    let mut merged = options.clone();
+    if merged.analytics_id.is_none() {
+        merged.analytics_id = telemetry.analytics_id.clone();
+    }
+    if merged.automation_id.is_none() {
+        merged.automation_id = telemetry.automation_id.clone();
+    }
+    merged
+}
+
+fn merge_region_options(
+    options: &CollapsibleRegionOptions,
+    telemetry: &TelemetryHooks,
+) -> CollapsibleRegionOptions {
+    let mut merged = options.clone();
+    if merged.analytics_id.is_none() {
+        merged.analytics_id = telemetry.analytics_id.clone();
+    }
+    if merged.automation_id.is_none() {
+        merged.automation_id = telemetry.automation_id.clone();
+    }
+    merged
 }
 
 fn apply_trigger_options<'a>(
@@ -78,6 +107,15 @@ pub fn collapsible_trigger_attributes(
     pairs
 }
 
+fn resolved_trigger_automation(options: &CollapsibleTriggerOptions, fallback: &str) -> String {
+    options
+        .automation_id
+        .as_deref()
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| fallback.to_string())
+}
+
 /// Convert region attributes into automation-friendly key/value pairs.
 #[must_use]
 pub fn collapsible_region_attributes(
@@ -97,6 +135,15 @@ pub fn collapsible_region_attributes(
         .unwrap_or(automation_fallback);
     pairs.push(("data-automation-id".into(), automation.to_string()));
     pairs
+}
+
+fn resolved_region_automation(options: &CollapsibleRegionOptions, fallback: &str) -> String {
+    options
+        .automation_id
+        .as_deref()
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| fallback.to_string())
 }
 
 fn trigger_style() -> Style {
@@ -169,7 +216,7 @@ pub fn render_collapsible_region_html(
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "yew")]
-mod yew_impl {
+pub mod yew {
     use super::*;
     use std::rc::Rc;
     use yew::prelude::*;
@@ -193,6 +240,9 @@ mod yew_impl {
         /// Trigger label children.
         #[prop_or_default]
         pub children: Children,
+        /// Optional telemetry hooks executed around render.
+        #[prop_or_default]
+        pub telemetry: TelemetryHooks,
     }
 
     impl PartialEq for CollapsibleTriggerProps {
@@ -202,31 +252,36 @@ mod yew_impl {
                 && self.automation_fallback == other.automation_fallback
                 && self.class == other.class
                 && self.children == other.children
+                && self.telemetry == other.telemetry
         }
     }
 
     #[function_component(CollapsibleTrigger)]
     pub fn collapsible_trigger(props: &CollapsibleTriggerProps) -> Html {
-        let attrs = props.state.trigger_attributes();
-        let attrs = apply_trigger_options(attrs, &props.options);
-        let pairs = collapsible_trigger_attributes(
-            attrs,
-            &props.options,
-            props.automation_fallback.as_str(),
-        );
-        let themed = crate::style_helpers::themed_class(trigger_style());
-        let class = match &props.class {
-            Some(custom) if !custom.is_empty() => format!("{themed} {custom}"),
-            _ => themed,
-        };
-        let mut node =
-            html! { <button type="button" class={class}>{ for props.children.iter() }</button> };
-        if let Html::VTag(ref mut tag) = node {
-            for (key, value) in pairs {
-                tag.add_attribute(key, value);
+        let options = merge_trigger_options(&props.options, &props.telemetry);
+        let automation = resolved_trigger_automation(&options, props.automation_fallback.as_str());
+        let context =
+            TelemetryContext::new("rustic_ui_material::collapsible::yew::CollapsibleTrigger")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            let attrs = props.state.trigger_attributes();
+            let attrs = apply_trigger_options(attrs, &options);
+            let pairs =
+                collapsible_trigger_attributes(attrs, &options, props.automation_fallback.as_str());
+            let themed = crate::style_helpers::themed_class(trigger_style());
+            let class = match &props.class {
+                Some(custom) if !custom.is_empty() => format!("{themed} {custom}"),
+                _ => themed,
+            };
+            let mut node = html! { <button type="button" class={class}>{ for props.children.iter() }</button> };
+            if let Html::VTag(ref mut tag) = node {
+                for (key, value) in pairs {
+                    tag.add_attribute(key, value);
+                }
             }
-        }
-        node
+            node
+        })
     }
 
     /// Yew region component mirroring the trigger API surface.
@@ -246,6 +301,9 @@ mod yew_impl {
         /// Region contents.
         #[prop_or_default]
         pub children: Children,
+        /// Optional telemetry hooks executed around render.
+        #[prop_or_default]
+        pub telemetry: TelemetryHooks,
     }
 
     impl PartialEq for CollapsibleRegionProps {
@@ -255,35 +313,41 @@ mod yew_impl {
                 && self.automation_fallback == other.automation_fallback
                 && self.class == other.class
                 && self.children == other.children
+                && self.telemetry == other.telemetry
         }
     }
 
     #[function_component(CollapsibleRegion)]
     pub fn collapsible_region(props: &CollapsibleRegionProps) -> Html {
-        let attrs = props.state.region_attributes();
-        let attrs = apply_region_options(attrs, &props.options);
-        let pairs = collapsible_region_attributes(
-            attrs,
-            &props.options,
-            props.automation_fallback.as_str(),
-        );
-        let themed = crate::style_helpers::themed_class(region_style());
-        let class = match &props.class {
-            Some(custom) if !custom.is_empty() => format!("{themed} {custom}"),
-            _ => themed,
-        };
-        let mut node = html! { <div class={class}>{ for props.children.iter() }</div> };
-        if let Html::VTag(ref mut tag) = node {
-            for (key, value) in pairs {
-                tag.add_attribute(key, value);
+        let options = merge_region_options(&props.options, &props.telemetry);
+        let automation = resolved_region_automation(&options, props.automation_fallback.as_str());
+        let context =
+            TelemetryContext::new("rustic_ui_material::collapsible::yew::CollapsibleRegion")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            let attrs = props.state.region_attributes();
+            let attrs = apply_region_options(attrs, &options);
+            let pairs =
+                collapsible_region_attributes(attrs, &options, props.automation_fallback.as_str());
+            let themed = crate::style_helpers::themed_class(region_style());
+            let class = match &props.class {
+                Some(custom) if !custom.is_empty() => format!("{themed} {custom}"),
+                _ => themed,
+            };
+            let mut node = html! { <div class={class}>{ for props.children.iter() }</div> };
+            if let Html::VTag(ref mut tag) = node {
+                for (key, value) in pairs {
+                    tag.add_attribute(key, value);
+                }
             }
-        }
-        node
+            node
+        })
     }
 }
 
 #[cfg(feature = "yew")]
-pub use yew_impl::{
+pub use yew::{
     CollapsibleRegion, CollapsibleRegionProps, CollapsibleTrigger, CollapsibleTriggerProps,
 };
 
@@ -292,7 +356,7 @@ pub use yew_impl::{
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "leptos")]
-mod leptos_impl {
+pub mod leptos {
     use super::*;
     use leptos::prelude::*;
     use std::sync::Arc;
@@ -310,6 +374,8 @@ mod leptos_impl {
         pub class: Option<String>,
         /// Trigger children view factory.
         pub children: Box<dyn Fn() -> View + Send + Sync>,
+        /// Optional telemetry hooks executed around render.
+        pub telemetry: TelemetryHooks,
     }
 
     impl Default for CollapsibleTriggerProps {
@@ -320,6 +386,7 @@ mod leptos_impl {
                 automation_fallback: "rustic-ui::collapsible-trigger".into(),
                 class: None,
                 children: Box::new(|| View::empty()),
+                telemetry: TelemetryHooks::default(),
             }
         }
     }
@@ -330,30 +397,36 @@ mod leptos_impl {
                 && self.options == other.options
                 && self.automation_fallback == other.automation_fallback
                 && self.class == other.class
+                && self.telemetry == other.telemetry
         }
     }
 
     #[component]
     pub fn CollapsibleTrigger(props: CollapsibleTriggerProps) -> impl IntoView {
-        let attrs = props.state.trigger_attributes();
-        let attrs = super::apply_trigger_options(attrs, &props.options);
-        let pairs = super::collapsible_trigger_attributes(
-            attrs,
-            &props.options,
-            &props.automation_fallback,
-        );
-        let themed = crate::style_helpers::themed_class(super::trigger_style());
-        let class = props
-            .class
-            .as_ref()
-            .map(|custom| format!("{themed} {custom}"))
-            .unwrap_or(themed);
-        let mut element = leptos::html::button().attr("type", "button");
-        element = element.class(class);
-        for (key, value) in pairs {
-            element = element.attr(key, value);
-        }
-        element.child((props.children)()).into_view()
+        let options = merge_trigger_options(&props.options, &props.telemetry);
+        let automation = resolved_trigger_automation(&options, &props.automation_fallback);
+        let context =
+            TelemetryContext::new("rustic_ui_material::collapsible::leptos::CollapsibleTrigger")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            let attrs = props.state.trigger_attributes();
+            let attrs = super::apply_trigger_options(attrs, &options);
+            let pairs =
+                super::collapsible_trigger_attributes(attrs, &options, &props.automation_fallback);
+            let themed = crate::style_helpers::themed_class(super::trigger_style());
+            let class = props
+                .class
+                .as_ref()
+                .map(|custom| format!("{themed} {custom}"))
+                .unwrap_or(themed);
+            let mut element = leptos::html::button().attr("type", "button");
+            element = element.class(class);
+            for (key, value) in pairs {
+                element = element.attr(key, value);
+            }
+            element.child((props.children)()).into_view()
+        })
     }
 
     /// Leptos variant of the collapsible region wrapper.
@@ -369,6 +442,8 @@ mod leptos_impl {
         pub class: Option<String>,
         /// Region children view factory.
         pub children: Box<dyn Fn() -> View + Send + Sync>,
+        /// Optional telemetry hooks executed around render.
+        pub telemetry: TelemetryHooks,
     }
 
     impl Default for CollapsibleRegionProps {
@@ -379,6 +454,7 @@ mod leptos_impl {
                 automation_fallback: "rustic-ui::collapsible-region".into(),
                 class: None,
                 children: Box::new(|| View::empty()),
+                telemetry: TelemetryHooks::default(),
             }
         }
     }
@@ -389,31 +465,40 @@ mod leptos_impl {
                 && self.options == other.options
                 && self.automation_fallback == other.automation_fallback
                 && self.class == other.class
+                && self.telemetry == other.telemetry
         }
     }
 
     #[component]
     pub fn CollapsibleRegion(props: CollapsibleRegionProps) -> impl IntoView {
-        let attrs = props.state.region_attributes();
-        let attrs = super::apply_region_options(attrs, &props.options);
-        let pairs =
-            super::collapsible_region_attributes(attrs, &props.options, &props.automation_fallback);
-        let themed = crate::style_helpers::themed_class(super::region_style());
-        let class = props
-            .class
-            .as_ref()
-            .map(|custom| format!("{themed} {custom}"))
-            .unwrap_or(themed);
-        let mut element = leptos::html::div().class(class);
-        for (key, value) in pairs {
-            element = element.attr(key, value);
-        }
-        element.child((props.children)()).into_view()
+        let options = merge_region_options(&props.options, &props.telemetry);
+        let automation = resolved_region_automation(&options, &props.automation_fallback);
+        let context =
+            TelemetryContext::new("rustic_ui_material::collapsible::leptos::CollapsibleRegion")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            let attrs = props.state.region_attributes();
+            let attrs = super::apply_region_options(attrs, &options);
+            let pairs =
+                super::collapsible_region_attributes(attrs, &options, &props.automation_fallback);
+            let themed = crate::style_helpers::themed_class(super::region_style());
+            let class = props
+                .class
+                .as_ref()
+                .map(|custom| format!("{themed} {custom}"))
+                .unwrap_or(themed);
+            let mut element = leptos::html::div().class(class);
+            for (key, value) in pairs {
+                element = element.attr(key, value);
+            }
+            element.child((props.children)()).into_view()
+        })
     }
 }
 
 #[cfg(feature = "leptos")]
-pub use leptos_impl::{
+pub use leptos::{
     CollapsibleRegion, CollapsibleRegionProps, CollapsibleTrigger, CollapsibleTriggerProps,
 };
 
@@ -426,7 +511,7 @@ pub mod dioxus {
     use super::*;
 
     /// Properties consumed by the Dioxus trigger renderer.
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone)]
     pub struct CollapsibleTriggerProps {
         /// Region state machine mirrored from the controller.
         pub state: CollapsibleRegionState,
@@ -436,6 +521,17 @@ pub mod dioxus {
         pub automation_fallback: String,
         /// Trigger children HTML.
         pub children: String,
+        /// Optional telemetry hooks executed around render.
+        pub telemetry: TelemetryHooks,
+    }
+
+    impl PartialEq for CollapsibleTriggerProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.options == other.options
+                && self.automation_fallback == other.automation_fallback
+                && self.children == other.children
+                && self.telemetry == other.telemetry
+        }
     }
 
     impl Default for CollapsibleTriggerProps {
@@ -445,22 +541,31 @@ pub mod dioxus {
                 options: CollapsibleTriggerOptions::default(),
                 automation_fallback: "rustic-ui::collapsible-trigger".into(),
                 children: String::new(),
+                telemetry: TelemetryHooks::default(),
             }
         }
     }
 
     /// Render the trigger into HTML.
     pub fn render_trigger(props: &CollapsibleTriggerProps) -> String {
-        super::render_collapsible_trigger_html(
-            &props.state,
-            &props.options,
-            &props.automation_fallback,
-            &props.children,
-        )
+        let options = merge_trigger_options(&props.options, &props.telemetry);
+        let automation = resolved_trigger_automation(&options, &props.automation_fallback);
+        let context =
+            TelemetryContext::new("rustic_ui_material::collapsible::dioxus::CollapsibleTrigger")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            super::render_collapsible_trigger_html(
+                &props.state,
+                &options,
+                &props.automation_fallback,
+                &props.children,
+            )
+        })
     }
 
     /// Properties consumed by the Dioxus region renderer.
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone)]
     pub struct CollapsibleRegionProps {
         /// Region state machine mirrored from the controller.
         pub state: CollapsibleRegionState,
@@ -470,6 +575,17 @@ pub mod dioxus {
         pub automation_fallback: String,
         /// Region children HTML.
         pub children: String,
+        /// Optional telemetry hooks executed around render.
+        pub telemetry: TelemetryHooks,
+    }
+
+    impl PartialEq for CollapsibleRegionProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.options == other.options
+                && self.automation_fallback == other.automation_fallback
+                && self.children == other.children
+                && self.telemetry == other.telemetry
+        }
     }
 
     impl Default for CollapsibleRegionProps {
@@ -479,18 +595,27 @@ pub mod dioxus {
                 options: CollapsibleRegionOptions::default(),
                 automation_fallback: "rustic-ui::collapsible-region".into(),
                 children: String::new(),
+                telemetry: TelemetryHooks::default(),
             }
         }
     }
 
     /// Render the region into HTML.
     pub fn render_region(props: &CollapsibleRegionProps) -> String {
-        super::render_collapsible_region_html(
-            &props.state,
-            &props.options,
-            &props.automation_fallback,
-            &props.children,
-        )
+        let options = merge_region_options(&props.options, &props.telemetry);
+        let automation = resolved_region_automation(&options, &props.automation_fallback);
+        let context =
+            TelemetryContext::new("rustic_ui_material::collapsible::dioxus::CollapsibleRegion")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            super::render_collapsible_region_html(
+                &props.state,
+                &options,
+                &props.automation_fallback,
+                &props.children,
+            )
+        })
     }
 }
 
@@ -503,7 +628,7 @@ pub mod sycamore {
     use super::*;
 
     /// Sycamore trigger renderer properties.
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone)]
     pub struct CollapsibleTriggerProps {
         /// Region state machine mirrored from the controller.
         pub state: CollapsibleRegionState,
@@ -513,6 +638,17 @@ pub mod sycamore {
         pub automation_fallback: String,
         /// Trigger children HTML.
         pub children: String,
+        /// Optional telemetry hooks executed around render.
+        pub telemetry: TelemetryHooks,
+    }
+
+    impl PartialEq for CollapsibleTriggerProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.options == other.options
+                && self.automation_fallback == other.automation_fallback
+                && self.children == other.children
+                && self.telemetry == other.telemetry
+        }
     }
 
     impl Default for CollapsibleTriggerProps {
@@ -522,22 +658,31 @@ pub mod sycamore {
                 options: CollapsibleTriggerOptions::default(),
                 automation_fallback: "rustic-ui::collapsible-trigger".into(),
                 children: String::new(),
+                telemetry: TelemetryHooks::default(),
             }
         }
     }
 
     /// Render the trigger into HTML.
     pub fn render_trigger(props: &CollapsibleTriggerProps) -> String {
-        super::render_collapsible_trigger_html(
-            &props.state,
-            &props.options,
-            &props.automation_fallback,
-            &props.children,
-        )
+        let options = merge_trigger_options(&props.options, &props.telemetry);
+        let automation = resolved_trigger_automation(&options, &props.automation_fallback);
+        let context =
+            TelemetryContext::new("rustic_ui_material::collapsible::sycamore::CollapsibleTrigger")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            super::render_collapsible_trigger_html(
+                &props.state,
+                &options,
+                &props.automation_fallback,
+                &props.children,
+            )
+        })
     }
 
     /// Sycamore region renderer properties.
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone)]
     pub struct CollapsibleRegionProps {
         /// Region state machine mirrored from the controller.
         pub state: CollapsibleRegionState,
@@ -547,6 +692,17 @@ pub mod sycamore {
         pub automation_fallback: String,
         /// Region children HTML.
         pub children: String,
+        /// Optional telemetry hooks executed around render.
+        pub telemetry: TelemetryHooks,
+    }
+
+    impl PartialEq for CollapsibleRegionProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.options == other.options
+                && self.automation_fallback == other.automation_fallback
+                && self.children == other.children
+                && self.telemetry == other.telemetry
+        }
     }
 
     impl Default for CollapsibleRegionProps {
@@ -556,17 +712,26 @@ pub mod sycamore {
                 options: CollapsibleRegionOptions::default(),
                 automation_fallback: "rustic-ui::collapsible-region".into(),
                 children: String::new(),
+                telemetry: TelemetryHooks::default(),
             }
         }
     }
 
     /// Render the region into HTML.
     pub fn render_region(props: &CollapsibleRegionProps) -> String {
-        super::render_collapsible_region_html(
-            &props.state,
-            &props.options,
-            &props.automation_fallback,
-            &props.children,
-        )
+        let options = merge_region_options(&props.options, &props.telemetry);
+        let automation = resolved_region_automation(&options, &props.automation_fallback);
+        let context =
+            TelemetryContext::new("rustic_ui_material::collapsible::sycamore::CollapsibleRegion")
+                .with_analytics(options.analytics_id.clone())
+                .with_automation(Some(automation));
+        instrument_render(&props.telemetry, context, || {
+            super::render_collapsible_region_html(
+                &props.state,
+                &options,
+                &props.automation_fallback,
+                &props.children,
+            )
+        })
     }
 }

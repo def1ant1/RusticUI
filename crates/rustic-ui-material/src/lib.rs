@@ -73,6 +73,7 @@ pub mod tab;
 pub mod tab_panel;
 pub mod table;
 pub mod tabs;
+mod telemetry;
 pub mod text_field;
 pub mod tooltip;
 pub mod typography;
@@ -125,6 +126,7 @@ pub use skeleton::{render_skeleton, SkeletonAdapterProps, SkeletonRenderOutput};
 #[cfg(feature = "forms")]
 pub use slider::{render_slider, SliderAdapterProps, SliderRenderOutput};
 pub use stack::{render_stack, StackAdapterProps, StackRenderOutput};
+pub use telemetry::{TelemetryContext, TelemetryError, TelemetryHooks};
 pub use typography::{render_typography, TypographyRenderOutput};
 
 #[cfg(any(

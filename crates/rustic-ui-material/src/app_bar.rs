@@ -175,7 +175,10 @@ pub mod dioxus {
         // stay aligned with the declarative front-end integrations.
         let attr_string = crate::style_helpers::themed_attributes_html(
             app_bar_style(&theme, props.color.clone(), props.size.clone()),
-            [("role", "banner"), ("aria-label", props.aria_label.clone())],
+            vec![
+                ("role".to_string(), "banner".to_string()),
+                ("aria-label".to_string(), props.aria_label.clone()),
+            ],
         );
         format!("<header {}>{}</header>", attr_string, props.title)
     }

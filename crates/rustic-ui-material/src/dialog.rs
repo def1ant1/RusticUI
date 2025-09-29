@@ -245,7 +245,7 @@ pub mod react {
 
     /// Properties accepted by the React oriented renderer. The struct mirrors
     /// the SSR adapters to keep orchestration consistent across frameworks.
-    #[derive(Clone, Debug, Default, PartialEq)]
+    #[derive(Clone, Debug, PartialEq)]
     pub struct DialogProps {
         /// Dialog state machine controlling visibility and analytics hooks.
         pub state: DialogState,
@@ -255,6 +255,17 @@ pub mod react {
         pub children: String,
         /// Optional accessible label announced by assistive technologies.
         pub aria_label: Option<String>,
+    }
+
+    impl Default for DialogProps {
+        fn default() -> Self {
+            Self {
+                state: DialogState::uncontrolled(false),
+                surface: DialogSurfaceOptions::default(),
+                children: String::new(),
+                aria_label: None,
+            }
+        }
     }
 
     /// Render the dialog surface using the shared SSR helper so React output

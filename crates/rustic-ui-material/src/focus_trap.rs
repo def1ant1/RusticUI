@@ -240,7 +240,7 @@ pub mod dioxus {
     use super::*;
 
     /// Properties for the Dioxus sentinel renderer.
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone)]
     pub struct FocusTrapSentinelProps {
         /// Focus trap state machine mirrored from the controller.
         pub state: FocusTrapState,
@@ -250,6 +250,14 @@ pub mod dioxus {
         pub options: FocusTrapSentinelOptions,
         /// Fallback automation prefix when the options omit one.
         pub fallback_prefix: String,
+    }
+
+    impl PartialEq for FocusTrapSentinelProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.kind == other.kind
+                && self.options == other.options
+                && self.fallback_prefix == other.fallback_prefix
+        }
     }
 
     impl Default for FocusTrapSentinelProps {
