@@ -113,6 +113,126 @@ fn box_tokens_for_breakpoint(evaluation: &BoxEvaluation<'_>) -> Vec<(&'static st
     tokens
 }
 
+/// Props shared by every framework adapter.
+///
+/// The [`BoxState`] already abstracts controlled and uncontrolled usage through
+/// its internal control strategy.  Adapters accept a reference to the state so
+/// reactive frameworks can either hold the state in a signal (controlled) or
+/// let the state live locally inside the adapter (uncontrolled).  The renderer
+/// simply reads the latest snapshot which keeps the mapping to the headless API
+/// deterministic.
+#[derive(Clone, Copy, Debug)]
+pub struct BoxAdapterProps<'a> {
+    /// Headless box state machine driving layout evaluation.
+    pub state: &'a BoxState,
+}
+
+impl<'a> BoxAdapterProps<'a> {
+    /// Convenience constructor so integrators can express intent without struct
+    /// literal syntax.
+    #[inline]
+    pub fn new(state: &'a BoxState) -> Self {
+        Self { state }
+    }
+}
+
+/// Internal helper used by every adapter module.
+///
+/// The function keeps the controlled/uncontrolled behaviour consistent by
+/// always delegating to [`render_box`].  Framework specific wrappers simply call
+/// this helper so server rendered React, client side Yew or signal driven
+/// Sycamore pipelines all render identical CSS variables.
+#[cfg_attr(
+    not(any(
+        feature = "react",
+        feature = "yew",
+        feature = "leptos",
+        feature = "dioxus",
+        feature = "sycamore"
+    )),
+    allow(dead_code)
+)]
+fn render_box_with_props(props: BoxAdapterProps<'_>) -> BoxRenderOutput {
+    // Delegating straight to the shared renderer ensures the adapter never goes
+    // out of sync with the canonical SSR output and keeps hydration byte-perfect.
+    render_box(props.state)
+}
+
+/// React SSR adapter wrapping [`render_box`].
+#[cfg(feature = "react")]
+pub mod react {
+    use super::*;
+
+    /// Generate deterministic CSS variables for React's server rendering stage.
+    ///
+    /// Enterprise teams often run this inside Node based renderers before
+    /// handing control to React on the client.  The adapter intentionally avoids
+    /// mutating the state; React should own the control flow and provide updated
+    /// [`BoxState`] snapshots whenever props change.  On hydration the browser
+    /// sees the exact same inline style string which prevents checksum
+    /// mismatches.
+    pub fn render(props: BoxAdapterProps<'_>) -> BoxRenderOutput {
+        super::render_box_with_props(props)
+    }
+}
+
+/// Yew adapter exposing [`render_box`] behind the `yew` feature flag.
+#[cfg(feature = "yew")]
+pub mod yew {
+    use super::*;
+
+    /// Produce CSS variables for inclusion in a `<style>` tag or inline `style`
+    /// attribute while respecting Yew's reactive lifecycles.  Callers typically
+    /// store the [`BoxState`] inside `use_state` (controlled) or build it on the
+    /// fly per render (uncontrolled); both flows surface the latest snapshot to
+    /// this helper which in turn mirrors the shared SSR renderer.
+    pub fn render(props: BoxAdapterProps<'_>) -> BoxRenderOutput {
+        super::render_box_with_props(props)
+    }
+}
+
+/// Leptos adapter bridging reactive signals to [`render_box`].
+#[cfg(feature = "leptos")]
+pub mod leptos {
+    use super::*;
+
+    /// Invoke the shared renderer using the latest headless snapshot.  Because
+    /// Leptos signals re-run dependents automatically, feeding the [`BoxState`]
+    /// through this helper keeps controlled signal driven flows aligned with the
+    /// headless behaviour without writing imperative glue code.
+    pub fn render(props: BoxAdapterProps<'_>) -> BoxRenderOutput {
+        super::render_box_with_props(props)
+    }
+}
+
+/// Dioxus adapter for layout SSR/hydration pipelines.
+#[cfg(feature = "dioxus")]
+pub mod dioxus {
+    use super::*;
+
+    /// Dioxus ships the same [`BoxState`] between server and client.  The
+    /// adapter simply calls into the shared renderer, guaranteeing that the
+    /// inline style string matches across SSR and subsequent mutations triggered
+    /// by controlled props.
+    pub fn render(props: BoxAdapterProps<'_>) -> BoxRenderOutput {
+        super::render_box_with_props(props)
+    }
+}
+
+/// Sycamore adapter mirroring the other framework implementations.
+#[cfg(feature = "sycamore")]
+pub mod sycamore {
+    use super::*;
+
+    /// Sycamore's reactive scopes can own the [`BoxState`] directly or receive
+    /// it from a parent owner.  In both cases we route through the shared
+    /// renderer so SSR output and client side recomputation stay perfectly
+    /// aligned for enterprise grade snapshot testing.
+    pub fn render(props: BoxAdapterProps<'_>) -> BoxRenderOutput {
+        super::render_box_with_props(props)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,5 +253,20 @@ mod tests {
             .css_variables()
             .contains_key("--rustic_ui_box_padding"));
         assert!(output.inline_style().contains("--rustic_ui_box_padding"));
+    }
+
+    #[test]
+    fn adapter_props_delegate_to_shared_renderer() {
+        let tokens = rustic_ui_headless::r#box::BoxTokens {
+            padding: ResponsiveValue::from(String::from("2rem")),
+            margin: ResponsiveValue::from(String::from("1rem")),
+            background: ResponsiveValue::from(String::from("var(--surface)")),
+        };
+        let state = BoxState::new(tokens, BreakpointConfig::material());
+
+        let base = render_box(&state);
+        let adapter = super::render_box_with_props(BoxAdapterProps::new(&state));
+
+        assert_eq!(base.inline_style(), adapter.inline_style());
     }
 }
