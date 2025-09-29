@@ -496,13 +496,10 @@ mod tests {
     fn trigger_attributes_include_expanded_state() {
         let props = TooltipProps::new("Help", "Tooltip");
         let state = TooltipState::new(TooltipConfig::default());
-        let attrs = super::trigger_attributes(
-            &props,
-            &state,
-            &tooltip_portal("rustic_ui_tooltip"),
-            &trigger_id("rustic_ui_tooltip"),
-            &surface_id("rustic_ui_tooltip"),
-        );
+        let portal = tooltip_portal(&props);
+        let trigger = trigger_id(&props);
+        let surface = surface_id(&props);
+        let attrs = super::trigger_attributes(&props, &state, &portal, &trigger, &surface);
 
         assert!(attrs.iter().any(|(k, _)| k == "aria-expanded"));
         assert!(attrs.iter().any(|(k, _)| k == "aria-describedby"));

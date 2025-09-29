@@ -139,6 +139,46 @@ pub(crate) fn normalise_css_token(token: &str, fallback: &str) -> String {
     }
 }
 
+/// Convert a boolean into the canonical CSS custom property string value.
+///
+/// Multiple layout renderers expose boolean state (e.g. the Hidden primitive's
+/// `aria-hidden` toggle).  Encoding this logic in one helper keeps every
+/// renderer serialising booleans with the exact same casing which simplifies
+/// snapshot assertions and cross-language parity checks.
+#[must_use]
+pub(crate) fn bool_to_css_flag(value: bool) -> String {
+    if value {
+        String::from("true")
+    } else {
+        String::from("false")
+    }
+}
+
+/// Translate a boolean visibility flag into a display token appropriate for CSS.
+///
+/// Material components frequently model visibility as `true/false` yet need to
+/// emit explicit CSS strings for SSR.  Using `revert-layer` lets author defined
+/// display styles bubble back in when the element is visible while still
+/// allowing server rendered snapshots to capture the intent precisely.
+#[must_use]
+pub(crate) fn visibility_to_display(hidden: bool) -> String {
+    if hidden {
+        String::from("none")
+    } else {
+        String::from("revert-layer")
+    }
+}
+
+/// Convert the same visibility flag into the CSS `visibility` property value.
+#[must_use]
+pub(crate) fn visibility_to_visibility(hidden: bool) -> String {
+    if hidden {
+        String::from("hidden")
+    } else {
+        String::from("visible")
+    }
+}
+
 /// Convert a [`CssVariableMap`] into a SSR friendly inline style string.
 #[must_use]
 pub(crate) fn css_variables_to_style(map: &CssVariableMap) -> String {

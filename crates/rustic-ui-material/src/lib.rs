@@ -30,8 +30,11 @@ pub mod checkbox;
 pub mod chip;
 pub mod container;
 pub mod dialog;
+pub mod divider;
 pub mod drawer;
 pub mod grid;
+pub mod hidden;
+pub mod image_list;
 pub mod list;
 pub mod macros;
 pub mod menu;
@@ -54,7 +57,10 @@ pub use rustic_ui_styled_engine::Theme;
 
 pub use crate::r#box::{render_box, BoxAdapterProps, BoxRenderOutput};
 pub use container::{render_container, ContainerAdapterProps, ContainerRenderOutput};
+pub use divider::{render_divider, DividerAdapterProps, DividerRenderOutput};
 pub use grid::{render_grid, GridAdapterProps, GridRenderOutput};
+pub use hidden::{render_hidden, HiddenAdapterProps, HiddenRenderOutput};
+pub use image_list::{render_image_list, ImageListAdapterProps, ImageListRenderOutput};
 pub use stack::{render_stack, StackAdapterProps, StackRenderOutput};
 
 /// Confirms that the crate links to `rustic_ui_styled_engine` and compiles.

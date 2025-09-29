@@ -220,3 +220,176 @@ fn material_stack_renderer_snapshot() {
 
     assert_json_snapshot!("material_stack_renderer", snapshot);
 }
+
+#[test]
+fn material_hidden_renderer_snapshot() {
+    use rustic_ui_headless::hidden::{HiddenRole, HiddenState};
+
+    let visibility = ResponsiveValue::new(false)
+        .with_override(Breakpoint::Sm, true)
+        .with_override(Breakpoint::Lg, false);
+    let state = HiddenState::new(visibility, BreakpointConfig::material())
+        .with_role(HiddenRole::Group)
+        .inert(true);
+    let render = rustic_ui_material::render_hidden(&state);
+    let attrs = state
+        .attributes()
+        .id("hidden-region")
+        .class("rustic-hidden");
+
+    let mut attr_pairs = Vec::new();
+    if let Some((key, value)) = attrs.id_attr() {
+        attr_pairs.push((key, value.to_string()));
+    }
+    if let Some((key, value)) = attrs.class_attr() {
+        attr_pairs.push((key, value.to_string()));
+    }
+    if let Some((key, value)) = attrs.inert() {
+        attr_pairs.push((key, value.to_string()));
+    }
+    attr_pairs.push((attrs.role().0, attrs.role().1.to_string()));
+    let hidden_attr = attrs.hidden(360);
+    attr_pairs.push((hidden_attr.0, hidden_attr.1.to_string()));
+
+    let html = format!(
+        "<div {attrs} style=\"{style}\"></div>",
+        attrs = attr_pairs
+            .into_iter()
+            .map(|(key, value)| format!("{key}=\"{value}\""))
+            .collect::<Vec<_>>()
+            .join(" "),
+        style = render.inline_style()
+    );
+
+    let snapshot = json!({
+        "html": html,
+        "css_variables": to_value(render.css_variables()).expect("css variables serializable"),
+        "inline_style": render.inline_style(),
+        "visibility": {
+            "viewport_360": attrs.hidden(360).1,
+            "viewport_1280": attrs.hidden(1280).1,
+        },
+    });
+
+    assert_json_snapshot!("material_hidden_renderer", snapshot);
+}
+
+#[test]
+fn material_image_list_renderer_snapshot() {
+    use rustic_ui_headless::image_list::{
+        ImageListRole, ImageListState, ImageListTokens, ImageListVariant,
+    };
+
+    let tokens = ImageListTokens {
+        columns: ResponsiveValue::new(3)
+            .with_override(Breakpoint::Sm, 4)
+            .with_override(Breakpoint::Lg, 6),
+        gap: ResponsiveValue::new(String::from("12px"))
+            .with_override(Breakpoint::Md, String::from("20px")),
+        row_height: ResponsiveValue::new(200).with_override(Breakpoint::Xl, 320),
+    };
+
+    let state = ImageListState::new(tokens, BreakpointConfig::material())
+        .variant(ImageListVariant::Masonry)
+        .with_role(ImageListRole::Presentation);
+    let render = rustic_ui_material::render_image_list(&state);
+    let attrs = state
+        .attributes()
+        .id("image-collection")
+        .class("rustic-image-list");
+
+    let mut attr_pairs = Vec::new();
+    if let Some((key, value)) = attrs.id_attr() {
+        attr_pairs.push((key, value.to_string()));
+    }
+    if let Some((key, value)) = attrs.class_attr() {
+        attr_pairs.push((key, value.to_string()));
+    }
+    attr_pairs.push((attrs.role().0, attrs.role().1.to_string()));
+    attr_pairs.push((attrs.data_variant().0, attrs.data_variant().1.to_string()));
+    let breakpoint_attr = attrs.data_breakpoint(1024);
+    attr_pairs.push((breakpoint_attr.0, breakpoint_attr.1.to_string()));
+
+    let html = format!(
+        "<ul {attrs} style=\"{style}\"></ul>",
+        attrs = attr_pairs
+            .into_iter()
+            .map(|(key, value)| format!("{key}=\"{value}\""))
+            .collect::<Vec<_>>()
+            .join(" "),
+        style = render.inline_style()
+    );
+
+    let snapshot = json!({
+        "html": html,
+        "css_variables": to_value(render.css_variables()).expect("css variables serializable"),
+        "inline_style": render.inline_style(),
+        "breakpoints": {
+            "viewport_768": attrs.data_breakpoint(768).1,
+            "viewport_1600": attrs.data_breakpoint(1600).1,
+        },
+        "variant": attrs.data_variant().1,
+    });
+
+    assert_json_snapshot!("material_image_list_renderer", snapshot);
+}
+
+#[test]
+fn material_divider_renderer_snapshot() {
+    use rustic_ui_headless::divider::{DividerRole, DividerState, DividerTokens};
+
+    let tokens = DividerTokens {
+        orientation: ResponsiveValue::new(
+            rustic_ui_headless::divider::DividerOrientation::Horizontal,
+        )
+        .with_override(
+            Breakpoint::Md,
+            rustic_ui_headless::divider::DividerOrientation::Vertical,
+        ),
+        thickness: ResponsiveValue::new(String::from("1px"))
+            .with_override(Breakpoint::Lg, String::from("3px")),
+        inset: ResponsiveValue::new(String::from("0"))
+            .with_override(Breakpoint::Xl, String::from("24px")),
+    };
+
+    let state = DividerState::new(tokens, BreakpointConfig::material())
+        .with_role(DividerRole::Presentation);
+    let render = rustic_ui_material::render_divider(&state);
+    let attrs = state
+        .attributes()
+        .id("divider-shell")
+        .class("rustic-divider");
+
+    let mut attr_pairs = Vec::new();
+    if let Some((key, value)) = attrs.id_attr() {
+        attr_pairs.push((key, value.to_string()));
+    }
+    if let Some((key, value)) = attrs.class_attr() {
+        attr_pairs.push((key, value.to_string()));
+    }
+    attr_pairs.push((attrs.role().0, attrs.role().1.to_string()));
+    let orientation_attr = attrs.data_orientation(480);
+    attr_pairs.push((orientation_attr.0, orientation_attr.1.to_string()));
+
+    let html = format!(
+        "<div {attrs} style=\"{style}\"></div>",
+        attrs = attr_pairs
+            .into_iter()
+            .map(|(key, value)| format!("{key}=\"{value}\""))
+            .collect::<Vec<_>>()
+            .join(" "),
+        style = render.inline_style()
+    );
+
+    let snapshot = json!({
+        "html": html,
+        "css_variables": to_value(render.css_variables()).expect("css variables serializable"),
+        "inline_style": render.inline_style(),
+        "orientation": {
+            "viewport_480": attrs.data_orientation(480).1,
+            "viewport_1440": attrs.data_orientation(1440).1,
+        },
+    });
+
+    assert_json_snapshot!("material_divider_renderer", snapshot);
+}

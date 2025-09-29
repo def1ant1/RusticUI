@@ -1,0 +1,40 @@
+---
+source: crates/rustic-ui-material/tests/layout_renderers.rs
+assertion_line: 394
+expression: snapshot
+---
+{
+  "css_variables": {
+    "--rustic_ui_divider_active_breakpoint": "base",
+    "--rustic_ui_divider_inset": "0",
+    "--rustic_ui_divider_inset-lg": "0",
+    "--rustic_ui_divider_inset-md": "0",
+    "--rustic_ui_divider_inset-sm": "0",
+    "--rustic_ui_divider_inset-xl": "24px",
+    "--rustic_ui_divider_inset-xxl": "24px",
+    "--rustic_ui_divider_orientation": "horizontal",
+    "--rustic_ui_divider_orientation-lg": "vertical",
+    "--rustic_ui_divider_orientation-md": "vertical",
+    "--rustic_ui_divider_orientation-sm": "horizontal",
+    "--rustic_ui_divider_orientation-xl": "vertical",
+    "--rustic_ui_divider_orientation-xxl": "vertical",
+    "--rustic_ui_divider_role": "presentation",
+    "--rustic_ui_divider_role-lg": "presentation",
+    "--rustic_ui_divider_role-md": "presentation",
+    "--rustic_ui_divider_role-sm": "presentation",
+    "--rustic_ui_divider_role-xl": "presentation",
+    "--rustic_ui_divider_role-xxl": "presentation",
+    "--rustic_ui_divider_thickness": "1px",
+    "--rustic_ui_divider_thickness-lg": "3px",
+    "--rustic_ui_divider_thickness-md": "1px",
+    "--rustic_ui_divider_thickness-sm": "1px",
+    "--rustic_ui_divider_thickness-xl": "3px",
+    "--rustic_ui_divider_thickness-xxl": "3px"
+  },
+  "html": "<div id=\"divider-shell\" class=\"rustic-divider\" role=\"presentation\" data-orientation=\"horizontal\" style=\"--rustic_ui_divider_active_breakpoint: base; --rustic_ui_divider_inset: 0; --rustic_ui_divider_inset-lg: 0; --rustic_ui_divider_inset-md: 0; --rustic_ui_divider_inset-sm: 0; --rustic_ui_divider_inset-xl: 24px; --rustic_ui_divider_inset-xxl: 24px; --rustic_ui_divider_orientation: horizontal; --rustic_ui_divider_orientation-lg: vertical; --rustic_ui_divider_orientation-md: vertical; --rustic_ui_divider_orientation-sm: horizontal; --rustic_ui_divider_orientation-xl: vertical; --rustic_ui_divider_orientation-xxl: vertical; --rustic_ui_divider_role: presentation; --rustic_ui_divider_role-lg: presentation; --rustic_ui_divider_role-md: presentation; --rustic_ui_divider_role-sm: presentation; --rustic_ui_divider_role-xl: presentation; --rustic_ui_divider_role-xxl: presentation; --rustic_ui_divider_thickness: 1px; --rustic_ui_divider_thickness-lg: 3px; --rustic_ui_divider_thickness-md: 1px; --rustic_ui_divider_thickness-sm: 1px; --rustic_ui_divider_thickness-xl: 3px; --rustic_ui_divider_thickness-xxl: 3px;\"></div>",
+  "inline_style": "--rustic_ui_divider_active_breakpoint: base; --rustic_ui_divider_inset: 0; --rustic_ui_divider_inset-lg: 0; --rustic_ui_divider_inset-md: 0; --rustic_ui_divider_inset-sm: 0; --rustic_ui_divider_inset-xl: 24px; --rustic_ui_divider_inset-xxl: 24px; --rustic_ui_divider_orientation: horizontal; --rustic_ui_divider_orientation-lg: vertical; --rustic_ui_divider_orientation-md: vertical; --rustic_ui_divider_orientation-sm: horizontal; --rustic_ui_divider_orientation-xl: vertical; --rustic_ui_divider_orientation-xxl: vertical; --rustic_ui_divider_role: presentation; --rustic_ui_divider_role-lg: presentation; --rustic_ui_divider_role-md: presentation; --rustic_ui_divider_role-sm: presentation; --rustic_ui_divider_role-xl: presentation; --rustic_ui_divider_role-xxl: presentation; --rustic_ui_divider_thickness: 1px; --rustic_ui_divider_thickness-lg: 3px; --rustic_ui_divider_thickness-md: 1px; --rustic_ui_divider_thickness-sm: 1px; --rustic_ui_divider_thickness-xl: 3px; --rustic_ui_divider_thickness-xxl: 3px;",
+  "orientation": {
+    "viewport_1440": "vertical",
+    "viewport_480": "horizontal"
+  }
+}

@@ -1,0 +1,53 @@
+---
+source: crates/rustic-ui-material/tests/layout_renderers.rs
+assertion_line: 334
+expression: snapshot
+---
+{
+  "breakpoints": {
+    "viewport_1600": "xl",
+    "viewport_768": "sm"
+  },
+  "css_variables": {
+    "--rustic_ui_image_list_active_breakpoint": "base",
+    "--rustic_ui_image_list_columns": "3",
+    "--rustic_ui_image_list_columns-lg": "6",
+    "--rustic_ui_image_list_columns-md": "4",
+    "--rustic_ui_image_list_columns-sm": "4",
+    "--rustic_ui_image_list_columns-xl": "6",
+    "--rustic_ui_image_list_columns-xxl": "6",
+    "--rustic_ui_image_list_gap": "12px",
+    "--rustic_ui_image_list_gap-lg": "20px",
+    "--rustic_ui_image_list_gap-md": "20px",
+    "--rustic_ui_image_list_gap-sm": "12px",
+    "--rustic_ui_image_list_gap-xl": "20px",
+    "--rustic_ui_image_list_gap-xxl": "20px",
+    "--rustic_ui_image_list_role": "presentation",
+    "--rustic_ui_image_list_role-lg": "presentation",
+    "--rustic_ui_image_list_role-md": "presentation",
+    "--rustic_ui_image_list_role-sm": "presentation",
+    "--rustic_ui_image_list_role-xl": "presentation",
+    "--rustic_ui_image_list_role-xxl": "presentation",
+    "--rustic_ui_image_list_row_height": "200px",
+    "--rustic_ui_image_list_row_height-lg": "200px",
+    "--rustic_ui_image_list_row_height-md": "200px",
+    "--rustic_ui_image_list_row_height-sm": "200px",
+    "--rustic_ui_image_list_row_height-xl": "320px",
+    "--rustic_ui_image_list_row_height-xxl": "320px",
+    "--rustic_ui_image_list_template": "repeat(3, minmax(0, 1fr))",
+    "--rustic_ui_image_list_template-lg": "repeat(6, minmax(0, 1fr))",
+    "--rustic_ui_image_list_template-md": "repeat(4, minmax(0, 1fr))",
+    "--rustic_ui_image_list_template-sm": "repeat(4, minmax(0, 1fr))",
+    "--rustic_ui_image_list_template-xl": "repeat(6, minmax(0, 1fr))",
+    "--rustic_ui_image_list_template-xxl": "repeat(6, minmax(0, 1fr))",
+    "--rustic_ui_image_list_variant": "masonry",
+    "--rustic_ui_image_list_variant-lg": "masonry",
+    "--rustic_ui_image_list_variant-md": "masonry",
+    "--rustic_ui_image_list_variant-sm": "masonry",
+    "--rustic_ui_image_list_variant-xl": "masonry",
+    "--rustic_ui_image_list_variant-xxl": "masonry"
+  },
+  "html": "<ul id=\"image-collection\" class=\"rustic-image-list\" role=\"presentation\" data-variant=\"masonry\" data-breakpoint=\"md\" style=\"--rustic_ui_image_list_active_breakpoint: base; --rustic_ui_image_list_columns: 3; --rustic_ui_image_list_columns-lg: 6; --rustic_ui_image_list_columns-md: 4; --rustic_ui_image_list_columns-sm: 4; --rustic_ui_image_list_columns-xl: 6; --rustic_ui_image_list_columns-xxl: 6; --rustic_ui_image_list_gap: 12px; --rustic_ui_image_list_gap-lg: 20px; --rustic_ui_image_list_gap-md: 20px; --rustic_ui_image_list_gap-sm: 12px; --rustic_ui_image_list_gap-xl: 20px; --rustic_ui_image_list_gap-xxl: 20px; --rustic_ui_image_list_role: presentation; --rustic_ui_image_list_role-lg: presentation; --rustic_ui_image_list_role-md: presentation; --rustic_ui_image_list_role-sm: presentation; --rustic_ui_image_list_role-xl: presentation; --rustic_ui_image_list_role-xxl: presentation; --rustic_ui_image_list_row_height: 200px; --rustic_ui_image_list_row_height-lg: 200px; --rustic_ui_image_list_row_height-md: 200px; --rustic_ui_image_list_row_height-sm: 200px; --rustic_ui_image_list_row_height-xl: 320px; --rustic_ui_image_list_row_height-xxl: 320px; --rustic_ui_image_list_template: repeat(3, minmax(0, 1fr)); --rustic_ui_image_list_template-lg: repeat(6, minmax(0, 1fr)); --rustic_ui_image_list_template-md: repeat(4, minmax(0, 1fr)); --rustic_ui_image_list_template-sm: repeat(4, minmax(0, 1fr)); --rustic_ui_image_list_template-xl: repeat(6, minmax(0, 1fr)); --rustic_ui_image_list_template-xxl: repeat(6, minmax(0, 1fr)); --rustic_ui_image_list_variant: masonry; --rustic_ui_image_list_variant-lg: masonry; --rustic_ui_image_list_variant-md: masonry; --rustic_ui_image_list_variant-sm: masonry; --rustic_ui_image_list_variant-xl: masonry; --rustic_ui_image_list_variant-xxl: masonry;\"></ul>",
+  "inline_style": "--rustic_ui_image_list_active_breakpoint: base; --rustic_ui_image_list_columns: 3; --rustic_ui_image_list_columns-lg: 6; --rustic_ui_image_list_columns-md: 4; --rustic_ui_image_list_columns-sm: 4; --rustic_ui_image_list_columns-xl: 6; --rustic_ui_image_list_columns-xxl: 6; --rustic_ui_image_list_gap: 12px; --rustic_ui_image_list_gap-lg: 20px; --rustic_ui_image_list_gap-md: 20px; --rustic_ui_image_list_gap-sm: 12px; --rustic_ui_image_list_gap-xl: 20px; --rustic_ui_image_list_gap-xxl: 20px; --rustic_ui_image_list_role: presentation; --rustic_ui_image_list_role-lg: presentation; --rustic_ui_image_list_role-md: presentation; --rustic_ui_image_list_role-sm: presentation; --rustic_ui_image_list_role-xl: presentation; --rustic_ui_image_list_role-xxl: presentation; --rustic_ui_image_list_row_height: 200px; --rustic_ui_image_list_row_height-lg: 200px; --rustic_ui_image_list_row_height-md: 200px; --rustic_ui_image_list_row_height-sm: 200px; --rustic_ui_image_list_row_height-xl: 320px; --rustic_ui_image_list_row_height-xxl: 320px; --rustic_ui_image_list_template: repeat(3, minmax(0, 1fr)); --rustic_ui_image_list_template-lg: repeat(6, minmax(0, 1fr)); --rustic_ui_image_list_template-md: repeat(4, minmax(0, 1fr)); --rustic_ui_image_list_template-sm: repeat(4, minmax(0, 1fr)); --rustic_ui_image_list_template-xl: repeat(6, minmax(0, 1fr)); --rustic_ui_image_list_template-xxl: repeat(6, minmax(0, 1fr)); --rustic_ui_image_list_variant: masonry; --rustic_ui_image_list_variant-lg: masonry; --rustic_ui_image_list_variant-md: masonry; --rustic_ui_image_list_variant-sm: masonry; --rustic_ui_image_list_variant-xl: masonry; --rustic_ui_image_list_variant-xxl: masonry;",
+  "variant": "masonry"
+}
