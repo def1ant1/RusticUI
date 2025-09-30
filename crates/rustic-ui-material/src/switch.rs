@@ -1,12 +1,12 @@
 //! Material switch built from the headless [`SwitchState`].
 //!
-//! Switches reuse the shared selection control renderer ensuring identical
+//! Switches reuse the shared selection control descriptor ensuring identical
 //! markup across frameworks while leveraging theme tokens for styling.
 
 use rustic_ui_headless::switch::SwitchState;
 use rustic_ui_styled_engine::{css_with_theme, Style};
 
-use crate::selection_control;
+use crate::selection_control::{self, ToggleControlDescriptor};
 
 #[derive(Clone, Debug)]
 pub struct SwitchProps {
@@ -22,13 +22,14 @@ impl SwitchProps {
     }
 }
 
+fn build_descriptor(props: &SwitchProps, state: &SwitchState) -> ToggleControlDescriptor {
+    ToggleControlDescriptor::new(props.label.clone(), themed_switch_style())
+        .with_attributes(state.aria_attributes())
+}
+
 fn render_html(props: &SwitchProps, state: &SwitchState) -> String {
-    let attrs = state
-        .aria_attributes()
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect();
-    selection_control::render_toggle(&props.label, themed_switch_style(), attrs)
+    let descriptor = build_descriptor(props, state);
+    selection_control::render_toggle_html(&descriptor)
 }
 
 /// Builds the switch track and thumb styling from the active theme tokens. By
@@ -107,16 +108,6 @@ fn themed_switch_style() -> Style {
     )
 }
 
-/// Testing hook mirroring the one provided in [`checkbox`].
-#[cfg_attr(not(test), allow(dead_code))]
-fn themed_switch_attributes(state: &SwitchState) -> Vec<(String, String)> {
-    state
-        .aria_attributes()
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect()
-}
-
 pub mod yew {
     use super::*;
 
@@ -156,8 +147,10 @@ mod tests {
     #[test]
     fn themed_attributes_include_role() {
         let state = SwitchState::uncontrolled(false, true);
-        let attrs = themed_switch_attributes(&state);
-        assert!(attrs.iter().any(|(k, v)| k == "role" && v == "switch"));
+        let descriptor = build_descriptor(&SwitchProps::new("Notifications"), &state);
+        assert!(descriptor
+            .aria_attributes()
+            .any(|(k, v)| k == "role" && v == "switch"));
     }
 
     #[test]
