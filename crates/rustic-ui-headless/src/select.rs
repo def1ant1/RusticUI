@@ -3,9 +3,21 @@
 //! The implementation keeps track of open state, the currently highlighted
 //! option, the committed selection and a rolling typeahead buffer.  Framework
 //! adapters can drive the state machine through the provided public API to
-//! implement either controlled or uncontrolled widgets.
+//! implement either controlled or uncontrolled widgets.  Internally the select
+//! state now layers the shared [`crate::input_base::InputState`] so validation,
+//! analytics, and focus telemetry mirror the text-field and future input
+//! primitives without re-implementing the bookkeeping logic.  When paired with
+//! [`SelectControlBuilder`] the select exposes both the [`SelectState`] and
+//! [`FormControlState`](crate::form_control::FormControlState) to adapters in a
+//! single call, keeping controlled/uncontrolled wiring consistent across
+//! frameworks.
 
 use crate::aria;
+use crate::form_control::FormControlState;
+use crate::input_base::{
+    InputAnalyticsEvent, InputCommit, InputControlBuilder, InputControlBundle, InputReset,
+    InputState,
+};
 use crate::interaction::ControlKey;
 use crate::selection::{clamp_index, wrap_index, ControlStrategy, TypeaheadBuffer};
 use std::time::Duration;
@@ -31,6 +43,134 @@ pub struct SelectState {
     open_mode: ControlStrategy,
     selection_mode: ControlStrategy,
     typeahead: TypeaheadBuffer,
+    input: InputState,
+}
+
+/// Bundle aligning [`SelectState`] with the surrounding [`FormControlState`].
+#[derive(Debug)]
+pub struct SelectControlBundle {
+    /// Headless select state machine.
+    pub select: SelectState,
+    /// Form control shell describing labels, helper text and analytics ids.
+    pub form_control: FormControlState,
+}
+
+/// Fluent builder that wires [`SelectState`] and [`FormControlState`] using the
+/// shared [`InputControlBuilder`].
+#[derive(Debug, Clone)]
+pub struct SelectControlBuilder {
+    option_count: usize,
+    initial_selected: Option<usize>,
+    default_open: bool,
+    open_mode: ControlStrategy,
+    selection_mode: ControlStrategy,
+    input: InputControlBuilder,
+}
+
+impl SelectControlBuilder {
+    /// Start a new builder targeting a select with the provided option count.
+    pub fn new(option_count: usize) -> Self {
+        Self {
+            option_count,
+            initial_selected: None,
+            default_open: false,
+            open_mode: ControlStrategy::Uncontrolled,
+            selection_mode: ControlStrategy::Uncontrolled,
+            input: InputControlBuilder::new(""),
+        }
+    }
+
+    /// Configure the zero-based index of the initially selected option.
+    pub fn initial_selected(mut self, selected: Option<usize>) -> Self {
+        self.initial_selected = selected;
+        self
+    }
+
+    /// Indicate whether the popover should start open when uncontrolled.
+    pub fn default_open(mut self, open: bool) -> Self {
+        self.default_open = open;
+        self
+    }
+
+    /// Switch the open flag into controlled mode.
+    pub fn controlled_open(mut self) -> Self {
+        self.open_mode = ControlStrategy::Controlled;
+        self
+    }
+
+    /// Switch the selection into controlled mode.
+    pub fn controlled_selection(mut self) -> Self {
+        self.selection_mode = ControlStrategy::Controlled;
+        self.input = self.input.controlled();
+        self
+    }
+
+    /// Explicitly mark the selection as uncontrolled.
+    pub fn uncontrolled_selection(mut self) -> Self {
+        self.selection_mode = ControlStrategy::Uncontrolled;
+        self.input = self.input.uncontrolled();
+        self
+    }
+
+    /// Assign an id for the underlying form control.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.input = self.input.id(id);
+        self
+    }
+
+    /// Replace the `aria-describedby` list with the provided collection.
+    pub fn described_by<I, S>(mut self, ids: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.input = self.input.described_by(ids);
+        self
+    }
+
+    /// Set the label id for the control shell.
+    pub fn labelled_by(mut self, id: impl Into<String>) -> Self {
+        self.input = self.input.labelled_by(id);
+        self
+    }
+
+    /// Mark the control as disabled.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.input = self.input.disabled(disabled);
+        self
+    }
+
+    /// Mark the control as required.
+    pub fn required(mut self, required: bool) -> Self {
+        self.input = self.input.required(required);
+        self
+    }
+
+    /// Attach an automation identifier used by analytics probes.
+    pub fn automation_id(mut self, id: impl Into<String>) -> Self {
+        self.input = self.input.automation_id(id);
+        self
+    }
+
+    /// Finalise the builder returning the aligned bundle.
+    pub fn build(self) -> SelectControlBundle {
+        let InputControlBundle {
+            input,
+            form_control,
+        } = self.input.build();
+        let mut select = SelectState::new(
+            self.option_count,
+            self.initial_selected,
+            self.default_open,
+            self.open_mode,
+            self.selection_mode,
+        );
+        select.set_input_state(input);
+        SelectControlBundle {
+            select,
+            form_control,
+        }
+    }
 }
 
 impl SelectState {
@@ -50,6 +190,11 @@ impl SelectState {
     ) -> Self {
         let selected = clamp_index(initial_selected, option_count);
         let highlighted = selected.or(if option_count > 0 { Some(0) } else { None });
+        let initial_value = Self::selection_value(selected);
+        let input = match selection_mode {
+            ControlStrategy::Controlled => InputState::controlled(initial_value.clone(), None),
+            ControlStrategy::Uncontrolled => InputState::uncontrolled(initial_value.clone(), None),
+        };
         let mut state = Self {
             option_count,
             disabled: vec![false; option_count],
@@ -63,6 +208,7 @@ impl SelectState {
             open_mode,
             selection_mode,
             typeahead: TypeaheadBuffer::new(TYPEAHEAD_TIMEOUT),
+            input,
         };
         // Ensure the initial highlight respects disabled bookkeeping even when
         // callers immediately flag items as inert after construction.
@@ -132,6 +278,57 @@ impl SelectState {
         self.selected
     }
 
+    /// Replace the underlying [`InputState`]. Primarily used by builders that
+    /// compose [`InputControlBuilder`] so the select and form control share the
+    /// same value bookkeeping.
+    pub(crate) fn set_input_state(&mut self, input: InputState) {
+        self.input = input;
+        self.sync_input_selection(self.selected, false);
+    }
+
+    /// Borrow the underlying [`InputState`] powering value/validation metadata.
+    #[inline]
+    pub fn input_state(&self) -> &InputState {
+        &self.input
+    }
+
+    /// Mutably borrow the underlying [`InputState`].
+    #[inline]
+    pub fn input_state_mut(&mut self) -> &mut InputState {
+        &mut self.input
+    }
+
+    /// Drain accumulated analytics events from the input state machine.
+    pub fn drain_input_analytics(&mut self) -> Vec<InputAnalyticsEvent> {
+        self.input.drain_analytics()
+    }
+
+    /// Commit the input state reflecting a blur/enter action on the control.
+    pub fn commit_input(&mut self) -> InputCommit<'_> {
+        self.input.commit()
+    }
+
+    /// Reset the input value back to its initial selection.
+    pub fn reset_input(&mut self) -> InputReset<'_> {
+        self.input.set_visited(false);
+        let reset = self.input.reset();
+        reset
+    }
+
+    /// Replace the validation errors tracked by the input state.
+    pub fn set_input_errors<I, S>(&mut self, errors: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.input.set_errors(errors);
+    }
+
+    /// Clear validation errors tracked by the input state.
+    pub fn clear_input_errors(&mut self) {
+        self.input.clear_errors();
+    }
+
     /// Imperatively set the open state (uncontrolled mode) or emit an intent to
     /// open the popover (controlled mode).
     pub fn open<F: FnOnce(bool)>(&mut self, notify: F) {
@@ -172,6 +369,7 @@ impl SelectState {
             }
         }
         self.ensure_highlight();
+        self.sync_input_selection(self.selected, false);
     }
 
     /// Manually override the highlighted index.  This is primarily used by
@@ -197,6 +395,12 @@ impl SelectState {
             self.selected = Some(index);
         }
         on_select(index);
+        let selection_for_input = if self.selection_mode.is_controlled() {
+            Some(index)
+        } else {
+            self.selected
+        };
+        self.sync_input_selection(selection_for_input, true);
     }
 
     /// Commits the current highlight if present.
@@ -263,6 +467,12 @@ impl SelectState {
                     self.selected = Some(index);
                 }
                 on_select(index);
+                let selection_for_input = if self.selection_mode.is_controlled() {
+                    Some(index)
+                } else {
+                    self.selected
+                };
+                self.sync_input_selection(selection_for_input, true);
             }
         }
     }
@@ -345,6 +555,7 @@ impl SelectState {
             if !self.selection_mode.is_controlled() {
                 self.selected = None;
             }
+            self.sync_input_selection(self.selected, false);
             return;
         }
         if !self.selection_mode.is_controlled() {
@@ -357,6 +568,7 @@ impl SelectState {
             }
         }
         self.ensure_highlight();
+        self.sync_input_selection(self.selected, false);
     }
 
     fn has_enabled_options(&self) -> bool {
@@ -417,11 +629,28 @@ impl SelectState {
         }
         None
     }
+
+    fn selection_value(selection: Option<usize>) -> String {
+        selection.map(|index| index.to_string()).unwrap_or_default()
+    }
+
+    fn sync_input_selection(&mut self, selection: Option<usize>, user_initiated: bool) {
+        let value = Self::selection_value(selection);
+        if user_initiated {
+            let _ = self.input.change(value, None);
+        } else if self.selection_mode.is_controlled() {
+            self.input.sync_controlled_value(value);
+        } else {
+            self.input.set_value_silently(value.clone());
+            self.input.set_initial_value(value);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::input_base::InputAnalyticsEventKind;
 
     fn noop(_: usize) {}
 
@@ -542,6 +771,10 @@ mod tests {
         );
         uncontrolled.select(2, noop);
         assert_eq!(uncontrolled.selected(), Some(2));
+        assert_eq!(uncontrolled.input_state().value(), "2");
+        assert!(uncontrolled.input_state().dirty());
+        let commit = uncontrolled.commit_input();
+        assert_eq!(commit.value, "2");
 
         // Controlled widgets emit intents but require the parent to synchronize
         // state explicitly.
@@ -554,10 +787,13 @@ mod tests {
         );
         controlled.select(2, noop);
         assert_eq!(controlled.selected(), Some(1));
+        assert_eq!(controlled.input_state().value(), "2");
         controlled.sync_selected(Some(2));
         assert_eq!(controlled.selected(), Some(2));
+        assert_eq!(controlled.input_state().value(), "2");
         controlled.sync_selected(None);
         assert_eq!(controlled.selected(), None);
+        assert_eq!(controlled.input_state().value(), "");
 
         // Disabling a controlled selection keeps the highlight on the next
         // available option while leaving the controlled value untouched.
@@ -565,6 +801,7 @@ mod tests {
         controlled.set_option_disabled(1, true);
         assert_eq!(controlled.selected(), Some(1));
         assert_eq!(controlled.highlighted(), Some(2));
+        assert_eq!(controlled.input_state().value(), "1");
     }
 
     #[test]
@@ -660,6 +897,8 @@ mod tests {
         // Selection and highlight fall forward to the next enabled entry.
         assert_eq!(state.selected(), Some(3));
         assert_eq!(state.highlighted(), Some(3));
+        assert_eq!(state.input_state().value(), "3");
+        assert!(!state.input_state().dirty());
 
         // Shrinking the option count drops disabled state and clamps indices.
         state.set_option_count(2);
@@ -667,6 +906,8 @@ mod tests {
         assert_eq!(state.disabled.len(), 2);
         assert_eq!(state.selected(), None);
         assert_eq!(state.highlighted(), Some(0));
+        assert_eq!(state.input_state().value(), "");
+        assert!(!state.input_state().dirty());
 
         // Expanding restores new slots as enabled by default.
         state.set_option_count(4);
@@ -690,6 +931,51 @@ mod tests {
             "callbacks should not fire for disabled options"
         );
         assert_eq!(state.highlighted(), Some(2));
+    }
+
+    #[test]
+    fn input_state_reset_and_validation_hooks() {
+        let mut state = SelectState::new(
+            2,
+            Some(0),
+            false,
+            ControlStrategy::Uncontrolled,
+            ControlStrategy::Uncontrolled,
+        );
+        state.select(1, noop);
+        state.set_input_errors(["required"]);
+        let commit = state.commit_input();
+        assert!(commit.has_errors);
+        let reset = state.reset_input();
+        assert_eq!(reset.value, "0");
+        assert!(reset
+            .analytics
+            .iter()
+            .any(|event| event.kind == InputAnalyticsEventKind::Reset));
+        state.clear_input_errors();
+        assert!(state.input_state().errors().is_empty());
+    }
+
+    #[test]
+    fn control_builder_produces_aligned_bundle() {
+        let SelectControlBundle {
+            mut select,
+            form_control,
+        } = SelectControlBuilder::new(3)
+            .initial_selected(Some(1))
+            .controlled_selection()
+            .labelled_by("select-label")
+            .automation_id("select.primary")
+            .build();
+        assert_eq!(select.selected(), Some(1));
+        assert_eq!(select.input_state().value(), "1");
+        assert_eq!(form_control.automation_id(), Some("select.primary"));
+        assert!(form_control
+            .aria_attributes()
+            .iter()
+            .any(|(k, v)| *k == "aria-labelledby" && v == "select-label"));
+        select.select(2, noop);
+        assert_eq!(select.input_state().value(), "2");
     }
 
     #[test]

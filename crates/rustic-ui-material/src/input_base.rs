@@ -30,7 +30,7 @@
 use rustic_ui_headless::input_base::{
     InputChangeEvent, InputCommitEvent, InputResetEvent, InputSelection, InputState,
 };
-use rustic_ui_styled_engine::{css_with_theme, use_theme, Style, Theme};
+use rustic_ui_styled_engine::{use_theme, Style, Theme};
 
 use crate::style_helpers;
 
@@ -50,13 +50,6 @@ fn bool_token(value: bool) -> String {
     }
 }
 
-#[cfg(any(
-    feature = "react",
-    feature = "yew",
-    feature = "leptos",
-    feature = "dioxus",
-    feature = "sycamore",
-))]
 fn compute_parts(
     theme: &Theme,
     color: InputBaseColor,
@@ -80,13 +73,6 @@ fn compute_parts(
     (color, font_size, border)
 }
 
-#[cfg(any(
-    feature = "react",
-    feature = "yew",
-    feature = "leptos",
-    feature = "dioxus",
-    feature = "sycamore",
-))]
 fn resolve_style(
     color: InputBaseColor,
     size: InputBaseSize,
@@ -96,22 +82,14 @@ fn resolve_style(
     let theme = use_theme();
     let (color, font_size, border) = compute_parts(&theme, color, size, variant);
     let extra = style_overrides.unwrap_or_default();
-    css_with_theme!(
-        theme,
-        r#"
-        color: ${color};
-        font-size: ${font_size};
-        border: ${border};
-        padding: 4px 8px;
-        width: 100%;
-        box-sizing: border-box;
-        ${extra}
-        "#,
+    Style::new(format!(
+        "color: {color};\nfont-size: {font_size};\nborder: {border};\npadding: 4px 8px;\nwidth: 100%;\nbox-sizing: border-box;\n{extra}",
         color = color,
         font_size = font_size,
         border = border,
         extra = extra
-    )
+    ))
+    .expect("static input base stylesheet")
 }
 
 /// Construct the automation/data attributes that mirror headless analytics state.

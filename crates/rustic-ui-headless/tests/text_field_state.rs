@@ -26,7 +26,7 @@ proptest! {
 
         let mut observed = None;
         state.change(next.clone(), |snapshot| {
-            observed = Some((snapshot.value.to_string(), snapshot.dirty, snapshot.debounce));
+            observed = Some((snapshot.value().to_string(), snapshot.dirty(), snapshot.debounce));
         });
 
         let (value, dirty, emitted_debounce) = observed.expect("change handler not invoked");
@@ -56,14 +56,18 @@ proptest! {
         state.set_errors(errors.clone());
 
         let mut commit_snapshot = None;
-        state.commit(|snapshot| commit_snapshot = Some((snapshot.has_errors, snapshot.previously_visited)));
+        state.commit(|snapshot| {
+            commit_snapshot = Some((snapshot.has_errors(), snapshot.previously_visited()));
+        });
         let (has_errors, previously_visited) = commit_snapshot.expect("commit snapshot missing");
         prop_assert_eq!(has_errors, !errors.is_empty());
         prop_assert!(!previously_visited);
         prop_assert!(state.visited());
 
         let mut reset_snapshot = None;
-        state.reset(|snapshot| reset_snapshot = Some((snapshot.value.to_string(), snapshot.cleared_errors)));
+        state.reset(|snapshot| {
+            reset_snapshot = Some((snapshot.value().to_string(), snapshot.cleared_errors()));
+        });
         let (value, cleared) = reset_snapshot.expect("reset snapshot missing");
         prop_assert_eq!(value, initial);
         prop_assert_eq!(cleared, !errors.is_empty());

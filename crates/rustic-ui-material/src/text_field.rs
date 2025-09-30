@@ -43,6 +43,23 @@
 //! eliminating brittle QA issues in pre-production environments. ARIA flags and
 //! analytics identifiers originate from the shared [`TextFieldState`] so SSR and
 //! hydrated behaviour stay perfectly aligned.
+//!
+//! ## Headless layering
+//! The Material adapters now consume [`TextFieldControlBuilder`] to assemble the
+//! [`TextFieldState`] alongside the surrounding
+//! [`FormControlState`](rustic_ui_headless::form_control::FormControlState).  This
+//! ensures labels, helper text and automation identifiers flow from the same
+//! source of truth while keeping adapter code focused on rendering concerns. The
+//! builder mirrors the low-level [`InputControlBuilder`](rustic_ui_headless::InputControlBuilder)
+//! exposed by the headless crate so future inputs (numeric, password, search)
+//! can reuse the exact same wiring without copy/pasting boilerplate.
+#[cfg(any(
+    feature = "yew",
+    feature = "leptos",
+    feature = "dioxus",
+    feature = "sycamore"
+))]
+use rustic_ui_headless::form_control::FormControlState;
 #[cfg(any(
     feature = "yew",
     feature = "leptos",
@@ -50,8 +67,8 @@
     feature = "sycamore"
 ))]
 use rustic_ui_headless::text_field::{
-    TextFieldAttributes, TextFieldChangeEvent, TextFieldCommitEvent, TextFieldResetEvent,
-    TextFieldState,
+    TextFieldAttributes, TextFieldChangeEvent, TextFieldCommitEvent, TextFieldControlBuilder,
+    TextFieldControlBundle, TextFieldResetEvent, TextFieldState,
 };
 #[cfg(any(
     feature = "yew",
@@ -217,6 +234,20 @@ mod shared_state_handle {
             Self {
                 inner: Rc::new(RefCell::new(state)),
             }
+        }
+
+        /// Construct a new handle while also returning the aligned [`FormControlState`].
+        pub fn with_control_builder(builder: TextFieldControlBuilder) -> (Self, FormControlState) {
+            let TextFieldControlBundle {
+                text_field,
+                form_control,
+            } = builder.build();
+            (Self::new(text_field), form_control)
+        }
+
+        /// Attach an existing bundle produced by [`TextFieldControlBuilder`].
+        pub fn from_control_bundle(bundle: TextFieldControlBundle) -> (Self, FormControlState) {
+            (Self::new(bundle.text_field), bundle.form_control)
         }
 
         /// Immutable access to the underlying state.
@@ -833,12 +864,13 @@ pub mod sycamore {
     )
 ))]
 mod tests {
+    use super::TextFieldStateHandle;
     use super::{build_text_field_attributes, input_attribute_pairs, ssr_input_attributes};
-    use rustic_ui_headless::text_field::TextFieldState;
+    use rustic_ui_headless::text_field::{TextFieldControlBuilder, TextFieldState};
 
     #[test]
     fn input_pairs_reflect_dirty_and_visited_flags() {
-        let mut state = TextFieldState::uncontrolled("seed", None);
+        let mut state = TextFieldControlBuilder::new("seed").build().text_field;
         let attrs = build_text_field_attributes(&state, None, None);
         let pairs = input_attribute_pairs(attrs, state.value(), "Placeholder", "Label");
         let lookup = |key: &str| {
@@ -877,7 +909,7 @@ mod tests {
 
     #[test]
     fn ssr_attributes_include_error_status() {
-        let mut state = TextFieldState::uncontrolled("", None);
+        let mut state = TextFieldControlBuilder::new("").build().text_field;
         state.set_errors(vec!["Required".into()]);
         let builder = build_text_field_attributes(&state, Some("status"), Some("analytics-1"));
         let attrs = ssr_input_attributes(builder, state.value(), "Placeholder", "Label");
@@ -895,7 +927,7 @@ mod tests {
 
     #[test]
     fn input_pairs_toggle_analytics_metadata() {
-        let state = TextFieldState::uncontrolled("", None);
+        let state = TextFieldControlBuilder::new("").build().text_field;
         let with_id = build_text_field_attributes(&state, None, Some("field-1"));
         let with_pairs = input_attribute_pairs(with_id, state.value(), "Hint", "Label");
         assert!(with_pairs
@@ -905,5 +937,14 @@ mod tests {
         let without_id = build_text_field_attributes(&state, None, None);
         let without_pairs = input_attribute_pairs(without_id, state.value(), "Hint", "Label");
         assert!(without_pairs.iter().all(|(k, _)| k != "data-analytics-id"));
+    }
+
+    #[test]
+    fn state_handle_builder_returns_form_control() {
+        let (handle, form_control) = TextFieldStateHandle::with_control_builder(
+            TextFieldControlBuilder::new("seed").automation_id("field-1"),
+        );
+        assert_eq!(handle.borrow().value(), "seed");
+        assert_eq!(form_control.automation_id(), Some("field-1"));
     }
 }

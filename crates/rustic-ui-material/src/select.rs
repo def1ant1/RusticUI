@@ -15,10 +15,92 @@
 //!   through every select.
 //! * Automation hooks (`data-*` attributes) are standardized so QA teams can
 //!   target components reliably regardless of hosting framework.
+//!
+//! ## Headless layering
+//! The Material select now builds atop [`SelectControlBuilder`], returning both
+//! the [`SelectState`] and its companion [`FormControlState`].  This mirrors the
+//! text-field integration so analytics identifiers, labels, and helper text flow
+//! from a single shared builder.  Consumers targeting interactive runtimes can
+//! call [`SelectStateHandle::with_control_builder`] to receive the shared
+//! [`Rc<RefCell<_>>`](std::rc::Rc) wrapper used by the Yew text field, ensuring
+//! inputs follow the same `InputBase` lifecycle hooks without manual wiring.
+//! Adapters therefore spend less time creating ARIA attributes and more time
+//! focusing on the ergonomics of the rendered trigger and popover.
 
-use rustic_ui_headless::select::SelectState;
+use rustic_ui_headless::form_control::FormControlState;
+use rustic_ui_headless::select::{SelectControlBuilder, SelectControlBundle, SelectState};
 use rustic_ui_styled_engine::{css_with_theme, Style};
 use rustic_ui_system::portal::PortalMount;
+
+mod shared_state_handle {
+    use super::*;
+    use std::cell::{Ref, RefCell, RefMut};
+    use std::rc::Rc;
+
+    /// Shared pointer wrapper that mirrors [`TextFieldStateHandle`](crate::text_field::TextFieldStateHandle)
+    /// so framework adapters can coordinate around a single [`SelectState`].
+    ///
+    /// Yew/Leptos/Sycamore integrations often need to mutate the state from multiple closures
+    /// (trigger click, option activation, blur handlers) while still exposing a stable handle to
+    /// user code.  Wrapping the state in `Rc<RefCell<_>>` keeps that workflow ergonomic without
+    /// leaking the lower level [`SelectControlBundle`].  The bundle methods remain available for
+    /// server rendered contexts that only require owned values.
+    #[derive(Clone)]
+    pub struct SelectStateHandle {
+        inner: Rc<RefCell<SelectState>>,
+    }
+
+    impl SelectStateHandle {
+        /// Construct a new handle from an owned [`SelectState`].
+        pub fn new(state: SelectState) -> Self {
+            Self {
+                inner: Rc::new(RefCell::new(state)),
+            }
+        }
+
+        /// Construct a new handle while also returning the aligned [`FormControlState`].
+        ///
+        /// This mirrors [`TextFieldStateHandle::with_control_builder`](crate::text_field::TextFieldStateHandle::with_control_builder)
+        /// so callers configuring analytics ids or helper text can do so once on the builder and
+        /// receive both state machines in lockstep.
+        pub fn with_control_builder(builder: SelectControlBuilder) -> (Self, FormControlState) {
+            let SelectControlBundle {
+                select,
+                form_control,
+            } = builder.build();
+            (Self::new(select), form_control)
+        }
+
+        /// Attach an existing bundle produced by [`SelectControlBuilder`].
+        pub fn from_control_bundle(bundle: SelectControlBundle) -> (Self, FormControlState) {
+            (Self::new(bundle.select), bundle.form_control)
+        }
+
+        /// Immutable access to the underlying state machine.
+        pub fn borrow(&self) -> Ref<'_, SelectState> {
+            self.inner.borrow()
+        }
+
+        /// Mutable access to the underlying state machine.
+        pub fn borrow_mut(&self) -> RefMut<'_, SelectState> {
+            self.inner.borrow_mut()
+        }
+    }
+
+    impl From<SelectState> for SelectStateHandle {
+        fn from(state: SelectState) -> Self {
+            Self::new(state)
+        }
+    }
+
+    impl PartialEq for SelectStateHandle {
+        fn eq(&self, other: &Self) -> bool {
+            Rc::ptr_eq(&self.inner, &other.inner)
+        }
+    }
+}
+
+pub use shared_state_handle::SelectStateHandle;
 
 /// Discrete option rendered inside the Material select popover.
 #[derive(Clone, Debug)]
@@ -445,17 +527,7 @@ mod tests {
     use super::*;
 
     fn build_state(option_count: usize) -> SelectState {
-        SelectState::new(
-            option_count,
-            None,
-            false,
-            // `ControlStrategy` lives in a private module inside `rustic_ui_headless`.
-            // The discriminant order is stable (documented within that crate),
-            // so the test recreates the `Uncontrolled` variant via transmute to
-            // keep the public surface lean while still exercising integration.
-            unsafe { std::mem::transmute(1u8) },
-            unsafe { std::mem::transmute(1u8) },
-        )
+        SelectControlBuilder::new(option_count).build().select
     }
 
     fn sample_props() -> SelectProps {

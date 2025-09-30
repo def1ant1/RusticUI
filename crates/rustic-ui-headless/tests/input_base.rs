@@ -112,3 +112,17 @@ fn builder_respects_mode_switching() {
         rustic_ui_headless::ControlStrategy::Uncontrolled
     );
 }
+
+#[test]
+fn silent_mutations_keep_analytics_clean() {
+    let mut state = InputState::controlled("baseline", None);
+    state.set_value_silently("override");
+    state.set_initial_value("override");
+    state.set_visited(true);
+    state.clear_errors();
+    assert_eq!(state.value(), "override");
+    assert!(!state.dirty());
+    assert!(state.drain_analytics().is_empty());
+    state.set_visited(false);
+    assert!(!state.visited());
+}

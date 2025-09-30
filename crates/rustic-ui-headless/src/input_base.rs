@@ -302,6 +302,25 @@ impl InputState {
         &self.errors
     }
 
+    /// Replace the current value without emitting analytics events.
+    ///
+    /// This is primarily consumed by higher level inputs that need to
+    /// synchronise SSR or virtual DOM state without incrementing dirty flags
+    /// or triggering instrumentation hooks.  The dirty flag is recomputed
+    /// against the existing baseline so callers can immediately decide whether
+    /// they also want to update [`InputState::set_initial_value`].
+    pub fn set_value_silently(&mut self, value: impl Into<String>) {
+        let value = value.into();
+        self.value = value;
+        self.pending_controlled = None;
+        self.recompute_dirty();
+    }
+
+    /// Explicitly toggle the visited marker.
+    pub fn set_visited(&mut self, visited: bool) {
+        self.visited = visited;
+    }
+
     fn push_analytics(&mut self, event: InputAnalyticsEvent) {
         self.analytics.push(event);
     }
@@ -422,6 +441,20 @@ impl InputState {
             InputAnalyticsEventKind::Validation,
             self.errors.len().to_string(),
         ));
+    }
+
+    /// Clear the validation error collection without emitting analytics.
+    pub fn clear_errors(&mut self) {
+        self.errors.clear();
+    }
+
+    /// Update the baseline used when calculating the dirty flag.  Callers can
+    /// pair this with [`InputState::set_value_silently`] after hydrating from a
+    /// controlled parent so the state machine mirrors the upstream value
+    /// without appearing dirty.
+    pub fn set_initial_value(&mut self, value: impl Into<String>) {
+        self.initial_value = value.into();
+        self.recompute_dirty();
     }
 }
 
