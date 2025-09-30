@@ -70,6 +70,8 @@ pub mod menu;
 pub mod pagination;
 pub mod paper;
 pub mod popover;
+pub mod popper;
+pub mod portal;
 pub mod radio;
 pub mod select;
 #[cfg(feature = "progress")]
@@ -87,6 +89,7 @@ pub mod text_field;
 pub mod timing;
 pub mod toggle_button_group;
 pub mod tooltip;
+pub mod transition;
 pub mod typography;
 #[cfg(feature = "unstable")]
 pub mod unstable_trap_focus;
