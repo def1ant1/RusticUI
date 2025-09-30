@@ -10,6 +10,7 @@
 //! struct they can configure to bolt analytics, tracing, and error
 //! collection into RusticUI widgets.
 
+use std::fmt;
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::Arc;
 
@@ -113,6 +114,18 @@ impl PartialEq for TelemetryHooks {
             && span_option_eq(&self.span, &other.span)
             && callback_eq(&self.on_render, &other.on_render)
             && callback_eq(&self.on_error, &other.on_error)
+    }
+}
+
+impl fmt::Debug for TelemetryHooks {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TelemetryHooks")
+            .field("analytics_id", &self.analytics_id)
+            .field("automation_id", &self.automation_id)
+            .field("span", &self.span.as_ref().map(|_| "configured"))
+            .field("on_render", &self.on_render.as_ref().map(|_| "callback"))
+            .field("on_error", &self.on_error.as_ref().map(|_| "callback"))
+            .finish()
     }
 }
 
