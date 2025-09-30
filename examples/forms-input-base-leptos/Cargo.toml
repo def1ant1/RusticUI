@@ -1,0 +1,20 @@
+[package]
+name = "forms-input-base-leptos"
+version = "0.1.0"
+edition = "2021"
+description = "InputBase blueprint with Leptos signals and hydration guidance"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+forms-input-base-shared = { path = "../forms-input-base-shared" }
+leptos = { version = "=0.6.12", default-features = false }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-material = { path = "../../crates/rustic-ui-material", features = ["leptos"] }
+rustic-ui-system = { path = "../../crates/rustic-ui-system" }
+tokio = { version = "1.37", default-features = false, features = ["macros", "rt-multi-thread"], optional = true }
+
+[features]
+default = ["csr"]
+csr = ["leptos/csr"]
+ssr = ["tokio", "leptos/ssr"]

@@ -1,0 +1,31 @@
+[package]
+name = "forms-input-base-dioxus"
+version = "0.1.0"
+edition = "2021"
+description = "InputBase blueprint rendered with Dioxus and shared automation notes"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "forms_input_base_dioxus"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bootstrap"
+path = "src/bin/bootstrap.rs"
+
+[dependencies]
+forms-input-base-shared = { path = "../forms-input-base-shared" }
+dioxus = { workspace = true, features = ["macro", "hooks", "html"] }
+dioxus-web = { workspace = true, features = ["file_engine"] }
+dioxus-ssr = { workspace = true, optional = true }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-material = { path = "../../crates/rustic-ui-material", features = ["dioxus"] }
+rustic-ui-system = { path = "../../crates/rustic-ui-system" }
+wasm-bindgen.workspace = true
+serde_json.workspace = true
+
+[features]
+default = ["csr"]
+csr = []
+ssr = ["dioxus-ssr"]

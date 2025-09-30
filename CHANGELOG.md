@@ -3,6 +3,28 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-07-12 – InputBase automation blueprints
+
+### Highlights
+
+- Added an InputBase developer guide detailing analytics hooks, SSR guidance,
+  and migration tasks so adopters can move from bespoke inputs to the shared
+  state machine without guesswork.【F:docs/data/material/guides/input-base/input-base.md†L1-L75】
+- Shipped `forms-input-base-*` examples for Dioxus, Leptos, Sycamore, and Yew,
+  each reusing the centralised shared crate to emit deterministic
+  `data-rustic-input-base-*` selectors, hydration notes, and SSR bootstrap
+  assets.【F:examples/forms-input-base-yew/src/lib.rs†L1-L170】【F:examples/forms-input-base-leptos/src/lib.rs†L1-L170】【F:examples/forms-input-base-dioxus/src/lib.rs†L1-L86】【F:examples/forms-input-base-sycamore/src/lib.rs†L1-L94】【F:examples/forms-input-base-shared/src/lib.rs†L1-L199】
+- Extended `cargo xtask examples` with a `forms` group so CI and local runs
+  compile the new blueprints for native and `wasm32-unknown-unknown` targets via
+  a single managed entry point.【F:crates/xtask/src/main.rs†L68-L110】【F:crates/xtask/src/main.rs†L523-L572】
+
+### Verification
+
+- `cargo fmt`
+- `cargo clippy --workspace --all-targets --all-features`
+- `cargo test --workspace --all-features`
+- `cargo xtask examples --group forms --release`
+
 ## 2025-07-05 – Multi-adapter primitive guards
 
 ### Highlights

@@ -1,0 +1,15 @@
+[package]
+name = "forms-input-base-shared"
+version = "0.1.0"
+edition = "2021"
+description = "Shared automation and SSR utilities for the InputBase form blueprints"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-material = { path = "../../crates/rustic-ui-material" }
+rustic-ui-system = { path = "../../crates/rustic-ui-system" }

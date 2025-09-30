@@ -71,7 +71,7 @@ enum Commands {
     /// Compile curated Rust example collections for native and WebAssembly targets.
     #[command(
         about = "Compile curated Rust example collections for native and WebAssembly targets.",
-        long_about = "Compile curated Rust example collections for native and WebAssembly targets without relying on ad-hoc shell scripts. Each group is centrally defined so new demos can be enrolled in CI by appending a manifest entry instead of wiring fresh workflows.\n\nLayout demos currently validated: examples/layout-box-leptos, examples/layout-grid-yew. Update the `layout_examples` helper when shipping new layouts so CI picks them up automatically."
+        long_about = "Compile curated Rust example collections for native and WebAssembly targets without relying on ad-hoc shell scripts. Each group is centrally defined so new demos can be enrolled in CI by appending a manifest entry instead of wiring fresh workflows.\n\nLayout demos currently validated: examples/layout-box-leptos, examples/layout-grid-yew. Update the `layout_examples` helper when shipping new layouts so CI picks them up automatically.\n\nForm control demos validated: examples/forms-input-base-yew, examples/forms-input-base-leptos, examples/forms-input-base-dioxus, examples/forms-input-base-sycamore. Update `forms_examples` when adding new frameworks so SSR snapshots stay wired into CI."
     )]
     Examples(ExamplesArgs),
     /// Run WebAssembly tests via `wasm-pack` for selected crates.
@@ -398,6 +398,8 @@ enum ExampleGroup {
     Utilities,
     /// Navigation surfaces spanning bottom nav, pagination, and speed dial.
     Navigation,
+    /// Form control blueprints exercising InputBase across frameworks.
+    Forms,
 }
 
 impl ExampleGroup {
@@ -406,6 +408,7 @@ impl ExampleGroup {
             ExampleGroup::Layout => "layout",
             ExampleGroup::Utilities => "utilities",
             ExampleGroup::Navigation => "navigation",
+            ExampleGroup::Forms => "forms",
         }
     }
 }
@@ -490,6 +493,7 @@ fn examples(args: ExamplesArgs) -> Result<()> {
         ExampleGroup::Layout => layout_examples(&workspace)?,
         ExampleGroup::Utilities => utilities_examples(&workspace)?,
         ExampleGroup::Navigation => navigation_examples(&workspace)?,
+        ExampleGroup::Forms => forms_examples(&workspace)?,
     };
 
     if crates.is_empty() {
@@ -642,6 +646,46 @@ fn navigation_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
         if !manifest_path.exists() {
             return Err(anyhow!(
                 "navigation example `{}` manifest missing at {}",
+                name,
+                manifest_path.display()
+            ));
+        }
+
+        crates.push(ExampleCrate {
+            name: (*name).to_string(),
+            manifest: manifest_path,
+        });
+    }
+
+    Ok(crates)
+}
+
+fn forms_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
+    const FORMS_MANIFESTS: &[(&str, &str)] = &[
+        (
+            "forms-input-base-dioxus",
+            "examples/forms-input-base-dioxus/Cargo.toml",
+        ),
+        (
+            "forms-input-base-leptos",
+            "examples/forms-input-base-leptos/Cargo.toml",
+        ),
+        (
+            "forms-input-base-sycamore",
+            "examples/forms-input-base-sycamore/Cargo.toml",
+        ),
+        (
+            "forms-input-base-yew",
+            "examples/forms-input-base-yew/Cargo.toml",
+        ),
+    ];
+
+    let mut crates = Vec::with_capacity(FORMS_MANIFESTS.len());
+    for (name, manifest) in FORMS_MANIFESTS {
+        let manifest_path = workspace.join(manifest);
+        if !manifest_path.exists() {
+            return Err(anyhow!(
+                "forms example `{}` manifest missing at {}",
                 name,
                 manifest_path.display()
             ));
