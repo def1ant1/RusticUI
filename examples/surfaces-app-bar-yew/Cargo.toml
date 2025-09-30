@@ -1,0 +1,23 @@
+[package]
+name = "surfaces_app_bar_yew"
+version = "0.1.0"
+edition = "2021"
+description = "RusticUI material app bar surface driven by the headless state"
+publish = false
+license.workspace = true
+
+[[bin]]
+name = "surfaces-app-bar-yew"
+path = "src/main.rs"
+
+[dependencies]
+yew = { workspace = true, features = ["csr"] }
+rustic-ui-material = { path = "../../crates/rustic-ui-material", features = ["yew"] }
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["Window", "Document"] }
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+
+[package.metadata.docs]
+summary = "Demonstrates enterprise-ready app bar automation hooks in Yew"

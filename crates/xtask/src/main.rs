@@ -623,6 +623,10 @@ fn navigation_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
             "examples/navigation-bottom-navigation-yew/Cargo.toml",
         ),
         (
+            "surfaces-app-bar-yew",
+            "examples/surfaces-app-bar-yew/Cargo.toml",
+        ),
+        (
             "navigation-pagination-leptos",
             "examples/navigation-pagination-leptos/Cargo.toml",
         ),

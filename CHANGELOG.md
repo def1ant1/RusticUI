@@ -16,6 +16,10 @@ archived Material UI change history now lives in [`docs/archives/material-ui-cha
   regressions introduced by new primitives or re-export changes.【F:crates/xtask/src/main.rs†L254-L285】
 - Documented the new guard in the Rust CI guide so contributors run the
   multi-adapter build matrix locally before submitting patches.【F:docs/rust-ci.md†L45-L56】
+- Introduced the headless-driven app bar workflow: `AppBarState` centralises
+  automation and analytics identifiers while the Material adapters, framework
+  shims, and new `surfaces-app-bar-yew` example consume the shared builders for
+  deterministic SSR output.【F:crates/rustic-ui-headless/src/app_bar.rs†L1-L220】【F:crates/rustic-ui-material/src/app_bar.rs†L1-L248】【F:examples/surfaces-app-bar-yew/src/lib.rs†L1-L20】
 
 ### Verification
 

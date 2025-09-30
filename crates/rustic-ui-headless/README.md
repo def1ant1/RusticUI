@@ -8,6 +8,12 @@ callbacks.
 
 ## Select state machine quick reference
 
+`app_bar::AppBarState` centralises navigation banner metadata. The builder style
+API exposes HTML/SVG attribute helpers with consistent automation identifiers,
+and optional analytics hooks (`data-analytics-view-id`,
+`data-analytics-interaction-id`) so Material adapters can emit the same SSR
+markup as their client-side counterparts without duplicating telemetry logic.
+
 `SelectState` powers listbox-style widgets (selects, combo boxes, virtualized
 menus). The state machine now tracks which options are disabled alongside the
 open/selected/highlighted bookkeeping so adapters can declaratively toggle
