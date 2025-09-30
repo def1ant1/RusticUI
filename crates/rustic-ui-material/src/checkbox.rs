@@ -1,14 +1,14 @@
 //! Material flavored checkbox built on the headless [`CheckboxState`].
 //!
 //! The module orchestrates styling through [`css_with_theme!`](rustic_ui_styled_engine::css_with_theme)
-//! and delegates markup generation to [`selection_control::render_toggle`]
+//! and delegates markup generation to [`selection_control::ToggleControlDescriptor`]
 //! keeping adapters tiny. Extensive inline documentation is provided to help
 //! enterprise teams adapt the component to their own design systems.
 
 use rustic_ui_headless::checkbox::CheckboxState;
 use rustic_ui_styled_engine::{css_with_theme, Style};
 
-use crate::selection_control;
+use crate::selection_control::{self, ToggleControlDescriptor};
 
 /// Props shared across all framework adapters.
 #[derive(Clone, Debug)]
@@ -26,13 +26,14 @@ impl CheckboxProps {
     }
 }
 
+fn build_descriptor(props: &CheckboxProps, state: &CheckboxState) -> ToggleControlDescriptor {
+    ToggleControlDescriptor::new(props.label.clone(), themed_checkbox_style())
+        .with_attributes(state.aria_attributes())
+}
+
 fn render_html(props: &CheckboxProps, state: &CheckboxState) -> String {
-    let attrs = state
-        .aria_attributes()
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect();
-    selection_control::render_toggle(&props.label, themed_checkbox_style(), attrs)
+    let descriptor = build_descriptor(props, state);
+    selection_control::render_toggle_html(&descriptor)
 }
 
 /// Generates the themed style for the checkbox container. The macro pulls
@@ -97,18 +98,6 @@ fn themed_checkbox_style() -> Style {
     )
 }
 
-/// Helper exposed for tests so we can assert the attribute map contains the
-/// expected ARIA metadata. Production callers should rely on
-/// [`render_html`].
-#[cfg_attr(not(test), allow(dead_code))]
-fn themed_checkbox_attributes(state: &CheckboxState) -> Vec<(String, String)> {
-    state
-        .aria_attributes()
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect()
-}
-
 pub mod yew {
     use super::*;
 
@@ -148,8 +137,10 @@ mod tests {
     #[test]
     fn themed_attributes_include_role() {
         let state = CheckboxState::uncontrolled(false, true);
-        let attrs = themed_checkbox_attributes(&state);
-        assert!(attrs.iter().any(|(k, v)| k == "role" && v == "checkbox"));
+        let attrs = build_descriptor(&CheckboxProps::new("Accept"), &state);
+        assert!(attrs
+            .aria_attributes()
+            .any(|(k, v)| k == "role" && v == "checkbox"));
     }
 
     #[test]

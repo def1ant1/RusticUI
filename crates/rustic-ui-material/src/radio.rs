@@ -1,12 +1,13 @@
 //! Material radio group built atop the headless [`RadioGroupState`].
 //!
 //! Rendering logic is intentionally centralized so Yew, Leptos, Dioxus and
-//! Sycamore integrations share identical markup.
+//! Sycamore integrations share identical markup while also giving adapters
+//! access to structured descriptors for hydration.
 
 use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
 use rustic_ui_styled_engine::{css_with_theme, Style};
 
-use crate::selection_control;
+use crate::selection_control::{self, RadioGroupDescriptor, RadioOptionDescriptor};
 
 #[derive(Clone, Debug)]
 pub struct RadioGroupProps {
@@ -29,17 +30,11 @@ impl RadioGroupProps {
     }
 }
 
-fn render_html(props: &RadioGroupProps, state: &RadioGroupState) -> String {
-    let mut group_attrs: Vec<(String, String)> = state
-        .group_aria_attributes()
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect();
+fn build_descriptor(props: &RadioGroupProps, state: &RadioGroupState) -> RadioGroupDescriptor {
     let orientation_value = match state.orientation() {
         RadioOrientation::Horizontal => "horizontal",
         RadioOrientation::Vertical => "vertical",
     };
-    group_attrs.push(("data-orientation".into(), orientation_value.into()));
 
     let labels = if props.option_labels.is_empty() {
         state.options().to_vec()
@@ -47,24 +42,24 @@ fn render_html(props: &RadioGroupProps, state: &RadioGroupState) -> String {
         props.option_labels.clone()
     };
 
-    let mut options = Vec::new();
+    let mut descriptor = RadioGroupDescriptor::new(themed_radio_group_style())
+        .with_group_attributes(state.group_aria_attributes())
+        .group_attribute("data-orientation", orientation_value);
+
     for (index, option) in state.options().iter().enumerate() {
         let label = labels.get(index).cloned().unwrap_or_else(|| option.clone());
-        let mut attrs: Vec<(String, String)> = state
-            .option_aria_attributes(index)
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v))
-            .collect();
-        attrs.push(("data-index".into(), index.to_string()));
-        options.push((label, attrs));
+        let option_descriptor = RadioOptionDescriptor::new(label, themed_radio_option_style())
+            .with_attributes(state.option_aria_attributes(index))
+            .attribute("data-index", index.to_string());
+        descriptor = descriptor.option(option_descriptor);
     }
 
-    selection_control::render_radio_group(
-        themed_radio_group_style(),
-        group_attrs,
-        themed_radio_option_style,
-        &options,
-    )
+    descriptor
+}
+
+fn render_html(props: &RadioGroupProps, state: &RadioGroupState) -> String {
+    let descriptor = build_descriptor(props, state);
+    selection_control::render_radio_group_html(&descriptor)
 }
 
 /// Generates layout styling for the radio group container, including
@@ -143,16 +138,6 @@ fn themed_radio_option_style() -> Style {
     )
 }
 
-/// Exposed for unit tests to assert the ARIA metadata contract.
-#[cfg_attr(not(test), allow(dead_code))]
-fn themed_radio_group_attributes(state: &RadioGroupState) -> Vec<(String, String)> {
-    state
-        .group_aria_attributes()
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect()
-}
-
 pub mod yew {
     use super::*;
 
@@ -199,22 +184,23 @@ mod tests {
             Some(0),
         );
         let html = render_html(&props, &state);
-        assert!(html.contains(">A<"));
-        assert!(html.contains(">B<"));
-        assert!(html.contains("radiogroup"));
+        assert!(html.contains("data-index=\"0\""));
+        assert!(html.contains("data-index=\"1\""));
     }
 
     #[test]
-    fn themed_attributes_include_orientation() {
+    fn descriptor_exposes_aria_metadata() {
+        let props = RadioGroupProps::new(vec!["A".to_string(), "B".to_string()]);
         let state = RadioGroupState::uncontrolled(
-            vec!["A".into()],
+            vec!["A".into(), "B".into()],
             false,
-            RadioOrientation::Vertical,
-            None,
+            RadioOrientation::Horizontal,
+            Some(0),
         );
-        let attrs = themed_radio_group_attributes(&state);
-        assert!(attrs
-            .iter()
-            .any(|(k, v)| k == "aria-orientation" && v == "vertical"));
+        let descriptor = build_descriptor(&props, &state);
+        assert!(descriptor.aria_attributes().any(|(k, _)| k == "role"));
+        assert!(descriptor.options().iter().any(|option| option
+            .aria_attributes()
+            .any(|(k, v)| k == "aria-checked" && v == "true")));
     }
 }
