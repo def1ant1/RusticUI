@@ -88,6 +88,8 @@ pub fn click_away_root_attributes(
     }
     if let Some((key, value)) = attrs.analytics_attribute() {
         pairs.push((key.into(), value.into()));
+    } else if let Some(analytics) = &options.analytics_id {
+        pairs.push(("data-rustic-analytics-id".into(), analytics.to_string()));
     }
     let automation_id = options
         .automation_id

@@ -33,7 +33,6 @@ fn root_attributes_mirror_automation_contract() {
     let state = seeded_state();
     let options = boundary_options();
     let attrs = click_away_root_attributes(state.root_attributes(), "dialog::checkout", &options);
-
     assert_eq!(attrs.len(), 4);
     assert!(attrs
         .iter()

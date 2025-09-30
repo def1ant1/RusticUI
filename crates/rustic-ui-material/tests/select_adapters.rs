@@ -1,4 +1,4 @@
-use rustic_ui_headless::select::SelectState;
+use rustic_ui_headless::select::{SelectControlBuilder, SelectState};
 use rustic_ui_material::select::{self, SelectOption, SelectProps};
 
 fn sample_props() -> SelectProps {
@@ -13,13 +13,7 @@ fn sample_props() -> SelectProps {
 }
 
 fn build_state(count: usize) -> SelectState {
-    SelectState::new(
-        count,
-        None,
-        true,
-        unsafe { std::mem::transmute(1u8) },
-        unsafe { std::mem::transmute(1u8) },
-    )
+    SelectControlBuilder::new(count).build().select
 }
 
 fn assert_portal_markup(html: &str) {
