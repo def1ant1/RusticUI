@@ -22,11 +22,13 @@
 //! [`ToggleControlDescriptor`](crate::selection_control::ToggleControlDescriptor)
 //! so automation hooks and ARIA metadata remain consistent across frameworks.
 
+use crate::{
+    selection_control::{self, ToggleControlDescriptor},
+    telemetry::{instrument_render, TelemetryContext, TelemetryHooks},
+};
 use rustic_ui_headless::checkbox::CheckboxState;
 use rustic_ui_styled_engine::{css_with_theme, Style};
 use std::collections::HashMap;
-
-use crate::selection_control::{self, ToggleControlDescriptor};
 
 /// Props shared across all framework adapters.
 #[derive(Clone, Debug, PartialEq)]
