@@ -60,6 +60,8 @@ pub mod hidden;
 pub mod image_list;
 #[cfg(feature = "forms")]
 pub mod input_adornment;
+#[cfg(feature = "forms")]
+pub mod input_base;
 pub mod interaction;
 pub mod layout;
 #[cfg(feature = "progress")]
@@ -97,6 +99,12 @@ pub mod unstable_trap_focus;
 mod selection;
 mod toggle;
 
+#[cfg(feature = "forms")]
+pub use input_base::{
+    InputAnalyticsEvent, InputAnalyticsEventKind, InputChange, InputChangeEvent, InputCommit,
+    InputCommitEvent, InputControlBuilder, InputControlBundle, InputReset, InputResetEvent,
+    InputSelection, InputState,
+};
 pub use selection::ControlStrategy;
 
 #[cfg(feature = "compat-mui")]
