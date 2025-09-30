@@ -136,8 +136,16 @@ mod yew_impl {
     }
 }
 
-#[cfg(feature = "yew")]
+// Align the default export with the active framework when only a single adapter
+// is compiled, maintaining backwards compatibility for crates that previously
+// relied on `use rustic_ui_system::Stack` without additional qualifiers.
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
 pub use yew_impl::{Stack, StackProps};
+
+// Surface explicit framework-qualified aliases so dual-framework builds can pick
+// the desired adapter without relying on cfg gymnastics in downstream crates.
+#[cfg(feature = "yew")]
+pub use yew_impl::{Stack as StackYew, StackProps as StackPropsYew};
 
 #[cfg(feature = "leptos")]
 mod leptos_impl {
@@ -176,5 +184,12 @@ mod leptos_impl {
     }
 }
 
-#[cfg(feature = "leptos")]
+// Mirror the Yew pathway for Leptos-only consumers so the historical
+// `rustic_ui_system::Stack` entry point continues to compile without edits.
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
 pub use leptos_impl::Stack;
+
+// Provide a named alias for automation harnesses targeting Leptos alongside the
+// Yew adapter in combined builds.
+#[cfg(feature = "leptos")]
+pub use leptos_impl::Stack as StackLeptos;

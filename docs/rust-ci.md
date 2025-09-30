@@ -35,6 +35,18 @@ Running `cargo xtask fmt --check` mirrors the CI lint job by wrapping the two co
 cargo test --workspace --all-features
 ```
 
+Immediately follow the workspace suite with a targeted feature matrix build to
+ensure the `rustic-ui-system` primitives continue compiling when multiple
+adapters are toggled:
+
+```bash
+cargo check -p rustic-ui-system --features "yew leptos"
+```
+
+The guard now runs automatically as part of `cargo xtask test`, catching
+duplicate re-export regressions the moment a new primitive is wired up for both
+frameworks.
+
 This is the quickest way to surface failures in the shared headless state machines, Material adapter suites, and the Joy headless unit tests under `crates/rustic-ui-joy/tests/headless_state_tests.rs`. CI calls the same entrypoint via `cargo xtask test --examples`, which additionally compiles every Rust example crate for `wasm32-unknown-unknown`.
 
 To reproduce the example verification locally (mirroring CI), install the WebAssembly target and run:

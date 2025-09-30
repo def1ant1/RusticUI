@@ -42,8 +42,15 @@ mod yew_impl {
     }
 }
 
-#[cfg(feature = "yew")]
+// Maintain the simple `Typography` import for single-framework builds while
+// still supporting the explicit aliases expected by dual-adapter CI runs.
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
 pub use yew_impl::{Typography, TypographyProps};
+
+// Surface deterministic aliases so downstream crates can opt into the Yew
+// adapter without relying on extra cfg annotations.
+#[cfg(feature = "yew")]
+pub use yew_impl::{Typography as TypographyYew, TypographyProps as TypographyPropsYew};
 
 #[cfg(feature = "leptos")]
 mod leptos_impl {
@@ -70,5 +77,10 @@ mod leptos_impl {
     }
 }
 
-#[cfg(feature = "leptos")]
+// Provide the backwards compatible export for Leptos-only builds while adding a
+// namespaced alias usable in mixed feature combinations.
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
 pub use leptos_impl::Typography;
+
+#[cfg(feature = "leptos")]
+pub use leptos_impl::Typography as TypographyLeptos;

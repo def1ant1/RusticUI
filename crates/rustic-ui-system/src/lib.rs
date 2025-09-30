@@ -29,16 +29,51 @@ pub mod typography;
 
 #[doc(hidden)]
 pub use crate::theme_provider::use_theme;
-#[cfg(any(feature = "yew", feature = "leptos"))]
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
 pub use container::Container;
-#[cfg(any(feature = "yew", feature = "leptos"))]
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
+pub use container::Container;
+#[cfg(feature = "leptos")]
+pub use container::ContainerLeptos;
+#[cfg(all(feature = "yew", feature = "leptos"))]
+pub use container::ContainerYew as Container;
+#[cfg(feature = "yew")]
+pub use container::ContainerYew;
+
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
 pub use grid::Grid;
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
+pub use grid::Grid;
+#[cfg(feature = "leptos")]
+pub use grid::GridLeptos;
+#[cfg(all(feature = "yew", feature = "leptos"))]
+pub use grid::GridYew as Grid;
+#[cfg(feature = "yew")]
+pub use grid::GridYew;
 pub use portal::{PortalFragment, PortalLayer, PortalMount};
-#[cfg(any(feature = "yew", feature = "leptos"))]
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
 pub use r#box::Box;
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
+pub use r#box::Box;
+#[cfg(feature = "leptos")]
+pub use r#box::BoxLeptos;
+#[cfg(all(feature = "yew", feature = "leptos"))]
+pub use r#box::BoxYew as Box;
+#[cfg(feature = "yew")]
+pub use r#box::BoxYew;
 pub use responsive::{grid_span_to_percent, Responsive};
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
+pub use stack::Stack;
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
+pub use stack::Stack;
 #[cfg(any(feature = "yew", feature = "leptos"))]
-pub use stack::{Stack, StackDirection};
+pub use stack::StackDirection;
+#[cfg(feature = "leptos")]
+pub use stack::StackLeptos;
+#[cfg(all(feature = "yew", feature = "leptos"))]
+pub use stack::StackYew as Stack;
+#[cfg(feature = "yew")]
+pub use stack::StackYew;
 #[allow(unused_imports)]
 pub use style::*;
 #[doc(hidden)]
@@ -50,8 +85,18 @@ pub use theme_provider::ThemeProviderLeptos as ThemeProvider;
 #[cfg(feature = "yew")]
 pub use theme_provider::ThemeProviderYew as ThemeProvider;
 pub use themed_element::{ThemedProps, Variant};
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
+pub use typography::Typography;
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
+pub use typography::Typography;
+#[cfg(feature = "leptos")]
+pub use typography::TypographyLeptos;
 #[cfg(any(feature = "yew", feature = "leptos"))]
-pub use typography::{Typography, TypographyVariant};
+pub use typography::TypographyVariant;
+#[cfg(all(feature = "yew", feature = "leptos"))]
+pub use typography::TypographyYew as Typography;
+#[cfg(feature = "yew")]
+pub use typography::TypographyYew;
 
 #[cfg(any(feature = "yew", feature = "leptos"))]
 pub(crate) use scoped_class::ScopedClass;
