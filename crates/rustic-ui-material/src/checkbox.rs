@@ -21,6 +21,13 @@
 //! All adapters delegate attribute hydration to the shared
 //! [`ToggleControlDescriptor`](crate::selection_control::ToggleControlDescriptor)
 //! so automation hooks and ARIA metadata remain consistent across frameworks.
+//!
+//! Downstream orchestration layers should populate the analytics and automation
+//! identifiers within [`TelemetryHooks`] *before* calling any render helper so
+//! every adapter emits identical instrumentation. Providing the identifiers up
+//! front allows SSR, WASM bridges, and component frameworks to produce matching
+//! telemetry payloads without bolting on per-platform patches, keeping
+//! enterprise monitoring pipelines aligned across runtimes.
 
 use crate::{
     selection_control::{self, ToggleControlDescriptor},
@@ -35,6 +42,9 @@ use std::collections::HashMap;
 pub struct CheckboxProps {
     /// Visible label rendered alongside the checkbox indicator.
     pub label: String,
+    /// Telemetry hooks used to decorate render lifecycles with analytics and
+    /// automation identifiers.
+    pub telemetry: TelemetryHooks,
 }
 
 impl CheckboxProps {
@@ -42,20 +52,36 @@ impl CheckboxProps {
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
+            telemetry: TelemetryHooks::default(),
         }
     }
 }
 
 #[allow(dead_code)]
 fn build_descriptor(props: &CheckboxProps, state: &CheckboxState) -> ToggleControlDescriptor {
-    ToggleControlDescriptor::new(props.label.clone(), themed_checkbox_style())
-        .with_attributes(state.aria_attributes())
+    let descriptor = ToggleControlDescriptor::new(props.label.clone(), themed_checkbox_style())
+        .with_attributes(state.aria_attributes());
+    let descriptor = if let Some(analytics) = &props.telemetry.analytics_id {
+        descriptor.attribute("data-rustic-analytics-id", analytics.clone())
+    } else {
+        descriptor
+    };
+    if let Some(automation) = &props.telemetry.automation_id {
+        descriptor.attribute("data-automation-id", automation.clone())
+    } else {
+        descriptor
+    }
 }
 
 #[allow(dead_code)]
 fn render_html(props: &CheckboxProps, state: &CheckboxState) -> String {
-    let descriptor = build_descriptor(props, state);
-    selection_control::render_toggle_html(&descriptor)
+    let context = TelemetryContext::new("rustic_ui_material::checkbox::render_html")
+        .with_analytics(props.telemetry.analytics_id.clone())
+        .with_automation(props.telemetry.automation_id.clone());
+    instrument_render(&props.telemetry, context, || {
+        let descriptor = build_descriptor(props, state);
+        selection_control::render_toggle_html(&descriptor)
+    })
 }
 
 #[allow(dead_code)]
@@ -181,11 +207,16 @@ pub mod react {
 
     /// React component rendering the Material checkbox.
     pub fn ReactCheckbox(props: &ReactCheckboxProps) -> Jsx {
-        let descriptor = super::build_descriptor(&props.checkbox, &props.state);
-        let label = descriptor.label().to_string();
-        let attributes = descriptor.themed_attributes();
-        let props_object = build_props_object(attributes);
-        create_element("span", props_object, &[JsValue::from_str(&label)])
+        let context = TelemetryContext::new("rustic_ui_material::checkbox::react::ReactCheckbox")
+            .with_analytics(props.checkbox.telemetry.analytics_id.clone())
+            .with_automation(props.checkbox.telemetry.automation_id.clone());
+        instrument_render(&props.checkbox.telemetry, context, || {
+            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let label = descriptor.label().to_string();
+            let attributes = descriptor.themed_attributes();
+            let props_object = build_props_object(attributes);
+            create_element("span", props_object, &[JsValue::from_str(&label)])
+        })
     }
 }
 
@@ -209,16 +240,21 @@ pub mod yew {
     /// Checkbox rendered as a Yew component.
     #[function_component(YewCheckbox)]
     pub fn yew_checkbox(props: &YewCheckboxProps) -> Html {
-        let descriptor = super::build_descriptor(&props.checkbox, &props.state);
-        let label = descriptor.label().to_string();
-        let attrs = descriptor.themed_attributes();
-        let mut node = html! { <span>{label}</span> };
-        if let VNode::VTag(ref mut tag) = node {
-            for (key, value) in attrs {
-                tag.add_attribute(key, value);
+        let context = TelemetryContext::new("rustic_ui_material::checkbox::yew::YewCheckbox")
+            .with_analytics(props.checkbox.telemetry.analytics_id.clone())
+            .with_automation(props.checkbox.telemetry.automation_id.clone());
+        instrument_render(&props.checkbox.telemetry, context, || {
+            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let label = descriptor.label().to_string();
+            let attrs = descriptor.themed_attributes();
+            let mut node = html! { <span>{label}</span> };
+            if let VNode::VTag(ref mut tag) = node {
+                for (key, value) in attrs {
+                    tag.add_attribute(key, value);
+                }
             }
-        }
-        node
+            node
+        })
     }
 }
 
@@ -241,40 +277,45 @@ pub mod leptos {
 
     #[component]
     pub fn LeptosCheckbox(props: LeptosCheckboxProps) -> impl IntoView {
-        let descriptor = super::build_descriptor(&props.checkbox, &props.state);
-        let label = descriptor.label().to_string();
-        let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
-        let class = attr_map.remove("class").unwrap_or_default();
-        let role = attr_map.remove("role").unwrap_or_else(|| "checkbox".into());
-        let aria_checked = attr_map
-            .remove("aria-checked")
-            .unwrap_or_else(|| String::from("false"));
-        let aria_disabled = attr_map.remove("aria-disabled");
-        let tabindex = attr_map
-            .remove("tabindex")
-            .unwrap_or_else(|| String::from("0"));
-        let data_checked = attr_map
-            .remove("data-checked")
-            .unwrap_or_else(|| String::from("false"));
-        let data_focus_visible = attr_map
-            .remove("data-focus-visible")
-            .unwrap_or_else(|| String::from("false"));
-        let data_indeterminate = attr_map
-            .remove("data-indeterminate")
-            .unwrap_or_else(|| String::from("false"));
+        let context = TelemetryContext::new("rustic_ui_material::checkbox::leptos::LeptosCheckbox")
+            .with_analytics(props.checkbox.telemetry.analytics_id.clone())
+            .with_automation(props.checkbox.telemetry.automation_id.clone());
+        instrument_render(&props.checkbox.telemetry, context, || {
+            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let label = descriptor.label().to_string();
+            let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
+            let class = attr_map.remove("class").unwrap_or_default();
+            let role = attr_map.remove("role").unwrap_or_else(|| "checkbox".into());
+            let aria_checked = attr_map
+                .remove("aria-checked")
+                .unwrap_or_else(|| String::from("false"));
+            let aria_disabled = attr_map.remove("aria-disabled");
+            let tabindex = attr_map
+                .remove("tabindex")
+                .unwrap_or_else(|| String::from("0"));
+            let data_checked = attr_map
+                .remove("data-checked")
+                .unwrap_or_else(|| String::from("false"));
+            let data_focus_visible = attr_map
+                .remove("data-focus-visible")
+                .unwrap_or_else(|| String::from("false"));
+            let data_indeterminate = attr_map
+                .remove("data-indeterminate")
+                .unwrap_or_else(|| String::from("false"));
 
-        view! {
-            <span
-                class=class
-                role=role
-                aria-checked=aria_checked
-                aria-disabled=aria_disabled
-                tabindex=tabindex
-                data-checked=data_checked
-                data-focus-visible=data_focus_visible
-                data-indeterminate=data_indeterminate
-            >{label}</span>
-        }
+            view! {
+                <span
+                    class=class
+                    role=role
+                    aria-checked=aria_checked
+                    aria-disabled=aria_disabled
+                    tabindex=tabindex
+                    data-checked=data_checked
+                    data-focus-visible=data_focus_visible
+                    data-indeterminate=data_indeterminate
+                >{label}</span>
+            }
+        })
     }
 }
 
@@ -296,40 +337,46 @@ pub mod dioxus {
 
     /// Checkbox rendered through the Dioxus virtual DOM.
     pub fn DioxusCheckbox(cx: Scope<DioxusCheckboxProps>) -> Element {
-        let descriptor = super::build_descriptor(&cx.props().checkbox, &cx.props().state);
-        let label = descriptor.label().to_string();
-        let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
-        let class = attr_map.remove("class").unwrap_or_default();
-        let role = attr_map.remove("role").unwrap_or_default();
-        let aria_checked = attr_map
-            .remove("aria-checked")
-            .unwrap_or_else(|| String::from("false"));
-        let aria_disabled = attr_map.remove("aria-disabled");
-        let tabindex = attr_map
-            .remove("tabindex")
-            .unwrap_or_else(|| String::from("0"));
-        let data_checked = attr_map
-            .remove("data-checked")
-            .unwrap_or_else(|| String::from("false"));
-        let data_focus_visible = attr_map
-            .remove("data-focus-visible")
-            .unwrap_or_else(|| String::from("false"));
-        let data_indeterminate = attr_map
-            .remove("data-indeterminate")
-            .unwrap_or_else(|| String::from("false"));
+        let props = cx.props();
+        let context = TelemetryContext::new("rustic_ui_material::checkbox::dioxus::DioxusCheckbox")
+            .with_analytics(props.checkbox.telemetry.analytics_id.clone())
+            .with_automation(props.checkbox.telemetry.automation_id.clone());
+        instrument_render(&props.checkbox.telemetry, context, || {
+            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let label = descriptor.label().to_string();
+            let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
+            let class = attr_map.remove("class").unwrap_or_default();
+            let role = attr_map.remove("role").unwrap_or_default();
+            let aria_checked = attr_map
+                .remove("aria-checked")
+                .unwrap_or_else(|| String::from("false"));
+            let aria_disabled = attr_map.remove("aria-disabled");
+            let tabindex = attr_map
+                .remove("tabindex")
+                .unwrap_or_else(|| String::from("0"));
+            let data_checked = attr_map
+                .remove("data-checked")
+                .unwrap_or_else(|| String::from("false"));
+            let data_focus_visible = attr_map
+                .remove("data-focus-visible")
+                .unwrap_or_else(|| String::from("false"));
+            let data_indeterminate = attr_map
+                .remove("data-indeterminate")
+                .unwrap_or_else(|| String::from("false"));
 
-        cx.render(rsx! {
-            span {
-                class: class,
-                role: role,
-                aria_checked: aria_checked,
-                aria_disabled: aria_disabled,
-                tabindex: tabindex,
-                data_checked: data_checked,
-                data_focus_visible: data_focus_visible,
-                data_indeterminate: data_indeterminate,
-                {label}
-            }
+            cx.render(rsx! {
+                span {
+                    class: class,
+                    role: role,
+                    aria_checked: aria_checked,
+                    aria_disabled: aria_disabled,
+                    tabindex: tabindex,
+                    data_checked: data_checked,
+                    data_focus_visible: data_focus_visible,
+                    data_indeterminate: data_indeterminate,
+                    {label}
+                }
+            })
         })
     }
 }
@@ -355,40 +402,46 @@ pub mod sycamore {
     /// Checkbox rendered within a Sycamore reactive scope.
     #[component]
     pub fn SycamoreCheckbox<G: Html>(cx: Scope, props: SycamoreCheckboxProps) -> Template<G> {
-        let descriptor = super::build_descriptor(&props.checkbox, &props.state);
-        let label = descriptor.label().to_string();
-        let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
-        let class = attr_map.remove("class").unwrap_or_default();
-        let role = attr_map.remove("role").unwrap_or_default();
-        let aria_checked = attr_map
-            .remove("aria-checked")
-            .unwrap_or_else(|| String::from("false"));
-        let aria_disabled = attr_map.remove("aria-disabled");
-        let tabindex = attr_map
-            .remove("tabindex")
-            .unwrap_or_else(|| String::from("0"));
-        let data_checked = attr_map
-            .remove("data-checked")
-            .unwrap_or_else(|| String::from("false"));
-        let data_focus_visible = attr_map
-            .remove("data-focus-visible")
-            .unwrap_or_else(|| String::from("false"));
-        let data_indeterminate = attr_map
-            .remove("data-indeterminate")
-            .unwrap_or_else(|| String::from("false"));
+        let context =
+            TelemetryContext::new("rustic_ui_material::checkbox::sycamore::SycamoreCheckbox")
+                .with_analytics(props.checkbox.telemetry.analytics_id.clone())
+                .with_automation(props.checkbox.telemetry.automation_id.clone());
+        instrument_render(&props.checkbox.telemetry, context, || {
+            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let label = descriptor.label().to_string();
+            let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
+            let class = attr_map.remove("class").unwrap_or_default();
+            let role = attr_map.remove("role").unwrap_or_default();
+            let aria_checked = attr_map
+                .remove("aria-checked")
+                .unwrap_or_else(|| String::from("false"));
+            let aria_disabled = attr_map.remove("aria-disabled");
+            let tabindex = attr_map
+                .remove("tabindex")
+                .unwrap_or_else(|| String::from("0"));
+            let data_checked = attr_map
+                .remove("data-checked")
+                .unwrap_or_else(|| String::from("false"));
+            let data_focus_visible = attr_map
+                .remove("data-focus-visible")
+                .unwrap_or_else(|| String::from("false"));
+            let data_indeterminate = attr_map
+                .remove("data-indeterminate")
+                .unwrap_or_else(|| String::from("false"));
 
-        view! { cx,
-            span(
-                class=class,
-                role=role,
-                aria_checked=aria_checked,
-                aria_disabled=aria_disabled,
-                tabindex=tabindex,
-                data_checked=data_checked,
-                data_focus_visible=data_focus_visible,
-                data_indeterminate=data_indeterminate,
-            ) { (label) }
-        }
+            view! { cx,
+                span(
+                    class=class,
+                    role=role,
+                    aria_checked=aria_checked,
+                    aria_disabled=aria_disabled,
+                    tabindex=tabindex,
+                    data_checked=data_checked,
+                    data_focus_visible=data_focus_visible,
+                    data_indeterminate=data_indeterminate,
+                ) { (label) }
+            }
+        })
     }
 }
 
@@ -412,5 +465,26 @@ mod tests {
         let html = render_html(&props, &state);
         assert!(html.contains(">Accept<"));
         assert!(html.contains("aria-checked"));
+    }
+
+    #[test]
+    fn telemetry_attributes_are_applied_when_provided() {
+        let state = CheckboxState::uncontrolled(false, false);
+        let mut props = CheckboxProps::new("Instrumented");
+        props.telemetry.analytics_id = Some("analytics-42".into());
+        props.telemetry.automation_id = Some("automation-42".into());
+
+        let descriptor = build_descriptor(&props, &state);
+        let data_attrs: Vec<_> = descriptor
+            .data_state_attributes()
+            .map(|(key, value)| (key.to_string(), value.to_string()))
+            .collect();
+
+        assert!(data_attrs
+            .iter()
+            .any(|(key, value)| key == "data-rustic-analytics-id" && value == "analytics-42"));
+        assert!(data_attrs
+            .iter()
+            .any(|(key, value)| key == "data-automation-id" && value == "automation-42"));
     }
 }
