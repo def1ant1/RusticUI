@@ -31,6 +31,7 @@
 pub mod accordion;
 #[cfg(feature = "feedback")]
 pub mod alert;
+pub mod app_bar;
 pub mod aria;
 pub mod autocomplete;
 pub mod avatar;

@@ -15,12 +15,18 @@ mod dioxus_tests {
             aria_label: "Application header".into(),
             color: rustic_ui_material::app_bar::AppBarColor::Primary,
             size: rustic_ui_material::app_bar::AppBarSize::Medium,
+            automation_id: Some("primary".into()),
+            analytics_view_id: Some("nav.view".into()),
+            analytics_interaction_id: Some("nav.click".into()),
+            svg_title_id: None,
         };
         let out = dioxus::render(&props);
         assert!(out.starts_with("<header"));
         assert!(out.contains("class=\""), "missing class attribute: {}", out);
         assert!(out.contains("role=\"banner\""));
         assert!(out.contains("aria-label=\"Application header\""));
+        assert!(out.contains("data-automation-id=\"rustic-app-bar-primary\""));
+        assert!(out.contains("data-analytics-view-id=\"nav.view\""));
     }
 }
 
@@ -35,11 +41,17 @@ mod sycamore_tests {
             aria_label: "Application header".into(),
             color: rustic_ui_material::app_bar::AppBarColor::Primary,
             size: rustic_ui_material::app_bar::AppBarSize::Medium,
+            automation_id: Some("primary".into()),
+            analytics_view_id: Some("nav.view".into()),
+            analytics_interaction_id: Some("nav.click".into()),
+            svg_title_id: None,
         };
         let out = sycamore::render(&props);
         assert!(out.starts_with("<header"));
         assert!(out.contains("class=\""), "missing class attribute: {}", out);
         assert!(out.contains("role=\"banner\""));
         assert!(out.contains("aria-label=\"Application header\""));
+        assert!(out.contains("data-automation-id=\"rustic-app-bar-primary\""));
+        assert!(out.contains("data-analytics-view-id=\"nav.view\""));
     }
 }

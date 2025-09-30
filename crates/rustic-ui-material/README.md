@@ -213,7 +213,12 @@ use yew::prelude::*;
 fn app() -> Html {
     html! {
         <ThemeProvider theme={Theme::default()}>
-            <AppBar title="My App" aria_label="main navigation" />
+            <AppBar
+                title="My App"
+                aria_label="main navigation"
+                automation_id={Some("global.app-bar".into())}
+                analytics_view_id={Some("nav.global.view".into())}
+            />
             // Throttle rapid clicks to once every 200ms
             <Button label="Press" throttle_ms={200} />
             // Debounced text input with custom background color
