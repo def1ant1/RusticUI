@@ -1,0 +1,15 @@
+[package]
+name = "forms-input-base-yew"
+version = "0.1.0"
+edition = "2021"
+description = "InputBase blueprint with controlled/uncontrolled Yew flows and automation hooks"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+forms-input-base-shared = { path = "../forms-input-base-shared" }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless" }
+rustic-ui-material = { path = "../../crates/rustic-ui-material", features = ["yew"] }
+rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["yew"] }
+yew = { version = "0.21", default-features = false, features = ["csr", "hydration", "ssr"] }
+wasm-bindgen = "0.2"

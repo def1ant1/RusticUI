@@ -1,0 +1,23 @@
+[package]
+name = "forms-input-base-sycamore"
+version = "0.1.0"
+edition = "2021"
+description = "InputBase blueprint rendered with Sycamore and hydration notes"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "forms_input_base_sycamore"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bootstrap"
+path = "src/bin/bootstrap.rs"
+
+[dependencies]
+forms-input-base-shared = { path = "../forms-input-base-shared" }
+sycamore.workspace = true
+wasm-bindgen.workspace = true
+rustic-ui-material = { path = "../../crates/rustic-ui-material", features = ["sycamore"] }
+rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["sycamore"] }
+rustic-ui-system = { path = "../../crates/rustic-ui-system" }
