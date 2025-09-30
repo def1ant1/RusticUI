@@ -344,8 +344,17 @@ mod yew_impl {
     }
 }
 
-#[cfg(feature = "yew")]
+// Keep the canonical `Box` export pointing at the active framework while still
+// surfacing explicit aliases for automation and multi-adapter builds. The
+// Yew-only configuration mirrors the historical API surface (`use rustic_ui_system::Box`).
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
 pub use yew_impl::{Box, BoxProps};
+
+// Always expose the framework-qualified aliases so tests and integration
+// harnesses can opt into a specific adapter even when multiple features are
+// enabled at the same time (for example `cargo check --features "yew leptos"`).
+#[cfg(feature = "yew")]
+pub use yew_impl::{Box as BoxYew, BoxProps as BoxPropsYew};
 
 #[cfg(feature = "leptos")]
 mod leptos_impl {
@@ -420,5 +429,14 @@ mod leptos_impl {
     }
 }
 
-#[cfg(feature = "leptos")]
+// Mirroring the Yew flow above, export the Leptos adapter explicitly when it is
+// the only enabled framework so downstream crates retain the ergonomic
+// `rustic_ui_system::Box` import.
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
 pub use leptos_impl::Box;
+
+// Provide the framework-qualified alias in every Leptos build so callers can
+// explicitly reference the correct adapter while cross-compiling multiple
+// front-end targets in CI.
+#[cfg(feature = "leptos")]
+pub use leptos_impl::Box as BoxLeptos;

@@ -3,6 +3,27 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-07-05 – Multi-adapter primitive guards
+
+### Highlights
+
+- Hardened the `rustic-ui-system` primitives (`Box`, `Container`, `Grid`,
+  `Stack`, and `Typography`) so Yew and Leptos adapters now expose explicit
+  framework-qualified aliases while avoiding duplicate `pub use` collisions when
+  both features are enabled.【F:crates/rustic-ui-system/src/box.rs†L348-L360】【F:crates/rustic-ui-system/src/lib.rs†L28-L63】
+- Added a `cargo check -p rustic-ui-system --features "yew leptos"` guard to the
+  `cargo xtask test` automation, ensuring CI instantly detects multi-feature
+  regressions introduced by new primitives or re-export changes.【F:crates/xtask/src/main.rs†L254-L285】
+- Documented the new guard in the Rust CI guide so contributors run the
+  multi-adapter build matrix locally before submitting patches.【F:docs/rust-ci.md†L45-L56】
+
+### Verification
+
+- `cargo fmt`
+- `cargo clippy --workspace --all-targets -D warnings`
+- `cargo check -p rustic-ui-system --features "yew leptos"`
+- `cargo test --workspace --all-features`
+
 ## 2025-06-28 – Experimental focus loop instrumentation
 
 ### Highlights

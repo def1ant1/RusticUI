@@ -94,8 +94,16 @@ mod yew_impl {
     }
 }
 
-#[cfg(feature = "yew")]
+// Preserve the original ergonomic import when only Yew is active while still
+// surfacing adapter-specific aliases for the multi-framework builds our CI
+// matrix executes.
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
 pub use yew_impl::{Container, ContainerProps};
+
+// Offer deterministic aliases for cross-framework automation so the Yew
+// adapter remains addressable alongside the Leptos implementation.
+#[cfg(feature = "yew")]
+pub use yew_impl::{Container as ContainerYew, ContainerProps as ContainerPropsYew};
 
 #[cfg(feature = "leptos")]
 mod leptos_impl {
@@ -128,5 +136,13 @@ mod leptos_impl {
     }
 }
 
-#[cfg(feature = "leptos")]
+// Enable the legacy top-level `Container` export when Leptos is the sole
+// renderer, mirroring the behaviour consumers relied on prior to the multi-adapter
+// guard.
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
 pub use leptos_impl::Container;
+
+// Provide a predictable alias so automation and integration tests can pick the
+// Leptos adapter explicitly even in dual-framework builds.
+#[cfg(feature = "leptos")]
+pub use leptos_impl::Container as ContainerLeptos;

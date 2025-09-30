@@ -271,13 +271,11 @@ impl PaginationState {
         focus_mode: ControlStrategy,
     ) -> Self {
         let current = clamp_index(current, page_count);
-        let focused = current.map(PaginationItemKind::Page).or_else(|| {
-            if page_count > 0 {
-                Some(PaginationItemKind::Page(0))
-            } else {
-                None
-            }
-        });
+        // Resolve a deterministic fallback so pagination always exposes a focus
+        // target when pages exist. Using `then_some` keeps the logic allocation-free
+        // while satisfying Clippy's strict `or_else` lint when both adapters build.
+        let fallback_focus = (page_count > 0).then_some(PaginationItemKind::Page(0));
+        let focused = current.map(PaginationItemKind::Page).or(fallback_focus);
         Self {
             page_count,
             current,

@@ -282,6 +282,11 @@ fn test(include_examples: bool) -> Result<()> {
     cmd.arg("test").arg("--workspace").arg("--all-features");
     run(cmd)?;
 
+    // Ensure the system crate compiles with both front-end adapters enabled.
+    // This catches duplicate re-export regressions and keeps CI confidence high
+    // when new primitives are added or existing adapters grow additional APIs.
+    verify_rustic_ui_system_multi_adapter()?;
+
     if !include_examples {
         return Ok(());
     }
@@ -340,6 +345,23 @@ fn test(include_examples: bool) -> Result<()> {
         "[xtask][examples] all Rust examples compiled successfully for wasm32-unknown-unknown"
     );
     Ok(())
+}
+
+/// Validates that the core system crate builds when Yew and Leptos adapters are
+/// enabled together. The guard protects enterprise consumers that compile
+/// workspace documentation or example galleries with multiple features toggled
+/// simultaneously.
+fn verify_rustic_ui_system_multi_adapter() -> Result<()> {
+    println!(
+        "[xtask][test] running cargo check -p rustic-ui-system --features \"yew leptos\" to validate multi-adapter builds"
+    );
+    let mut cmd = Command::new("cargo");
+    cmd.arg("check")
+        .arg("-p")
+        .arg("rustic-ui-system")
+        .arg("--features")
+        .arg("yew leptos");
+    run(cmd)
 }
 
 /// Metadata for a Rust example crate under `examples/`.

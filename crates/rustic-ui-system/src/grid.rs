@@ -132,8 +132,16 @@ mod yew_impl {
     }
 }
 
-#[cfg(feature = "yew")]
+// Retain the ergonomic top-level `Grid` export for single-framework builds while
+// still allowing CI to compile both adapters simultaneously without symbol
+// conflicts.
+#[cfg(all(feature = "yew", not(feature = "leptos")))]
 pub use yew_impl::{Grid, GridProps};
+
+// Framework-qualified aliases ensure downstream crates can choose the Yew
+// adapter explicitly even when multiple features are toggled for cross-testing.
+#[cfg(feature = "yew")]
+pub use yew_impl::{Grid as GridYew, GridProps as GridPropsYew};
 
 #[cfg(feature = "leptos")]
 mod leptos_impl {
@@ -171,5 +179,12 @@ mod leptos_impl {
     }
 }
 
-#[cfg(feature = "leptos")]
+// When Leptos is the only renderer selected we continue exporting `Grid` under
+// its historical name so existing imports stay valid.
+#[cfg(all(feature = "leptos", not(feature = "yew")))]
 pub use leptos_impl::Grid;
+
+// Provide a deterministic alias mirroring the Yew pathway for dual-adapter
+// builds, ensuring automation can pick the Leptos implementation directly.
+#[cfg(feature = "leptos")]
+pub use leptos_impl::Grid as GridLeptos;
