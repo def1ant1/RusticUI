@@ -3529,8 +3529,10 @@ dependencies = [
 name = "rustic-ui-material"
 version = "0.1.0"
 dependencies = [
+ "dioxus",
  "gloo-utils 0.2.0",
  "insta",
+ "js-sys",
  "leptos",
  "rustic-ui-headless",
  "rustic-ui-styled-engine",
@@ -3538,6 +3540,7 @@ dependencies = [
  "rustic-ui-utils",
  "serde_json",
  "stylist",
+ "sycamore",
  "tracing",
  "wasm-bindgen",
  "wasm-bindgen-test",
