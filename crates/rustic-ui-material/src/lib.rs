@@ -53,6 +53,8 @@ pub mod hidden;
 pub mod image_list;
 #[cfg(feature = "forms")]
 pub mod input_adornment;
+#[cfg(feature = "forms")]
+pub mod input_base;
 #[cfg(feature = "progress")]
 pub mod linear_progress;
 pub mod link;
@@ -131,6 +133,10 @@ pub use image_list::{render_image_list, ImageListAdapterProps, ImageListRenderOu
 #[cfg(feature = "forms")]
 pub use input_adornment::{
     render_input_adornment, InputAdornmentAdapterProps, InputAdornmentRenderOutput,
+};
+#[cfg(feature = "forms")]
+pub use input_base::{
+    render_input_base, render_input_base_html, InputBaseRenderConfig, InputBaseRenderOutput,
 };
 #[cfg(feature = "progress")]
 pub use linear_progress::{
