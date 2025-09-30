@@ -20,6 +20,9 @@ rustic-ui-headless = { path = "../rustic-ui-headless", version = "0.1.0" }
 leptos = { workspace = true, optional = true }
 yew = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
+dioxus = { workspace = true, optional = true }
+sycamore = { workspace = true, optional = true }
+js-sys = { workspace = true, optional = true }
 stylist = { version = "0.13", default-features = false, features = ["macros", "parser"] }
 rustic-ui-utils = { path = "../rustic-ui-utils", version = "0.1.0" }
 web-sys = { workspace = true, optional = true }
@@ -34,11 +37,11 @@ serde_json.workspace = true
 [features]
 default = ["forms", "feedback", "progress"]
 compat-mui = []
-react = []
+react = ["dep:wasm-bindgen", "dep:js-sys"]
 yew = ["dep:yew", "dep:wasm-bindgen", "rustic-ui-system/yew", "rustic-ui-styled-engine/yew", "dep:web-sys"]
 leptos = ["dep:leptos", "dep:wasm-bindgen", "rustic-ui-system/leptos"]
-dioxus = ["rustic-ui-system/dioxus", "rustic-ui-styled-engine/dioxus"]
-sycamore = ["rustic-ui-system/sycamore", "rustic-ui-styled-engine/sycamore"]
+dioxus = ["rustic-ui-system/dioxus", "rustic-ui-styled-engine/dioxus", "dep:dioxus"]
+sycamore = ["rustic-ui-system/sycamore", "rustic-ui-styled-engine/sycamore", "dep:sycamore"]
 forms = ["rustic-ui-headless/forms"]
 feedback = ["rustic-ui-headless/feedback"]
 progress = ["rustic-ui-headless/progress"]
