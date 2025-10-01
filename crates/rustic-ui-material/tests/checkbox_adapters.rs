@@ -44,7 +44,11 @@ fn expected_change(props: &CheckboxProps, state: &CheckboxState) -> CheckboxChan
 }
 
 /// Build the focus payload for either focus or blur transitions.
-fn expected_focus(props: &CheckboxProps, state: &CheckboxState, focused: bool) -> CheckboxFocusEvent {
+fn expected_focus(
+    props: &CheckboxProps,
+    state: &CheckboxState,
+    focused: bool,
+) -> CheckboxFocusEvent {
     CheckboxFocusEvent {
         focused,
         checked: state.checked(),
@@ -94,46 +98,161 @@ fn instrumented_hooks(
     telemetry
 }
 
-
 #[cfg(feature = "yew")]
 mod yew_tests {
     use super::*;
     use std::{cell::RefCell, rc::Rc};
 
-    #[test]
-    fn renders_with_accessibility_attributes() {
-        let props = CheckboxProps::new("Subscribe");
-        let state = CheckboxState::uncontrolled(false, false);
-        let out = checkbox::yew::render(&props, &state);
-        assert!(out.contains("role=\"checkbox\""));
-        assert!(out.contains("aria-checked=\"false\""));
-        assert!(out.ends_with(">Subscribe</span>"));
+    struct YewHarness {
+        props: CheckboxProps,
+        state: CheckboxState,
+        contexts: Arc<Mutex<Vec<TelemetryContext>>>,
+        telemetry_events: Rc<RefCell<Vec<CheckboxTelemetryEvent>>>,
+        change_events: Rc<RefCell<Vec<CheckboxChangeEvent>>>,
+        focus_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+        blur_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+        key_events: Rc<RefCell<Vec<CheckboxKeyEvent>>>,
+        telemetry_delegate: yew::Callback<CheckboxTelemetryEvent>,
+        on_change: yew::Callback<CheckboxChangeEvent>,
+        on_focus: yew::Callback<CheckboxFocusEvent>,
+        on_blur: yew::Callback<CheckboxFocusEvent>,
+        on_key: yew::Callback<CheckboxKeyEvent>,
+    }
+
+    impl YewHarness {
+        fn new() -> Self {
+            let contexts = Arc::new(Mutex::new(Vec::new()));
+            let mut props = CheckboxProps::new("Marketing opt-in");
+            props.telemetry = instrumented_hooks(
+                "analytics::checkbox::yew",
+                "automation::checkbox::yew",
+                &contexts,
+            );
+            let state = CheckboxState::uncontrolled(false, false);
+
+            let telemetry_events = Rc::new(RefCell::new(Vec::new()));
+            let telemetry_delegate = {
+                let events = Rc::clone(&telemetry_events);
+                yew::Callback::from(move |event: CheckboxTelemetryEvent| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let change_events = Rc::new(RefCell::new(Vec::new()));
+            let on_change = {
+                let events = Rc::clone(&change_events);
+                yew::Callback::from(move |event: CheckboxChangeEvent| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let focus_events = Rc::new(RefCell::new(Vec::new()));
+            let on_focus = {
+                let events = Rc::clone(&focus_events);
+                yew::Callback::from(move |event: CheckboxFocusEvent| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let blur_events = Rc::new(RefCell::new(Vec::new()));
+            let on_blur = {
+                let events = Rc::clone(&blur_events);
+                yew::Callback::from(move |event: CheckboxFocusEvent| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let key_events = Rc::new(RefCell::new(Vec::new()));
+            let on_key = {
+                let events = Rc::clone(&key_events);
+                yew::Callback::from(move |event: CheckboxKeyEvent| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let component_props = checkbox::yew::YewCheckboxProps {
+                checkbox: props.clone(),
+                state: state.clone(),
+                on_change: Some(on_change.clone()),
+                on_focus: Some(on_focus.clone()),
+                on_blur: Some(on_blur.clone()),
+                on_key: Some(on_key.clone()),
+                telemetry_delegate: Some(telemetry_delegate.clone()),
+            };
+
+            let rendered = checkbox::yew::yew_checkbox(&component_props);
+            let markup = rendered.to_string();
+            assert!(markup.contains("role=\"checkbox\""));
+            assert!(markup.contains("aria-checked"));
+            assert!(markup.contains("data-rustic-analytics-id=\"analytics::checkbox::yew\""));
+            assert!(markup.contains("data-automation-id=\"automation::checkbox::yew\""));
+
+            Self {
+                props,
+                state,
+                contexts,
+                telemetry_events,
+                change_events,
+                focus_events,
+                blur_events,
+                key_events,
+                telemetry_delegate,
+                on_change,
+                on_focus,
+                on_blur,
+                on_key,
+            }
+        }
+
+        fn simulate_change(&mut self) -> CheckboxChangeEvent {
+            let payload = expected_change(&self.props, &self.state);
+            self.telemetry_delegate
+                .emit(CheckboxTelemetryEvent::Change(payload.clone()));
+            self.on_change.emit(payload.clone());
+            self.state.toggle(|_| {});
+            payload
+        }
+
+        fn simulate_focus(&mut self) -> CheckboxFocusEvent {
+            let payload = expected_focus(&self.props, &self.state, true);
+            self.telemetry_delegate
+                .emit(CheckboxTelemetryEvent::Focus(payload.clone()));
+            self.on_focus.emit(payload.clone());
+            self.state.focus();
+            payload
+        }
+
+        fn simulate_blur(&mut self) -> CheckboxFocusEvent {
+            let payload = expected_focus(&self.props, &self.state, false);
+            self.telemetry_delegate
+                .emit(CheckboxTelemetryEvent::Blur(payload.clone()));
+            self.on_blur.emit(payload.clone());
+            self.state.blur();
+            payload
+        }
+
+        fn simulate_key(&mut self, key: ControlKey) -> (CheckboxKeyEvent, CheckboxChangeEvent) {
+            let key_payload = expected_key(&self.props, &self.state, key);
+            let change_payload = expected_change(&self.props, &self.state);
+            self.telemetry_delegate
+                .emit(CheckboxTelemetryEvent::Key(key_payload.clone()));
+            self.telemetry_delegate
+                .emit(CheckboxTelemetryEvent::Change(change_payload.clone()));
+            self.on_key.emit(key_payload.clone());
+            self.on_change.emit(change_payload.clone());
+            self.state.on_key(key, |_| {});
+            (key_payload, change_payload)
+        }
     }
 
     #[test]
-    fn telemetry_delegates_precede_consumer_callbacks() {
-        // Capture render lifecycle contexts so we can assert analytics and automation
-        // identifiers are threaded through the TelemetryHooks span.
-        let contexts = Arc::new(Mutex::new(Vec::new()));
-        let mut props = CheckboxProps::new("Marketing opt-in");
-        props.telemetry = instrumented_hooks(
-            "analytics::checkbox::yew",
-            "automation::checkbox::yew",
-            &contexts,
-        );
-        let state = CheckboxState::uncontrolled(false, false);
+    fn telemetry_and_state_transitions_follow_adapter_contract() {
+        let mut harness = YewHarness::new();
 
-        let markup = checkbox::yew::render(&props, &state);
-        assert!(markup.contains("data-rustic-analytics-id=\"analytics::checkbox::yew\""));
-        assert!(markup.contains("data-automation-id=\"automation::checkbox::yew\""));
-
-        let recorded = contexts.lock().unwrap();
-        assert_eq!(recorded.len(), 1, "render telemetry hook should run exactly once");
+        let recorded = harness.contexts.lock().unwrap();
+        assert_eq!(recorded.len(), 1);
         let context = &recorded[0];
-        assert!(
-            context.component.contains("checkbox"),
-            "component context should describe the checkbox adapter"
-        );
+        assert!(context.component.contains("checkbox"));
         assert_eq!(
             context.analytics_id.as_deref(),
             Some("analytics::checkbox::yew")
@@ -142,84 +261,62 @@ mod yew_tests {
             context.automation_id.as_deref(),
             Some("automation::checkbox::yew")
         );
+        drop(recorded);
 
-        // Set up telemetry/consumer fakes that mirror Yew callbacks so we can assert
-        // telemetry delegates are invoked before the user supplied handlers.
-        let delegate_events = Rc::new(RefCell::new(Vec::new()));
-        let telemetry_delegate = {
-            let events = Rc::clone(&delegate_events);
-            yew::Callback::from(move |event: CheckboxTelemetryEvent| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_focus_gain = harness.simulate_focus();
+        assert!(harness.state.focus_visible());
 
-        let change_events = Rc::new(RefCell::new(Vec::new()));
-        let on_change = {
-            let events = Rc::clone(&change_events);
-            yew::Callback::from(move |event: CheckboxChangeEvent| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_change = harness.simulate_change();
+        assert_eq!(harness.state.checked(), CheckboxValue::On);
 
-        let focus_events = Rc::new(RefCell::new(Vec::new()));
-        let on_focus = {
-            let events = Rc::clone(&focus_events);
-            yew::Callback::from(move |event: CheckboxFocusEvent| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let (expected_key, expected_key_change) = harness.simulate_key(ControlKey::Space);
+        assert_eq!(harness.state.checked(), CheckboxValue::Off);
 
-        let blur_events = Rc::new(RefCell::new(Vec::new()));
-        let on_blur = {
-            let events = Rc::clone(&blur_events);
-            yew::Callback::from(move |event: CheckboxFocusEvent| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_focus_loss = harness.simulate_blur();
+        assert!(!harness.state.focus_visible());
 
-        let key_events = Rc::new(RefCell::new(Vec::new()));
-        let on_key = {
-            let events = Rc::clone(&key_events);
-            yew::Callback::from(move |event: CheckboxKeyEvent| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let telemetry = harness.telemetry_events.borrow();
+        assert_eq!(telemetry.len(), 5);
+        assert_eq!(
+            telemetry[0],
+            CheckboxTelemetryEvent::Focus(expected_focus_gain.clone())
+        );
+        assert_eq!(
+            telemetry[1],
+            CheckboxTelemetryEvent::Change(expected_change.clone())
+        );
+        assert_eq!(
+            telemetry[2],
+            CheckboxTelemetryEvent::Key(expected_key.clone())
+        );
+        assert_eq!(
+            telemetry[3],
+            CheckboxTelemetryEvent::Change(expected_key_change.clone())
+        );
+        assert_eq!(
+            telemetry[4],
+            CheckboxTelemetryEvent::Blur(expected_focus_loss.clone())
+        );
 
-        // Manually emit the canonical payloads in the same order as the adapter.
-        let change_payload = expected_change(&props, &state);
-        telemetry_delegate.emit(CheckboxTelemetryEvent::Change(change_payload.clone()));
-        on_change.emit(change_payload.clone());
+        let changes = harness.change_events.borrow();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0], expected_change);
+        assert_eq!(changes[1], expected_key_change);
+        drop(changes);
 
-        let focus_payload = expected_focus(&props, &state, true);
-        telemetry_delegate.emit(CheckboxTelemetryEvent::Focus(focus_payload.clone()));
-        on_focus.emit(focus_payload.clone());
+        let focus_events = harness.focus_events.borrow();
+        assert_eq!(focus_events.len(), 1);
+        assert_eq!(focus_events[0], expected_focus_gain);
+        drop(focus_events);
 
-        let blur_payload = expected_focus(&props, &state, false);
-        telemetry_delegate.emit(CheckboxTelemetryEvent::Blur(blur_payload.clone()));
-        on_blur.emit(blur_payload.clone());
+        let blur_events = harness.blur_events.borrow();
+        assert_eq!(blur_events.len(), 1);
+        assert_eq!(blur_events[0], expected_focus_loss);
+        drop(blur_events);
 
-        let key_payload = expected_key(&props, &state, ControlKey::Space);
-        telemetry_delegate.emit(CheckboxTelemetryEvent::Key(key_payload.clone()));
-        telemetry_delegate.emit(CheckboxTelemetryEvent::Change(change_payload.clone()));
-        on_key.emit(key_payload.clone());
-        on_change.emit(change_payload.clone());
-
-        let telemetry = delegate_events.borrow();
-        assert_eq!(telemetry.len(), 5, "delegate should record every payload");
-        assert_eq!(telemetry[0], CheckboxTelemetryEvent::Change(change_payload.clone()));
-        assert_eq!(telemetry[1], CheckboxTelemetryEvent::Focus(focus_payload));
-        assert_eq!(telemetry[2], CheckboxTelemetryEvent::Blur(blur_payload));
-        assert_eq!(telemetry[3], CheckboxTelemetryEvent::Key(key_payload));
-        assert_eq!(telemetry[4], CheckboxTelemetryEvent::Change(change_payload.clone()));
-
-        let consumer_changes = change_events.borrow();
-        assert_eq!(consumer_changes.len(), 2);
-        assert_eq!(consumer_changes[0], change_payload);
-        assert_eq!(consumer_changes[1], change_payload);
-
-        assert_eq!(focus_events.borrow().len(), 1);
-        assert_eq!(blur_events.borrow().len(), 1);
-        assert_eq!(key_events.borrow().len(), 1);
+        let key_events = harness.key_events.borrow();
+        assert_eq!(key_events.len(), 1);
+        assert_eq!(key_events[0], expected_key);
     }
 }
 
@@ -228,31 +325,151 @@ mod leptos_tests {
     use super::*;
     use std::{cell::RefCell, rc::Rc};
 
-    #[test]
-    fn renders_with_accessibility_attributes() {
-        let props = CheckboxProps::new("Subscribe");
-        let state = CheckboxState::uncontrolled(false, false);
-        let out = checkbox::leptos::render(&props, &state);
-        assert!(out.contains("role=\"checkbox\""));
-        assert!(out.contains("aria-checked=\"false\""));
+    struct LeptosHarness {
+        props: CheckboxProps,
+        state: CheckboxState,
+        contexts: Arc<Mutex<Vec<TelemetryContext>>>,
+        telemetry_events: Rc<RefCell<Vec<CheckboxTelemetryEvent>>>,
+        change_events: Rc<RefCell<Vec<CheckboxChangeEvent>>>,
+        focus_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+        blur_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+        key_events: Rc<RefCell<Vec<CheckboxKeyEvent>>>,
+        telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)>,
+        on_change: Rc<dyn Fn(CheckboxChangeEvent)>,
+        on_focus: Rc<dyn Fn(CheckboxFocusEvent)>,
+        on_blur: Rc<dyn Fn(CheckboxFocusEvent)>,
+        on_key: Rc<dyn Fn(CheckboxKeyEvent)>,
+    }
+
+    impl LeptosHarness {
+        fn new() -> Self {
+            let contexts = Arc::new(Mutex::new(Vec::new()));
+            let mut props = CheckboxProps::new("Release automation");
+            props.telemetry = instrumented_hooks(
+                "analytics::checkbox::leptos",
+                "automation::checkbox::leptos",
+                &contexts,
+            );
+            let state = CheckboxState::uncontrolled(false, false);
+
+            let telemetry_events = Rc::new(RefCell::new(Vec::new()));
+            let telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = {
+                let events = Rc::clone(&telemetry_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let change_events = Rc::new(RefCell::new(Vec::new()));
+            let on_change: Rc<dyn Fn(CheckboxChangeEvent)> = {
+                let events = Rc::clone(&change_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let focus_events = Rc::new(RefCell::new(Vec::new()));
+            let on_focus: Rc<dyn Fn(CheckboxFocusEvent)> = {
+                let events = Rc::clone(&focus_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let blur_events = Rc::new(RefCell::new(Vec::new()));
+            let on_blur: Rc<dyn Fn(CheckboxFocusEvent)> = {
+                let events = Rc::clone(&blur_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let key_events = Rc::new(RefCell::new(Vec::new()));
+            let on_key: Rc<dyn Fn(CheckboxKeyEvent)> = {
+                let events = Rc::clone(&key_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let leptos_props = checkbox::leptos::LeptosCheckboxProps {
+                checkbox: props.clone(),
+                state: state.clone(),
+                on_change: Some(on_change.clone()),
+                on_focus: Some(on_focus.clone()),
+                on_blur: Some(on_blur.clone()),
+                on_key: Some(on_key.clone()),
+                telemetry_delegate: Some(telemetry_delegate.clone()),
+            };
+
+            let html = leptos::ssr::render_to_string({
+                let props = leptos_props.clone();
+                move || checkbox::leptos::LeptosCheckbox(props.clone())
+            });
+            let markup = html.to_string();
+            assert!(markup.contains("role=\"checkbox\""));
+            assert!(markup.contains("aria-checked"));
+            assert!(markup.contains("data-rustic-analytics-id=\"analytics::checkbox::leptos\""));
+            assert!(markup.contains("data-automation-id=\"automation::checkbox::leptos\""));
+
+            Self {
+                props,
+                state,
+                contexts,
+                telemetry_events,
+                change_events,
+                focus_events,
+                blur_events,
+                key_events,
+                telemetry_delegate,
+                on_change,
+                on_focus,
+                on_blur,
+                on_key,
+            }
+        }
+
+        fn simulate_change(&mut self) -> CheckboxChangeEvent {
+            let payload = expected_change(&self.props, &self.state);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(payload.clone()));
+            (self.on_change)(payload.clone());
+            self.state.toggle(|_| {});
+            payload
+        }
+
+        fn simulate_focus(&mut self) -> CheckboxFocusEvent {
+            let payload = expected_focus(&self.props, &self.state, true);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Focus(payload.clone()));
+            (self.on_focus)(payload.clone());
+            self.state.focus();
+            payload
+        }
+
+        fn simulate_blur(&mut self) -> CheckboxFocusEvent {
+            let payload = expected_focus(&self.props, &self.state, false);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Blur(payload.clone()));
+            (self.on_blur)(payload.clone());
+            self.state.blur();
+            payload
+        }
+
+        fn simulate_key(&mut self, key: ControlKey) -> (CheckboxKeyEvent, CheckboxChangeEvent) {
+            let key_payload = expected_key(&self.props, &self.state, key);
+            let change_payload = expected_change(&self.props, &self.state);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Key(key_payload.clone()));
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(change_payload.clone()));
+            (self.on_key)(key_payload.clone());
+            (self.on_change)(change_payload.clone());
+            self.state.on_key(key, |_| {});
+            (key_payload, change_payload)
+        }
     }
 
     #[test]
-    fn telemetry_events_reach_leptos_consumers() {
-        let contexts = Arc::new(Mutex::new(Vec::new()));
-        let mut props = CheckboxProps::new("Release automation");
-        props.telemetry = instrumented_hooks(
-            "analytics::checkbox::leptos",
-            "automation::checkbox::leptos",
-            &contexts,
-        );
-        let state = CheckboxState::uncontrolled(false, false);
+    fn telemetry_and_state_transitions_follow_adapter_contract() {
+        let mut harness = LeptosHarness::new();
 
-        let markup = checkbox::leptos::render(&props, &state);
-        assert!(markup.contains("data-rustic-analytics-id=\"analytics::checkbox::leptos\""));
-        assert!(markup.contains("data-automation-id=\"automation::checkbox::leptos\""));
-
-        let recorded = contexts.lock().unwrap();
+        let recorded = harness.contexts.lock().unwrap();
         assert_eq!(recorded.len(), 1);
         let context = &recorded[0];
         assert!(context.component.contains("checkbox"));
@@ -264,104 +481,210 @@ mod leptos_tests {
             context.automation_id.as_deref(),
             Some("automation::checkbox::leptos")
         );
+        drop(recorded);
 
-        let delegate_events: Rc<RefCell<Vec<CheckboxTelemetryEvent>>> =
-            Rc::new(RefCell::new(Vec::new()));
-        let telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = {
-            let events = Rc::clone(&delegate_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_focus_gain = harness.simulate_focus();
+        assert!(harness.state.focus_visible());
 
-        let change_events: Rc<RefCell<Vec<CheckboxChangeEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_change: Rc<dyn Fn(CheckboxChangeEvent)> = {
-            let events = Rc::clone(&change_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_change = harness.simulate_change();
+        assert_eq!(harness.state.checked(), CheckboxValue::On);
 
-        let focus_events: Rc<RefCell<Vec<CheckboxFocusEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_focus: Rc<dyn Fn(CheckboxFocusEvent)> = {
-            let events = Rc::clone(&focus_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let (expected_key, expected_key_change) = harness.simulate_key(ControlKey::Enter);
+        assert_eq!(harness.state.checked(), CheckboxValue::Off);
 
-        let blur_events: Rc<RefCell<Vec<CheckboxFocusEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_blur: Rc<dyn Fn(CheckboxFocusEvent)> = {
-            let events = Rc::clone(&blur_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_focus_loss = harness.simulate_blur();
+        assert!(!harness.state.focus_visible());
 
-        let key_events: Rc<RefCell<Vec<CheckboxKeyEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_key: Rc<dyn Fn(CheckboxKeyEvent)> = {
-            let events = Rc::clone(&key_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let telemetry = harness.telemetry_events.borrow();
+        assert_eq!(telemetry.len(), 5);
+        assert_eq!(
+            telemetry[0],
+            CheckboxTelemetryEvent::Focus(expected_focus_gain.clone())
+        );
+        assert_eq!(
+            telemetry[1],
+            CheckboxTelemetryEvent::Change(expected_change.clone())
+        );
+        assert_eq!(
+            telemetry[2],
+            CheckboxTelemetryEvent::Key(expected_key.clone())
+        );
+        assert_eq!(
+            telemetry[3],
+            CheckboxTelemetryEvent::Change(expected_key_change.clone())
+        );
+        assert_eq!(
+            telemetry[4],
+            CheckboxTelemetryEvent::Blur(expected_focus_loss.clone())
+        );
 
-        let change_payload = expected_change(&props, &state);
-        telemetry_delegate(CheckboxTelemetryEvent::Change(change_payload.clone()));
-        on_change(change_payload.clone());
+        let changes = harness.change_events.borrow();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0], expected_change);
+        assert_eq!(changes[1], expected_key_change);
+        drop(changes);
 
-        let focus_payload = expected_focus(&props, &state, true);
-        telemetry_delegate(CheckboxTelemetryEvent::Focus(focus_payload.clone()));
-        on_focus(focus_payload.clone());
+        let focus_events = harness.focus_events.borrow();
+        assert_eq!(focus_events.len(), 1);
+        assert_eq!(focus_events[0], expected_focus_gain);
+        drop(focus_events);
 
-        let blur_payload = expected_focus(&props, &state, false);
-        telemetry_delegate(CheckboxTelemetryEvent::Blur(blur_payload.clone()));
-        on_blur(blur_payload.clone());
+        let blur_events = harness.blur_events.borrow();
+        assert_eq!(blur_events.len(), 1);
+        assert_eq!(blur_events[0], expected_focus_loss);
+        drop(blur_events);
 
-        let key_payload = expected_key(&props, &state, ControlKey::Enter);
-        telemetry_delegate(CheckboxTelemetryEvent::Key(key_payload.clone()));
-        telemetry_delegate(CheckboxTelemetryEvent::Change(change_payload.clone()));
-        on_key(key_payload.clone());
-        on_change(change_payload.clone());
-
-        assert_eq!(delegate_events.borrow().len(), 5);
-        assert_eq!(change_events.borrow().len(), 2);
-        assert_eq!(focus_events.borrow().len(), 1);
-        assert_eq!(blur_events.borrow().len(), 1);
-        assert_eq!(key_events.borrow().len(), 1);
+        let key_events = harness.key_events.borrow();
+        assert_eq!(key_events.len(), 1);
+        assert_eq!(key_events[0], expected_key);
     }
 }
 
 #[cfg(feature = "dioxus")]
 mod dioxus_tests {
     use super::*;
+    use dioxus::prelude::VirtualDom;
     use std::{cell::RefCell, rc::Rc};
 
-    #[test]
-    fn renders_with_accessibility_attributes() {
-        let props = CheckboxProps::new("Subscribe");
-        let mut state = CheckboxState::uncontrolled(false, false);
-        state.toggle(|_| {});
-        let out = checkbox::dioxus::render(&props, &state);
-        assert!(out.contains("aria-checked=\"true\""));
+    struct DioxusHarness {
+        props: CheckboxProps,
+        state: CheckboxState,
+        contexts: Arc<Mutex<Vec<TelemetryContext>>>,
+        telemetry_events: Rc<RefCell<Vec<CheckboxTelemetryEvent>>>,
+        change_events: Rc<RefCell<Vec<CheckboxChangeEvent>>>,
+        focus_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+        blur_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+        key_events: Rc<RefCell<Vec<CheckboxKeyEvent>>>,
+        telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)>,
+        on_change: Rc<dyn Fn(CheckboxChangeEvent)>,
+        on_focus: Rc<dyn Fn(CheckboxFocusEvent)>,
+        on_blur: Rc<dyn Fn(CheckboxFocusEvent)>,
+        on_key: Rc<dyn Fn(CheckboxKeyEvent)>,
+    }
+
+    impl DioxusHarness {
+        fn new() -> Self {
+            let contexts = Arc::new(Mutex::new(Vec::new()));
+            let mut props = CheckboxProps::new("Nightly deployments");
+            props.telemetry = instrumented_hooks(
+                "analytics::checkbox::dioxus",
+                "automation::checkbox::dioxus",
+                &contexts,
+            );
+            let state = CheckboxState::uncontrolled(false, false);
+
+            let telemetry_events = Rc::new(RefCell::new(Vec::new()));
+            let telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = {
+                let events = Rc::clone(&telemetry_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let change_events = Rc::new(RefCell::new(Vec::new()));
+            let on_change: Rc<dyn Fn(CheckboxChangeEvent)> = {
+                let events = Rc::clone(&change_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let focus_events = Rc::new(RefCell::new(Vec::new()));
+            let on_focus: Rc<dyn Fn(CheckboxFocusEvent)> = {
+                let events = Rc::clone(&focus_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let blur_events = Rc::new(RefCell::new(Vec::new()));
+            let on_blur: Rc<dyn Fn(CheckboxFocusEvent)> = {
+                let events = Rc::clone(&blur_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let key_events = Rc::new(RefCell::new(Vec::new()));
+            let on_key: Rc<dyn Fn(CheckboxKeyEvent)> = {
+                let events = Rc::clone(&key_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let dioxus_props = checkbox::dioxus::DioxusCheckboxProps {
+                checkbox: props.clone(),
+                state: state.clone(),
+                on_change: Some(on_change.clone()),
+                on_focus: Some(on_focus.clone()),
+                on_blur: Some(on_blur.clone()),
+                on_key: Some(on_key.clone()),
+                telemetry_delegate: Some(telemetry_delegate.clone()),
+            };
+
+            let mut dom =
+                VirtualDom::new_with_props(checkbox::dioxus::DioxusCheckbox, dioxus_props);
+            dom.rebuild();
+
+            Self {
+                props,
+                state,
+                contexts,
+                telemetry_events,
+                change_events,
+                focus_events,
+                blur_events,
+                key_events,
+                telemetry_delegate,
+                on_change,
+                on_focus,
+                on_blur,
+                on_key,
+            }
+        }
+
+        fn simulate_change(&mut self) -> CheckboxChangeEvent {
+            let payload = expected_change(&self.props, &self.state);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(payload.clone()));
+            (self.on_change)(payload.clone());
+            self.state.toggle(|_| {});
+            payload
+        }
+
+        fn simulate_focus(&mut self) -> CheckboxFocusEvent {
+            let payload = expected_focus(&self.props, &self.state, true);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Focus(payload.clone()));
+            (self.on_focus)(payload.clone());
+            self.state.focus();
+            payload
+        }
+
+        fn simulate_blur(&mut self) -> CheckboxFocusEvent {
+            let payload = expected_focus(&self.props, &self.state, false);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Blur(payload.clone()));
+            (self.on_blur)(payload.clone());
+            self.state.blur();
+            payload
+        }
+
+        fn simulate_key(&mut self, key: ControlKey) -> (CheckboxKeyEvent, CheckboxChangeEvent) {
+            let key_payload = expected_key(&self.props, &self.state, key);
+            let change_payload = expected_change(&self.props, &self.state);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Key(key_payload.clone()));
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(change_payload.clone()));
+            (self.on_key)(key_payload.clone());
+            (self.on_change)(change_payload.clone());
+            self.state.on_key(key, |_| {});
+            (key_payload, change_payload)
+        }
     }
 
     #[test]
-    fn telemetry_contexts_and_events_capture_dioxus_state() {
-        let contexts = Arc::new(Mutex::new(Vec::new()));
-        let mut props = CheckboxProps::new("Nightly deployments");
-        props.telemetry = instrumented_hooks(
-            "analytics::checkbox::dioxus",
-            "automation::checkbox::dioxus",
-            &contexts,
-        );
-        let state = CheckboxState::uncontrolled(false, false);
+    fn telemetry_and_state_transitions_follow_adapter_contract() {
+        let mut harness = DioxusHarness::new();
 
-        let markup = checkbox::dioxus::render(&props, &state);
-        assert!(markup.contains("data-rustic-analytics-id=\"analytics::checkbox::dioxus\""));
-        assert!(markup.contains("data-automation-id=\"automation::checkbox::dioxus\""));
-
-        let recorded = contexts.lock().unwrap();
+        let recorded = harness.contexts.lock().unwrap();
         assert_eq!(recorded.len(), 1);
         let context = &recorded[0];
         assert!(context.component.contains("checkbox"));
@@ -373,71 +696,62 @@ mod dioxus_tests {
             context.automation_id.as_deref(),
             Some("automation::checkbox::dioxus")
         );
+        drop(recorded);
 
-        let delegate_events: Rc<RefCell<Vec<CheckboxTelemetryEvent>>> =
-            Rc::new(RefCell::new(Vec::new()));
-        let telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = {
-            let events = Rc::clone(&delegate_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_focus_gain = harness.simulate_focus();
+        assert!(harness.state.focus_visible());
 
-        let change_events: Rc<RefCell<Vec<CheckboxChangeEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_change: Rc<dyn Fn(CheckboxChangeEvent)> = {
-            let events = Rc::clone(&change_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_change = harness.simulate_change();
+        assert_eq!(harness.state.checked(), CheckboxValue::On);
 
-        let focus_events: Rc<RefCell<Vec<CheckboxFocusEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_focus: Rc<dyn Fn(CheckboxFocusEvent)> = {
-            let events = Rc::clone(&focus_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let (expected_key, expected_key_change) = harness.simulate_key(ControlKey::Space);
+        assert_eq!(harness.state.checked(), CheckboxValue::Off);
 
-        let blur_events: Rc<RefCell<Vec<CheckboxFocusEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_blur: Rc<dyn Fn(CheckboxFocusEvent)> = {
-            let events = Rc::clone(&blur_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_focus_loss = harness.simulate_blur();
+        assert!(!harness.state.focus_visible());
 
-        let key_events: Rc<RefCell<Vec<CheckboxKeyEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_key: Rc<dyn Fn(CheckboxKeyEvent)> = {
-            let events = Rc::clone(&key_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let telemetry = harness.telemetry_events.borrow();
+        assert_eq!(telemetry.len(), 5);
+        assert_eq!(
+            telemetry[0],
+            CheckboxTelemetryEvent::Focus(expected_focus_gain.clone())
+        );
+        assert_eq!(
+            telemetry[1],
+            CheckboxTelemetryEvent::Change(expected_change.clone())
+        );
+        assert_eq!(
+            telemetry[2],
+            CheckboxTelemetryEvent::Key(expected_key.clone())
+        );
+        assert_eq!(
+            telemetry[3],
+            CheckboxTelemetryEvent::Change(expected_key_change.clone())
+        );
+        assert_eq!(
+            telemetry[4],
+            CheckboxTelemetryEvent::Blur(expected_focus_loss.clone())
+        );
 
-        let change_payload = expected_change(&props, &state);
-        telemetry_delegate(CheckboxTelemetryEvent::Change(change_payload.clone()));
-        on_change(change_payload.clone());
+        let changes = harness.change_events.borrow();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0], expected_change);
+        assert_eq!(changes[1], expected_key_change);
+        drop(changes);
 
-        let focus_payload = expected_focus(&props, &state, true);
-        telemetry_delegate(CheckboxTelemetryEvent::Focus(focus_payload.clone()));
-        on_focus(focus_payload.clone());
+        let focus_events = harness.focus_events.borrow();
+        assert_eq!(focus_events.len(), 1);
+        assert_eq!(focus_events[0], expected_focus_gain);
+        drop(focus_events);
 
-        let blur_payload = expected_focus(&props, &state, false);
-        telemetry_delegate(CheckboxTelemetryEvent::Blur(blur_payload.clone()));
-        on_blur(blur_payload.clone());
+        let blur_events = harness.blur_events.borrow();
+        assert_eq!(blur_events.len(), 1);
+        assert_eq!(blur_events[0], expected_focus_loss);
+        drop(blur_events);
 
-        let key_payload = expected_key(&props, &state, ControlKey::Space);
-        telemetry_delegate(CheckboxTelemetryEvent::Key(key_payload.clone()));
-        telemetry_delegate(CheckboxTelemetryEvent::Change(change_payload.clone()));
-        on_key(key_payload.clone());
-        on_change(change_payload.clone());
-
-        assert_eq!(delegate_events.borrow().len(), 5);
-        assert_eq!(change_events.borrow().len(), 2);
-        assert_eq!(focus_events.borrow().len(), 1);
-        assert_eq!(blur_events.borrow().len(), 1);
-        assert_eq!(key_events.borrow().len(), 1);
+        let key_events = harness.key_events.borrow();
+        assert_eq!(key_events.len(), 1);
+        assert_eq!(key_events[0], expected_key);
     }
 }
 
@@ -445,32 +759,151 @@ mod dioxus_tests {
 mod sycamore_tests {
     use super::*;
     use std::{cell::RefCell, rc::Rc};
+    use sycamore::prelude::*;
 
-    #[test]
-    fn renders_with_accessibility_attributes() {
-        let props = CheckboxProps::new("Subscribe");
-        let state = CheckboxState::uncontrolled(false, false);
-        let out = checkbox::sycamore::render(&props, &state);
-        assert!(out.contains("role=\"checkbox\""));
-        assert!(out.contains("aria-checked"));
+    struct SycamoreHarness {
+        props: CheckboxProps,
+        state: CheckboxState,
+        contexts: Arc<Mutex<Vec<TelemetryContext>>>,
+        telemetry_events: Rc<RefCell<Vec<CheckboxTelemetryEvent>>>,
+        change_events: Rc<RefCell<Vec<CheckboxChangeEvent>>>,
+        focus_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+        blur_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+        key_events: Rc<RefCell<Vec<CheckboxKeyEvent>>>,
+        telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)>,
+        on_change: Rc<dyn Fn(CheckboxChangeEvent)>,
+        on_focus: Rc<dyn Fn(CheckboxFocusEvent)>,
+        on_blur: Rc<dyn Fn(CheckboxFocusEvent)>,
+        on_key: Rc<dyn Fn(CheckboxKeyEvent)>,
+    }
+
+    impl SycamoreHarness {
+        fn new() -> Self {
+            let contexts = Arc::new(Mutex::new(Vec::new()));
+            let mut props = CheckboxProps::new("Finance approvals");
+            props.telemetry = instrumented_hooks(
+                "analytics::checkbox::sycamore",
+                "automation::checkbox::sycamore",
+                &contexts,
+            );
+            let state = CheckboxState::uncontrolled(false, false);
+
+            let telemetry_events = Rc::new(RefCell::new(Vec::new()));
+            let telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = {
+                let events = Rc::clone(&telemetry_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let change_events = Rc::new(RefCell::new(Vec::new()));
+            let on_change: Rc<dyn Fn(CheckboxChangeEvent)> = {
+                let events = Rc::clone(&change_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let focus_events = Rc::new(RefCell::new(Vec::new()));
+            let on_focus: Rc<dyn Fn(CheckboxFocusEvent)> = {
+                let events = Rc::clone(&focus_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let blur_events = Rc::new(RefCell::new(Vec::new()));
+            let on_blur: Rc<dyn Fn(CheckboxFocusEvent)> = {
+                let events = Rc::clone(&blur_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let key_events = Rc::new(RefCell::new(Vec::new()));
+            let on_key: Rc<dyn Fn(CheckboxKeyEvent)> = {
+                let events = Rc::clone(&key_events);
+                Rc::new(move |event| {
+                    events.borrow_mut().push(event);
+                })
+            };
+
+            let sycamore_props = checkbox::sycamore::SycamoreCheckboxProps {
+                checkbox: props.clone(),
+                state: state.clone(),
+                on_change: Some(on_change.clone()),
+                on_focus: Some(on_focus.clone()),
+                on_blur: Some(on_blur.clone()),
+                on_key: Some(on_key.clone()),
+                telemetry_delegate: Some(telemetry_delegate.clone()),
+            };
+
+            let html = sycamore::render_to_string(|cx| {
+                checkbox::sycamore::SycamoreCheckbox(cx, sycamore_props.clone())
+            });
+            assert!(html.contains("role=\"checkbox\""));
+            assert!(html.contains("aria-checked"));
+            assert!(html.contains("data-rustic-analytics-id=\"analytics::checkbox::sycamore\""));
+            assert!(html.contains("data-automation-id=\"automation::checkbox::sycamore\""));
+
+            Self {
+                props,
+                state,
+                contexts,
+                telemetry_events,
+                change_events,
+                focus_events,
+                blur_events,
+                key_events,
+                telemetry_delegate,
+                on_change,
+                on_focus,
+                on_blur,
+                on_key,
+            }
+        }
+
+        fn simulate_change(&mut self) -> CheckboxChangeEvent {
+            let payload = expected_change(&self.props, &self.state);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(payload.clone()));
+            (self.on_change)(payload.clone());
+            self.state.toggle(|_| {});
+            payload
+        }
+
+        fn simulate_focus(&mut self) -> CheckboxFocusEvent {
+            let payload = expected_focus(&self.props, &self.state, true);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Focus(payload.clone()));
+            (self.on_focus)(payload.clone());
+            self.state.focus();
+            payload
+        }
+
+        fn simulate_blur(&mut self) -> CheckboxFocusEvent {
+            let payload = expected_focus(&self.props, &self.state, false);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Blur(payload.clone()));
+            (self.on_blur)(payload.clone());
+            self.state.blur();
+            payload
+        }
+
+        fn simulate_key(&mut self, key: ControlKey) -> (CheckboxKeyEvent, CheckboxChangeEvent) {
+            let key_payload = expected_key(&self.props, &self.state, key);
+            let change_payload = expected_change(&self.props, &self.state);
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Key(key_payload.clone()));
+            (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(change_payload.clone()));
+            (self.on_key)(key_payload.clone());
+            (self.on_change)(change_payload.clone());
+            self.state.on_key(key, |_| {});
+            (key_payload, change_payload)
+        }
     }
 
     #[test]
-    fn telemetry_and_consumer_callbacks_align_for_sycamore() {
-        let contexts = Arc::new(Mutex::new(Vec::new()));
-        let mut props = CheckboxProps::new("Finance approvals");
-        props.telemetry = instrumented_hooks(
-            "analytics::checkbox::sycamore",
-            "automation::checkbox::sycamore",
-            &contexts,
-        );
-        let state = CheckboxState::uncontrolled(false, false);
+    fn telemetry_and_state_transitions_follow_adapter_contract() {
+        let mut harness = SycamoreHarness::new();
 
-        let markup = checkbox::sycamore::render(&props, &state);
-        assert!(markup.contains("data-rustic-analytics-id=\"analytics::checkbox::sycamore\""));
-        assert!(markup.contains("data-automation-id=\"automation::checkbox::sycamore\""));
-
-        let recorded = contexts.lock().unwrap();
+        let recorded = harness.contexts.lock().unwrap();
         assert_eq!(recorded.len(), 1);
         let context = &recorded[0];
         assert!(context.component.contains("checkbox"));
@@ -482,70 +915,61 @@ mod sycamore_tests {
             context.automation_id.as_deref(),
             Some("automation::checkbox::sycamore")
         );
+        drop(recorded);
 
-        let delegate_events: Rc<RefCell<Vec<CheckboxTelemetryEvent>>> =
-            Rc::new(RefCell::new(Vec::new()));
-        let telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = {
-            let events = Rc::clone(&delegate_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_focus_gain = harness.simulate_focus();
+        assert!(harness.state.focus_visible());
 
-        let change_events: Rc<RefCell<Vec<CheckboxChangeEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_change: Rc<dyn Fn(CheckboxChangeEvent)> = {
-            let events = Rc::clone(&change_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_change = harness.simulate_change();
+        assert_eq!(harness.state.checked(), CheckboxValue::On);
 
-        let focus_events: Rc<RefCell<Vec<CheckboxFocusEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_focus: Rc<dyn Fn(CheckboxFocusEvent)> = {
-            let events = Rc::clone(&focus_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let (expected_key, expected_key_change) = harness.simulate_key(ControlKey::Enter);
+        assert_eq!(harness.state.checked(), CheckboxValue::Off);
 
-        let blur_events: Rc<RefCell<Vec<CheckboxFocusEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_blur: Rc<dyn Fn(CheckboxFocusEvent)> = {
-            let events = Rc::clone(&blur_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let expected_focus_loss = harness.simulate_blur();
+        assert!(!harness.state.focus_visible());
 
-        let key_events: Rc<RefCell<Vec<CheckboxKeyEvent>>> = Rc::new(RefCell::new(Vec::new()));
-        let on_key: Rc<dyn Fn(CheckboxKeyEvent)> = {
-            let events = Rc::clone(&key_events);
-            Rc::new(move |event| {
-                events.borrow_mut().push(event);
-            })
-        };
+        let telemetry = harness.telemetry_events.borrow();
+        assert_eq!(telemetry.len(), 5);
+        assert_eq!(
+            telemetry[0],
+            CheckboxTelemetryEvent::Focus(expected_focus_gain.clone())
+        );
+        assert_eq!(
+            telemetry[1],
+            CheckboxTelemetryEvent::Change(expected_change.clone())
+        );
+        assert_eq!(
+            telemetry[2],
+            CheckboxTelemetryEvent::Key(expected_key.clone())
+        );
+        assert_eq!(
+            telemetry[3],
+            CheckboxTelemetryEvent::Change(expected_key_change.clone())
+        );
+        assert_eq!(
+            telemetry[4],
+            CheckboxTelemetryEvent::Blur(expected_focus_loss.clone())
+        );
 
-        let change_payload = expected_change(&props, &state);
-        telemetry_delegate(CheckboxTelemetryEvent::Change(change_payload.clone()));
-        on_change(change_payload.clone());
+        let changes = harness.change_events.borrow();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0], expected_change);
+        assert_eq!(changes[1], expected_key_change);
+        drop(changes);
 
-        let focus_payload = expected_focus(&props, &state, true);
-        telemetry_delegate(CheckboxTelemetryEvent::Focus(focus_payload.clone()));
-        on_focus(focus_payload.clone());
+        let focus_events = harness.focus_events.borrow();
+        assert_eq!(focus_events.len(), 1);
+        assert_eq!(focus_events[0], expected_focus_gain);
+        drop(focus_events);
 
-        let blur_payload = expected_focus(&props, &state, false);
-        telemetry_delegate(CheckboxTelemetryEvent::Blur(blur_payload.clone()));
-        on_blur(blur_payload.clone());
+        let blur_events = harness.blur_events.borrow();
+        assert_eq!(blur_events.len(), 1);
+        assert_eq!(blur_events[0], expected_focus_loss);
+        drop(blur_events);
 
-        let key_payload = expected_key(&props, &state, ControlKey::Enter);
-        telemetry_delegate(CheckboxTelemetryEvent::Key(key_payload.clone()));
-        telemetry_delegate(CheckboxTelemetryEvent::Change(change_payload.clone()));
-        on_key(key_payload.clone());
-        on_change(change_payload.clone());
-
-        assert_eq!(delegate_events.borrow().len(), 5);
-        assert_eq!(change_events.borrow().len(), 2);
-        assert_eq!(focus_events.borrow().len(), 1);
-        assert_eq!(blur_events.borrow().len(), 1);
-        assert_eq!(key_events.borrow().len(), 1);
+        let key_events = harness.key_events.borrow();
+        assert_eq!(key_events.len(), 1);
+        assert_eq!(key_events[0], expected_key);
     }
 }
