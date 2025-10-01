@@ -288,3 +288,11 @@ Additional enterprise patterns such as server side rendering can be found under
   `target/rustic-ui-automation/automation-events.ndjson`.  Tail the file while
   running your harness to confirm click-away dismissals, focus hand-offs, and
   snackbar queue transitions are accounted for end-to-end.
+- Integration tests under `tests/checkbox_adapters.rs` now fabricate framework-
+  specific telemetry delegates and consumer callbacks, asserting that
+  instrumentation hooks capture analytics/automation identifiers before
+  forwarding `CheckboxTelemetryEvent` payloads to user code.  Downstream teams
+  can mirror this pattern to validate their own adapters by providing
+  deterministic fakes for the delegate and callbacks, invoking the telemetry
+  payloads in the documented order (change → focus → blur → key) and asserting
+  both the context metadata and payloads include the configured identifiers.
