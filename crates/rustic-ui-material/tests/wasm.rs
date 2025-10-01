@@ -1,5 +1,6 @@
 #![cfg(feature = "yew")]
 
+use gloo_timers::future::TimeoutFuture;
 use rustic_ui_headless::checkbox::CheckboxState;
 use rustic_ui_headless::chip::{ChipConfig, ChipState};
 use rustic_ui_headless::click_away::ClickAwayState;
@@ -22,7 +23,9 @@ use rustic_ui_material::dialog::{self as dialog_adapter, DialogSurfaceOptions};
 use rustic_ui_material::drawer::{self, DrawerLayoutOptions, DrawerProps};
 use rustic_ui_material::focus_trap::{self, FocusTrapSentinelKind, FocusTrapSentinelOptions};
 use rustic_ui_material::menu::{self, MenuItem, MenuProps};
-use rustic_ui_material::radio::{self, RadioGroupProps};
+use rustic_ui_material::radio::{
+    self, RadioChangeEvent, RadioFocusEvent, RadioGroupProps, RadioKeyEvent, RadioTelemetryEvent,
+};
 use rustic_ui_material::switch::{self, SwitchProps};
 use rustic_ui_material::tab_panel;
 use rustic_ui_material::table::{self, TableColumn, TableProps, TableRow};
@@ -31,6 +34,7 @@ use rustic_ui_material::text_field::TextFieldStateHandle;
 use rustic_ui_material::tooltip::{self, TooltipProps};
 use rustic_ui_material::{AppBar, Button, Snackbar, TextField};
 use rustic_ui_styled_engine::{Theme, ThemeProvider};
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 use wasm_bindgen::{prelude::*, JsCast};
@@ -338,6 +342,184 @@ async fn radio_accessibility_audit() {
     let radios = mount.query_selector_all("[role='radio']").unwrap();
     assert_eq!(radios.length(), 3);
     axe_check(&mount).await;
+}
+
+/// Exercise pointer, focus and keyboard interactions to guarantee telemetry and
+/// ARIA state stay in sync with the headless state machine.
+#[wasm_bindgen_test(async)]
+async fn radio_group_interactions_emit_telemetry() {
+    use rustic_ui_material::radio::yew::YewRadioGroup;
+
+    let document = gloo_utils::document();
+    let mount = document.create_element("div").unwrap();
+    document.body().unwrap().append_child(&mount).unwrap();
+
+    let telemetry_log = Rc::new(RefCell::new(Vec::new()));
+    let change_log = Rc::new(RefCell::new(Vec::new()));
+    let focus_log = Rc::new(RefCell::new(Vec::new()));
+    let blur_log = Rc::new(RefCell::new(Vec::new()));
+    let key_log = Rc::new(RefCell::new(Vec::new()));
+
+    let telemetry_cb = {
+        let log = Rc::clone(&telemetry_log);
+        Callback::from(move |event: RadioTelemetryEvent| {
+            log.borrow_mut().push(event);
+        })
+    };
+    let change_cb = {
+        let log = Rc::clone(&change_log);
+        Callback::from(move |event: RadioChangeEvent| {
+            log.borrow_mut().push(event);
+        })
+    };
+    let focus_cb = {
+        let log = Rc::clone(&focus_log);
+        Callback::from(move |event: RadioFocusEvent| {
+            log.borrow_mut().push(event);
+        })
+    };
+    let blur_cb = {
+        let log = Rc::clone(&blur_log);
+        Callback::from(move |event: RadioFocusEvent| {
+            log.borrow_mut().push(event);
+        })
+    };
+    let key_cb = {
+        let log = Rc::clone(&key_log);
+        Callback::from(move |event: RadioKeyEvent| {
+            log.borrow_mut().push(event);
+        })
+    };
+
+    let state = RadioGroupState::uncontrolled(
+        vec!["Alpha".into(), "Beta".into(), "Gamma".into()],
+        false,
+        RadioOrientation::Horizontal,
+        Some(0),
+    );
+    let mut group = RadioGroupProps::from_state(&state);
+    group.telemetry.analytics_id = Some("yew-radio-group".into());
+    group.telemetry.automation_id = Some("yew-radio-automation".into());
+
+    #[derive(Properties, Clone, PartialEq)]
+    struct RadioHarnessProps {
+        group: RadioGroupProps,
+        state: RadioGroupState,
+        on_change: Callback<RadioChangeEvent>,
+        on_focus: Callback<RadioFocusEvent>,
+        on_blur: Callback<RadioFocusEvent>,
+        on_key: Callback<RadioKeyEvent>,
+        telemetry: Callback<RadioTelemetryEvent>,
+    }
+
+    #[function_component(RadioHarness)]
+    fn radio_harness(props: &RadioHarnessProps) -> Html {
+        html! {
+            <ThemeProvider theme={Theme::default()}>
+                <YewRadioGroup
+                    group={props.group.clone()}
+                    state={props.state.clone()}
+                    on_change={Some(props.on_change.clone())}
+                    on_focus={Some(props.on_focus.clone())}
+                    on_blur={Some(props.on_blur.clone())}
+                    on_key={Some(props.on_key.clone())}
+                    telemetry_delegate={Some(props.telemetry.clone())}
+                />
+            </ThemeProvider>
+        }
+    }
+
+    let props = RadioHarnessProps {
+        group,
+        state: state.clone(),
+        on_change: change_cb,
+        on_focus: focus_cb,
+        on_blur: blur_cb,
+        on_key: key_cb,
+        telemetry: telemetry_cb,
+    };
+
+    Renderer::<RadioHarness>::with_root_and_props(mount.clone(), props).render();
+
+    // Pointer selection updates telemetry and aria attributes.
+    let second = mount
+        .query_selector("[data-index='1']")
+        .unwrap()
+        .expect("second radio option");
+    let second_element: web_sys::HtmlElement = second.clone().dyn_into().unwrap();
+    second_element.click();
+    TimeoutFuture::new(0).await;
+
+    let change_events = change_log.borrow();
+    assert_eq!(change_events.len(), 1);
+    assert_eq!(change_events[0].next, 1);
+    drop(change_events);
+
+    let telemetry_events = telemetry_log.borrow();
+    assert!(matches!(
+        telemetry_events[0],
+        RadioTelemetryEvent::Analytics(_)
+    ));
+    assert!(matches!(telemetry_events[1], RadioTelemetryEvent::Change(ref evt) if evt.next == 1));
+    assert!(
+        matches!(telemetry_events[2], RadioTelemetryEvent::Commit(ref evt) if evt.selected == Some(1))
+    );
+    drop(telemetry_events);
+
+    assert_eq!(
+        second
+            .get_attribute("aria-checked")
+            .expect("aria-checked attribute"),
+        "true"
+    );
+
+    // Focus and blur events bubble telemetry before consumer callbacks.
+    let focus_event = web_sys::FocusEvent::new("focus").unwrap();
+    second_element.dispatch_event(&focus_event).unwrap();
+    TimeoutFuture::new(0).await;
+    let blur_event = web_sys::FocusEvent::new("blur").unwrap();
+    second_element.dispatch_event(&blur_event).unwrap();
+    TimeoutFuture::new(0).await;
+
+    assert_eq!(focus_log.borrow().len(), 1);
+    assert_eq!(blur_log.borrow().len(), 1);
+
+    // Keyboard navigation advances selection and surfaces telemetry in order.
+    let mut keyboard_init = web_sys::KeyboardEventInit::new();
+    keyboard_init.set_key("ArrowRight");
+    keyboard_init.set_bubbles(true);
+    keyboard_init.set_cancelable(true);
+    let key_event =
+        web_sys::KeyboardEvent::new_with_keyboard_event_init_dict("keydown", &keyboard_init)
+            .unwrap();
+    second_element.dispatch_event(&key_event).unwrap();
+    TimeoutFuture::new(0).await;
+
+    let key_events = key_log.borrow();
+    assert_eq!(key_events.len(), 1);
+    assert_eq!(key_events[0].next, Some(2));
+    drop(key_events);
+
+    let telemetry_events = telemetry_log.borrow();
+    assert!(telemetry_events.len() >= 7);
+    let tail = &telemetry_events[telemetry_events.len() - 5..];
+    assert!(matches!(tail[0], RadioTelemetryEvent::Analytics(_)));
+    assert!(matches!(tail[1], RadioTelemetryEvent::Focus(_)));
+    assert!(matches!(tail[2], RadioTelemetryEvent::Blur(_)));
+    assert!(matches!(tail[3], RadioTelemetryEvent::Change(ref evt) if evt.next == 2));
+    assert!(matches!(tail[4], RadioTelemetryEvent::Commit(ref evt) if evt.selected == Some(2)));
+    drop(telemetry_events);
+
+    let third = mount
+        .query_selector("[data-index='2']")
+        .unwrap()
+        .expect("third radio option");
+    assert_eq!(
+        third
+            .get_attribute("data-checked")
+            .expect("data-checked attribute"),
+        "true"
+    );
 }
 
 /// Validate the switch renders and passes accessibility audit.

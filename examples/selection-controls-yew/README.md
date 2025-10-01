@@ -6,9 +6,11 @@ from `rustic_ui_material`.
 
 ```rust
 use rustic_ui_headless::checkbox::CheckboxState;
+use gloo_console::log;
 use rustic_ui_material::checkbox::{self, CheckboxProps};
 use rustic_ui_material::switch::{self, SwitchProps};
-use rustic_ui_material::radio::{self, RadioGroupProps};
+use rustic_ui_material::radio::{self, RadioChangeEvent, RadioGroupProps, RadioTelemetryEvent};
+use rustic_ui_material::radio::yew::YewRadioGroup;
 use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
 use yew::prelude::*;
 
@@ -23,22 +25,32 @@ fn selection_controls() -> Html {
         Some(0),
     );
 
-    let checkbox = Html::from_html_unchecked(AttrValue::from(
-        checkbox::yew::render(&CheckboxProps::new("Receive updates"), &checkbox_state),
-    ));
-    let switch = Html::from_html_unchecked(AttrValue::from(
-        switch::yew::render(&SwitchProps::new("Enable notifications"), &switch_state),
-    ));
-    let radio = Html::from_html_unchecked(AttrValue::from(
-        radio::yew::render(&RadioGroupProps::from_state(&radio_state), &radio_state),
-    ));
+    let on_radio_change = Callback::from(|event: RadioChangeEvent| {
+        log!(format!("selected index: {}", event.next));
+    });
+    let on_radio_telemetry = Callback::from(|event: RadioTelemetryEvent| {
+        log!(format!("telemetry: {:?}", event));
+    });
 
     html! {
         <>
-            {checkbox}
-            {switch}
-            {radio}
+            { Html::from_html_unchecked(AttrValue::from(
+                checkbox::yew::render(&CheckboxProps::new("Receive updates"), &checkbox_state),
+            )) }
+            { Html::from_html_unchecked(AttrValue::from(
+                switch::yew::render(&SwitchProps::new("Enable notifications"), &switch_state),
+            )) }
+            <YewRadioGroup
+                group={RadioGroupProps::from_state(&radio_state)}
+                state={radio_state}
+                on_change={Some(on_radio_change)}
+                telemetry_delegate={Some(on_radio_telemetry)}
+            />
         </>
     }
 }
 ```
+
+The radio group now emits structured telemetry before any consumer callbacks
+execute, ensuring analytics capture remains deterministic even as the UI mutates
+through `RadioGroupState`.
