@@ -2744,18 +2744,387 @@ pub mod leptos {
 pub mod dioxus {
     //! Dioxus adapter constructed with `rsx!` for idiomatic use in Dioxus apps.
     use super::*;
-    use dioxus::prelude::*;
+    use ::dioxus::prelude::events::{FocusEvent, KeyboardEvent, MouseEvent};
+    use ::dioxus::prelude::*;
+    use keyboard_types::Key;
+    use std::{cell::RefCell, rc::Rc};
+
+    /// Shared type alias mirroring the `Leptos` adapter so integrations can
+    /// forward telemetry in a consistent `Rc` shape.
+    type TelemetryDelegate = Rc<dyn Fn(RadioTelemetryEvent)>;
+    /// Alias for change callbacks supplied by Dioxus shells.
+    type ChangeCallback = Rc<dyn Fn(RadioChangeEvent)>;
+    /// Alias for focus/blur callbacks supplied by Dioxus shells.
+    type FocusCallback = Rc<dyn Fn(RadioFocusEvent)>;
+    /// Alias for keyboard callbacks supplied by Dioxus shells.
+    type KeyCallback = Rc<dyn Fn(RadioKeyEvent)>;
+
+    fn emit_telemetry(delegate: &Option<TelemetryDelegate>, events: &[RadioTelemetryEvent]) {
+        if let Some(callback) = delegate {
+            for event in events {
+                callback(event.clone());
+            }
+        }
+    }
+
+    fn rc_option_eq<T: ?Sized>(lhs: &Option<Rc<T>>, rhs: &Option<Rc<T>>) -> bool {
+        match (lhs, rhs) {
+            (Some(a), Some(b)) => Rc::ptr_eq(a, b),
+            (None, None) => true,
+            _ => false,
+        }
+    }
 
     /// Properties accepted by [`DioxusRadioGroup`].
-    #[derive(Props, Clone, PartialEq)]
+    #[derive(Props, Clone)]
     pub struct DioxusRadioGroupProps {
         /// Optional labels applied to each radio option.
         pub group: RadioGroupProps,
         /// Headless state providing focus and selection metadata.
         pub state: RadioGroupState,
+        /// Optional change callback invoked after the shared runner completes.
+        #[props(optional)]
+        pub on_change: Option<ChangeCallback>,
+        /// Optional focus callback invoked when an option gains focus.
+        #[props(optional)]
+        pub on_focus: Option<FocusCallback>,
+        /// Optional blur callback invoked when an option loses focus.
+        #[props(optional)]
+        pub on_blur: Option<FocusCallback>,
+        /// Optional keyboard callback invoked with normalized control keys.
+        #[props(optional)]
+        pub on_key: Option<KeyCallback>,
+        /// Optional telemetry delegate receiving structured payloads.
+        #[props(optional)]
+        pub telemetry_delegate: Option<TelemetryDelegate>,
         /// Telemetry hooks applied around the Dioxus render lifecycle.
         #[props(default = None)]
         pub telemetry: Option<TelemetryHooks>,
+    }
+
+    impl PartialEq for DioxusRadioGroupProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.group == other.group
+                && self.state.options() == other.state.options()
+                && self.state.orientation() == other.state.orientation()
+                && self.state.disabled() == other.state.disabled()
+                && self.state.selected_index() == other.state.selected_index()
+                && self.state.focus_visible_index() == other.state.focus_visible_index()
+                && rc_option_eq(&self.on_change, &other.on_change)
+                && rc_option_eq(&self.on_focus, &other.on_focus)
+                && rc_option_eq(&self.on_blur, &other.on_blur)
+                && rc_option_eq(&self.on_key, &other.on_key)
+                && rc_option_eq(&self.telemetry_delegate, &other.telemetry_delegate)
+                && self.telemetry == other.telemetry
+        }
+    }
+
+    #[derive(Clone)]
+    struct DioxusOptionHandlers {
+        select: Rc<dyn Fn()>,
+        focus: Rc<dyn Fn()>,
+        blur: Rc<dyn Fn()>,
+        key: Rc<dyn Fn(ControlKey)>,
+    }
+
+    struct DioxusOptionHandlerBuilder {
+        state: Rc<RefCell<RadioGroupState>>,
+        options: Rc<Vec<RadioOptionSnapshot>>,
+        on_change: Option<ChangeCallback>,
+        on_focus: Option<FocusCallback>,
+        on_blur: Option<FocusCallback>,
+        on_key: Option<KeyCallback>,
+        telemetry_delegate: Option<TelemetryDelegate>,
+        refresh: Rc<dyn Fn()>,
+    }
+
+    impl DioxusOptionHandlerBuilder {
+        fn new(
+            state: Rc<RefCell<RadioGroupState>>,
+            options: Rc<Vec<RadioOptionSnapshot>>,
+            on_change: Option<ChangeCallback>,
+            on_focus: Option<FocusCallback>,
+            on_blur: Option<FocusCallback>,
+            on_key: Option<KeyCallback>,
+            telemetry_delegate: Option<TelemetryDelegate>,
+            refresh: Rc<dyn Fn()>,
+        ) -> Self {
+            Self {
+                state,
+                options,
+                on_change,
+                on_focus,
+                on_blur,
+                on_key,
+                telemetry_delegate,
+                refresh,
+            }
+        }
+
+        fn build(&self, index: usize) -> DioxusOptionHandlers {
+            let select_runner = self.build_select_handler(index);
+            let focus_runner = self.build_focus_handler(index);
+            let blur_runner = self.build_blur_handler(index);
+            let key_runner = self.build_key_handler(index);
+
+            DioxusOptionHandlers {
+                select: select_runner,
+                focus: focus_runner,
+                blur: blur_runner,
+                key: key_runner,
+            }
+        }
+
+        fn build_select_handler(&self, index: usize) -> Rc<dyn Fn()> {
+            let state = Rc::clone(&self.state);
+            let option = self.options[index].clone();
+            let telemetry = self.telemetry_delegate.clone();
+            let on_change = self.on_change.clone();
+            let refresh = Rc::clone(&self.refresh);
+
+            Rc::new(move || {
+                // Telemetry is captured **before** any mutation to ensure
+                // analytics systems observe the pre-interaction state. This
+                // mirrors the React/Yew/Leptos lifecycles and keeps automation
+                // flows deterministic across adapters.
+                let (analytics_event, previous, controlled, disabled) = {
+                    let state_ref = state.borrow();
+                    (
+                        RadioTelemetryEvent::Analytics(build_analytics_event(
+                            &option, &state_ref, index,
+                        )),
+                        state_ref.selected_index(),
+                        state_ref.is_controlled(),
+                        state_ref.disabled(),
+                    )
+                };
+
+                let change_event = build_change_event(&option, previous, index, disabled);
+                let mut telemetry_events = Vec::with_capacity(3);
+                telemetry_events.push(analytics_event);
+                telemetry_events.push(RadioTelemetryEvent::Change(change_event.clone()));
+
+                {
+                    // Drive the shared state machine so keyboard focus follows
+                    // the selection just like the other renderers.
+                    let mut state_mut = state.borrow_mut();
+                    state_mut.select(index, |_| {});
+                    state_mut.focus(index);
+                }
+
+                refresh();
+
+                let selected_after = {
+                    let state_ref = state.borrow();
+                    state_ref.selected_index().or(Some(index))
+                };
+                telemetry_events.push(RadioTelemetryEvent::Commit(build_commit_event(
+                    &option,
+                    selected_after,
+                    controlled,
+                )));
+
+                emit_telemetry(&telemetry, &telemetry_events);
+
+                if let Some(callback) = &on_change {
+                    callback(change_event);
+                }
+            })
+        }
+
+        fn build_focus_handler(&self, index: usize) -> Rc<dyn Fn()> {
+            let state = Rc::clone(&self.state);
+            let option = self.options[index].clone();
+            let telemetry = self.telemetry_delegate.clone();
+            let on_focus = self.on_focus.clone();
+            let refresh = Rc::clone(&self.refresh);
+
+            Rc::new(move || {
+                // Focus telemetry mirrors the analytics-first lifecycle so
+                // automation can assert deterministic ordering.
+                let (analytics_event, focus_payload) = {
+                    let state_ref = state.borrow();
+                    (
+                        RadioTelemetryEvent::Analytics(build_analytics_event(
+                            &option, &state_ref, index,
+                        )),
+                        build_focus_event(&option, &state_ref, index, true),
+                    )
+                };
+
+                let telemetry_events = vec![
+                    analytics_event,
+                    RadioTelemetryEvent::Focus(focus_payload.clone()),
+                ];
+                emit_telemetry(&telemetry, &telemetry_events);
+
+                {
+                    let mut state_mut = state.borrow_mut();
+                    state_mut.focus(index);
+                }
+
+                refresh();
+
+                if let Some(callback) = &on_focus {
+                    callback(focus_payload);
+                }
+            })
+        }
+
+        fn build_blur_handler(&self, index: usize) -> Rc<dyn Fn()> {
+            let state = Rc::clone(&self.state);
+            let option = self.options[index].clone();
+            let telemetry = self.telemetry_delegate.clone();
+            let on_blur = self.on_blur.clone();
+            let refresh = Rc::clone(&self.refresh);
+
+            Rc::new(move || {
+                // Blur mirrors the focus handler with an explicit `false`
+                // visibility flag so analytics sees the transition order.
+                let (analytics_event, blur_payload) = {
+                    let state_ref = state.borrow();
+                    (
+                        RadioTelemetryEvent::Analytics(build_analytics_event(
+                            &option, &state_ref, index,
+                        )),
+                        build_focus_event(&option, &state_ref, index, false),
+                    )
+                };
+
+                let telemetry_events = vec![
+                    analytics_event,
+                    RadioTelemetryEvent::Blur(blur_payload.clone()),
+                ];
+                emit_telemetry(&telemetry, &telemetry_events);
+
+                {
+                    let mut state_mut = state.borrow_mut();
+                    state_mut.blur();
+                }
+
+                refresh();
+
+                if let Some(callback) = &on_blur {
+                    callback(blur_payload);
+                }
+            })
+        }
+
+        fn build_key_handler(&self, index: usize) -> Rc<dyn Fn(ControlKey)> {
+            let state = Rc::clone(&self.state);
+            let options = Rc::clone(&self.options);
+            let telemetry = self.telemetry_delegate.clone();
+            let on_key = self.on_key.clone();
+            let on_change = self.on_change.clone();
+            let origin_option = self.options[index].clone();
+            let refresh = Rc::clone(&self.refresh);
+
+            Rc::new(move |control: ControlKey| {
+                // Capture a consistent snapshot before mutating so telemetry
+                // ordering matches the other adapters.
+                let (analytics_event, previous, controlled, disabled) = {
+                    let state_ref = state.borrow();
+                    (
+                        RadioTelemetryEvent::Analytics(build_analytics_event(
+                            &origin_option,
+                            &state_ref,
+                            index,
+                        )),
+                        state_ref.selected_index(),
+                        state_ref.is_controlled(),
+                        state_ref.disabled(),
+                    )
+                };
+
+                let selected_after = Rc::new(RefCell::new(None));
+                {
+                    let mut state_mut = state.borrow_mut();
+                    let recorder = Rc::clone(&selected_after);
+                    state_mut.on_key(control, move |selected| {
+                        recorder.borrow_mut().replace(selected);
+                    });
+                }
+
+                refresh();
+
+                let mut telemetry_events = Vec::with_capacity(5);
+                telemetry_events.push(analytics_event);
+
+                let next_index = *selected_after.borrow();
+                let mut change_payload = None;
+
+                let key_payload =
+                    build_key_event(&origin_option, control, previous, next_index, disabled);
+
+                if let Some(next_index) = next_index {
+                    let focused_option = options[next_index].clone();
+                    let focus_event = {
+                        let state_ref = state.borrow();
+                        RadioTelemetryEvent::Focus(build_focus_event(
+                            &focused_option,
+                            &state_ref,
+                            next_index,
+                            true,
+                        ))
+                    };
+                    telemetry_events.push(focus_event);
+
+                    if next_index != index {
+                        let blur_event = {
+                            let state_ref = state.borrow();
+                            RadioTelemetryEvent::Blur(build_focus_event(
+                                &origin_option,
+                                &state_ref,
+                                index,
+                                false,
+                            ))
+                        };
+                        telemetry_events.push(blur_event);
+                    }
+
+                    let change_event =
+                        build_change_event(&focused_option, previous, next_index, disabled);
+                    telemetry_events.push(RadioTelemetryEvent::Change(change_event.clone()));
+
+                    let committed = {
+                        let state_ref = state.borrow();
+                        state_ref.selected_index().or(Some(next_index))
+                    };
+                    telemetry_events.push(RadioTelemetryEvent::Commit(build_commit_event(
+                        &focused_option,
+                        committed,
+                        controlled,
+                    )));
+
+                    change_payload = Some(change_event);
+                }
+
+                emit_telemetry(&telemetry, &telemetry_events);
+
+                if let Some(callback) = &on_key {
+                    callback(key_payload.clone());
+                }
+
+                if let (Some(callback), Some(change_event)) = (on_change.as_ref(), change_payload) {
+                    callback(change_event);
+                }
+            })
+        }
+    }
+
+    fn sync_state_from_props(state: &Rc<RefCell<RadioGroupState>>, props_state: &RadioGroupState) {
+        let mut state_mut = state.borrow_mut();
+        if state_mut.options() != props_state.options() {
+            *state_mut = props_state.clone();
+            return;
+        }
+
+        state_mut.set_disabled(props_state.disabled());
+        state_mut.set_orientation(props_state.orientation());
+
+        if props_state.is_controlled() {
+            state_mut.sync_selected(props_state.selected_index());
+        }
     }
 
     /// Radio group rendered as a Dioxus component.
@@ -2763,15 +3132,45 @@ pub mod dioxus {
         let props = cx.props();
         let telemetry_override = props.telemetry.clone().unwrap_or_default();
         let telemetry = super::merged_telemetry(&telemetry_override, &props.group.telemetry);
+        let state_handle = {
+            let initial = Rc::new(RefCell::new(props.state.clone()));
+            let cell = use_ref(cx, || initial);
+            cell.read().clone()
+        };
+        sync_state_from_props(&state_handle, &props.state);
+
+        let state_snapshot = state_handle.borrow();
         let (context, _descriptor, snapshot) = super::descriptor_with_context(
             "rustic_ui_material::radio::dioxus::DioxusRadioGroup",
             &props.group,
             &telemetry,
-            &props.state,
+            &state_snapshot,
         );
+        drop(state_snapshot);
+
         let scope = cx;
+        let on_change = props.on_change.clone();
+        let on_focus = props.on_focus.clone();
+        let on_blur = props.on_blur.clone();
+        let on_key = props.on_key.clone();
+        let telemetry_delegate = props.telemetry_delegate.clone();
         instrument_render(&telemetry, context, move || {
-            let options = snapshot.options.clone();
+            let options = Rc::new(snapshot.options.clone());
+            let refresh: Rc<dyn Fn()> = {
+                let scope = scope;
+                Rc::new(move || scope.needs_update())
+            };
+            let handler_builder = Rc::new(DioxusOptionHandlerBuilder::new(
+                Rc::clone(&state_handle),
+                Rc::clone(&options),
+                on_change.clone(),
+                on_focus.clone(),
+                on_blur.clone(),
+                on_key.clone(),
+                telemetry_delegate.clone(),
+                refresh,
+            ));
+
             scope.render(rsx! {
                 div {
                     class: snapshot.class.clone(),
@@ -2781,8 +3180,14 @@ pub mod dioxus {
                     data_orientation: snapshot.data_orientation.clone(),
                     data_rustic_analytics_id: snapshot.analytics_id.clone(),
                     data_automation_id: snapshot.automation_id.clone(),
-                    { options.iter().map(|option| {
+                    { options.iter().enumerate().map(|(index, option)| {
                         let label = option.label.clone();
+                        let handlers = handler_builder.build(index);
+                        let select_runner = handlers.select.clone();
+                        let focus_runner = handlers.focus.clone();
+                        let blur_runner = handlers.blur.clone();
+                        let key_runner = handlers.key.clone();
+
                         rsx! {
                             span {
                                 class: option.class.clone(),
@@ -2795,6 +3200,37 @@ pub mod dioxus {
                                 data_index: option.data_index.clone(),
                                 data_rustic_analytics_id: option.analytics_id.clone(),
                                 data_automation_id: option.automation_id.clone(),
+                                // Clicking funnels through the shared runner so telemetry,
+                                // state updates, and consumer callbacks remain in lock-step.
+                                onclick: move |_event: MouseEvent| {
+                                    select_runner();
+                                },
+                                // Focus hooks emit analytics before mutating focus state to
+                                // keep automation ordering deterministic.
+                                onfocus: move |_event: FocusEvent| {
+                                    focus_runner();
+                                },
+                                // Blur mirrors focus to capture analytics prior to clearing
+                                // the headless focus-visible flag.
+                                onblur: move |_event: FocusEvent| {
+                                    blur_runner();
+                                },
+                                // Keyboard interactions normalize the control key before
+                                // delegating into the shared handler, guaranteeing identical
+                                // telemetry sequencing across renderers.
+                                onkeydown: move |event: KeyboardEvent| {
+                                    let raw_key = event.data.key();
+                                    let name = match raw_key {
+                                        Key::Character(ch) => ch,
+                                        Key::Space => " ".to_string(),
+                                        Key::Enter => "Enter".to_string(),
+                                        other => other.to_string(),
+                                    };
+                                    if let Some(control) = control_key_from_str(name.as_str()) {
+                                        event.prevent_default();
+                                        key_runner(control);
+                                    }
+                                },
                                 {label}
                             }
                         }
@@ -2802,6 +3238,321 @@ pub mod dioxus {
                 }
             })
         })
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use ::dioxus::prelude::VirtualDom;
+
+        struct Harness {
+            state: Rc<RefCell<RadioGroupState>>,
+            options: Rc<Vec<RadioOptionSnapshot>>,
+            order: Rc<RefCell<Vec<String>>>,
+            telemetry_events: Rc<RefCell<Vec<RadioTelemetryEvent>>>,
+            change_events: Rc<RefCell<Vec<RadioChangeEvent>>>,
+            focus_events: Rc<RefCell<Vec<RadioFocusEvent>>>,
+            blur_events: Rc<RefCell<Vec<RadioFocusEvent>>>,
+            key_events: Rc<RefCell<Vec<RadioKeyEvent>>>,
+            refresh_counter: Rc<RefCell<usize>>,
+            builder: Rc<DioxusOptionHandlerBuilder>,
+        }
+
+        impl Harness {
+            fn new(controlled: bool) -> Self {
+                let state = if controlled {
+                    RadioGroupState::controlled(
+                        vec!["Alpha".into(), "Beta".into(), "Gamma".into()],
+                        false,
+                        RadioOrientation::Horizontal,
+                        Some(0),
+                    )
+                } else {
+                    RadioGroupState::uncontrolled(
+                        vec!["Alpha".into(), "Beta".into(), "Gamma".into()],
+                        false,
+                        RadioOrientation::Horizontal,
+                        Some(0),
+                    )
+                };
+                let group = RadioGroupProps::from_state(&state);
+                let telemetry = TelemetryHooks::default();
+                let (_context, _descriptor, snapshot) = super::descriptor_with_context(
+                    "rustic_ui_material::radio::dioxus::tests::Harness",
+                    &group,
+                    &telemetry,
+                    &state,
+                );
+
+                let state_handle = Rc::new(RefCell::new(state));
+                let options = Rc::new(snapshot.options.clone());
+                let order = Rc::new(RefCell::new(Vec::new()));
+                let telemetry_events = Rc::new(RefCell::new(Vec::new()));
+                let change_events = Rc::new(RefCell::new(Vec::new()));
+                let focus_events = Rc::new(RefCell::new(Vec::new()));
+                let blur_events = Rc::new(RefCell::new(Vec::new()));
+                let key_events = Rc::new(RefCell::new(Vec::new()));
+                let refresh_counter = Rc::new(RefCell::new(0usize));
+
+                let telemetry_delegate: TelemetryDelegate = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&telemetry_events);
+                    Rc::new(move |event| {
+                        order.borrow_mut().push(format!("telemetry::{:?}", event));
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let on_change: ChangeCallback = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&change_events);
+                    Rc::new(move |event| {
+                        order.borrow_mut().push("callback::change".into());
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let on_focus: FocusCallback = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&focus_events);
+                    Rc::new(move |event| {
+                        order.borrow_mut().push("callback::focus".into());
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let on_blur: FocusCallback = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&blur_events);
+                    Rc::new(move |event| {
+                        order.borrow_mut().push("callback::blur".into());
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let on_key: KeyCallback = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&key_events);
+                    Rc::new(move |event| {
+                        order.borrow_mut().push("callback::key".into());
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let refresh = {
+                    let counter = Rc::clone(&refresh_counter);
+                    Rc::new(move || {
+                        let mut value = counter.borrow_mut();
+                        *value = value.wrapping_add(1);
+                    }) as Rc<dyn Fn()>
+                };
+
+                let builder = Rc::new(DioxusOptionHandlerBuilder::new(
+                    Rc::clone(&state_handle),
+                    Rc::clone(&options),
+                    Some(on_change),
+                    Some(on_focus),
+                    Some(on_blur),
+                    Some(on_key),
+                    Some(telemetry_delegate),
+                    refresh,
+                ));
+
+                Self {
+                    state: state_handle,
+                    options,
+                    order,
+                    telemetry_events,
+                    change_events,
+                    focus_events,
+                    blur_events,
+                    key_events,
+                    refresh_counter,
+                    builder,
+                }
+            }
+        }
+
+        #[test]
+        fn uncontrolled_select_emits_change_and_commit_before_callbacks() {
+            let harness = Harness::new(false);
+            let handlers = harness.builder.build(1);
+            handlers.select();
+
+            assert_eq!(harness.state.borrow().selected_index(), Some(1));
+
+            let telemetry = harness.telemetry_events.borrow();
+            assert_eq!(telemetry.len(), 3);
+            assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
+            assert!(matches!(
+                telemetry[1],
+                RadioTelemetryEvent::Change(ref evt) if evt.next == 1
+            ));
+            assert!(matches!(
+                telemetry[2],
+                RadioTelemetryEvent::Commit(ref evt) if evt.selected == Some(1)
+            ));
+            drop(telemetry);
+
+            let changes = harness.change_events.borrow();
+            assert_eq!(changes.len(), 1);
+            assert_eq!(changes[0].next, 1);
+            drop(changes);
+
+            let order = harness.order.borrow();
+            assert_eq!(order.len(), 4);
+            assert!(order[0].starts_with("telemetry::Analytics"));
+            assert!(order[1].starts_with("telemetry::Change"));
+            assert!(order[2].starts_with("telemetry::Commit"));
+            assert_eq!(order[3], "callback::change");
+            drop(order);
+
+            assert_eq!(*harness.refresh_counter.borrow(), 1);
+        }
+
+        #[test]
+        fn controlled_select_notifies_without_mutating_selection() {
+            let harness = Harness::new(true);
+            let handlers = harness.builder.build(2);
+            handlers.select();
+
+            assert_eq!(harness.state.borrow().selected_index(), Some(0));
+
+            let telemetry = harness.telemetry_events.borrow();
+            assert_eq!(telemetry.len(), 3);
+            assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
+            assert!(matches!(
+                telemetry[1],
+                RadioTelemetryEvent::Change(ref evt) if evt.next == 2
+            ));
+            assert!(matches!(
+                telemetry[2],
+                RadioTelemetryEvent::Commit(ref evt) if evt.selected == Some(0)
+            ));
+            drop(telemetry);
+
+            let changes = harness.change_events.borrow();
+            assert_eq!(changes.len(), 1);
+            assert_eq!(changes[0].next, 2);
+            drop(changes);
+
+            let order = harness.order.borrow();
+            assert_eq!(order[3], "callback::change");
+            drop(order);
+
+            assert_eq!(*harness.refresh_counter.borrow(), 1);
+        }
+
+        #[test]
+        fn focus_and_blur_emit_telemetry_and_update_focus_state() {
+            let harness = Harness::new(false);
+            let handlers = harness.builder.build(1);
+            handlers.focus();
+            assert_eq!(harness.state.borrow().focus_visible_index(), Some(1));
+            handlers.blur();
+            assert_eq!(harness.state.borrow().focus_visible_index(), None);
+
+            let focus_events = harness.focus_events.borrow();
+            assert_eq!(focus_events.len(), 1);
+            assert_eq!(focus_events[0].index, 1);
+            drop(focus_events);
+
+            let blur_events = harness.blur_events.borrow();
+            assert_eq!(blur_events.len(), 1);
+            assert_eq!(blur_events[0].index, 1);
+            drop(blur_events);
+
+            let telemetry = harness.telemetry_events.borrow();
+            assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
+            assert!(matches!(telemetry[1], RadioTelemetryEvent::Focus(_)));
+            assert!(matches!(telemetry[2], RadioTelemetryEvent::Analytics(_)));
+            assert!(matches!(telemetry[3], RadioTelemetryEvent::Blur(_)));
+            drop(telemetry);
+
+            let order = harness.order.borrow();
+            assert_eq!(order.len(), 6);
+            assert!(order[0].starts_with("telemetry::Analytics"));
+            assert!(order[1].starts_with("telemetry::Focus"));
+            assert_eq!(order[2], "callback::focus");
+            assert!(order[3].starts_with("telemetry::Analytics"));
+            assert!(order[4].starts_with("telemetry::Blur"));
+            assert_eq!(order[5], "callback::blur");
+            drop(order);
+
+            assert_eq!(*harness.refresh_counter.borrow(), 2);
+        }
+
+        #[test]
+        fn keyboard_navigation_emits_key_change_and_commit() {
+            let harness = Harness::new(false);
+            let handlers = harness.builder.build(0);
+            handlers.key(ControlKey::ArrowRight);
+
+            assert_eq!(harness.state.borrow().selected_index(), Some(1));
+
+            let telemetry = harness.telemetry_events.borrow();
+            assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
+            assert!(matches!(telemetry[1], RadioTelemetryEvent::Focus(_)));
+            assert!(matches!(telemetry[2], RadioTelemetryEvent::Blur(_)));
+            assert!(matches!(telemetry[3], RadioTelemetryEvent::Change(_)));
+            assert!(matches!(telemetry[4], RadioTelemetryEvent::Commit(_)));
+            drop(telemetry);
+
+            let keys = harness.key_events.borrow();
+            assert_eq!(keys.len(), 1);
+            assert_eq!(keys[0].key, ControlKey::ArrowRight);
+            drop(keys);
+
+            let changes = harness.change_events.borrow();
+            assert_eq!(changes.len(), 1);
+            assert_eq!(changes[0].next, 1);
+            drop(changes);
+
+            let order = harness.order.borrow();
+            assert_eq!(order.len(), 7);
+            assert!(order[0].starts_with("telemetry::Analytics"));
+            assert!(order[1].starts_with("telemetry::Focus"));
+            assert!(order[2].starts_with("telemetry::Blur"));
+            assert!(order[3].starts_with("telemetry::Change"));
+            assert!(order[4].starts_with("telemetry::Commit"));
+            assert_eq!(order[5], "callback::key");
+            assert_eq!(order[6], "callback::change");
+            drop(order);
+
+            assert_eq!(*harness.refresh_counter.borrow(), 1);
+        }
+
+        #[test]
+        fn virtual_dom_preserves_descriptor_attributes() {
+            let state = RadioGroupState::uncontrolled(
+                vec!["North".into(), "South".into()],
+                false,
+                RadioOrientation::Vertical,
+                Some(0),
+            );
+            let props = DioxusRadioGroupProps {
+                group: RadioGroupProps::from_state(&state),
+                state: state.clone(),
+                on_change: None,
+                on_focus: None,
+                on_blur: None,
+                on_key: None,
+                telemetry_delegate: None,
+                telemetry: None,
+            };
+            let mut dom = VirtualDom::new_with_props(DioxusRadioGroup, props);
+            dom.rebuild();
+            let markup = dioxus_ssr::render(&dom);
+
+            assert!(markup.contains("role=\"radiogroup\""));
+            assert!(markup.contains("data-index=\"0\""));
+            assert!(markup.contains("data-orientation=\"vertical\""));
+        }
+    }
+
+    /// Helper retained for SSR convenience matching the other adapters.
+    pub fn render(props: &RadioGroupProps, state: &RadioGroupState) -> String {
+        super::render_html(props, state)
     }
 }
 

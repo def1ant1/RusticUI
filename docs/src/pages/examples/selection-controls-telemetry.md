@@ -149,6 +149,45 @@ state machine. Pass an `Rc<dyn Fn(CheckboxTelemetryEvent)>` or
 `Rc<dyn Fn(SwitchTelemetryEvent)>` delegate to receive that
 stream.【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:crates/rustic-ui-material/src/checkbox.rs†L1548-L1662】【F:crates/rustic-ui-material/src/switch.rs†L1044-L1323】
 
+The Dioxus adapter now mirrors this choreography for radio groups. Each option
+captures analytics metadata before calling `RadioGroupState::select`,
+`RadioGroupState::focus`, or `RadioGroupState::on_key`, ensuring telemetry fires
+in a deterministic order prior to consumer callbacks. Optional `Rc` callbacks
+(`on_change`, `on_focus`, `on_blur`, `on_key`) and telemetry delegates slot
+directly into the shared runners so enterprise automation receives identical
+payloads regardless of renderer.【F:crates/rustic-ui-material/src/radio.rs†L2747-L3339】
+
+```rust
+use dioxus::prelude::*;
+use std::rc::Rc;
+use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+use rustic_ui_material::radio::{self, RadioGroupProps, RadioTelemetryEvent, RadioChangeEvent};
+
+pub fn payment_methods(cx: Scope) -> Element {
+    let state = RadioGroupState::uncontrolled(
+        vec!["Cash".into(), "Card".into(), "Invoice".into()],
+        false,
+        RadioOrientation::Horizontal,
+        Some(2),
+    );
+    let telemetry: Rc<dyn Fn(RadioTelemetryEvent)> = Rc::new(|event| {
+        println!("telemetry::{:?}", event);
+    });
+    let on_change: Rc<dyn Fn(RadioChangeEvent)> = Rc::new(|event| {
+        println!("radio-change next={}", event.next);
+    });
+
+    cx.render(rsx! {
+        radio::dioxus::DioxusRadioGroup {
+            group: RadioGroupProps::from_state(&state),
+            state: state.clone(),
+            on_change: Some(on_change),
+            telemetry_delegate: Some(telemetry),
+        }
+    })
+}
+```
+
 ```rust
 use std::rc::Rc;
 use rustic_ui_headless::{

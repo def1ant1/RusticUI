@@ -3533,6 +3533,7 @@ dependencies = [
  "gloo-utils 0.2.0",
  "insta",
  "js-sys",
+ "keyboard-types",
  "leptos",
  "rustic-ui-headless",
  "rustic-ui-styled-engine",
