@@ -21,31 +21,49 @@
 use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
 use rustic_ui_styled_engine::{css_with_theme, Style};
 
-use crate::selection_control::{self, RadioGroupDescriptor, RadioOptionDescriptor};
+use crate::{
+    selection_control::{self, RadioGroupDescriptor, RadioOptionDescriptor},
+    telemetry::{instrument_render, TelemetryContext, TelemetryHooks},
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RadioGroupProps {
     /// Optional custom labels for each option. When omitted the state's option
     /// names are reused.
     pub option_labels: Vec<String>,
+    /// Telemetry hooks invoked when rendering adapters for analytics and
+    /// automation instrumentation.
+    pub telemetry: TelemetryHooks,
 }
 
 impl RadioGroupProps {
     pub fn new(option_labels: impl Into<Vec<String>>) -> Self {
         Self {
             option_labels: option_labels.into(),
+            telemetry: TelemetryHooks::default(),
         }
     }
 
     pub fn from_state(state: &RadioGroupState) -> Self {
         Self {
             option_labels: state.options().to_vec(),
+            telemetry: TelemetryHooks::default(),
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn with_telemetry(mut self, telemetry: TelemetryHooks) -> Self {
+        self.telemetry = telemetry;
+        self
     }
 }
 
 #[allow(dead_code)]
-fn build_descriptor(props: &RadioGroupProps, state: &RadioGroupState) -> RadioGroupDescriptor {
+fn build_descriptor(
+    props: &RadioGroupProps,
+    telemetry: &TelemetryHooks,
+    state: &RadioGroupState,
+) -> RadioGroupDescriptor {
     let orientation_value = match state.orientation() {
         RadioOrientation::Horizontal => "horizontal",
         RadioOrientation::Vertical => "vertical",
@@ -61,21 +79,250 @@ fn build_descriptor(props: &RadioGroupProps, state: &RadioGroupState) -> RadioGr
         .with_group_attributes(state.group_aria_attributes())
         .group_attribute("data-orientation", orientation_value);
 
+    descriptor = apply_group_telemetry(descriptor, telemetry);
+
     for (index, option) in state.options().iter().enumerate() {
         let label = labels.get(index).cloned().unwrap_or_else(|| option.clone());
         let option_descriptor = RadioOptionDescriptor::new(label, themed_radio_option_style())
             .with_attributes(state.option_aria_attributes(index))
             .attribute("data-index", index.to_string());
+        let option_descriptor = apply_option_telemetry(option_descriptor, telemetry);
         descriptor = descriptor.option(option_descriptor);
     }
 
     descriptor
 }
 
+fn apply_group_telemetry(
+    mut descriptor: RadioGroupDescriptor,
+    telemetry: &TelemetryHooks,
+) -> RadioGroupDescriptor {
+    let has_analytics = descriptor
+        .data_state_attributes()
+        .any(|(key, _)| key == "data-rustic-analytics-id");
+    if !has_analytics {
+        if let Some(analytics) = &telemetry.analytics_id {
+            descriptor = descriptor.group_attribute("data-rustic-analytics-id", analytics.clone());
+        }
+    }
+
+    let has_automation = descriptor
+        .data_state_attributes()
+        .any(|(key, _)| key == "data-automation-id");
+    if !has_automation {
+        if let Some(automation) = &telemetry.automation_id {
+            descriptor = descriptor.group_attribute("data-automation-id", automation.clone());
+        }
+    }
+
+    descriptor
+}
+
+fn apply_option_telemetry(
+    mut option: RadioOptionDescriptor,
+    telemetry: &TelemetryHooks,
+) -> RadioOptionDescriptor {
+    let has_analytics = option
+        .data_state_attributes()
+        .any(|(key, _)| key == "data-rustic-analytics-id");
+    if !has_analytics {
+        if let Some(analytics) = &telemetry.analytics_id {
+            option = option.attribute("data-rustic-analytics-id", analytics.clone());
+        }
+    }
+
+    let has_automation = option
+        .data_state_attributes()
+        .any(|(key, _)| key == "data-automation-id");
+    if !has_automation {
+        if let Some(automation) = &telemetry.automation_id {
+            option = option.attribute("data-automation-id", automation.clone());
+        }
+    }
+
+    option
+}
+
 #[allow(dead_code)]
 fn render_html(props: &RadioGroupProps, state: &RadioGroupState) -> String {
-    let descriptor = build_descriptor(props, state);
-    selection_control::render_radio_group_html(&descriptor)
+    let telemetry = props.telemetry.clone();
+    let (context, descriptor, _snapshot) = descriptor_with_context(
+        "rustic_ui_material::radio::render_html",
+        props,
+        &telemetry,
+        state,
+    );
+    instrument_render(&telemetry, context, || {
+        selection_control::render_radio_group_html(&descriptor)
+    })
+}
+
+fn merged_telemetry(primary: &TelemetryHooks, fallback: &TelemetryHooks) -> TelemetryHooks {
+    TelemetryHooks {
+        analytics_id: primary
+            .analytics_id
+            .clone()
+            .or_else(|| fallback.analytics_id.clone()),
+        automation_id: primary
+            .automation_id
+            .clone()
+            .or_else(|| fallback.automation_id.clone()),
+        span: primary.span.clone().or_else(|| fallback.span.clone()),
+        on_render: primary
+            .on_render
+            .clone()
+            .or_else(|| fallback.on_render.clone()),
+        on_error: primary
+            .on_error
+            .clone()
+            .or_else(|| fallback.on_error.clone()),
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct RadioOptionSnapshot {
+    label: String,
+    themed_attributes: Vec<(String, String)>,
+    class: String,
+    role: String,
+    aria_checked: String,
+    aria_disabled: Option<String>,
+    tabindex: String,
+    data_checked: String,
+    data_focus_visible: String,
+    data_index: String,
+    analytics_id: Option<String>,
+    automation_id: Option<String>,
+}
+
+impl RadioOptionSnapshot {
+    fn from_descriptor(descriptor: &RadioOptionDescriptor) -> Self {
+        let themed_attributes = descriptor.themed_attributes();
+        let mut class = String::new();
+        let mut role = String::from("radio");
+        let mut aria_checked = String::from("false");
+        let mut aria_disabled = None;
+        let mut tabindex = String::from("0");
+        let mut data_checked = String::from("false");
+        let mut data_focus_visible = String::from("false");
+        let mut data_index = String::from("0");
+        let mut analytics_id = None;
+        let mut automation_id = None;
+
+        for (key, value) in &themed_attributes {
+            match key.as_str() {
+                "class" => class = value.clone(),
+                "role" => role = value.clone(),
+                "aria-checked" => aria_checked = value.clone(),
+                "aria-disabled" => aria_disabled = Some(value.clone()),
+                "tabindex" => tabindex = value.clone(),
+                "data-checked" => data_checked = value.clone(),
+                "data-focus-visible" => data_focus_visible = value.clone(),
+                "data-index" => data_index = value.clone(),
+                "data-rustic-analytics-id" => analytics_id = Some(value.clone()),
+                "data-automation-id" => automation_id = Some(value.clone()),
+                _ => {}
+            }
+        }
+
+        Self {
+            label: descriptor.label().to_string(),
+            themed_attributes,
+            class,
+            role,
+            aria_checked,
+            aria_disabled,
+            tabindex,
+            data_checked,
+            data_focus_visible,
+            data_index,
+            analytics_id,
+            automation_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct RadioGroupDescriptorSnapshot {
+    label: String,
+    group_thematic_attributes: Vec<(String, String)>,
+    class: String,
+    role: String,
+    aria_orientation: String,
+    aria_disabled: Option<String>,
+    data_orientation: String,
+    analytics_id: Option<String>,
+    automation_id: Option<String>,
+    options: Vec<RadioOptionSnapshot>,
+}
+
+impl RadioGroupDescriptorSnapshot {
+    fn from_descriptor(descriptor: &RadioGroupDescriptor) -> Self {
+        let group_thematic_attributes = descriptor.group_thematic_attributes();
+        let mut class = String::new();
+        let mut role = String::from("radiogroup");
+        let mut aria_orientation = String::from("horizontal");
+        let mut aria_disabled = None;
+        let mut data_orientation = String::from("horizontal");
+        let mut analytics_id = None;
+        let mut automation_id = None;
+
+        for (key, value) in &group_thematic_attributes {
+            match key.as_str() {
+                "class" => class = value.clone(),
+                "role" => role = value.clone(),
+                "aria-orientation" => aria_orientation = value.clone(),
+                "aria-disabled" => aria_disabled = Some(value.clone()),
+                "data-orientation" => data_orientation = value.clone(),
+                "data-rustic-analytics-id" => analytics_id = Some(value.clone()),
+                "data-automation-id" => automation_id = Some(value.clone()),
+                _ => {}
+            }
+        }
+
+        let options = descriptor
+            .options()
+            .iter()
+            .map(RadioOptionSnapshot::from_descriptor)
+            .collect::<Vec<_>>();
+
+        let label = format!("radio-group::{}-options", options.len());
+
+        Self {
+            label,
+            group_thematic_attributes,
+            class,
+            role,
+            aria_orientation,
+            aria_disabled,
+            data_orientation,
+            analytics_id,
+            automation_id,
+            options,
+        }
+    }
+}
+
+fn descriptor_with_context(
+    component: &'static str,
+    props: &RadioGroupProps,
+    telemetry: &TelemetryHooks,
+    state: &RadioGroupState,
+) -> (
+    TelemetryContext,
+    RadioGroupDescriptor,
+    RadioGroupDescriptorSnapshot,
+) {
+    let descriptor = build_descriptor(props, telemetry, state);
+    let snapshot = RadioGroupDescriptorSnapshot::from_descriptor(&descriptor);
+    let context = TelemetryContext::new(component)
+        .with_analytics(telemetry.analytics_id.clone())
+        .with_automation(telemetry.automation_id.clone())
+        .with_descriptor_metadata(
+            snapshot.label.clone(),
+            snapshot.group_thematic_attributes.clone(),
+        );
+    (context, descriptor, snapshot)
 }
 
 /// Generates layout styling for the radio group container, including
@@ -173,6 +420,26 @@ pub mod react {
         pub group: RadioGroupProps,
         /// Headless state describing option metadata and focus handling.
         pub state: RadioGroupState,
+        /// Telemetry hooks applied around the React render.
+        pub telemetry: TelemetryHooks,
+    }
+
+    impl ReactRadioGroupProps {
+        /// Convenience constructor mirroring the previous two-field struct so
+        /// downstream callers remain source compatible.
+        pub fn new(group: RadioGroupProps, state: RadioGroupState) -> Self {
+            Self {
+                group,
+                state,
+                telemetry: TelemetryHooks::default(),
+            }
+        }
+
+        #[allow(dead_code)]
+        pub fn with_telemetry(mut self, telemetry: TelemetryHooks) -> Self {
+            self.telemetry = telemetry;
+            self
+        }
     }
 
     fn create_element(tag: &str, props: Object, children: &[JsValue]) -> JsValue {
@@ -211,21 +478,25 @@ pub mod react {
 
     /// React component rendering a Material radio group.
     pub fn ReactRadioGroup(props: &ReactRadioGroupProps) -> Jsx {
-        let descriptor = super::build_descriptor(&props.group, &props.state);
-        let group_attrs = descriptor.group_thematic_attributes();
-        let group_props = build_props_object(group_attrs);
-
-        let option_children: Vec<JsValue> = descriptor
-            .options()
-            .iter()
-            .map(|option| {
-                let option_props = build_props_object(option.themed_attributes());
-                let label = option.label().to_string();
-                create_element("span", option_props, &[JsValue::from_str(&label)])
-            })
-            .collect();
-
-        create_element("div", group_props, option_children.as_slice())
+        let telemetry = super::merged_telemetry(&props.telemetry, &props.group.telemetry);
+        let (context, _descriptor, snapshot) = super::descriptor_with_context(
+            "rustic_ui_material::radio::react::ReactRadioGroup",
+            &props.group,
+            &telemetry,
+            &props.state,
+        );
+        instrument_render(&telemetry, context, || {
+            let group_props = build_props_object(snapshot.group_thematic_attributes.clone());
+            let option_children: Vec<JsValue> = snapshot
+                .options
+                .iter()
+                .map(|option| {
+                    let option_props = build_props_object(option.themed_attributes.clone());
+                    create_element("span", option_props, &[JsValue::from_str(&option.label)])
+                })
+                .collect();
+            create_element("div", group_props, option_children.as_slice())
+        })
     }
 }
 
@@ -243,36 +514,45 @@ pub mod yew {
         pub group: RadioGroupProps,
         /// Headless state providing focus and selection metadata.
         pub state: RadioGroupState,
+        /// Telemetry hooks applied around the Yew render lifecycle.
+        #[prop_or_default]
+        pub telemetry: TelemetryHooks,
     }
 
     /// Radio group rendered via Yew.
     #[function_component(YewRadioGroup)]
     pub fn yew_radio_group(props: &YewRadioGroupProps) -> Html {
-        let descriptor = super::build_descriptor(&props.group, &props.state);
-        let group_attrs = descriptor.group_thematic_attributes();
-        let mut node = html! {
-            <div>
-                { for descriptor.options().iter().map(|option| {
-                    let option_label = option.label().to_string();
-                    let option_attrs = option.themed_attributes();
-                    let mut child = html! { <span>{option_label}</span> };
-                    if let VNode::VTag(ref mut tag) = child {
-                        for (key, value) in option_attrs {
-                            tag.add_attribute(key, value);
+        let telemetry = super::merged_telemetry(&props.telemetry, &props.group.telemetry);
+        let (context, _descriptor, snapshot) = super::descriptor_with_context(
+            "rustic_ui_material::radio::yew::YewRadioGroup",
+            &props.group,
+            &telemetry,
+            &props.state,
+        );
+        instrument_render(&telemetry, context, move || {
+            let mut node = html! {
+                <div>
+                    { for snapshot.options.iter().map(|option| {
+                        let option_attrs = option.themed_attributes.clone();
+                        let mut child = html! { <span>{option.label.clone()}</span> };
+                        if let VNode::VTag(ref mut tag) = child {
+                            for (key, value) in option_attrs {
+                                tag.add_attribute(key, value);
+                            }
                         }
-                    }
-                    child
-                }) }
-            </div>
-        };
+                        child
+                    }) }
+                </div>
+            };
 
-        if let VNode::VTag(ref mut tag) = node {
-            for (key, value) in group_attrs {
-                tag.add_attribute(key, value);
+            if let VNode::VTag(ref mut tag) = node {
+                for (key, value) in snapshot.group_thematic_attributes.clone() {
+                    tag.add_attribute(key, value);
+                }
             }
-        }
 
-        node
+            node
+        })
     }
 }
 
@@ -290,94 +570,66 @@ pub mod leptos {
         pub group: RadioGroupProps,
         /// Headless state providing focus and selection metadata.
         pub state: RadioGroupState,
+        /// Telemetry hooks applied around the Leptos render lifecycle.
+        pub telemetry: TelemetryHooks,
+    }
+
+    impl LeptosRadioGroupProps {
+        /// Convenience constructor retaining backward-compatible ergonomics.
+        pub fn new(group: RadioGroupProps, state: RadioGroupState) -> Self {
+            Self {
+                group,
+                state,
+                telemetry: TelemetryHooks::default(),
+            }
+        }
     }
 
     #[component]
     pub fn LeptosRadioGroup(props: LeptosRadioGroupProps) -> impl IntoView {
-        let descriptor = super::build_descriptor(&props.group, &props.state);
-        let mut class = String::new();
-        let mut role = None;
-        let mut aria_orientation = None;
-        let mut aria_disabled = None;
-        let mut data_orientation = None;
-
-        for (key, value) in descriptor.group_thematic_attributes() {
-            match key.as_str() {
-                "class" => class = value,
-                "role" => role = Some(value),
-                "aria-orientation" => aria_orientation = Some(value),
-                "aria-disabled" => aria_disabled = Some(value),
-                "data-orientation" => data_orientation = Some(value),
-                _ => {}
-            }
-        }
-
-        let role = role.unwrap_or_else(|| String::from("radiogroup"));
-        let aria_orientation = aria_orientation.unwrap_or_else(|| String::from("horizontal"));
-        let data_orientation = data_orientation.unwrap_or_else(|| String::from("horizontal"));
-
-        let option_views: Vec<View> = descriptor
-            .options()
-            .iter()
-            .map(|option| {
-                let mut option_class = String::new();
-                let mut option_role = None;
-                let mut aria_checked = None;
-                let mut aria_disabled_opt = None;
-                let mut tabindex = None;
-                let mut data_checked = None;
-                let mut data_focus_visible = None;
-                let mut data_index = None;
-
-                for (key, value) in option.themed_attributes() {
-                    match key.as_str() {
-                        "class" => option_class = value,
-                        "role" => option_role = Some(value),
-                        "aria-checked" => aria_checked = Some(value),
-                        "aria-disabled" => aria_disabled_opt = Some(value),
-                        "tabindex" => tabindex = Some(value),
-                        "data-checked" => data_checked = Some(value),
-                        "data-focus-visible" => data_focus_visible = Some(value),
-                        "data-index" => data_index = Some(value),
-                        _ => {}
+        let telemetry = super::merged_telemetry(&props.telemetry, &props.group.telemetry);
+        let (context, _descriptor, snapshot) = super::descriptor_with_context(
+            "rustic_ui_material::radio::leptos::LeptosRadioGroup",
+            &props.group,
+            &telemetry,
+            &props.state,
+        );
+        instrument_render(&telemetry, context, move || {
+            let option_views: Vec<View> = snapshot
+                .options
+                .iter()
+                .map(|option| {
+                    view! {
+                        <span
+                            class=option.class.clone()
+                            role=option.role.clone()
+                            aria-checked=option.aria_checked.clone()
+                            aria-disabled=option.aria_disabled.clone()
+                            tabindex=option.tabindex.clone()
+                            data_checked=option.data_checked.clone()
+                            data_focus_visible=option.data_focus_visible.clone()
+                            data_index=option.data_index.clone()
+                            data_rustic_analytics_id=option.analytics_id.clone()
+                            data_automation_id=option.automation_id.clone()
+                        >{option.label.clone()}</span>
                     }
-                }
+                })
+                .collect();
 
-                let option_role = option_role.unwrap_or_else(|| String::from("radio"));
-                let aria_checked = aria_checked.unwrap_or_else(|| String::from("false"));
-                let tabindex = tabindex.unwrap_or_else(|| String::from("0"));
-                let data_checked = data_checked.unwrap_or_else(|| String::from("false"));
-                let data_focus_visible =
-                    data_focus_visible.unwrap_or_else(|| String::from("false"));
-                let data_index = data_index.unwrap_or_else(|| String::from("0"));
-                let label = option.label().to_string();
+            let options_fragment = View::new_fragment(option_views);
 
-                view! {
-                    <span
-                        class=option_class
-                        role=option_role
-                        aria-checked=aria_checked
-                        aria-disabled=aria_disabled_opt.clone()
-                        tabindex=tabindex
-                        data_checked=data_checked
-                        data_focus_visible=data_focus_visible
-                        data_index=data_index
-                    >{label}</span>
-                }
-            })
-            .collect();
-
-        let options_fragment = View::new_fragment(option_views);
-
-        view! {
-            <div
-                class=class
-                role=role
-                aria-orientation=aria_orientation
-                aria-disabled=aria_disabled
-                data-orientation=data_orientation
-            >{options_fragment}</div>
-        }
+            view! {
+                <div
+                    class=snapshot.class.clone()
+                    role=snapshot.role.clone()
+                    aria-orientation=snapshot.aria_orientation.clone()
+                    aria-disabled=snapshot.aria_disabled.clone()
+                    data-orientation=snapshot.data_orientation.clone()
+                    data_rustic_analytics_id=snapshot.analytics_id.clone()
+                    data_automation_id=snapshot.automation_id.clone()
+                >{options_fragment}</div>
+            }
+        })
     }
 }
 
@@ -394,87 +646,54 @@ pub mod dioxus {
         pub group: RadioGroupProps,
         /// Headless state providing focus and selection metadata.
         pub state: RadioGroupState,
+        /// Telemetry hooks applied around the Dioxus render lifecycle.
+        #[props(default = None)]
+        pub telemetry: Option<TelemetryHooks>,
     }
 
     /// Radio group rendered as a Dioxus component.
     pub fn DioxusRadioGroup(cx: Scope<DioxusRadioGroupProps>) -> Element {
-        let descriptor = super::build_descriptor(&cx.props().group, &cx.props().state);
-        let mut class = String::new();
-        let mut role = None;
-        let mut aria_orientation = None;
-        let mut aria_disabled = None;
-        let mut data_orientation = None;
-
-        for (key, value) in descriptor.group_thematic_attributes() {
-            match key.as_str() {
-                "class" => class = value,
-                "role" => role = Some(value),
-                "aria-orientation" => aria_orientation = Some(value),
-                "aria-disabled" => aria_disabled = Some(value),
-                "data-orientation" => data_orientation = Some(value),
-                _ => {}
-            }
-        }
-
-        let role = role.unwrap_or_else(|| String::from("radiogroup"));
-        let aria_orientation = aria_orientation.unwrap_or_else(|| String::from("horizontal"));
-        let data_orientation = data_orientation.unwrap_or_else(|| String::from("horizontal"));
-
-        cx.render(rsx! {
-            div {
-                class: class,
-                role: role,
-                aria_orientation: aria_orientation,
-                aria_disabled: aria_disabled,
-                data_orientation: data_orientation,
-                { descriptor.options().iter().map(|option| {
-                    let mut option_class = String::new();
-                    let mut option_role = None;
-                    let mut aria_checked = None;
-                    let mut aria_disabled_opt = None;
-                    let mut tabindex = None;
-                    let mut data_checked = None;
-                    let mut data_focus_visible = None;
-                    let mut data_index = None;
-
-                    for (key, value) in option.themed_attributes() {
-                        match key.as_str() {
-                            "class" => option_class = value,
-                            "role" => option_role = Some(value),
-                            "aria-checked" => aria_checked = Some(value),
-                            "aria-disabled" => aria_disabled_opt = Some(value),
-                            "tabindex" => tabindex = Some(value),
-                            "data-checked" => data_checked = Some(value),
-                            "data-focus-visible" => data_focus_visible = Some(value),
-                            "data-index" => data_index = Some(value),
-                            _ => {}
+        let props = cx.props();
+        let telemetry_override = props.telemetry.clone().unwrap_or_default();
+        let telemetry = super::merged_telemetry(&telemetry_override, &props.group.telemetry);
+        let (context, _descriptor, snapshot) = super::descriptor_with_context(
+            "rustic_ui_material::radio::dioxus::DioxusRadioGroup",
+            &props.group,
+            &telemetry,
+            &props.state,
+        );
+        let scope = cx;
+        instrument_render(&telemetry, context, move || {
+            let options = snapshot.options.clone();
+            scope.render(rsx! {
+                div {
+                    class: snapshot.class.clone(),
+                    role: snapshot.role.clone(),
+                    aria_orientation: snapshot.aria_orientation.clone(),
+                    aria_disabled: snapshot.aria_disabled.clone(),
+                    data_orientation: snapshot.data_orientation.clone(),
+                    data_rustic_analytics_id: snapshot.analytics_id.clone(),
+                    data_automation_id: snapshot.automation_id.clone(),
+                    { options.iter().map(|option| {
+                        let label = option.label.clone();
+                        rsx! {
+                            span {
+                                class: option.class.clone(),
+                                role: option.role.clone(),
+                                aria_checked: option.aria_checked.clone(),
+                                aria_disabled: option.aria_disabled.clone(),
+                                tabindex: option.tabindex.clone(),
+                                data_checked: option.data_checked.clone(),
+                                data_focus_visible: option.data_focus_visible.clone(),
+                                data_index: option.data_index.clone(),
+                                data_rustic_analytics_id: option.analytics_id.clone(),
+                                data_automation_id: option.automation_id.clone(),
+                                {label}
+                            }
                         }
-                    }
-
-                    let option_role = option_role.unwrap_or_else(|| String::from("radio"));
-                    let aria_checked = aria_checked.unwrap_or_else(|| String::from("false"));
-                    let tabindex = tabindex.unwrap_or_else(|| String::from("0"));
-                    let data_checked = data_checked.unwrap_or_else(|| String::from("false"));
-                    let data_focus_visible =
-                        data_focus_visible.unwrap_or_else(|| String::from("false"));
-                    let data_index = data_index.unwrap_or_else(|| String::from("0"));
-                    let label = option.label().to_string();
-
-                    rsx! {
-                        span {
-                            class: option_class,
-                            role: option_role,
-                            aria_checked: aria_checked,
-                            aria_disabled: aria_disabled_opt,
-                            tabindex: tabindex,
-                            data_checked: data_checked,
-                            data_focus_visible: data_focus_visible,
-                            data_index: data_index,
-                            {label}
-                        }
-                    }
-                }) }
-            }
+                    }) }
+                }
+            })
         })
     }
 }
@@ -495,95 +714,68 @@ pub mod sycamore {
         pub group: RadioGroupProps,
         /// Headless state providing focus and selection metadata.
         pub state: RadioGroupState,
+        /// Telemetry hooks applied around the Sycamore render lifecycle.
+        pub telemetry: TelemetryHooks,
+    }
+
+    impl SycamoreRadioGroupProps {
+        /// Convenience constructor mirroring the previous struct layout.
+        pub fn new(group: RadioGroupProps, state: RadioGroupState) -> Self {
+            Self {
+                group,
+                state,
+                telemetry: TelemetryHooks::default(),
+            }
+        }
     }
 
     /// Radio group rendered within a Sycamore reactive scope.
     #[component]
     pub fn SycamoreRadioGroup<G: Html>(cx: Scope, props: SycamoreRadioGroupProps) -> Template<G> {
-        let descriptor = super::build_descriptor(&props.group, &props.state);
-        let mut class = String::new();
-        let mut role = None;
-        let mut aria_orientation = None;
-        let mut aria_disabled = None;
-        let mut data_orientation = None;
-
-        for (key, value) in descriptor.group_thematic_attributes() {
-            match key.as_str() {
-                "class" => class = value,
-                "role" => role = Some(value),
-                "aria-orientation" => aria_orientation = Some(value),
-                "aria-disabled" => aria_disabled = Some(value),
-                "data-orientation" => data_orientation = Some(value),
-                _ => {}
-            }
-        }
-
-        let role = role.unwrap_or_else(|| String::from("radiogroup"));
-        let aria_orientation = aria_orientation.unwrap_or_else(|| String::from("horizontal"));
-        let data_orientation = data_orientation.unwrap_or_else(|| String::from("horizontal"));
-
-        let option_views: Vec<View<G>> = descriptor
-            .options()
-            .iter()
-            .map(|option| {
-                let mut option_class = String::new();
-                let mut option_role = None;
-                let mut aria_checked = None;
-                let mut aria_disabled_opt = None;
-                let mut tabindex = None;
-                let mut data_checked = None;
-                let mut data_focus_visible = None;
-                let mut data_index = None;
-
-                for (key, value) in option.themed_attributes() {
-                    match key.as_str() {
-                        "class" => option_class = value,
-                        "role" => option_role = Some(value),
-                        "aria-checked" => aria_checked = Some(value),
-                        "aria-disabled" => aria_disabled_opt = Some(value),
-                        "tabindex" => tabindex = Some(value),
-                        "data-checked" => data_checked = Some(value),
-                        "data-focus-visible" => data_focus_visible = Some(value),
-                        "data-index" => data_index = Some(value),
-                        _ => {}
+        let telemetry = super::merged_telemetry(&props.telemetry, &props.group.telemetry);
+        let (context, _descriptor, snapshot) = super::descriptor_with_context(
+            "rustic_ui_material::radio::sycamore::SycamoreRadioGroup",
+            &props.group,
+            &telemetry,
+            &props.state,
+        );
+        instrument_render(&telemetry, context, move || {
+            let option_views: Vec<View<G>> = snapshot
+                .options
+                .iter()
+                .map(|option| {
+                    let label = option.label.clone();
+                    view! { cx,
+                        span(
+                            class=option.class.clone(),
+                            role=option.role.clone(),
+                            aria_checked=option.aria_checked.clone(),
+                            aria_disabled=option.aria_disabled.clone(),
+                            tabindex=option.tabindex.clone(),
+                            data_checked=option.data_checked.clone(),
+                            data_focus_visible=option.data_focus_visible.clone(),
+                            data_index=option.data_index.clone(),
+                            data_rustic_analytics_id=option.analytics_id.clone(),
+                            data_automation_id=option.automation_id.clone(),
+                        ) { (label) }
                     }
-                }
+                })
+                .collect();
 
-                let option_role = option_role.unwrap_or_else(|| String::from("radio"));
-                let aria_checked = aria_checked.unwrap_or_else(|| String::from("false"));
-                let tabindex = tabindex.unwrap_or_else(|| String::from("0"));
-                let data_checked = data_checked.unwrap_or_else(|| String::from("false"));
-                let data_focus_visible =
-                    data_focus_visible.unwrap_or_else(|| String::from("false"));
-                let data_index = data_index.unwrap_or_else(|| String::from("0"));
-                let label = option.label().to_string();
+            let options_fragment = View::new_fragment(option_views);
 
-                view! { cx,
-                    span(
-                        class=option_class,
-                        role=option_role,
-                        aria_checked=aria_checked,
-                        aria_disabled=aria_disabled_opt,
-                        tabindex=tabindex,
-                        data_checked=data_checked,
-                        data_focus_visible=data_focus_visible,
-                        data_index=data_index,
-                    ) { (label) }
-                }
-            })
-            .collect();
-
-        let options_fragment = View::new_fragment(option_views);
-
-        view! { cx,
-            div(
-                class=class,
-                role=role,
-                aria_orientation=aria_orientation,
-                aria_disabled=aria_disabled,
-                data_orientation=data_orientation,
-            ) { (options_fragment) }
-        }
+            view! { cx,
+                div(
+                    class=snapshot.class.clone(),
+                    role=snapshot.role.clone(),
+                    aria_orientation=snapshot.aria_orientation.clone(),
+                    aria_disabled=snapshot.aria_disabled.clone(),
+                    data_orientation=snapshot.data_orientation.clone(),
+                    data_rustic_analytics_id=snapshot.analytics_id.clone(),
+                    data_automation_id=snapshot.automation_id.clone(),
+                ) { (options_fragment) }
+            }
+        })
     }
 }
 
@@ -614,7 +806,7 @@ mod tests {
             RadioOrientation::Horizontal,
             Some(0),
         );
-        let descriptor = build_descriptor(&props, &state);
+        let descriptor = build_descriptor(&props, &props.telemetry, &state);
         assert!(descriptor.aria_attributes().any(|(k, _)| k == "role"));
         assert!(descriptor.options().iter().any(|option| option
             .aria_attributes()
