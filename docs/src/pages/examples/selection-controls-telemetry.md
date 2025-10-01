@@ -238,6 +238,7 @@ switches.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】【F:crate
 ```tsx
 import { ReactCheckbox } from 'rustic-ui-material/checkbox';
 import { ReactSwitch } from 'rustic-ui-material/switch';
+import { ReactRadioGroup } from 'rustic-ui-material/radio';
 
 const telemetryDelegate = (event: any) => {
   switch (event.kind) {
@@ -272,12 +273,29 @@ const telemetryDelegate = (event: any) => {
     state={switchStateFromWasm}
     telemetry_delegate={telemetryDelegate}
   />
+  <ReactRadioGroup
+    group={radioGroupPropsFromWasm}
+    state={radioGroupStateFromWasm}
+    on_change={handleRadioChange}
+    on_focus={handleRadioFocus}
+    on_blur={handleRadioBlur}
+    on_key_down={handleRadioKeyDown}
+    telemetry_delegate={telemetryDelegate}
+  />
 </>;
 ```
 
 The delegate signature matches the `Function` stored in
-`ReactCheckboxProps::telemetry_delegate` and `ReactSwitchProps::telemetry_delegate`,
-and events are emitted before any user handlers run.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】【F:crates/rustic-ui-material/src/switch.rs†L697-L882】
+`ReactCheckboxProps::telemetry_delegate`, `ReactSwitchProps::telemetry_delegate`,
+and `ReactRadioGroupProps::telemetry_delegate`, and events are emitted before any
+user handlers run.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】【F:crates/rustic-ui-material/src/switch.rs†L697-L882】【F:crates/rustic-ui-material/src/radio.rs†L480-L703】
+
+Radio groups additionally sequence telemetry in the order `analytics → focus/
+blur → change → commit` so analytics pipelines see the interaction intent before
+the shared headless state mutates. The React adapter exposes explicit
+`on_change`, `on_focus`, `on_blur`, and `on_key_down` callbacks that run *after*
+telemetry and state updates, guaranteeing consumer side effects observe a fully
+committed selection snapshot.【F:crates/rustic-ui-material/src/radio.rs†L480-L703】
 
 `checkboxPropsFromWasm` and `checkboxStateFromWasm` represent the `CheckboxProps`
 and `CheckboxState` values exported by the wasm bundle; the React adapter expects

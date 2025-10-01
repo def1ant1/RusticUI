@@ -18,13 +18,159 @@
 //! Each adapter reads from the same descriptor so automation selectors and ARIA
 //! metadata stay synchronized across frameworks and SSR pipelines.
 
-use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+use rustic_ui_headless::{
+    interaction::ControlKey,
+    radio::{RadioGroupState, RadioOrientation},
+};
 use rustic_ui_styled_engine::{css_with_theme, Style};
 
 use crate::{
     selection_control::{self, RadioGroupDescriptor, RadioOptionDescriptor},
     telemetry::{instrument_render, TelemetryContext, TelemetryHooks},
 };
+
+/// Telemetry payload emitted when radio option analytics identifiers are
+/// observed by the adapter event handlers.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RadioAnalyticsEvent {
+    /// Index of the option that triggered the interaction.
+    pub index: usize,
+    /// Index currently selected before the event is processed.
+    pub selected: Option<usize>,
+    /// Whether the group is disabled, mirroring the descriptor attributes.
+    pub disabled: bool,
+    /// Analytics identifier mirrored from the descriptor, if present.
+    pub analytics_id: Option<String>,
+    /// Automation identifier mirrored from the descriptor, if present.
+    pub automation_id: Option<String>,
+    /// Human readable label rendered beside the faux radio control.
+    pub label: String,
+}
+
+/// Telemetry payload emitted when an option gains or loses focus.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RadioFocusEvent {
+    /// Index of the option that changed focus state.
+    pub index: usize,
+    /// Whether focus is now active (`true`) or cleared (`false`).
+    pub focused: bool,
+    /// Whether the group is disabled at the time of the focus change.
+    pub disabled: bool,
+    /// Analytics identifier mirrored from the descriptor, if present.
+    pub analytics_id: Option<String>,
+    /// Automation identifier mirrored from the descriptor, if present.
+    pub automation_id: Option<String>,
+    /// Human readable label rendered beside the faux radio control.
+    pub label: String,
+}
+
+/// Telemetry payload emitted whenever the selection intent changes.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RadioChangeEvent {
+    /// Previously selected index prior to the change.
+    pub previous: Option<usize>,
+    /// Index requested by the interaction.
+    pub next: usize,
+    /// Whether the group is disabled when the change was requested.
+    pub disabled: bool,
+    /// Analytics identifier mirrored from the descriptor, if present.
+    pub analytics_id: Option<String>,
+    /// Automation identifier mirrored from the descriptor, if present.
+    pub automation_id: Option<String>,
+    /// Label describing the option the user attempted to select.
+    pub label: String,
+}
+
+/// Telemetry payload emitted after [`RadioGroupState::select`] completes.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RadioCommitEvent {
+    /// Selected index reported after the mutation request finishes.
+    pub selected: Option<usize>,
+    /// Whether the state machine is operating in controlled mode.
+    pub controlled: bool,
+    /// Analytics identifier mirrored from the descriptor, if present.
+    pub analytics_id: Option<String>,
+    /// Automation identifier mirrored from the descriptor, if present.
+    pub automation_id: Option<String>,
+    /// Label describing the option confirmed by the commit.
+    pub label: String,
+}
+
+/// Unified telemetry event surfaced to React consumers.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RadioTelemetryEvent {
+    /// Analytics metadata observed prior to any other telemetry.
+    Analytics(RadioAnalyticsEvent),
+    /// Focus gained for a specific option.
+    Focus(RadioFocusEvent),
+    /// Focus lost for a specific option.
+    Blur(RadioFocusEvent),
+    /// Selection intent captured before state mutation.
+    Change(RadioChangeEvent),
+    /// Final selection snapshot captured after the commit path completes.
+    Commit(RadioCommitEvent),
+}
+
+fn build_analytics_event(
+    option: &RadioOptionSnapshot,
+    state: &RadioGroupState,
+    index: usize,
+) -> RadioAnalyticsEvent {
+    RadioAnalyticsEvent {
+        index,
+        selected: state.selected_index(),
+        disabled: state.disabled(),
+        analytics_id: option.analytics_id.clone(),
+        automation_id: option.automation_id.clone(),
+        label: option.label.clone(),
+    }
+}
+
+fn build_focus_event(
+    option: &RadioOptionSnapshot,
+    state: &RadioGroupState,
+    index: usize,
+    focused: bool,
+) -> RadioFocusEvent {
+    RadioFocusEvent {
+        index,
+        focused,
+        disabled: state.disabled(),
+        analytics_id: option.analytics_id.clone(),
+        automation_id: option.automation_id.clone(),
+        label: option.label.clone(),
+    }
+}
+
+fn build_change_event(
+    option: &RadioOptionSnapshot,
+    previous: Option<usize>,
+    next: usize,
+    disabled: bool,
+) -> RadioChangeEvent {
+    RadioChangeEvent {
+        previous,
+        next,
+        disabled,
+        analytics_id: option.analytics_id.clone(),
+        automation_id: option.automation_id.clone(),
+        label: option.label.clone(),
+    }
+}
+
+fn build_commit_event(
+    option: &RadioOptionSnapshot,
+    selected: Option<usize>,
+    controlled: bool,
+) -> RadioCommitEvent {
+    RadioCommitEvent {
+        selected,
+        controlled,
+        analytics_id: option.analytics_id.clone(),
+        automation_id: option.automation_id.clone(),
+        label: option.label.clone(),
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RadioGroupProps {
@@ -408,13 +554,14 @@ pub mod react {
     //! React adapter returning [`Jsx`] nodes via the shared descriptor.
     use super::*;
     use js_sys::{Array, Function, Object, Reflect};
-    use wasm_bindgen::{JsCast, JsValue};
+    use std::{cell::RefCell, rc::Rc};
+    use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 
     /// Type alias representing React elements emitted by the adapter.
     pub type Jsx = JsValue;
 
     /// Properties accepted by the React radio group component.
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Debug)]
     pub struct ReactRadioGroupProps {
         /// Optional labels applied to each radio option.
         pub group: RadioGroupProps,
@@ -422,6 +569,16 @@ pub mod react {
         pub state: RadioGroupState,
         /// Telemetry hooks applied around the React render.
         pub telemetry: TelemetryHooks,
+        /// Optional React `onChange` handler executed after telemetry.
+        pub on_change: Option<Function>,
+        /// Optional React `onFocus` handler executed after telemetry.
+        pub on_focus: Option<Function>,
+        /// Optional React `onBlur` handler executed after telemetry.
+        pub on_blur: Option<Function>,
+        /// Optional React `onKeyDown` handler executed after telemetry.
+        pub on_key_down: Option<Function>,
+        /// Optional telemetry delegate receiving structured payloads.
+        pub telemetry_delegate: Option<Function>,
     }
 
     impl ReactRadioGroupProps {
@@ -432,6 +589,11 @@ pub mod react {
                 group,
                 state,
                 telemetry: TelemetryHooks::default(),
+                on_change: None,
+                on_focus: None,
+                on_blur: None,
+                on_key_down: None,
+                telemetry_delegate: None,
             }
         }
 
@@ -439,6 +601,367 @@ pub mod react {
         pub fn with_telemetry(mut self, telemetry: TelemetryHooks) -> Self {
             self.telemetry = telemetry;
             self
+        }
+    }
+
+    fn function_option_eq(lhs: &Option<Function>, rhs: &Option<Function>) -> bool {
+        match (lhs, rhs) {
+            (Some(a), Some(b)) => JsValue::from(a).strict_eq(&JsValue::from(b)),
+            (None, None) => true,
+            _ => false,
+        }
+    }
+
+    impl PartialEq for ReactRadioGroupProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.group == other.group
+                && self.state == other.state
+                && self.telemetry == other.telemetry
+                && function_option_eq(&self.on_change, &other.on_change)
+                && function_option_eq(&self.on_focus, &other.on_focus)
+                && function_option_eq(&self.on_blur, &other.on_blur)
+                && function_option_eq(&self.on_key_down, &other.on_key_down)
+                && function_option_eq(&self.telemetry_delegate, &other.telemetry_delegate)
+        }
+    }
+
+    fn control_key_from_str(key: &str) -> Option<ControlKey> {
+        match key {
+            " " | "Space" | "Spacebar" => Some(ControlKey::Space),
+            "Enter" => Some(ControlKey::Enter),
+            "ArrowUp" => Some(ControlKey::ArrowUp),
+            "ArrowDown" => Some(ControlKey::ArrowDown),
+            "ArrowLeft" => Some(ControlKey::ArrowLeft),
+            "ArrowRight" => Some(ControlKey::ArrowRight),
+            "Home" => Some(ControlKey::Home),
+            "End" => Some(ControlKey::End),
+            _ => None,
+        }
+    }
+
+    fn emit_telemetry(delegate: &Option<Function>, events: &[RadioTelemetryEvent]) {
+        if let Some(function) = delegate {
+            for event in events {
+                let payload = telemetry_event_to_js(event);
+                let _ = function.call1(&JsValue::NULL, &payload);
+            }
+        }
+    }
+
+    #[derive(Default)]
+    struct ReactOptionHandlers {
+        on_select: Option<Function>,
+        on_focus: Option<Function>,
+        on_blur: Option<Function>,
+        on_key: Option<Function>,
+    }
+
+    struct ReactOptionHandlerBuilder {
+        state: Rc<RefCell<RadioGroupState>>,
+        options: Rc<Vec<RadioOptionSnapshot>>,
+        on_change: Option<Function>,
+        on_focus: Option<Function>,
+        on_blur: Option<Function>,
+        on_key_down: Option<Function>,
+        telemetry_delegate: Option<Function>,
+    }
+
+    impl ReactOptionHandlerBuilder {
+        fn new(
+            state: Rc<RefCell<RadioGroupState>>,
+            options: Rc<Vec<RadioOptionSnapshot>>,
+            on_change: Option<Function>,
+            on_focus: Option<Function>,
+            on_blur: Option<Function>,
+            on_key_down: Option<Function>,
+            telemetry_delegate: Option<Function>,
+        ) -> Self {
+            Self {
+                state,
+                options,
+                on_change,
+                on_focus,
+                on_blur,
+                on_key_down,
+                telemetry_delegate,
+            }
+        }
+
+        fn build(&self, index: usize) -> ReactOptionHandlers {
+            ReactOptionHandlers {
+                on_select: self.build_select_handler(index),
+                on_focus: self.build_focus_handler(index),
+                on_blur: self.build_blur_handler(index),
+                on_key: self.build_key_handler(index),
+            }
+        }
+
+        fn build_select_handler(&self, index: usize) -> Option<Function> {
+            if self.on_change.is_none() && self.telemetry_delegate.is_none() {
+                return None;
+            }
+
+            let telemetry = self.telemetry_delegate.clone();
+            let on_change = self.on_change.clone();
+            let state = Rc::clone(&self.state);
+            let option = self.options[index].clone();
+
+            // Each handler adheres to the same telemetry choreography:
+            // 1. Emit analytics metadata immediately so upstream pipelines
+            //    capture the raw interaction context before mutation.
+            // 2. Emit the domain specific event (change in this case).
+            // 3. Invoke the shared headless state machine (`select`).
+            // 4. Emit the commit snapshot reflecting the resulting state.
+            // 5. Delegate to user provided callbacks, guaranteeing side
+            //    effects only observe telemetry that already shipped.
+            let closure = Closure::wrap(Box::new(move |event: JsValue| {
+                let (analytics_event, previous, controlled, disabled) = {
+                    let state_ref = state.borrow();
+                    (
+                        RadioTelemetryEvent::Analytics(build_analytics_event(
+                            &option, &state_ref, index,
+                        )),
+                        state_ref.selected_index(),
+                        state_ref.is_controlled(),
+                        state_ref.disabled(),
+                    )
+                };
+
+                let mut events = Vec::with_capacity(3);
+                events.push(analytics_event);
+                events.push(RadioTelemetryEvent::Change(build_change_event(
+                    &option, previous, index, disabled,
+                )));
+
+                {
+                    let mut state_mut = state.borrow_mut();
+                    state_mut.select(index, |_| {});
+                }
+
+                let selected_after = {
+                    let state_ref = state.borrow();
+                    state_ref.selected_index().or(Some(index))
+                };
+
+                events.push(RadioTelemetryEvent::Commit(build_commit_event(
+                    &option,
+                    selected_after,
+                    controlled,
+                )));
+
+                emit_telemetry(&telemetry, &events);
+
+                if let Some(handler) = on_change.as_ref() {
+                    let _ = handler.call1(&JsValue::NULL, &event);
+                }
+            }) as Box<dyn FnMut(JsValue)>);
+
+            let function: Function = closure.as_ref().clone().unchecked_into();
+            closure.forget();
+            Some(function)
+        }
+
+        fn build_focus_handler(&self, index: usize) -> Option<Function> {
+            if self.on_focus.is_none() && self.telemetry_delegate.is_none() {
+                return None;
+            }
+
+            let telemetry = self.telemetry_delegate.clone();
+            let on_focus = self.on_focus.clone();
+            let state = Rc::clone(&self.state);
+            let option = self.options[index].clone();
+
+            let closure = Closure::wrap(Box::new(move |event: JsValue| {
+                let (analytics_event, focus_event) = {
+                    let state_ref = state.borrow();
+                    (
+                        RadioTelemetryEvent::Analytics(build_analytics_event(
+                            &option, &state_ref, index,
+                        )),
+                        RadioTelemetryEvent::Focus(build_focus_event(
+                            &option, &state_ref, index, true,
+                        )),
+                    )
+                };
+
+                let mut events = Vec::with_capacity(2);
+                events.push(analytics_event);
+                events.push(focus_event);
+                emit_telemetry(&telemetry, &events);
+
+                {
+                    let mut state_mut = state.borrow_mut();
+                    state_mut.focus(index);
+                }
+
+                if let Some(handler) = on_focus.as_ref() {
+                    let _ = handler.call1(&JsValue::NULL, &event);
+                }
+            }) as Box<dyn FnMut(JsValue)>);
+
+            let function: Function = closure.as_ref().clone().unchecked_into();
+            closure.forget();
+            Some(function)
+        }
+
+        fn build_blur_handler(&self, index: usize) -> Option<Function> {
+            if self.on_blur.is_none() && self.telemetry_delegate.is_none() {
+                return None;
+            }
+
+            let telemetry = self.telemetry_delegate.clone();
+            let on_blur = self.on_blur.clone();
+            let state = Rc::clone(&self.state);
+            let option = self.options[index].clone();
+
+            let closure = Closure::wrap(Box::new(move |event: JsValue| {
+                let (analytics_event, blur_event) = {
+                    let state_ref = state.borrow();
+                    (
+                        RadioTelemetryEvent::Analytics(build_analytics_event(
+                            &option, &state_ref, index,
+                        )),
+                        RadioTelemetryEvent::Blur(build_focus_event(
+                            &option, &state_ref, index, false,
+                        )),
+                    )
+                };
+
+                let mut events = Vec::with_capacity(2);
+                events.push(analytics_event);
+                events.push(blur_event);
+                emit_telemetry(&telemetry, &events);
+
+                {
+                    let mut state_mut = state.borrow_mut();
+                    state_mut.blur();
+                }
+
+                if let Some(handler) = on_blur.as_ref() {
+                    let _ = handler.call1(&JsValue::NULL, &event);
+                }
+            }) as Box<dyn FnMut(JsValue)>);
+
+            let function: Function = closure.as_ref().clone().unchecked_into();
+            closure.forget();
+            Some(function)
+        }
+
+        fn build_key_handler(&self, index: usize) -> Option<Function> {
+            if self.on_key_down.is_none()
+                && self.on_change.is_none()
+                && self.telemetry_delegate.is_none()
+            {
+                return None;
+            }
+
+            let telemetry = self.telemetry_delegate.clone();
+            let on_key = self.on_key_down.clone();
+            let on_change = self.on_change.clone();
+            let state = Rc::clone(&self.state);
+            let options = Rc::clone(&self.options);
+            let origin_option = self.options[index].clone();
+
+            let closure = Closure::wrap(Box::new(move |event: JsValue| {
+                let key = Reflect::get(&event, &JsValue::from_str("key"))
+                    .ok()
+                    .and_then(|value| value.as_string())
+                    .and_then(|value| control_key_from_str(&value));
+
+                if let Some(control) = key {
+                    if let Ok(prevent) = Reflect::get(&event, &JsValue::from_str("preventDefault"))
+                    {
+                        if let Ok(prevent) = prevent.dyn_into::<Function>() {
+                            let _ = prevent.call0(&event);
+                        }
+                    }
+
+                    let (analytics_event, previous, controlled, disabled) = {
+                        let state_ref = state.borrow();
+                        (
+                            RadioTelemetryEvent::Analytics(build_analytics_event(
+                                &origin_option,
+                                &state_ref,
+                                index,
+                            )),
+                            state_ref.selected_index(),
+                            state_ref.is_controlled(),
+                            state_ref.disabled(),
+                        )
+                    };
+
+                    let mut events = Vec::with_capacity(5);
+                    events.push(analytics_event);
+
+                    let selected_after = Rc::new(RefCell::new(None));
+                    {
+                        let mut state_mut = state.borrow_mut();
+                        let recorder = Rc::clone(&selected_after);
+                        state_mut.on_key(control, move |selected| {
+                            recorder.borrow_mut().replace(selected);
+                        });
+                    }
+
+                    if let Some(next_index) = *selected_after.borrow() {
+                        let focused_option = options[next_index].clone();
+                        let focus_event = {
+                            let state_ref = state.borrow();
+                            RadioTelemetryEvent::Focus(build_focus_event(
+                                &focused_option,
+                                &state_ref,
+                                next_index,
+                                true,
+                            ))
+                        };
+                        events.push(focus_event);
+
+                        if next_index != index {
+                            let blur_event = {
+                                let state_ref = state.borrow();
+                                RadioTelemetryEvent::Blur(build_focus_event(
+                                    &origin_option,
+                                    &state_ref,
+                                    index,
+                                    false,
+                                ))
+                            };
+                            events.push(blur_event);
+                        }
+
+                        events.push(RadioTelemetryEvent::Change(build_change_event(
+                            &focused_option,
+                            previous,
+                            next_index,
+                            disabled,
+                        )));
+
+                        let committed = {
+                            let state_ref = state.borrow();
+                            state_ref.selected_index().or(Some(next_index))
+                        };
+
+                        events.push(RadioTelemetryEvent::Commit(build_commit_event(
+                            &focused_option,
+                            committed,
+                            controlled,
+                        )));
+                    }
+
+                    emit_telemetry(&telemetry, &events);
+
+                    if let Some(handler) = on_key.as_ref() {
+                        let _ = handler.call1(&JsValue::NULL, &event);
+                    }
+
+                    if let Some(handler) = on_change.as_ref() {
+                        let _ = handler.call1(&JsValue::NULL, &event);
+                    }
+                }
+            }) as Box<dyn FnMut(JsValue)>);
+
+            let function: Function = closure.as_ref().clone().unchecked_into();
+            closure.forget();
+            Some(function)
         }
     }
 
@@ -476,6 +999,409 @@ pub mod react {
         object
     }
 
+    fn build_option_props_object(
+        option: &RadioOptionSnapshot,
+        handlers: &ReactOptionHandlers,
+    ) -> Object {
+        let object = Object::new();
+        for (key, value) in &option.themed_attributes {
+            Reflect::set(&object, &JsValue::from_str(key), &JsValue::from_str(value))
+                .expect("set option prop");
+        }
+
+        if let Some(handler) = &handlers.on_select {
+            Reflect::set(&object, &JsValue::from_str("onClick"), handler)
+                .expect("set onClick handler");
+            Reflect::set(&object, &JsValue::from_str("onclick"), handler)
+                .expect("set onclick handler");
+            Reflect::set(&object, &JsValue::from_str("onChange"), handler)
+                .expect("set onChange handler");
+            Reflect::set(&object, &JsValue::from_str("onchange"), handler)
+                .expect("set onchange handler");
+        }
+
+        if let Some(handler) = &handlers.on_focus {
+            Reflect::set(&object, &JsValue::from_str("onFocus"), handler)
+                .expect("set onFocus handler");
+            Reflect::set(&object, &JsValue::from_str("onfocus"), handler)
+                .expect("set onfocus handler");
+        }
+
+        if let Some(handler) = &handlers.on_blur {
+            Reflect::set(&object, &JsValue::from_str("onBlur"), handler)
+                .expect("set onBlur handler");
+            Reflect::set(&object, &JsValue::from_str("onblur"), handler)
+                .expect("set onblur handler");
+        }
+
+        if let Some(handler) = &handlers.on_key {
+            Reflect::set(&object, &JsValue::from_str("onKeyDown"), handler)
+                .expect("set onKeyDown handler");
+            Reflect::set(&object, &JsValue::from_str("onkeydown"), handler)
+                .expect("set onkeydown handler");
+        }
+
+        object
+    }
+
+    fn push_optional_string(
+        object: &Object,
+        key: &str,
+        value: &Option<String>,
+    ) -> Result<(), JsValue> {
+        if let Some(value) = value {
+            Reflect::set(object, &JsValue::from_str(key), &JsValue::from_str(value))?;
+        }
+        Ok(())
+    }
+
+    fn push_optional_usize(
+        object: &Object,
+        key: &str,
+        value: Option<usize>,
+    ) -> Result<(), JsValue> {
+        if let Some(value) = value {
+            Reflect::set(
+                object,
+                &JsValue::from_str(key),
+                &JsValue::from_f64(value as f64),
+            )?;
+        }
+        Ok(())
+    }
+
+    fn telemetry_event_to_js(event: &RadioTelemetryEvent) -> JsValue {
+        use RadioTelemetryEvent as Event;
+
+        let object = Object::new();
+        match event {
+            Event::Analytics(analytics) => {
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("kind"),
+                    &JsValue::from_str("analytics"),
+                )
+                .expect("set kind");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("index"),
+                    &JsValue::from_f64(analytics.index as f64),
+                )
+                .expect("set index");
+                push_optional_usize(&object, "selected", analytics.selected).expect("set selected");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("disabled"),
+                    &JsValue::from_bool(analytics.disabled),
+                )
+                .expect("set disabled");
+                push_optional_string(&object, "analyticsId", &analytics.analytics_id)
+                    .expect("set analyticsId");
+                push_optional_string(&object, "automationId", &analytics.automation_id)
+                    .expect("set automationId");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("label"),
+                    &JsValue::from_str(&analytics.label),
+                )
+                .expect("set label");
+            }
+            Event::Focus(focus) => {
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("kind"),
+                    &JsValue::from_str("focus"),
+                )
+                .expect("set kind");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("index"),
+                    &JsValue::from_f64(focus.index as f64),
+                )
+                .expect("set index");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("focused"),
+                    &JsValue::from_bool(focus.focused),
+                )
+                .expect("set focused");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("disabled"),
+                    &JsValue::from_bool(focus.disabled),
+                )
+                .expect("set disabled");
+                push_optional_string(&object, "analyticsId", &focus.analytics_id)
+                    .expect("set analyticsId");
+                push_optional_string(&object, "automationId", &focus.automation_id)
+                    .expect("set automationId");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("label"),
+                    &JsValue::from_str(&focus.label),
+                )
+                .expect("set label");
+            }
+            Event::Blur(blur) => {
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("kind"),
+                    &JsValue::from_str("blur"),
+                )
+                .expect("set kind");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("index"),
+                    &JsValue::from_f64(blur.index as f64),
+                )
+                .expect("set index");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("focused"),
+                    &JsValue::from_bool(blur.focused),
+                )
+                .expect("set focused");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("disabled"),
+                    &JsValue::from_bool(blur.disabled),
+                )
+                .expect("set disabled");
+                push_optional_string(&object, "analyticsId", &blur.analytics_id)
+                    .expect("set analyticsId");
+                push_optional_string(&object, "automationId", &blur.automation_id)
+                    .expect("set automationId");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("label"),
+                    &JsValue::from_str(&blur.label),
+                )
+                .expect("set label");
+            }
+            Event::Change(change) => {
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("kind"),
+                    &JsValue::from_str("change"),
+                )
+                .expect("set kind");
+                push_optional_usize(&object, "previous", change.previous).expect("set previous");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("next"),
+                    &JsValue::from_f64(change.next as f64),
+                )
+                .expect("set next");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("disabled"),
+                    &JsValue::from_bool(change.disabled),
+                )
+                .expect("set disabled");
+                push_optional_string(&object, "analyticsId", &change.analytics_id)
+                    .expect("set analyticsId");
+                push_optional_string(&object, "automationId", &change.automation_id)
+                    .expect("set automationId");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("label"),
+                    &JsValue::from_str(&change.label),
+                )
+                .expect("set label");
+            }
+            Event::Commit(commit) => {
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("kind"),
+                    &JsValue::from_str("commit"),
+                )
+                .expect("set kind");
+                push_optional_usize(&object, "selected", commit.selected).expect("set selected");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("controlled"),
+                    &JsValue::from_bool(commit.controlled),
+                )
+                .expect("set controlled");
+                push_optional_string(&object, "analyticsId", &commit.analytics_id)
+                    .expect("set analyticsId");
+                push_optional_string(&object, "automationId", &commit.automation_id)
+                    .expect("set automationId");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("label"),
+                    &JsValue::from_str(&commit.label),
+                )
+                .expect("set label");
+            }
+        }
+
+        object.into()
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::{cell::RefCell, rc::Rc};
+        use wasm_bindgen::JsValue;
+        use wasm_bindgen_test::*;
+
+        wasm_bindgen_test_configure!(run_in_browser);
+
+        fn sample_state_uncontrolled() -> RadioGroupState {
+            RadioGroupState::uncontrolled(
+                vec!["Alpha".to_string(), "Beta".to_string(), "Gamma".to_string()],
+                false,
+                RadioOrientation::Horizontal,
+                Some(0),
+            )
+        }
+
+        fn sample_state_controlled() -> RadioGroupState {
+            RadioGroupState::controlled(
+                vec!["Alpha".to_string(), "Beta".to_string(), "Gamma".to_string()],
+                false,
+                RadioOrientation::Horizontal,
+                Some(1),
+            )
+        }
+
+        fn build_snapshot(state: &RadioGroupState) -> RadioGroupDescriptorSnapshot {
+            let props = RadioGroupProps::from_state(state);
+            let telemetry = TelemetryHooks::default();
+            let (_ctx, _descriptor, snapshot) = super::super::descriptor_with_context(
+                "rustic_ui_material::radio::react::tests::snapshot",
+                &props,
+                &telemetry,
+                state,
+            );
+            snapshot
+        }
+
+        fn telemetry_collector() -> (Function, js_sys::Array) {
+            let events = js_sys::Array::new();
+            let stored = events.clone();
+            let closure = Closure::wrap(Box::new(move |event: JsValue| {
+                stored.push(&event);
+            }) as Box<dyn FnMut(JsValue)>);
+            let function: Function = closure.as_ref().clone().unchecked_into();
+            closure.forget();
+            (function, events)
+        }
+
+        fn build_option_props(
+            state: Rc<RefCell<RadioGroupState>>,
+            snapshot: &RadioGroupDescriptorSnapshot,
+            telemetry: Option<Function>,
+            index: usize,
+        ) -> (Object, Rc<RefCell<RadioGroupState>>) {
+            let options = Rc::new(snapshot.options.clone());
+            let builder = ReactOptionHandlerBuilder::new(
+                Rc::clone(&state),
+                Rc::clone(&options),
+                None,
+                None,
+                None,
+                None,
+                telemetry,
+            );
+            let handlers = builder.build(index);
+            let props = build_option_props_object(&options[index], &handlers);
+            (props, state)
+        }
+
+        fn call_handler(props: &Object, key: &str) {
+            if let Ok(handler) = Reflect::get(props, &JsValue::from_str(key)) {
+                if let Ok(function) = handler.dyn_into::<Function>() {
+                    let _ = function.call1(&JsValue::NULL, &JsValue::UNDEFINED);
+                }
+            }
+        }
+
+        fn event_kinds(events: &js_sys::Array) -> Vec<String> {
+            events
+                .iter()
+                .map(|value| {
+                    Reflect::get(&value, &JsValue::from_str("kind"))
+                        .ok()
+                        .and_then(|kind| kind.as_string())
+                        .unwrap_or_default()
+                })
+                .collect()
+        }
+
+        #[wasm_bindgen_test]
+        fn uncontrolled_click_emits_change_commit_sequence() {
+            let state = Rc::new(RefCell::new(sample_state_uncontrolled()));
+            let snapshot = build_snapshot(&state.borrow());
+            let (delegate, events) = telemetry_collector();
+            let (props, state_handle) =
+                build_option_props(Rc::clone(&state), &snapshot, Some(delegate), 1);
+
+            call_handler(&props, "onClick");
+
+            let kinds = event_kinds(&events);
+            assert_eq!(kinds, vec!["analytics", "change", "commit"]);
+            assert_eq!(state_handle.borrow().selected_index(), Some(1));
+        }
+
+        #[wasm_bindgen_test]
+        fn controlled_click_reports_commit_without_mutating_state() {
+            let state = Rc::new(RefCell::new(sample_state_controlled()));
+            let snapshot = build_snapshot(&state.borrow());
+            let (delegate, events) = telemetry_collector();
+            let (props, state_handle) =
+                build_option_props(Rc::clone(&state), &snapshot, Some(delegate), 2);
+
+            call_handler(&props, "onClick");
+
+            assert_eq!(state_handle.borrow().selected_index(), Some(1));
+            let last_event = events.get(events.length() - 1);
+            let selected = Reflect::get(&last_event, &JsValue::from_str("selected"))
+                .unwrap()
+                .as_f64()
+                .map(|value| value as usize);
+            assert_eq!(selected, Some(2));
+            let kinds = event_kinds(&events);
+            assert_eq!(kinds, vec!["analytics", "change", "commit"]);
+        }
+
+        #[wasm_bindgen_test]
+        fn preserves_option_attributes() {
+            let state = Rc::new(RefCell::new(sample_state_uncontrolled()));
+            let snapshot = build_snapshot(&state.borrow());
+            let options = Rc::new(snapshot.options.clone());
+            let builder = ReactOptionHandlerBuilder::new(
+                Rc::clone(&state),
+                Rc::clone(&options),
+                None,
+                None,
+                None,
+                None,
+                None,
+            );
+            let handlers = builder.build(0);
+            let props = build_option_props_object(&options[0], &handlers);
+
+            let role = Reflect::get(&props, &JsValue::from_str("role"))
+                .unwrap()
+                .as_string()
+                .unwrap();
+            let aria_checked = Reflect::get(&props, &JsValue::from_str("aria-checked"))
+                .unwrap()
+                .as_string()
+                .unwrap();
+            let data_index = Reflect::get(&props, &JsValue::from_str("data-index"))
+                .unwrap()
+                .as_string()
+                .unwrap();
+
+            assert_eq!(role, "radio");
+            assert_eq!(aria_checked, "true");
+            assert_eq!(data_index, "0");
+        }
+    }
+
     /// React component rendering a Material radio group.
     pub fn ReactRadioGroup(props: &ReactRadioGroupProps) -> Jsx {
         let telemetry = super::merged_telemetry(&props.telemetry, &props.group.telemetry);
@@ -487,11 +1413,24 @@ pub mod react {
         );
         instrument_render(&telemetry, context, || {
             let group_props = build_props_object(snapshot.group_thematic_attributes.clone());
-            let option_children: Vec<JsValue> = snapshot
-                .options
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let options = Rc::new(snapshot.options.clone());
+            let handler_builder = ReactOptionHandlerBuilder::new(
+                Rc::clone(&state_handle),
+                Rc::clone(&options),
+                props.on_change.clone(),
+                props.on_focus.clone(),
+                props.on_blur.clone(),
+                props.on_key_down.clone(),
+                props.telemetry_delegate.clone(),
+            );
+
+            let option_children: Vec<JsValue> = options
                 .iter()
-                .map(|option| {
-                    let option_props = build_props_object(option.themed_attributes.clone());
+                .enumerate()
+                .map(|(index, option)| {
+                    let handlers = handler_builder.build(index);
+                    let option_props = build_option_props_object(option, &handlers);
                     create_element("span", option_props, &[JsValue::from_str(&option.label)])
                 })
                 .collect();
