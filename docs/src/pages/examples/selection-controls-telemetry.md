@@ -147,15 +147,15 @@ Leptos, Dioxus, and Sycamore share the same lifecycle: each closure emits the
 telemetry payload, then the consumer callback, and finally mutates the headless
 state machine. Pass an `Rc<dyn Fn(CheckboxTelemetryEvent)>` or
 `Rc<dyn Fn(SwitchTelemetryEvent)>` delegate to receive that
-stream.【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:crates/rustic-ui-material/src/checkbox.rs†L1548-L1662】【F:crates/rustic-ui-material/src/switch.rs†L1044-L1323】
+stream.【F:crates/rustic-ui-material/src/checkbox.rs†L1522-L1703】【F:crates/rustic-ui-material/src/checkbox.rs†L1200-L1399】【F:crates/rustic-ui-material/src/switch.rs†L1494-L1666】
 
-The Dioxus adapter now mirrors this choreography for radio groups. Each option
-captures analytics metadata before calling `RadioGroupState::select`,
-`RadioGroupState::focus`, or `RadioGroupState::on_key`, ensuring telemetry fires
-in a deterministic order prior to consumer callbacks. Optional `Rc` callbacks
-(`on_change`, `on_focus`, `on_blur`, `on_key`) and telemetry delegates slot
-directly into the shared runners so enterprise automation receives identical
-payloads regardless of renderer.【F:crates/rustic-ui-material/src/radio.rs†L2747-L3339】
+The radio adapters for Dioxus **and** Sycamore now mirror this choreography. A
+shared closure factory constructs per-option runners that emit analytics before
+invoking `RadioGroupState::select`, `RadioGroupState::focus`, `RadioGroupState::blur`,
+or `RadioGroupState::on_key`. Optional `Rc` callbacks (`on_change`, `on_focus`,
+`on_blur`, `on_key`) and telemetry delegates are captured once per option index so
+enterprise automation observes deterministic analytics → callback → state
+ordering across renderers.【F:crates/rustic-ui-material/src/radio.rs†L2633-L3436】【F:crates/rustic-ui-material/src/radio.rs†L3827-L4239】
 
 ```rust
 use dioxus::prelude::*;
@@ -185,6 +185,38 @@ pub fn payment_methods(cx: Scope) -> Element {
             telemetry_delegate: Some(telemetry),
         }
     })
+}
+```
+
+```rust
+use std::rc::Rc;
+use sycamore::prelude::*;
+use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+use rustic_ui_material::radio::{self, RadioGroupProps, RadioTelemetryEvent, RadioChangeEvent};
+
+#[component]
+fn PaymentMethods<G: Html>(cx: Scope) -> View<G> {
+    let state = RadioGroupState::uncontrolled(
+        vec!["Cash".into(), "Card".into(), "Invoice".into()],
+        false,
+        RadioOrientation::Horizontal,
+        Some(2),
+    );
+    let telemetry: Rc<dyn Fn(RadioTelemetryEvent)> = Rc::new(|event| {
+        println!("telemetry::{:?}", event);
+    });
+    let on_change: Rc<dyn Fn(RadioChangeEvent)> = Rc::new(|event| {
+        println!("change::next={}", event.next);
+    });
+
+    let mut props = radio::sycamore::SycamoreRadioGroupProps::new(
+        RadioGroupProps::from_state(&state),
+        state.clone(),
+    );
+    props.on_change = Some(on_change);
+    props.telemetry_delegate = Some(telemetry);
+
+    view! { cx, radio::sycamore::SycamoreRadioGroup(props) }
 }
 ```
 

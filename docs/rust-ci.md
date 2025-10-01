@@ -80,6 +80,7 @@ cargo test -p rustic-ui-material --test joy_dioxus --features dioxus
 
 # Sycamore parity
 cargo test -p rustic-ui-material --test joy_sycamore --features sycamore
+cargo test -p rustic-ui-material sycamore:: --features sycamore
 ```
 
 Each suite consumes the shared fixtures in `crates/rustic-ui-material/tests/common/fixtures.rs` so updating the canonical props or Joy analytics hooks automatically propagates across frameworks.
