@@ -1309,8 +1309,8 @@ pub mod dioxus {
     //! Dioxus adapter built with `rsx!` for idiomatic usage inside Dioxus
     //! applications.
     use super::*;
-    use dioxus::events::{FocusEvent, KeyboardEvent, MouseEvent};
-    use dioxus::prelude::*;
+    use ::dioxus::events::{FocusEvent, KeyboardEvent, MouseEvent};
+    use ::dioxus::prelude::*;
     use std::{cell::RefCell, rc::Rc};
 
     /// Properties accepted by [`DioxusSwitch`].

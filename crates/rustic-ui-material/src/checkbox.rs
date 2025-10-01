@@ -1304,8 +1304,8 @@ pub mod dioxus {
     //! Dioxus adapter using `rsx!` so teams can hydrate the checkbox inside
     //! Dioxus shells without falling back to raw HTML strings.
     use super::*;
-    use dioxus::prelude::events::{FocusEvent, KeyboardEvent, MouseEvent};
-    use dioxus::prelude::*;
+    use ::dioxus::prelude::events::{FocusEvent, KeyboardEvent, MouseEvent};
+    use ::dioxus::prelude::*;
     use keyboard_types::Key;
     use std::{cell::RefCell, rc::Rc};
 
