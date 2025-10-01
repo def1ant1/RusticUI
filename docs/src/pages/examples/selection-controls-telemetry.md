@@ -188,6 +188,13 @@ pub fn payment_methods(cx: Scope) -> Element {
 }
 ```
 
+The Dioxus renderer now mirrors the other adapters by automatically
+propagating every themed attribute (`class`, `style`, `data-*`, analytics IDs)
+emitted by the headless descriptor. When design tokens roll out new keys the
+adapter spreads them across the `<div>` and option `<span>` nodes without any
+manual wiring, keeping enterprise theming layers and analytics probes intact
+during upgrades.
+
 ```rust
 use std::rc::Rc;
 use sycamore::prelude::*;
