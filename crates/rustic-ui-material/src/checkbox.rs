@@ -48,6 +48,9 @@ use rustic_ui_headless::{
 use rustic_ui_styled_engine::{css_with_theme, Style};
 use std::collections::HashMap;
 
+#[cfg(feature = "react")]
+use wasm_bindgen::JsValue;
+
 /// Canonical payload emitted when checkbox state changes.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CheckboxChangeEvent {
@@ -240,7 +243,8 @@ fn render_html(props: &CheckboxProps, state: &CheckboxState) -> String {
         .with_analytics(props.telemetry.analytics_id.clone())
         .with_automation(props.telemetry.automation_id.clone());
     instrument_render(&props.telemetry, context, || {
-        let descriptor = build_descriptor(props, state);
+        let descriptor =
+            merge_descriptor_telemetry(build_descriptor(props, state), &props.telemetry);
         selection_control::render_toggle_html(&descriptor)
     })
 }
@@ -248,6 +252,228 @@ fn render_html(props: &CheckboxProps, state: &CheckboxState) -> String {
 #[allow(dead_code)]
 fn attributes_to_map(pairs: Vec<(String, String)>) -> HashMap<String, String> {
     pairs.into_iter().collect()
+}
+
+fn merge_descriptor_telemetry(
+    mut descriptor: ToggleControlDescriptor,
+    telemetry: &TelemetryHooks,
+) -> ToggleControlDescriptor {
+    let has_analytics = descriptor
+        .data_state_attributes()
+        .any(|(key, _)| key == "data-rustic-analytics-id");
+    if !has_analytics {
+        if let Some(analytics) = &telemetry.analytics_id {
+            descriptor = descriptor.attribute("data-rustic-analytics-id", analytics.clone());
+        }
+    }
+
+    let has_automation = descriptor
+        .data_state_attributes()
+        .any(|(key, _)| key == "data-automation-id");
+    if !has_automation {
+        if let Some(automation) = &telemetry.automation_id {
+            descriptor = descriptor.attribute("data-automation-id", automation.clone());
+        }
+    }
+
+    descriptor
+}
+
+#[cfg(feature = "react")]
+fn checkbox_value_to_str(value: CheckboxValue) -> &'static str {
+    match value {
+        CheckboxValue::Off => "off",
+        CheckboxValue::On => "on",
+        CheckboxValue::Indeterminate => "indeterminate",
+    }
+}
+
+#[cfg(feature = "react")]
+fn control_key_to_str(key: ControlKey) -> &'static str {
+    match key {
+        ControlKey::Space => "space",
+        ControlKey::Enter => "enter",
+        ControlKey::ArrowUp => "arrow-up",
+        ControlKey::ArrowDown => "arrow-down",
+        ControlKey::ArrowLeft => "arrow-left",
+        ControlKey::ArrowRight => "arrow-right",
+        ControlKey::Home => "home",
+        ControlKey::End => "end",
+    }
+}
+
+#[cfg(feature = "react")]
+fn push_optional_string(
+    object: &js_sys::Object,
+    key: &str,
+    value: &Option<String>,
+) -> Result<(), JsValue> {
+    if let Some(value) = value {
+        js_sys::Reflect::set(object, &JsValue::from_str(key), &JsValue::from_str(value))?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "react")]
+fn telemetry_event_to_js(event: CheckboxTelemetryEvent) -> JsValue {
+    use js_sys::Reflect;
+    use CheckboxTelemetryEvent as Event;
+
+    let object = js_sys::Object::new();
+    match event {
+        Event::Change(change) => {
+            Reflect::set(
+                &object,
+                &JsValue::from_str("kind"),
+                &JsValue::from_str("change"),
+            )
+            .expect("set kind");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("previous"),
+                &JsValue::from_str(checkbox_value_to_str(change.previous)),
+            )
+            .expect("set previous");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("next"),
+                &JsValue::from_str(checkbox_value_to_str(change.next)),
+            )
+            .expect("set next");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("disabled"),
+                &JsValue::from_bool(change.disabled),
+            )
+            .expect("set disabled");
+            push_optional_string(&object, "analyticsId", &change.analytics_id)
+                .expect("set analyticsId");
+            push_optional_string(&object, "automationId", &change.automation_id)
+                .expect("set automationId");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("label"),
+                &JsValue::from_str(&change.label),
+            )
+            .expect("set label");
+        }
+        Event::Focus(focus) => {
+            Reflect::set(
+                &object,
+                &JsValue::from_str("kind"),
+                &JsValue::from_str("focus"),
+            )
+            .expect("set kind");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("focused"),
+                &JsValue::from_bool(focus.focused),
+            )
+            .expect("set focused");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("checked"),
+                &JsValue::from_str(checkbox_value_to_str(focus.checked)),
+            )
+            .expect("set checked");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("disabled"),
+                &JsValue::from_bool(focus.disabled),
+            )
+            .expect("set disabled");
+            push_optional_string(&object, "analyticsId", &focus.analytics_id)
+                .expect("set analyticsId");
+            push_optional_string(&object, "automationId", &focus.automation_id)
+                .expect("set automationId");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("label"),
+                &JsValue::from_str(&focus.label),
+            )
+            .expect("set label");
+        }
+        Event::Blur(focus) => {
+            Reflect::set(
+                &object,
+                &JsValue::from_str("kind"),
+                &JsValue::from_str("blur"),
+            )
+            .expect("set kind");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("focused"),
+                &JsValue::from_bool(focus.focused),
+            )
+            .expect("set focused");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("checked"),
+                &JsValue::from_str(checkbox_value_to_str(focus.checked)),
+            )
+            .expect("set checked");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("disabled"),
+                &JsValue::from_bool(focus.disabled),
+            )
+            .expect("set disabled");
+            push_optional_string(&object, "analyticsId", &focus.analytics_id)
+                .expect("set analyticsId");
+            push_optional_string(&object, "automationId", &focus.automation_id)
+                .expect("set automationId");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("label"),
+                &JsValue::from_str(&focus.label),
+            )
+            .expect("set label");
+        }
+        Event::Key(key) => {
+            Reflect::set(
+                &object,
+                &JsValue::from_str("kind"),
+                &JsValue::from_str("key"),
+            )
+            .expect("set kind");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("key"),
+                &JsValue::from_str(control_key_to_str(key.key)),
+            )
+            .expect("set key");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("previous"),
+                &JsValue::from_str(checkbox_value_to_str(key.previous)),
+            )
+            .expect("set previous");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("next"),
+                &JsValue::from_str(checkbox_value_to_str(key.next)),
+            )
+            .expect("set next");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("disabled"),
+                &JsValue::from_bool(key.disabled),
+            )
+            .expect("set disabled");
+            push_optional_string(&object, "analyticsId", &key.analytics_id)
+                .expect("set analyticsId");
+            push_optional_string(&object, "automationId", &key.automation_id)
+                .expect("set automationId");
+            Reflect::set(
+                &object,
+                &JsValue::from_str("label"),
+                &JsValue::from_str(&key.label),
+            )
+            .expect("set label");
+        }
+    }
+
+    object.into()
 }
 
 /// Generates the themed style for the checkbox container. The macro pulls
@@ -318,7 +544,7 @@ pub mod react {
     //! React adapter producing `Jsx` nodes via the `wasm_bindgen` bridge.
     use super::*;
     use js_sys::{Array, Function, Object, Reflect};
-    use wasm_bindgen::{JsCast, JsValue};
+    use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 
     /// Type alias representing React elements returned through the WASM bridge.
     pub type Jsx = JsValue;
@@ -383,7 +609,14 @@ pub mod react {
             .expect("React.createElement invocation")
     }
 
-    fn build_props_object(pairs: Vec<(String, String)>, props: &ReactCheckboxProps) -> Object {
+    struct ReactHandlers {
+        on_change: Option<Function>,
+        on_focus: Option<Function>,
+        on_blur: Option<Function>,
+        on_key: Option<Function>,
+    }
+
+    fn build_props_object(pairs: Vec<(String, String)>, handlers: &ReactHandlers) -> Object {
         let object = Object::new();
         for (key, value) in pairs {
             Reflect::set(
@@ -393,39 +626,195 @@ pub mod react {
             )
             .expect("set React prop");
         }
-        if let Some(handler) = &props.on_change {
+        if let Some(handler) = &handlers.on_change {
             Reflect::set(&object, &JsValue::from_str("onChange"), handler)
                 .expect("set onChange handler");
         }
-        if let Some(handler) = &props.on_focus {
+        if let Some(handler) = &handlers.on_focus {
             Reflect::set(&object, &JsValue::from_str("onFocus"), handler)
                 .expect("set onFocus handler");
         }
-        if let Some(handler) = &props.on_blur {
+        if let Some(handler) = &handlers.on_blur {
             Reflect::set(&object, &JsValue::from_str("onBlur"), handler)
                 .expect("set onBlur handler");
         }
-        if let Some(handler) = &props.on_key {
+        if let Some(handler) = &handlers.on_key {
             Reflect::set(&object, &JsValue::from_str("onKeyDown"), handler)
                 .expect("set onKeyDown handler");
-        }
-        if let Some(delegate) = &props.telemetry_delegate {
-            Reflect::set(&object, &JsValue::from_str("telemetryDelegate"), delegate)
-                .expect("set telemetry delegate");
         }
         object
     }
 
+    fn change_handler(props: &ReactCheckboxProps) -> Option<Function> {
+        if props.on_change.is_none() && props.telemetry_delegate.is_none() {
+            return None;
+        }
+
+        let telemetry = props.telemetry_delegate.clone();
+        let on_change = props.on_change.clone();
+        let checkbox = props.checkbox.clone();
+        let state = props.state.clone();
+
+        let closure = Closure::wrap(Box::new(move |event: JsValue| {
+            let change = build_change_event(&checkbox, &state);
+            if let Some(delegate) = telemetry.as_ref() {
+                let payload = telemetry_event_to_js(CheckboxTelemetryEvent::Change(change.clone()));
+                let _ = delegate.call1(&JsValue::NULL, &payload);
+            }
+            if let Some(handler) = on_change.as_ref() {
+                let _ = handler.call1(&JsValue::NULL, &event);
+            }
+        }) as Box<dyn FnMut(JsValue)>);
+
+        let function: Function = closure.as_ref().clone().unchecked_into();
+        closure.forget();
+        Some(function)
+    }
+
+    fn focus_handler(props: &ReactCheckboxProps) -> Option<Function> {
+        if props.on_focus.is_none() && props.telemetry_delegate.is_none() {
+            return None;
+        }
+
+        let telemetry = props.telemetry_delegate.clone();
+        let on_focus = props.on_focus.clone();
+        let checkbox = props.checkbox.clone();
+        let state = props.state.clone();
+
+        let closure = Closure::wrap(Box::new(move |event: JsValue| {
+            let focus = build_focus_event(&checkbox, &state, true);
+            if let Some(delegate) = telemetry.as_ref() {
+                let payload = telemetry_event_to_js(CheckboxTelemetryEvent::Focus(focus.clone()));
+                let _ = delegate.call1(&JsValue::NULL, &payload);
+            }
+            if let Some(handler) = on_focus.as_ref() {
+                let _ = handler.call1(&JsValue::NULL, &event);
+            }
+        }) as Box<dyn FnMut(JsValue)>);
+
+        let function: Function = closure.as_ref().clone().unchecked_into();
+        closure.forget();
+        Some(function)
+    }
+
+    fn blur_handler(props: &ReactCheckboxProps) -> Option<Function> {
+        if props.on_blur.is_none() && props.telemetry_delegate.is_none() {
+            return None;
+        }
+
+        let telemetry = props.telemetry_delegate.clone();
+        let on_blur = props.on_blur.clone();
+        let checkbox = props.checkbox.clone();
+        let state = props.state.clone();
+
+        let closure = Closure::wrap(Box::new(move |event: JsValue| {
+            let blur = build_focus_event(&checkbox, &state, false);
+            if let Some(delegate) = telemetry.as_ref() {
+                let payload = telemetry_event_to_js(CheckboxTelemetryEvent::Blur(blur.clone()));
+                let _ = delegate.call1(&JsValue::NULL, &payload);
+            }
+            if let Some(handler) = on_blur.as_ref() {
+                let _ = handler.call1(&JsValue::NULL, &event);
+            }
+        }) as Box<dyn FnMut(JsValue)>);
+
+        let function: Function = closure.as_ref().clone().unchecked_into();
+        closure.forget();
+        Some(function)
+    }
+
+    fn key_handler(props: &ReactCheckboxProps) -> Option<Function> {
+        if props.on_key.is_none() && props.on_change.is_none() && props.telemetry_delegate.is_none()
+        {
+            return None;
+        }
+
+        let telemetry = props.telemetry_delegate.clone();
+        let on_key = props.on_key.clone();
+        let on_change = props.on_change.clone();
+        let checkbox = props.checkbox.clone();
+        let state = props.state.clone();
+
+        let closure = Closure::wrap(Box::new(move |event: JsValue| {
+            let key_value = Reflect::get(&event, &JsValue::from_str("key"))
+                .ok()
+                .and_then(|value| value.as_string());
+            if let Some(key) = key_value.as_deref().and_then(control_key_from_str) {
+                if let Ok(prevent) = Reflect::get(&event, &JsValue::from_str("preventDefault")) {
+                    if let Ok(prevent) = prevent.dyn_into::<Function>() {
+                        let _ = prevent.call0(&event);
+                    }
+                }
+
+                let key_event = build_key_event(&checkbox, &state, key);
+                let change_event = build_change_event(&checkbox, &state);
+
+                if let Some(delegate) = telemetry.as_ref() {
+                    let key_payload =
+                        telemetry_event_to_js(CheckboxTelemetryEvent::Key(key_event.clone()));
+                    let _ = delegate.call1(&JsValue::NULL, &key_payload);
+                    let change_payload =
+                        telemetry_event_to_js(CheckboxTelemetryEvent::Change(change_event.clone()));
+                    let _ = delegate.call1(&JsValue::NULL, &change_payload);
+                }
+
+                if let Some(handler) = on_key.as_ref() {
+                    let _ = handler.call1(&JsValue::NULL, &event);
+                }
+
+                if let Some(handler) = on_change.as_ref() {
+                    let _ = handler.call1(&JsValue::NULL, &event);
+                }
+            }
+        }) as Box<dyn FnMut(JsValue)>);
+
+        let function: Function = closure.as_ref().clone().unchecked_into();
+        closure.forget();
+        Some(function)
+    }
+
+    fn handlers(props: &ReactCheckboxProps) -> ReactHandlers {
+        ReactHandlers {
+            on_change: change_handler(props),
+            on_focus: focus_handler(props),
+            on_blur: blur_handler(props),
+            on_key: key_handler(props),
+        }
+    }
+
     /// React component rendering the Material checkbox.
+    ///
+    /// The adapter mirrors the documentation-heavy style used by other modules
+    /// (see [`click_away`](crate::click_away) or [`collapsible`](crate::collapsible))
+    /// so enterprise governance teams understand the render lifecycle:
+    ///
+    /// * A [`TelemetryContext`] seeded with the fully-qualified component path
+    ///   is constructed so downstream spans, analytics sinks, and error hooks
+    ///   can attribute metrics back to this adapter.
+    /// * [`instrument_render`] enters the context span, ensures success/error
+    ///   hooks run, and propagates analytics/automation identifiers extracted
+    ///   from [`CheckboxProps::telemetry`].
+    /// * Prior to hydration, telemetry defaults are merged into the descriptor
+    ///   attributes so SSR and CSR renders emit identical `data-*` markers even
+    ///   when the caller omits explicit identifiers.
+    /// * Event handlers wrap consumer callbacks, delivering normalized
+    ///   [`CheckboxTelemetryEvent`] payloads to the optional telemetry delegate
+    ///   **before** invoking user logic. This guarantees analytics capture
+    ///   precedes side effects, aligning with audit requirements in regulated
+    ///   environments.
     pub fn ReactCheckbox(props: &ReactCheckboxProps) -> Jsx {
         let context = TelemetryContext::new("rustic_ui_material::checkbox::react::ReactCheckbox")
             .with_analytics(props.checkbox.telemetry.analytics_id.clone())
             .with_automation(props.checkbox.telemetry.automation_id.clone());
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let descriptor = merge_descriptor_telemetry(
+                super::build_descriptor(&props.checkbox, &props.state),
+                &props.checkbox.telemetry,
+            );
             let label = descriptor.label().to_string();
             let attributes = descriptor.themed_attributes();
-            let props_object = build_props_object(attributes, props);
+            let handlers = handlers(props);
+            let props_object = build_props_object(attributes, &handlers);
             create_element("span", props_object, &[JsValue::from_str(&label)])
         })
     }
@@ -465,13 +854,32 @@ pub mod yew {
     }
 
     /// Checkbox rendered as a Yew component.
+    ///
+    /// The function mirrors the inline documentation style adopted by other
+    /// enterprise adapters, spelling out the render lifecycle so governance and
+    /// QA teams can trace telemetry:
+    ///
+    /// * [`TelemetryContext`] is seeded with the component name and populated
+    ///   with analytics/automation identifiers from [`CheckboxProps`].
+    /// * [`instrument_render`] enters the span and invokes success/error hooks,
+    ///   ensuring render panics propagate structured
+    ///   [`crate::telemetry::TelemetryError`] events.
+    /// * Descriptor telemetry defaults are merged prior to calling
+    ///   [`ToggleControlDescriptor::themed_attributes`], keeping SSR/CSR output
+    ///   aligned even when consumers omit explicit identifiers.
+    /// * Event handlers route structured [`CheckboxTelemetryEvent`] payloads to
+    ///   the optional telemetry delegate **before** invoking user callbacks so
+    ///   analytics capture consistently precedes consumer side effects.
     #[function_component(YewCheckbox)]
     pub fn yew_checkbox(props: &YewCheckboxProps) -> Html {
         let context = TelemetryContext::new("rustic_ui_material::checkbox::yew::YewCheckbox")
             .with_analytics(props.checkbox.telemetry.analytics_id.clone())
             .with_automation(props.checkbox.telemetry.automation_id.clone());
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let descriptor = merge_descriptor_telemetry(
+                super::build_descriptor(&props.checkbox, &props.state),
+                &props.checkbox.telemetry,
+            );
             let label = descriptor.label().to_string();
             let attrs = descriptor.themed_attributes();
             let change_handler = {
@@ -481,11 +889,11 @@ pub mod yew {
                 let state = props.state.clone();
                 Callback::from(move |_event: MouseEvent| {
                     let change = build_change_event(&checkbox, &state);
-                    if let Some(cb) = &on_change {
-                        cb.emit(change.clone());
-                    }
                     if let Some(delegate) = &telemetry {
-                        delegate.emit(CheckboxTelemetryEvent::Change(change));
+                        delegate.emit(CheckboxTelemetryEvent::Change(change.clone()));
+                    }
+                    if let Some(cb) = &on_change {
+                        cb.emit(change);
                     }
                 })
             };
@@ -496,11 +904,11 @@ pub mod yew {
                 let state = props.state.clone();
                 Callback::from(move |_event: FocusEvent| {
                     let focus = build_focus_event(&checkbox, &state, true);
-                    if let Some(cb) = &on_focus {
-                        cb.emit(focus.clone());
-                    }
                     if let Some(delegate) = &telemetry {
-                        delegate.emit(CheckboxTelemetryEvent::Focus(focus));
+                        delegate.emit(CheckboxTelemetryEvent::Focus(focus.clone()));
+                    }
+                    if let Some(cb) = &on_focus {
+                        cb.emit(focus);
                     }
                 })
             };
@@ -511,11 +919,11 @@ pub mod yew {
                 let state = props.state.clone();
                 Callback::from(move |_event: FocusEvent| {
                     let blur = build_focus_event(&checkbox, &state, false);
-                    if let Some(cb) = &on_blur {
-                        cb.emit(blur.clone());
-                    }
                     if let Some(delegate) = &telemetry {
-                        delegate.emit(CheckboxTelemetryEvent::Blur(blur));
+                        delegate.emit(CheckboxTelemetryEvent::Blur(blur.clone()));
+                    }
+                    if let Some(cb) = &on_blur {
+                        cb.emit(blur);
                     }
                 })
             };
@@ -529,18 +937,16 @@ pub mod yew {
                     if let Some(control) = control_key_from_str(event.key().as_str()) {
                         event.prevent_default();
                         let key_event = build_key_event(&checkbox, &state, control);
+                        let change = build_change_event(&checkbox, &state);
+                        if let Some(delegate) = &telemetry {
+                            delegate.emit(CheckboxTelemetryEvent::Key(key_event.clone()));
+                            delegate.emit(CheckboxTelemetryEvent::Change(change.clone()));
+                        }
                         if let Some(cb) = &on_key {
                             cb.emit(key_event.clone());
                         }
-                        if let Some(delegate) = &telemetry {
-                            delegate.emit(CheckboxTelemetryEvent::Key(key_event.clone()));
-                        }
                         if let Some(change_cb) = &on_change {
-                            let change = build_change_event(&checkbox, &state);
-                            change_cb.emit(change.clone());
-                            if let Some(delegate) = &telemetry {
-                                delegate.emit(CheckboxTelemetryEvent::Change(change));
-                            }
+                            change_cb.emit(change);
                         }
                     }
                 })
@@ -588,12 +994,28 @@ pub mod leptos {
     }
 
     #[component]
+    /// Leptos adapter mirroring the telemetry-heavy lifecycle described for the
+    /// Yew/React integrations. The documentation explicitly calls out the
+    /// render order so observability and QA teams can validate automation:
+    ///
+    /// * A [`TelemetryContext`] seeded with the component name feeds
+    ///   [`instrument_render`], wiring analytics/automation identifiers into the
+    ///   tracing span.
+    /// * Descriptor telemetry defaults are merged before extracting themed
+    ///   attributes, guaranteeing SSR and CSR renders emit identical `data-*`
+    ///   markers.
+    /// * Event closures emit [`CheckboxTelemetryEvent`] payloads to the
+    ///   telemetry delegate **before** executing user callbacks, keeping
+    ///   analytics capture deterministic.
     pub fn LeptosCheckbox(props: LeptosCheckboxProps) -> impl IntoView {
         let context = TelemetryContext::new("rustic_ui_material::checkbox::leptos::LeptosCheckbox")
             .with_analytics(props.checkbox.telemetry.analytics_id.clone())
             .with_automation(props.checkbox.telemetry.automation_id.clone());
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let descriptor = merge_descriptor_telemetry(
+                super::build_descriptor(&props.checkbox, &props.state),
+                &props.checkbox.telemetry,
+            );
             let label = descriptor.label().to_string();
             let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
             let class = attr_map.remove("class").unwrap_or_default();
@@ -621,11 +1043,11 @@ pub mod leptos {
                 let state = props.state.clone();
                 move |_event: MouseEvent| {
                     let change = build_change_event(&checkbox, &state);
-                    if let Some(cb) = &on_change {
-                        cb(change.clone());
-                    }
                     if let Some(delegate) = &telemetry {
-                        delegate(CheckboxTelemetryEvent::Change(change));
+                        delegate(CheckboxTelemetryEvent::Change(change.clone()));
+                    }
+                    if let Some(cb) = &on_change {
+                        cb(change);
                     }
                 }
             };
@@ -636,11 +1058,11 @@ pub mod leptos {
                 let state = props.state.clone();
                 move |_event: FocusEvent| {
                     let focus = build_focus_event(&checkbox, &state, true);
-                    if let Some(cb) = &on_focus {
-                        cb(focus.clone());
-                    }
                     if let Some(delegate) = &telemetry {
-                        delegate(CheckboxTelemetryEvent::Focus(focus));
+                        delegate(CheckboxTelemetryEvent::Focus(focus.clone()));
+                    }
+                    if let Some(cb) = &on_focus {
+                        cb(focus);
                     }
                 }
             };
@@ -651,11 +1073,11 @@ pub mod leptos {
                 let state = props.state.clone();
                 move |_event: FocusEvent| {
                     let blur = build_focus_event(&checkbox, &state, false);
-                    if let Some(cb) = &on_blur {
-                        cb(blur.clone());
-                    }
                     if let Some(delegate) = &telemetry {
-                        delegate(CheckboxTelemetryEvent::Blur(blur));
+                        delegate(CheckboxTelemetryEvent::Blur(blur.clone()));
+                    }
+                    if let Some(cb) = &on_blur {
+                        cb(blur);
                     }
                 }
             };
@@ -669,18 +1091,16 @@ pub mod leptos {
                     if let Some(control) = control_key_from_str(event.key().as_str()) {
                         event.prevent_default();
                         let key_event = build_key_event(&checkbox, &state, control);
+                        let change = build_change_event(&checkbox, &state);
+                        if let Some(delegate) = &telemetry {
+                            delegate(CheckboxTelemetryEvent::Key(key_event.clone()));
+                            delegate(CheckboxTelemetryEvent::Change(change.clone()));
+                        }
                         if let Some(cb) = &on_key {
                             cb(key_event.clone());
                         }
-                        if let Some(delegate) = &telemetry {
-                            delegate(CheckboxTelemetryEvent::Key(key_event.clone()));
-                        }
                         if let Some(change_cb) = &on_change {
-                            let change = build_change_event(&checkbox, &state);
-                            change_cb(change.clone());
-                            if let Some(delegate) = &telemetry {
-                                delegate(CheckboxTelemetryEvent::Change(change));
-                            }
+                            change_cb(change);
                         }
                     }
                 }
@@ -761,13 +1181,22 @@ pub mod dioxus {
     }
 
     /// Checkbox rendered through the Dioxus virtual DOM.
+    ///
+    /// Even though the Dioxus adapter does not wire interactive callbacks yet,
+    /// we still document the telemetry flow explicitly so automated governance
+    /// tooling can verify that renders occur inside a [`TelemetryContext`],
+    /// descriptor telemetry defaults are merged, and the resulting attributes
+    /// mirror the other adapters.
     pub fn DioxusCheckbox(cx: Scope<DioxusCheckboxProps>) -> Element {
         let props = cx.props();
         let context = TelemetryContext::new("rustic_ui_material::checkbox::dioxus::DioxusCheckbox")
             .with_analytics(props.checkbox.telemetry.analytics_id.clone())
             .with_automation(props.checkbox.telemetry.automation_id.clone());
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let descriptor = merge_descriptor_telemetry(
+                super::build_descriptor(&props.checkbox, &props.state),
+                &props.checkbox.telemetry,
+            );
             let label = descriptor.label().to_string();
             let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
             let class = attr_map.remove("class").unwrap_or_default();
@@ -836,6 +1265,11 @@ pub mod sycamore {
     }
 
     /// Checkbox rendered within a Sycamore reactive scope.
+    ///
+    /// The adapter mirrors the documentation approach of the other modules,
+    /// highlighting that render telemetry wraps the body and descriptor
+    /// telemetry defaults are merged before exposing attributes to Sycamore's
+    /// view! macro.
     #[component]
     pub fn SycamoreCheckbox<G: Html>(cx: Scope, props: SycamoreCheckboxProps) -> Template<G> {
         let context =
@@ -843,7 +1277,10 @@ pub mod sycamore {
                 .with_analytics(props.checkbox.telemetry.analytics_id.clone())
                 .with_automation(props.checkbox.telemetry.automation_id.clone());
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = super::build_descriptor(&props.checkbox, &props.state);
+            let descriptor = merge_descriptor_telemetry(
+                super::build_descriptor(&props.checkbox, &props.state),
+                &props.checkbox.telemetry,
+            );
             let label = descriptor.label().to_string();
             let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
             let class = attr_map.remove("class").unwrap_or_default();
