@@ -2874,6 +2874,7 @@ pub mod leptos {
 pub mod dioxus {
     //! Dioxus adapter constructed with `rsx!` for idiomatic use in Dioxus apps.
     use super::*;
+    use ::dioxus::core::{Attribute, AttributeValue, DynamicNode, VNode};
     use ::dioxus::prelude::events::{FocusEvent, KeyboardEvent, MouseEvent};
     use ::dioxus::prelude::*;
     use keyboard_types::Key;
@@ -3257,6 +3258,51 @@ pub mod dioxus {
         }
     }
 
+    /// Appends arbitrary theme attributes to an existing [`VNode`], matching the
+    /// spread behaviour used by our React and Leptos adapters so partners receive
+    /// the same automation surface without hand-editing the Dioxus tree.
+    fn extend_node_attributes<'a>(
+        scope: &'a ScopeState,
+        node: &mut VNode<'a>,
+        attributes: &[(String, String)],
+    ) {
+        if attributes.is_empty() {
+            return;
+        }
+
+        let existing = node.dynamic_attrs.len();
+        let bump = scope.bump();
+        let mut merged =
+            bumpalo::collections::Vec::with_capacity_in(existing + attributes.len(), bump);
+
+        // SAFETY: the dynamic attribute slice lives in the scope-local bump
+        // arena. Copying the bytes into a new bump allocation is equivalent to
+        // how the `rsx!` macro hydrates attributes, and the original slice is
+        // discarded with the frame, so we avoid aliasing while keeping parity
+        // with the other adapters.
+        unsafe {
+            merged.set_len(existing);
+            std::ptr::copy_nonoverlapping(
+                node.dynamic_attrs.as_ptr(),
+                merged.as_mut_ptr(),
+                existing,
+            );
+        }
+
+        for (key, value) in attributes {
+            let name = bump.alloc_str(key);
+            let value = bump.alloc_str(value);
+            merged.push(Attribute::new(
+                name,
+                AttributeValue::Text(value),
+                None,
+                false,
+            ));
+        }
+
+        node.dynamic_attrs = merged.into_bump_slice();
+    }
+
     /// Radio group rendered as a Dioxus component.
     pub fn DioxusRadioGroup(cx: Scope<DioxusRadioGroupProps>) -> Element {
         let props = cx.props();
@@ -3284,8 +3330,62 @@ pub mod dioxus {
         let on_blur = props.on_blur.clone();
         let on_key = props.on_key.clone();
         let telemetry_delegate = props.telemetry_delegate.clone();
+        let options_snapshot = snapshot.options.clone();
+        // Collect the group-level attributes eagerly so the Dioxus adapter stays
+        // aligned with the React/Leptos/Yew renderers when new theme metadata is
+        // introduced.  Centralising the spread here keeps enterprise builds free
+        // from repetitive "add this new key" patches.
+        let group_attributes = {
+            let mut attributes = snapshot.extra_attributes.clone();
+            attributes.push(("class".into(), snapshot.class.clone()));
+            attributes.push(("role".into(), snapshot.role.clone()));
+            attributes.push(("aria-orientation".into(), snapshot.aria_orientation.clone()));
+            if let Some(value) = snapshot.aria_disabled.clone() {
+                attributes.push(("aria-disabled".into(), value));
+            }
+            attributes.push(("data-orientation".into(), snapshot.data_orientation.clone()));
+            if let Some(value) = snapshot.analytics_id.clone() {
+                attributes.push(("data-rustic-analytics-id".into(), value));
+            }
+            if let Some(value) = snapshot.automation_id.clone() {
+                attributes.push(("data-automation-id".into(), value));
+            }
+            attributes
+        };
+        // Mirror the group strategy for each option to keep theme tweaks (class,
+        // style, data hooks, etc.) flowing through automatically.
+        let option_attribute_sets = options_snapshot
+            .iter()
+            .map(|option| {
+                let mut attributes = option.extra_attributes.clone();
+                attributes.push(("class".into(), option.class.clone()));
+                attributes.push(("role".into(), option.role.clone()));
+                attributes.push(("aria-checked".into(), option.aria_checked.clone()));
+                if let Some(value) = option.aria_disabled.clone() {
+                    attributes.push(("aria-disabled".into(), value));
+                }
+                attributes.push(("tabindex".into(), option.tabindex.clone()));
+                attributes.push(("data-checked".into(), option.data_checked.clone()));
+                attributes.push((
+                    "data-focus-visible".into(),
+                    option.data_focus_visible.clone(),
+                ));
+                attributes.push(("data-index".into(), option.data_index.clone()));
+                if let Some(value) = option.analytics_id.clone() {
+                    attributes.push(("data-rustic-analytics-id".into(), value));
+                }
+                if let Some(value) = option.automation_id.clone() {
+                    attributes.push(("data-automation-id".into(), value));
+                }
+                attributes
+            })
+            .collect::<Vec<_>>();
+
+        let options = Rc::new(options_snapshot);
+        let option_attribute_sets = Rc::new(option_attribute_sets);
+        let group_attributes = Rc::new(group_attributes);
+
         instrument_render(&telemetry, context, move || {
-            let options = Rc::new(snapshot.options.clone());
             let refresh: Rc<dyn Fn()> = {
                 let scope = scope;
                 Rc::new(move || scope.needs_update())
@@ -3301,72 +3401,92 @@ pub mod dioxus {
                 refresh,
             ));
 
-            scope.render(rsx! {
-                div {
-                    class: snapshot.class.clone(),
-                    role: snapshot.role.clone(),
-                    aria_orientation: snapshot.aria_orientation.clone(),
-                    aria_disabled: snapshot.aria_disabled.clone(),
-                    data_orientation: snapshot.data_orientation.clone(),
-                    data_rustic_analytics_id: snapshot.analytics_id.clone(),
-                    data_automation_id: snapshot.automation_id.clone(),
-                    { options.iter().enumerate().map(|(index, option)| {
-                        let label = option.label.clone();
-                        let handlers = handler_builder.build(index);
-                        let select_runner = handlers.select.clone();
-                        let focus_runner = handlers.focus.clone();
-                        let blur_runner = handlers.blur.clone();
-                        let key_runner = handlers.key.clone();
+            let options = Rc::clone(&options);
+            let option_attribute_sets = Rc::clone(&option_attribute_sets);
+            let group_attributes = Rc::clone(&group_attributes);
 
-                        rsx! {
-                            span {
-                                class: option.class.clone(),
-                                role: option.role.clone(),
-                                aria_checked: option.aria_checked.clone(),
-                                aria_disabled: option.aria_disabled.clone(),
-                                tabindex: option.tabindex.clone(),
-                                data_checked: option.data_checked.clone(),
-                                data_focus_visible: option.data_focus_visible.clone(),
-                                data_index: option.data_index.clone(),
-                                data_rustic_analytics_id: option.analytics_id.clone(),
-                                data_automation_id: option.automation_id.clone(),
-                                // Clicking funnels through the shared runner so telemetry,
-                                // state updates, and consumer callbacks remain in lock-step.
-                                onclick: move |_event: MouseEvent| {
-                                    select_runner();
-                                },
-                                // Focus hooks emit analytics before mutating focus state to
-                                // keep automation ordering deterministic.
-                                onfocus: move |_event: FocusEvent| {
-                                    focus_runner();
-                                },
-                                // Blur mirrors focus to capture analytics prior to clearing
-                                // the headless focus-visible flag.
-                                onblur: move |_event: FocusEvent| {
-                                    blur_runner();
-                                },
-                                // Keyboard interactions normalize the control key before
-                                // delegating into the shared handler, guaranteeing identical
-                                // telemetry sequencing across renderers.
-                                onkeydown: move |event: KeyboardEvent| {
-                                    let raw_key = event.data.key();
-                                    let name = match raw_key {
-                                        Key::Character(ch) => ch,
-                                        Key::Space => " ".to_string(),
-                                        Key::Enter => "Enter".to_string(),
-                                        other => other.to_string(),
-                                    };
-                                    if let Some(control) = control_key_from_str(name.as_str()) {
-                                        event.prevent_default();
-                                        key_runner(control);
-                                    }
-                                },
-                                {label}
+            scope.render(LazyNodes::new(move |scope_state| {
+                let mut node = rsx! {
+                    div {
+                        { options.iter().enumerate().map(|(index, option)| {
+                            let label = option.label.clone();
+                            let handlers = handler_builder.build(index);
+                            let select_runner = handlers.select.clone();
+                            let focus_runner = handlers.focus.clone();
+                            let blur_runner = handlers.blur.clone();
+                            let key_runner = handlers.key.clone();
+
+                            rsx! {
+                                span {
+                                    // Clicking funnels through the shared runner so telemetry,
+                                    // state updates, and consumer callbacks remain in lock-step.
+                                    onclick: move |_event: MouseEvent| {
+                                        select_runner();
+                                    },
+                                    // Focus hooks emit analytics before mutating focus state to
+                                    // keep automation ordering deterministic.
+                                    onfocus: move |_event: FocusEvent| {
+                                        focus_runner();
+                                    },
+                                    // Blur mirrors focus to capture analytics prior to clearing
+                                    // the headless focus-visible flag.
+                                    onblur: move |_event: FocusEvent| {
+                                        blur_runner();
+                                    },
+                                    // Keyboard interactions normalize the control key before
+                                    // delegating into the shared handler, guaranteeing identical
+                                    // telemetry sequencing across renderers.
+                                    onkeydown: move |event: KeyboardEvent| {
+                                        let raw_key = event.data.key();
+                                        let name = match raw_key {
+                                            Key::Character(ch) => ch,
+                                            Key::Space => " ".to_string(),
+                                            Key::Enter => "Enter".to_string(),
+                                            other => other.to_string(),
+                                        };
+                                        if let Some(control) = control_key_from_str(name.as_str()) {
+                                            event.prevent_default();
+                                            key_runner(control);
+                                        }
+                                    },
+                                    {label}
+                                }
+                            }
+                        }) }
+                    }
+                }
+                .call(scope_state);
+
+                // Rehydrate the group container with the precomputed attributes so
+                // any freshly introduced theme hooks (style, data-*, analytics) are
+                // forwarded automatically.
+                extend_node_attributes(scope_state, &mut node, &group_attributes);
+
+                let mut option_attributes = option_attribute_sets.iter();
+                for dynamic in node.dynamic_nodes.iter() {
+                    if let DynamicNode::Fragment(children) = dynamic {
+                        for child in *children {
+                            if let Some(attributes) = option_attributes.next() {
+                                // SAFETY: the VNode instances were just constructed for this render,
+                                // so mutating them in place keeps parity with the other adapters
+                                // while guaranteeing no aliasing across scopes.
+                                let child = unsafe { &mut *(child as *const VNode as *mut VNode) };
+                                // Apply the option attributes lazily so design system experiments
+                                // (think inline `style` or `data-*` analytics probes) flow through
+                                // without revisiting the adapter.
+                                extend_node_attributes(scope_state, child, attributes);
                             }
                         }
-                    }) }
+                    }
                 }
-            })
+
+                debug_assert!(
+                    option_attributes.next().is_none(),
+                    "every option attribute bundle should have been applied",
+                );
+
+                node
+            }))
         })
     }
 
@@ -3650,6 +3770,53 @@ pub mod dioxus {
             drop(order);
 
             assert_eq!(*harness.refresh_counter.borrow(), 1);
+        }
+
+        #[test]
+        fn dioxus_extra_attributes_round_trip_through_virtual_dom() {
+            let state = RadioGroupState::uncontrolled(
+                vec!["Primary".into(), "Secondary".into()],
+                false,
+                RadioOrientation::Horizontal,
+                Some(0),
+            );
+            let mut group = RadioGroupProps::from_state(&state);
+            group
+                .additional_group_attributes
+                .push(("style".into(), "position: relative;".into()));
+            group.additional_option_attributes =
+                vec![vec![("style".into(), "color: crimson;".into())], Vec::new()];
+
+            let props = DioxusRadioGroupProps {
+                group,
+                state: state.clone(),
+                on_change: None,
+                on_focus: None,
+                on_blur: None,
+                on_key: None,
+                telemetry_delegate: None,
+                telemetry: None,
+            };
+
+            let mut dom = VirtualDom::new_with_props(DioxusRadioGroup, props);
+            dom.rebuild();
+            let markup = dioxus_ssr::render(&dom).to_string();
+
+            // Guard the "theme attributes propagate automatically" contract so
+            // enterprise theming hooks (class names, inline experiments, data-*
+            // analytics probes) do not regress silently.
+            assert!(
+                markup.contains("class=\""),
+                "expected class attribute to survive the Dioxus round-trip: {markup}"
+            );
+            assert!(
+                markup.contains("style=\"position: relative;\""),
+                "group style attribute missing after VirtualDom render: {markup}"
+            );
+            assert!(
+                markup.contains("style=\"color: crimson;\""),
+                "option style attribute missing after VirtualDom render: {markup}"
+            );
         }
 
         #[test]
