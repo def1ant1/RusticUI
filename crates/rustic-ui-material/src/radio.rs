@@ -1952,6 +1952,7 @@ pub mod leptos {
         on_blur: Option<FocusCallback>,
         on_key: Option<KeyCallback>,
         telemetry_delegate: Option<TelemetryDelegate>,
+        refresh: Rc<dyn Fn()>,
     }
 
     impl LeptosOptionHandlerBuilder {
@@ -1963,6 +1964,7 @@ pub mod leptos {
             on_blur: Option<FocusCallback>,
             on_key: Option<KeyCallback>,
             telemetry_delegate: Option<TelemetryDelegate>,
+            refresh: Rc<dyn Fn()>,
         ) -> Self {
             Self {
                 state,
@@ -1972,6 +1974,7 @@ pub mod leptos {
                 on_blur,
                 on_key,
                 telemetry_delegate,
+                refresh,
             }
         }
 
@@ -1994,6 +1997,7 @@ pub mod leptos {
             let option = self.options[index].clone();
             let telemetry = self.telemetry_delegate.clone();
             let on_change = self.on_change.clone();
+            let refresh = Rc::clone(&self.refresh);
 
             Rc::new(move || {
                 // Snapshot the current state before any mutation so telemetry
@@ -2023,6 +2027,8 @@ pub mod leptos {
                     state_mut.focus(index);
                 }
 
+                refresh();
+
                 let selected_after = {
                     let state_ref = state.borrow();
                     state_ref.selected_index().or(Some(index))
@@ -2043,6 +2049,7 @@ pub mod leptos {
             let option = self.options[index].clone();
             let telemetry = self.telemetry_delegate.clone();
             let on_focus = self.on_focus.clone();
+            let refresh = Rc::clone(&self.refresh);
 
             Rc::new(move || {
                 let (analytics_event, focus_payload) = {
@@ -2066,6 +2073,8 @@ pub mod leptos {
                     state_mut.focus(index);
                 }
 
+                refresh();
+
                 if let Some(callback) = &on_focus {
                     callback(focus_payload);
                 }
@@ -2077,6 +2086,7 @@ pub mod leptos {
             let option = self.options[index].clone();
             let telemetry = self.telemetry_delegate.clone();
             let on_blur = self.on_blur.clone();
+            let refresh = Rc::clone(&self.refresh);
 
             Rc::new(move || {
                 let (analytics_event, blur_payload) = {
@@ -2100,6 +2110,8 @@ pub mod leptos {
                     state_mut.blur();
                 }
 
+                refresh();
+
                 if let Some(callback) = &on_blur {
                     callback(blur_payload);
                 }
@@ -2113,6 +2125,7 @@ pub mod leptos {
             let on_key = self.on_key.clone();
             let on_change = self.on_change.clone();
             let origin_option = self.options[index].clone();
+            let refresh = Rc::clone(&self.refresh);
 
             Rc::new(move |control: ControlKey| {
                 let (analytics_event, previous, controlled, disabled) = {
@@ -2137,6 +2150,8 @@ pub mod leptos {
                         recorder.borrow_mut().replace(selected);
                     });
                 }
+
+                refresh();
 
                 let mut telemetry_events = Vec::with_capacity(5);
                 telemetry_events.push(analytics_event);
@@ -2250,6 +2265,7 @@ pub mod leptos {
     #[component]
     pub fn LeptosRadioGroup(props: LeptosRadioGroupProps) -> impl IntoView {
         let telemetry = super::merged_telemetry(&props.telemetry, &props.group.telemetry);
+        let telemetry_for_closure = telemetry.clone();
         let (context, _descriptor, snapshot) = super::descriptor_with_context(
             "rustic_ui_material::radio::leptos::LeptosRadioGroup",
             &props.group,
@@ -2259,6 +2275,11 @@ pub mod leptos {
         instrument_render(&telemetry, context, move || {
             let state_handle = Rc::new(RefCell::new(props.state.clone()));
             let options = Rc::new(snapshot.options.clone());
+            let (version, set_version) = create_signal(0u64);
+            let refresh = {
+                let set_version = set_version.clone();
+                Rc::new(move || set_version.update(|tick| *tick = tick.wrapping_add(1)))
+            };
             let handler_builder = Rc::new(LeptosOptionHandlerBuilder::new(
                 Rc::clone(&state_handle),
                 Rc::clone(&options),
@@ -2267,36 +2288,112 @@ pub mod leptos {
                 props.on_blur.clone(),
                 props.on_key.clone(),
                 props.telemetry_delegate.clone(),
+                Rc::clone(&refresh),
             ));
+
+            let state_for_snapshot = Rc::clone(&state_handle);
+            let group_for_snapshot = props.group.clone();
+            let telemetry_for_snapshot = telemetry_for_closure.clone();
+            let snapshot_signal = create_memo(move |_| {
+                version.get();
+                let state_ref = state_for_snapshot.borrow();
+                let descriptor = super::build_descriptor(
+                    &group_for_snapshot,
+                    &telemetry_for_snapshot,
+                    &state_ref,
+                );
+                RadioGroupDescriptorSnapshot::from_descriptor(&descriptor)
+            });
 
             let option_views: Vec<View> = options
                 .iter()
                 .enumerate()
                 .map({
                     let builder = Rc::clone(&handler_builder);
-                    move |(index, option)| {
-                        let option_snapshot = option.clone();
+                    let snapshot_signal = snapshot_signal.clone();
+                    move |(index, _option)| {
                         let handlers = builder.build(index);
                         let select_runner = handlers.select.clone();
-                        let change_runner = handlers.select.clone();
                         let focus_runner = handlers.focus.clone();
                         let blur_runner = handlers.blur.clone();
                         let key_runner = handlers.key.clone();
+                        let snapshot_signal_for_option = snapshot_signal.clone();
+                        let index_for_option = index;
 
                         view! {
                             <span
-                                class=option_snapshot.class.clone()
-                                role=option_snapshot.role.clone()
-                                aria-checked=option_snapshot.aria_checked.clone()
-                                aria-disabled=option_snapshot.aria_disabled.clone()
-                                tabindex=option_snapshot.tabindex.clone()
-                                data_checked=option_snapshot.data_checked.clone()
-                                data_focus_visible=option_snapshot.data_focus_visible.clone()
-                                data_index=option_snapshot.data_index.clone()
-                                data_rustic_analytics_id=option_snapshot.analytics_id.clone()
-                                data_automation_id=option_snapshot.automation_id.clone()
+                                class=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .class
+                                        .clone()
+                                }
+                                attr:role=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .role
+                                        .clone()
+                                }
+                                attr:aria-checked=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .aria_checked
+                                        .clone()
+                                }
+                                attr:aria-disabled=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .aria_disabled
+                                        .clone()
+                                }
+                                attr:tabindex=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .tabindex
+                                        .clone()
+                                }
+                                attr:data-checked=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .data_checked
+                                        .clone()
+                                }
+                                attr:data-focus-visible=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .data_focus_visible
+                                        .clone()
+                                }
+                                attr:data-index=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .data_index
+                                        .clone()
+                                }
+                                attr:data-rustic-analytics-id=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .analytics_id
+                                        .clone()
+                                }
+                                attr:data-automation-id=move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .automation_id
+                                        .clone()
+                                }
                                 on:click=move |_event: MouseEvent| select_runner()
-                                on:change=move |_event: Event| change_runner()
+                                on:change=move |_event: Event| select_runner()
                                 on:focus=move |_event: FocusEvent| focus_runner()
                                 on:blur=move |_event: FocusEvent| blur_runner()
                                 on:keydown=move |event: KeyboardEvent| {
@@ -2305,7 +2402,13 @@ pub mod leptos {
                                         key_runner(control);
                                     }
                                 }
-                            >{option_snapshot.label.clone()}</span>
+                            >{move || {
+                                snapshot_signal_for_option
+                                    .get()
+                                    .options[index_for_option]
+                                    .label
+                                    .clone()
+                            }}</span>
                         }
                     }
                 })
@@ -2313,15 +2416,22 @@ pub mod leptos {
 
             let options_fragment = View::new_fragment(option_views);
 
+            let group_snapshot = snapshot_signal.clone();
             view! {
                 <div
-                    class=snapshot.class.clone()
-                    role=snapshot.role.clone()
-                    aria-orientation=snapshot.aria_orientation.clone()
-                    aria-disabled=snapshot.aria_disabled.clone()
-                    data-orientation=snapshot.data_orientation.clone()
-                    data_rustic_analytics_id=snapshot.analytics_id.clone()
-                    data_automation_id=snapshot.automation_id.clone()
+                    class=move || group_snapshot.get().class.clone()
+                    attr:role=move || group_snapshot.get().role.clone()
+                    attr:aria-orientation=move || {
+                        group_snapshot.get().aria_orientation.clone()
+                    }
+                    attr:aria-disabled=move || group_snapshot.get().aria_disabled.clone()
+                    attr:data-orientation=move || group_snapshot.get().data_orientation.clone()
+                    attr:data-rustic-analytics-id=move || {
+                        group_snapshot.get().analytics_id.clone()
+                    }
+                    attr:data-automation-id=move || {
+                        group_snapshot.get().automation_id.clone()
+                    }
                 >{options_fragment}</div>
             }
         })
@@ -2340,6 +2450,7 @@ pub mod leptos {
             focus_events: Rc<RefCell<Vec<RadioFocusEvent>>>,
             blur_events: Rc<RefCell<Vec<RadioFocusEvent>>>,
             key_events: Rc<RefCell<Vec<RadioKeyEvent>>>,
+            refresh_counter: Rc<RefCell<usize>>,
             builder: Rc<LeptosOptionHandlerBuilder>,
         }
 
@@ -2377,6 +2488,7 @@ pub mod leptos {
                 let focus_events = Rc::new(RefCell::new(Vec::new()));
                 let blur_events = Rc::new(RefCell::new(Vec::new()));
                 let key_events = Rc::new(RefCell::new(Vec::new()));
+                let refresh_counter = Rc::new(RefCell::new(0usize));
 
                 let telemetry_delegate: TelemetryDelegate = {
                     let order = Rc::clone(&order);
@@ -2423,6 +2535,14 @@ pub mod leptos {
                     })
                 };
 
+                let refresh = {
+                    let counter = Rc::clone(&refresh_counter);
+                    Rc::new(move || {
+                        let mut count = counter.borrow_mut();
+                        *count = count.wrapping_add(1);
+                    }) as Rc<dyn Fn()>
+                };
+
                 let builder = Rc::new(LeptosOptionHandlerBuilder::new(
                     Rc::clone(&state_handle),
                     Rc::clone(&options),
@@ -2431,6 +2551,7 @@ pub mod leptos {
                     Some(on_blur),
                     Some(on_key),
                     Some(telemetry_delegate),
+                    refresh,
                 ));
 
                 Self {
@@ -2442,6 +2563,7 @@ pub mod leptos {
                     focus_events,
                     blur_events,
                     key_events,
+                    refresh_counter,
                     builder,
                 }
             }
@@ -2479,6 +2601,9 @@ pub mod leptos {
             assert!(order[1].starts_with("telemetry::Change"));
             assert!(order[2].starts_with("telemetry::Commit"));
             assert_eq!(order[3], "callback::change");
+            drop(order);
+
+            assert_eq!(*harness.refresh_counter.borrow(), 1);
         }
 
         #[test]
@@ -2508,6 +2633,9 @@ pub mod leptos {
 
             let order = harness.order.borrow();
             assert_eq!(order[3], "callback::change");
+            drop(order);
+
+            assert_eq!(*harness.refresh_counter.borrow(), 1);
         }
 
         #[test]
@@ -2545,6 +2673,8 @@ pub mod leptos {
             assert!(order[4].starts_with("telemetry::Blur"));
             assert_eq!(order[5], "callback::blur");
             drop(order);
+
+            assert_eq!(*harness.refresh_counter.borrow(), 2);
         }
 
         #[test]
@@ -2582,6 +2712,9 @@ pub mod leptos {
             assert!(order[4].starts_with("telemetry::Commit"));
             assert_eq!(order[5], "callback::key");
             assert_eq!(order[6], "callback::change");
+            drop(order);
+
+            assert_eq!(*harness.refresh_counter.borrow(), 1);
         }
 
         #[test]
