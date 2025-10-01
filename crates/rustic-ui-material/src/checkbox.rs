@@ -46,7 +46,6 @@ use rustic_ui_headless::{
     interaction::ControlKey,
 };
 use rustic_ui_styled_engine::{css_with_theme, Style};
-use std::collections::HashMap;
 
 #[cfg(feature = "react")]
 use wasm_bindgen::JsValue;
@@ -239,19 +238,11 @@ fn build_descriptor(props: &CheckboxProps, state: &CheckboxState) -> ToggleContr
 
 #[allow(dead_code)]
 fn render_html(props: &CheckboxProps, state: &CheckboxState) -> String {
-    let context = TelemetryContext::new("rustic_ui_material::checkbox::render_html")
-        .with_analytics(props.telemetry.analytics_id.clone())
-        .with_automation(props.telemetry.automation_id.clone());
+    let (context, descriptor, _snapshot) =
+        descriptor_with_context("rustic_ui_material::checkbox::render_html", props, state);
     instrument_render(&props.telemetry, context, || {
-        let descriptor =
-            merge_descriptor_telemetry(build_descriptor(props, state), &props.telemetry);
         selection_control::render_toggle_html(&descriptor)
     })
-}
-
-#[allow(dead_code)]
-fn attributes_to_map(pairs: Vec<(String, String)>) -> HashMap<String, String> {
-    pairs.into_iter().collect()
 }
 
 fn merge_descriptor_telemetry(
@@ -277,6 +268,79 @@ fn merge_descriptor_telemetry(
     }
 
     descriptor
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CheckboxDescriptorSnapshot {
+    label: String,
+    themed_attributes: Vec<(String, String)>,
+    class: String,
+    role: String,
+    aria_checked: String,
+    aria_disabled: Option<String>,
+    tabindex: String,
+    data_checked: String,
+    data_focus_visible: String,
+    data_indeterminate: String,
+}
+
+impl CheckboxDescriptorSnapshot {
+    fn from_descriptor(descriptor: &ToggleControlDescriptor) -> Self {
+        let themed_attributes = descriptor.themed_attributes();
+        let mut class = String::new();
+        let mut role = String::from("checkbox");
+        let mut aria_checked = String::from("false");
+        let mut aria_disabled = None;
+        let mut tabindex = String::from("0");
+        let mut data_checked = String::from("false");
+        let mut data_focus_visible = String::from("false");
+        let mut data_indeterminate = String::from("false");
+
+        for (key, value) in &themed_attributes {
+            match key.as_str() {
+                "class" => class = value.clone(),
+                "role" => role = value.clone(),
+                "aria-checked" => aria_checked = value.clone(),
+                "aria-disabled" => aria_disabled = Some(value.clone()),
+                "tabindex" => tabindex = value.clone(),
+                "data-checked" => data_checked = value.clone(),
+                "data-focus-visible" => data_focus_visible = value.clone(),
+                "data-indeterminate" => data_indeterminate = value.clone(),
+                _ => {}
+            }
+        }
+
+        Self {
+            label: descriptor.label().to_string(),
+            themed_attributes,
+            class,
+            role,
+            aria_checked,
+            aria_disabled,
+            tabindex,
+            data_checked,
+            data_focus_visible,
+            data_indeterminate,
+        }
+    }
+}
+
+fn descriptor_with_context(
+    component: &'static str,
+    props: &CheckboxProps,
+    state: &CheckboxState,
+) -> (
+    TelemetryContext,
+    ToggleControlDescriptor,
+    CheckboxDescriptorSnapshot,
+) {
+    let descriptor = merge_descriptor_telemetry(build_descriptor(props, state), &props.telemetry);
+    let snapshot = CheckboxDescriptorSnapshot::from_descriptor(&descriptor);
+    let context = TelemetryContext::new(component)
+        .with_analytics(props.telemetry.analytics_id.clone())
+        .with_automation(props.telemetry.automation_id.clone())
+        .with_descriptor_metadata(snapshot.label.clone(), snapshot.themed_attributes.clone());
+    (context, descriptor, snapshot)
 }
 
 #[cfg(feature = "react")]
@@ -544,6 +608,8 @@ pub mod react {
     //! React adapter producing `Jsx` nodes via the `wasm_bindgen` bridge.
     use super::*;
     use js_sys::{Array, Function, Object, Reflect};
+    use std::{cell::RefCell, rc::Rc};
+    use std::{cell::RefCell, rc::Rc};
     use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 
     /// Type alias representing React elements returned through the WASM bridge.
@@ -645,7 +711,10 @@ pub mod react {
         object
     }
 
-    fn change_handler(props: &ReactCheckboxProps) -> Option<Function> {
+    fn change_handler(
+        props: &ReactCheckboxProps,
+        state_handle: &Rc<RefCell<CheckboxState>>,
+    ) -> Option<Function> {
         if props.on_change.is_none() && props.telemetry_delegate.is_none() {
             return None;
         }
@@ -653,10 +722,13 @@ pub mod react {
         let telemetry = props.telemetry_delegate.clone();
         let on_change = props.on_change.clone();
         let checkbox = props.checkbox.clone();
-        let state = props.state.clone();
+        let state = Rc::clone(state_handle);
 
         let closure = Closure::wrap(Box::new(move |event: JsValue| {
-            let change = build_change_event(&checkbox, &state);
+            let change = {
+                let state = state.borrow();
+                build_change_event(&checkbox, &state)
+            };
             if let Some(delegate) = telemetry.as_ref() {
                 let payload = telemetry_event_to_js(CheckboxTelemetryEvent::Change(change.clone()));
                 let _ = delegate.call1(&JsValue::NULL, &payload);
@@ -664,6 +736,10 @@ pub mod react {
             if let Some(handler) = on_change.as_ref() {
                 let _ = handler.call1(&JsValue::NULL, &event);
             }
+            {
+                let mut state = state.borrow_mut();
+                state.toggle(|_| {});
+            }
         }) as Box<dyn FnMut(JsValue)>);
 
         let function: Function = closure.as_ref().clone().unchecked_into();
@@ -671,7 +747,10 @@ pub mod react {
         Some(function)
     }
 
-    fn focus_handler(props: &ReactCheckboxProps) -> Option<Function> {
+    fn focus_handler(
+        props: &ReactCheckboxProps,
+        state_handle: &Rc<RefCell<CheckboxState>>,
+    ) -> Option<Function> {
         if props.on_focus.is_none() && props.telemetry_delegate.is_none() {
             return None;
         }
@@ -679,10 +758,13 @@ pub mod react {
         let telemetry = props.telemetry_delegate.clone();
         let on_focus = props.on_focus.clone();
         let checkbox = props.checkbox.clone();
-        let state = props.state.clone();
+        let state = Rc::clone(state_handle);
 
         let closure = Closure::wrap(Box::new(move |event: JsValue| {
-            let focus = build_focus_event(&checkbox, &state, true);
+            let focus = {
+                let state = state.borrow();
+                build_focus_event(&checkbox, &state, true)
+            };
             if let Some(delegate) = telemetry.as_ref() {
                 let payload = telemetry_event_to_js(CheckboxTelemetryEvent::Focus(focus.clone()));
                 let _ = delegate.call1(&JsValue::NULL, &payload);
@@ -690,6 +772,10 @@ pub mod react {
             if let Some(handler) = on_focus.as_ref() {
                 let _ = handler.call1(&JsValue::NULL, &event);
             }
+            {
+                let mut state = state.borrow_mut();
+                state.focus();
+            }
         }) as Box<dyn FnMut(JsValue)>);
 
         let function: Function = closure.as_ref().clone().unchecked_into();
@@ -697,7 +783,10 @@ pub mod react {
         Some(function)
     }
 
-    fn blur_handler(props: &ReactCheckboxProps) -> Option<Function> {
+    fn blur_handler(
+        props: &ReactCheckboxProps,
+        state_handle: &Rc<RefCell<CheckboxState>>,
+    ) -> Option<Function> {
         if props.on_blur.is_none() && props.telemetry_delegate.is_none() {
             return None;
         }
@@ -705,16 +794,23 @@ pub mod react {
         let telemetry = props.telemetry_delegate.clone();
         let on_blur = props.on_blur.clone();
         let checkbox = props.checkbox.clone();
-        let state = props.state.clone();
+        let state = Rc::clone(state_handle);
 
         let closure = Closure::wrap(Box::new(move |event: JsValue| {
-            let blur = build_focus_event(&checkbox, &state, false);
+            let blur = {
+                let state = state.borrow();
+                build_focus_event(&checkbox, &state, false)
+            };
             if let Some(delegate) = telemetry.as_ref() {
                 let payload = telemetry_event_to_js(CheckboxTelemetryEvent::Blur(blur.clone()));
                 let _ = delegate.call1(&JsValue::NULL, &payload);
             }
             if let Some(handler) = on_blur.as_ref() {
                 let _ = handler.call1(&JsValue::NULL, &event);
+            }
+            {
+                let mut state = state.borrow_mut();
+                state.blur();
             }
         }) as Box<dyn FnMut(JsValue)>);
 
@@ -723,7 +819,10 @@ pub mod react {
         Some(function)
     }
 
-    fn key_handler(props: &ReactCheckboxProps) -> Option<Function> {
+    fn key_handler(
+        props: &ReactCheckboxProps,
+        state_handle: &Rc<RefCell<CheckboxState>>,
+    ) -> Option<Function> {
         if props.on_key.is_none() && props.on_change.is_none() && props.telemetry_delegate.is_none()
         {
             return None;
@@ -733,7 +832,7 @@ pub mod react {
         let on_key = props.on_key.clone();
         let on_change = props.on_change.clone();
         let checkbox = props.checkbox.clone();
-        let state = props.state.clone();
+        let state = Rc::clone(state_handle);
 
         let closure = Closure::wrap(Box::new(move |event: JsValue| {
             let key_value = Reflect::get(&event, &JsValue::from_str("key"))
@@ -746,8 +845,13 @@ pub mod react {
                     }
                 }
 
-                let key_event = build_key_event(&checkbox, &state, key);
-                let change_event = build_change_event(&checkbox, &state);
+                let (key_event, change_event) = {
+                    let state = state.borrow();
+                    (
+                        build_key_event(&checkbox, &state, key),
+                        build_change_event(&checkbox, &state),
+                    )
+                };
 
                 if let Some(delegate) = telemetry.as_ref() {
                     let key_payload =
@@ -765,6 +869,11 @@ pub mod react {
                 if let Some(handler) = on_change.as_ref() {
                     let _ = handler.call1(&JsValue::NULL, &event);
                 }
+
+                {
+                    let mut state = state.borrow_mut();
+                    state.on_key(key, |_| {});
+                }
             }
         }) as Box<dyn FnMut(JsValue)>);
 
@@ -773,12 +882,15 @@ pub mod react {
         Some(function)
     }
 
-    fn handlers(props: &ReactCheckboxProps) -> ReactHandlers {
+    fn handlers(
+        props: &ReactCheckboxProps,
+        state_handle: Rc<RefCell<CheckboxState>>,
+    ) -> ReactHandlers {
         ReactHandlers {
-            on_change: change_handler(props),
-            on_focus: focus_handler(props),
-            on_blur: blur_handler(props),
-            on_key: key_handler(props),
+            on_change: change_handler(props, &state_handle),
+            on_focus: focus_handler(props, &state_handle),
+            on_blur: blur_handler(props, &state_handle),
+            on_key: key_handler(props, &state_handle),
         }
     }
 
@@ -789,8 +901,9 @@ pub mod react {
     /// so enterprise governance teams understand the render lifecycle:
     ///
     /// * A [`TelemetryContext`] seeded with the fully-qualified component path
-    ///   is constructed so downstream spans, analytics sinks, and error hooks
-    ///   can attribute metrics back to this adapter.
+    ///   and decorated with descriptor metadata is constructed so downstream
+    ///   spans, analytics sinks, and error hooks can attribute metrics and
+    ///   attribute snapshots back to this adapter.
     /// * [`instrument_render`] enters the context span, ensures success/error
     ///   hooks run, and propagates analytics/automation identifiers extracted
     ///   from [`CheckboxProps::telemetry`].
@@ -802,18 +915,22 @@ pub mod react {
     ///   **before** invoking user logic. This guarantees analytics capture
     ///   precedes side effects, aligning with audit requirements in regulated
     ///   environments.
+    /// * After telemetry delegates and consumer callbacks run, the captured
+    ///   [`CheckboxState`] is mutated via [`CheckboxState::toggle`],
+    ///   [`CheckboxState::focus`], [`CheckboxState::blur`], and
+    ///   [`CheckboxState::on_key`] so UI transitions always flow through the
+    ///   shared headless state machine.
     pub fn ReactCheckbox(props: &ReactCheckboxProps) -> Jsx {
-        let context = TelemetryContext::new("rustic_ui_material::checkbox::react::ReactCheckbox")
-            .with_analytics(props.checkbox.telemetry.analytics_id.clone())
-            .with_automation(props.checkbox.telemetry.automation_id.clone());
+        let (context, _descriptor, snapshot) = descriptor_with_context(
+            "rustic_ui_material::checkbox::react::ReactCheckbox",
+            &props.checkbox,
+            &props.state,
+        );
+        let state_handle = Rc::new(RefCell::new(props.state.clone()));
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = merge_descriptor_telemetry(
-                super::build_descriptor(&props.checkbox, &props.state),
-                &props.checkbox.telemetry,
-            );
-            let label = descriptor.label().to_string();
-            let attributes = descriptor.themed_attributes();
-            let handlers = handlers(props);
+            let label = snapshot.label.clone();
+            let attributes = snapshot.themed_attributes.clone();
+            let handlers = handlers(props, Rc::clone(&state_handle));
             let props_object = build_props_object(attributes, &handlers);
             create_element("span", props_object, &[JsValue::from_str(&label)])
         })
@@ -859,8 +976,10 @@ pub mod yew {
     /// enterprise adapters, spelling out the render lifecycle so governance and
     /// QA teams can trace telemetry:
     ///
-    /// * [`TelemetryContext`] is seeded with the component name and populated
-    ///   with analytics/automation identifiers from [`CheckboxProps`].
+    /// * [`TelemetryContext`] is seeded with the component name, populated with
+    ///   analytics/automation identifiers from [`CheckboxProps`], and enriched
+    ///   with descriptor metadata so diagnostics capture the rendered
+    ///   attributes.
     /// * [`instrument_render`] enters the span and invokes success/error hooks,
     ///   ensuring render panics propagate structured
     ///   [`crate::telemetry::TelemetryError`] events.
@@ -870,30 +989,40 @@ pub mod yew {
     /// * Event handlers route structured [`CheckboxTelemetryEvent`] payloads to
     ///   the optional telemetry delegate **before** invoking user callbacks so
     ///   analytics capture consistently precedes consumer side effects.
+    /// * After telemetry flows, the shared [`CheckboxState`] transitions via
+    ///   [`CheckboxState::toggle`], [`CheckboxState::focus`],
+    ///   [`CheckboxState::blur`], and [`CheckboxState::on_key`] ensuring the UI
+    ///   always reflects the canonical headless state.
     #[function_component(YewCheckbox)]
     pub fn yew_checkbox(props: &YewCheckboxProps) -> Html {
-        let context = TelemetryContext::new("rustic_ui_material::checkbox::yew::YewCheckbox")
-            .with_analytics(props.checkbox.telemetry.analytics_id.clone())
-            .with_automation(props.checkbox.telemetry.automation_id.clone());
+        let (context, _descriptor, snapshot) = descriptor_with_context(
+            "rustic_ui_material::checkbox::yew::YewCheckbox",
+            &props.checkbox,
+            &props.state,
+        );
+        let state_handle = Rc::new(RefCell::new(props.state.clone()));
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = merge_descriptor_telemetry(
-                super::build_descriptor(&props.checkbox, &props.state),
-                &props.checkbox.telemetry,
-            );
-            let label = descriptor.label().to_string();
-            let attrs = descriptor.themed_attributes();
+            let label = snapshot.label.clone();
+            let attrs = snapshot.themed_attributes.clone();
             let change_handler = {
                 let on_change = props.on_change.clone();
                 let telemetry = props.telemetry_delegate.clone();
                 let checkbox = props.checkbox.clone();
-                let state = props.state.clone();
+                let state = Rc::clone(&state_handle);
                 Callback::from(move |_event: MouseEvent| {
-                    let change = build_change_event(&checkbox, &state);
+                    let change = {
+                        let state = state.borrow();
+                        build_change_event(&checkbox, &state)
+                    };
                     if let Some(delegate) = &telemetry {
                         delegate.emit(CheckboxTelemetryEvent::Change(change.clone()));
                     }
                     if let Some(cb) = &on_change {
-                        cb.emit(change);
+                        cb.emit(change.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.toggle(|_| {});
                     }
                 })
             };
@@ -901,14 +1030,21 @@ pub mod yew {
                 let on_focus = props.on_focus.clone();
                 let telemetry = props.telemetry_delegate.clone();
                 let checkbox = props.checkbox.clone();
-                let state = props.state.clone();
+                let state = Rc::clone(&state_handle);
                 Callback::from(move |_event: FocusEvent| {
-                    let focus = build_focus_event(&checkbox, &state, true);
+                    let focus = {
+                        let state = state.borrow();
+                        build_focus_event(&checkbox, &state, true)
+                    };
                     if let Some(delegate) = &telemetry {
                         delegate.emit(CheckboxTelemetryEvent::Focus(focus.clone()));
                     }
                     if let Some(cb) = &on_focus {
-                        cb.emit(focus);
+                        cb.emit(focus.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.focus();
                     }
                 })
             };
@@ -916,14 +1052,21 @@ pub mod yew {
                 let on_blur = props.on_blur.clone();
                 let telemetry = props.telemetry_delegate.clone();
                 let checkbox = props.checkbox.clone();
-                let state = props.state.clone();
+                let state = Rc::clone(&state_handle);
                 Callback::from(move |_event: FocusEvent| {
-                    let blur = build_focus_event(&checkbox, &state, false);
+                    let blur = {
+                        let state = state.borrow();
+                        build_focus_event(&checkbox, &state, false)
+                    };
                     if let Some(delegate) = &telemetry {
                         delegate.emit(CheckboxTelemetryEvent::Blur(blur.clone()));
                     }
                     if let Some(cb) = &on_blur {
-                        cb.emit(blur);
+                        cb.emit(blur.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.blur();
                     }
                 })
             };
@@ -932,12 +1075,17 @@ pub mod yew {
                 let on_change = props.on_change.clone();
                 let telemetry = props.telemetry_delegate.clone();
                 let checkbox = props.checkbox.clone();
-                let state = props.state.clone();
+                let state = Rc::clone(&state_handle);
                 Callback::from(move |event: KeyboardEvent| {
                     if let Some(control) = control_key_from_str(event.key().as_str()) {
                         event.prevent_default();
-                        let key_event = build_key_event(&checkbox, &state, control);
-                        let change = build_change_event(&checkbox, &state);
+                        let (key_event, change) = {
+                            let state = state.borrow();
+                            (
+                                build_key_event(&checkbox, &state, control),
+                                build_change_event(&checkbox, &state),
+                            )
+                        };
                         if let Some(delegate) = &telemetry {
                             delegate.emit(CheckboxTelemetryEvent::Key(key_event.clone()));
                             delegate.emit(CheckboxTelemetryEvent::Change(change.clone()));
@@ -946,7 +1094,11 @@ pub mod yew {
                             cb.emit(key_event.clone());
                         }
                         if let Some(change_cb) = &on_change {
-                            change_cb.emit(change);
+                            change_cb.emit(change.clone());
+                        }
+                        {
+                            let mut state = state.borrow_mut();
+                            state.on_key(control, |_| {});
                         }
                     }
                 })
@@ -972,7 +1124,7 @@ pub mod leptos {
     use super::*;
     use leptos::ev::{FocusEvent, KeyboardEvent, MouseEvent};
     use leptos::prelude::*;
-    use std::rc::Rc;
+    use std::{cell::RefCell, rc::Rc};
 
     /// Properties accepted by [`LeptosCheckbox`].
     #[derive(Clone)]
@@ -998,56 +1150,54 @@ pub mod leptos {
     /// Yew/React integrations. The documentation explicitly calls out the
     /// render order so observability and QA teams can validate automation:
     ///
-    /// * A [`TelemetryContext`] seeded with the component name feeds
-    ///   [`instrument_render`], wiring analytics/automation identifiers into the
-    ///   tracing span.
+    /// * A [`TelemetryContext`] seeded with the component name and descriptor
+    ///   metadata feeds [`instrument_render`], wiring analytics/automation
+    ///   identifiers and attribute snapshots into the tracing span.
     /// * Descriptor telemetry defaults are merged before extracting themed
     ///   attributes, guaranteeing SSR and CSR renders emit identical `data-*`
     ///   markers.
     /// * Event closures emit [`CheckboxTelemetryEvent`] payloads to the
     ///   telemetry delegate **before** executing user callbacks, keeping
     ///   analytics capture deterministic.
+    /// * [`CheckboxState`] transitions (`toggle`/`focus`/`blur`/`on_key`) execute
+    ///   after telemetry delegates fire so the UI mutates through the shared
+    ///   headless state machine while preserving analytics ordering.
     pub fn LeptosCheckbox(props: LeptosCheckboxProps) -> impl IntoView {
-        let context = TelemetryContext::new("rustic_ui_material::checkbox::leptos::LeptosCheckbox")
-            .with_analytics(props.checkbox.telemetry.analytics_id.clone())
-            .with_automation(props.checkbox.telemetry.automation_id.clone());
+        let (context, _descriptor, snapshot) = descriptor_with_context(
+            "rustic_ui_material::checkbox::leptos::LeptosCheckbox",
+            &props.checkbox,
+            &props.state,
+        );
+        let state_handle = Rc::new(RefCell::new(props.state.clone()));
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = merge_descriptor_telemetry(
-                super::build_descriptor(&props.checkbox, &props.state),
-                &props.checkbox.telemetry,
-            );
-            let label = descriptor.label().to_string();
-            let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
-            let class = attr_map.remove("class").unwrap_or_default();
-            let role = attr_map.remove("role").unwrap_or_else(|| "checkbox".into());
-            let aria_checked = attr_map
-                .remove("aria-checked")
-                .unwrap_or_else(|| String::from("false"));
-            let aria_disabled = attr_map.remove("aria-disabled");
-            let tabindex = attr_map
-                .remove("tabindex")
-                .unwrap_or_else(|| String::from("0"));
-            let data_checked = attr_map
-                .remove("data-checked")
-                .unwrap_or_else(|| String::from("false"));
-            let data_focus_visible = attr_map
-                .remove("data-focus-visible")
-                .unwrap_or_else(|| String::from("false"));
-            let data_indeterminate = attr_map
-                .remove("data-indeterminate")
-                .unwrap_or_else(|| String::from("false"));
+            let label = snapshot.label.clone();
+            let class = snapshot.class.clone();
+            let role = snapshot.role.clone();
+            let aria_checked = snapshot.aria_checked.clone();
+            let aria_disabled = snapshot.aria_disabled.clone();
+            let tabindex = snapshot.tabindex.clone();
+            let data_checked = snapshot.data_checked.clone();
+            let data_focus_visible = snapshot.data_focus_visible.clone();
+            let data_indeterminate = snapshot.data_indeterminate.clone();
             let on_click = {
                 let on_change = props.on_change.clone();
                 let telemetry = props.telemetry_delegate.clone();
                 let checkbox = props.checkbox.clone();
-                let state = props.state.clone();
+                let state = Rc::clone(&state_handle);
                 move |_event: MouseEvent| {
-                    let change = build_change_event(&checkbox, &state);
+                    let change = {
+                        let state = state.borrow();
+                        build_change_event(&checkbox, &state)
+                    };
                     if let Some(delegate) = &telemetry {
                         delegate(CheckboxTelemetryEvent::Change(change.clone()));
                     }
                     if let Some(cb) = &on_change {
-                        cb(change);
+                        cb(change.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.toggle(|_| {});
                     }
                 }
             };
@@ -1055,14 +1205,21 @@ pub mod leptos {
                 let on_focus = props.on_focus.clone();
                 let telemetry = props.telemetry_delegate.clone();
                 let checkbox = props.checkbox.clone();
-                let state = props.state.clone();
+                let state = Rc::clone(&state_handle);
                 move |_event: FocusEvent| {
-                    let focus = build_focus_event(&checkbox, &state, true);
+                    let focus = {
+                        let state = state.borrow();
+                        build_focus_event(&checkbox, &state, true)
+                    };
                     if let Some(delegate) = &telemetry {
                         delegate(CheckboxTelemetryEvent::Focus(focus.clone()));
                     }
                     if let Some(cb) = &on_focus {
-                        cb(focus);
+                        cb(focus.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.focus();
                     }
                 }
             };
@@ -1070,14 +1227,21 @@ pub mod leptos {
                 let on_blur = props.on_blur.clone();
                 let telemetry = props.telemetry_delegate.clone();
                 let checkbox = props.checkbox.clone();
-                let state = props.state.clone();
+                let state = Rc::clone(&state_handle);
                 move |_event: FocusEvent| {
-                    let blur = build_focus_event(&checkbox, &state, false);
+                    let blur = {
+                        let state = state.borrow();
+                        build_focus_event(&checkbox, &state, false)
+                    };
                     if let Some(delegate) = &telemetry {
                         delegate(CheckboxTelemetryEvent::Blur(blur.clone()));
                     }
                     if let Some(cb) = &on_blur {
-                        cb(blur);
+                        cb(blur.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.blur();
                     }
                 }
             };
@@ -1086,12 +1250,17 @@ pub mod leptos {
                 let on_change = props.on_change.clone();
                 let telemetry = props.telemetry_delegate.clone();
                 let checkbox = props.checkbox.clone();
-                let state = props.state.clone();
+                let state = Rc::clone(&state_handle);
                 move |event: KeyboardEvent| {
                     if let Some(control) = control_key_from_str(event.key().as_str()) {
                         event.prevent_default();
-                        let key_event = build_key_event(&checkbox, &state, control);
-                        let change = build_change_event(&checkbox, &state);
+                        let (key_event, change) = {
+                            let state = state.borrow();
+                            (
+                                build_key_event(&checkbox, &state, control),
+                                build_change_event(&checkbox, &state),
+                            )
+                        };
                         if let Some(delegate) = &telemetry {
                             delegate(CheckboxTelemetryEvent::Key(key_event.clone()));
                             delegate(CheckboxTelemetryEvent::Change(change.clone()));
@@ -1100,7 +1269,11 @@ pub mod leptos {
                             cb(key_event.clone());
                         }
                         if let Some(change_cb) = &on_change {
-                            change_cb(change);
+                            change_cb(change.clone());
+                        }
+                        {
+                            let mut state = state.borrow_mut();
+                            state.on_key(control, |_| {});
                         }
                     }
                 }
@@ -1131,8 +1304,10 @@ pub mod dioxus {
     //! Dioxus adapter using `rsx!` so teams can hydrate the checkbox inside
     //! Dioxus shells without falling back to raw HTML strings.
     use super::*;
+    use dioxus::prelude::events::{FocusEvent, KeyboardEvent, MouseEvent};
     use dioxus::prelude::*;
-    use std::rc::Rc;
+    use keyboard_types::Key;
+    use std::{cell::RefCell, rc::Rc};
 
     /// Properties accepted by [`DioxusCheckbox`].
     #[derive(Props, Clone)]
@@ -1182,41 +1357,145 @@ pub mod dioxus {
 
     /// Checkbox rendered through the Dioxus virtual DOM.
     ///
-    /// Even though the Dioxus adapter does not wire interactive callbacks yet,
-    /// we still document the telemetry flow explicitly so automated governance
-    /// tooling can verify that renders occur inside a [`TelemetryContext`],
-    /// descriptor telemetry defaults are merged, and the resulting attributes
-    /// mirror the other adapters.
+    /// The adapter mirrors the analytics-first lifecycle established in the
+    /// React/Yew/Leptos integrations:
+    ///
+    /// * A [`TelemetryContext`] enriched with descriptor metadata scopes the
+    ///   render span so tracing subscribers record both component identity and
+    ///   attribute snapshots.
+    /// * Descriptor telemetry defaults are merged before deriving themed
+    ///   attributes which keeps SSR and client renders aligned even when
+    ///   orchestration layers omit explicit identifiers.
+    /// * Event handlers deliver [`CheckboxTelemetryEvent`] payloads to optional
+    ///   telemetry delegates **before** invoking consumer callbacks, ensuring
+    ///   analytics capture precedes business logic.
+    /// * After telemetry dispatch, the shared [`CheckboxState`] transitions via
+    ///   [`CheckboxState::toggle`], [`CheckboxState::focus`],
+    ///   [`CheckboxState::blur`], and [`CheckboxState::on_key`], guaranteeing all
+    ///   UI updates flow through the headless state machine.
     pub fn DioxusCheckbox(cx: Scope<DioxusCheckboxProps>) -> Element {
         let props = cx.props();
-        let context = TelemetryContext::new("rustic_ui_material::checkbox::dioxus::DioxusCheckbox")
-            .with_analytics(props.checkbox.telemetry.analytics_id.clone())
-            .with_automation(props.checkbox.telemetry.automation_id.clone());
+        let (context, _descriptor, snapshot) = descriptor_with_context(
+            "rustic_ui_material::checkbox::dioxus::DioxusCheckbox",
+            &props.checkbox,
+            &props.state,
+        );
+        let state_handle = Rc::new(RefCell::new(props.state.clone()));
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = merge_descriptor_telemetry(
-                super::build_descriptor(&props.checkbox, &props.state),
-                &props.checkbox.telemetry,
-            );
-            let label = descriptor.label().to_string();
-            let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
-            let class = attr_map.remove("class").unwrap_or_default();
-            let role = attr_map.remove("role").unwrap_or_default();
-            let aria_checked = attr_map
-                .remove("aria-checked")
-                .unwrap_or_else(|| String::from("false"));
-            let aria_disabled = attr_map.remove("aria-disabled");
-            let tabindex = attr_map
-                .remove("tabindex")
-                .unwrap_or_else(|| String::from("0"));
-            let data_checked = attr_map
-                .remove("data-checked")
-                .unwrap_or_else(|| String::from("false"));
-            let data_focus_visible = attr_map
-                .remove("data-focus-visible")
-                .unwrap_or_else(|| String::from("false"));
-            let data_indeterminate = attr_map
-                .remove("data-indeterminate")
-                .unwrap_or_else(|| String::from("false"));
+            let label = snapshot.label.clone();
+            let class = snapshot.class.clone();
+            let role = snapshot.role.clone();
+            let aria_checked = snapshot.aria_checked.clone();
+            let aria_disabled = snapshot.aria_disabled.clone();
+            let tabindex = snapshot.tabindex.clone();
+            let data_checked = snapshot.data_checked.clone();
+            let data_focus_visible = snapshot.data_focus_visible.clone();
+            let data_indeterminate = snapshot.data_indeterminate.clone();
+            let onclick = {
+                let telemetry = props.telemetry_delegate.clone();
+                let on_change = props.on_change.clone();
+                let checkbox = props.checkbox.clone();
+                let state = Rc::clone(&state_handle);
+                move |_event: MouseEvent| {
+                    let change = {
+                        let state = state.borrow();
+                        build_change_event(&checkbox, &state)
+                    };
+                    if let Some(delegate) = &telemetry {
+                        delegate(CheckboxTelemetryEvent::Change(change.clone()));
+                    }
+                    if let Some(cb) = &on_change {
+                        cb(change.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.toggle(|_| {});
+                    }
+                }
+            };
+            let on_focus = {
+                let telemetry = props.telemetry_delegate.clone();
+                let on_focus = props.on_focus.clone();
+                let checkbox = props.checkbox.clone();
+                let state = Rc::clone(&state_handle);
+                move |_event: FocusEvent| {
+                    let focus = {
+                        let state = state.borrow();
+                        build_focus_event(&checkbox, &state, true)
+                    };
+                    if let Some(delegate) = &telemetry {
+                        delegate(CheckboxTelemetryEvent::Focus(focus.clone()));
+                    }
+                    if let Some(cb) = &on_focus {
+                        cb(focus.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.focus();
+                    }
+                }
+            };
+            let on_blur = {
+                let telemetry = props.telemetry_delegate.clone();
+                let on_blur = props.on_blur.clone();
+                let checkbox = props.checkbox.clone();
+                let state = Rc::clone(&state_handle);
+                move |_event: FocusEvent| {
+                    let blur = {
+                        let state = state.borrow();
+                        build_focus_event(&checkbox, &state, false)
+                    };
+                    if let Some(delegate) = &telemetry {
+                        delegate(CheckboxTelemetryEvent::Blur(blur.clone()));
+                    }
+                    if let Some(cb) = &on_blur {
+                        cb(blur.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.blur();
+                    }
+                }
+            };
+            let on_key = {
+                let telemetry = props.telemetry_delegate.clone();
+                let on_key = props.on_key.clone();
+                let on_change = props.on_change.clone();
+                let checkbox = props.checkbox.clone();
+                let state = Rc::clone(&state_handle);
+                move |event: KeyboardEvent| {
+                    let key = match event.data.key() {
+                        Key::Space | Key::Character(ref ch) if ch == " " => Some(" ".to_string()),
+                        Key::Enter => Some("Enter".to_string()),
+                        _ => None,
+                    };
+                    if let Some(name) = key {
+                        if let Some(control) = control_key_from_str(&name) {
+                            let (key_event, change) = {
+                                let state = state.borrow();
+                                (
+                                    build_key_event(&checkbox, &state, control),
+                                    build_change_event(&checkbox, &state),
+                                )
+                            };
+                            if let Some(delegate) = &telemetry {
+                                delegate(CheckboxTelemetryEvent::Key(key_event.clone()));
+                                delegate(CheckboxTelemetryEvent::Change(change.clone()));
+                            }
+                            if let Some(cb) = &on_key {
+                                cb(key_event.clone());
+                            }
+                            if let Some(change_cb) = &on_change {
+                                change_cb(change.clone());
+                            }
+                            {
+                                let mut state = state.borrow_mut();
+                                state.on_key(control, |_| {});
+                            }
+                        }
+                    }
+                }
+            };
 
             cx.render(rsx! {
                 span {
@@ -1228,6 +1507,10 @@ pub mod dioxus {
                     data_checked: data_checked,
                     data_focus_visible: data_focus_visible,
                     data_indeterminate: data_indeterminate,
+                    onclick: onclick,
+                    onfocus: on_focus,
+                    onblur: on_blur,
+                    onkeydown: on_key,
                     {label}
                 }
             })
@@ -1239,8 +1522,9 @@ pub mod dioxus {
 pub mod sycamore {
     //! Sycamore adapter returning a [`Template`] for signal driven surfaces.
     use super::*;
-    use std::rc::Rc;
+    use std::{cell::RefCell, rc::Rc};
     use sycamore::prelude::*;
+    use sycamore::web::html::event::KeyboardEvent;
 
     /// Alias matching the return type expected by Sycamore component macros.
     pub type Template<G> = View<G>;
@@ -1266,41 +1550,130 @@ pub mod sycamore {
 
     /// Checkbox rendered within a Sycamore reactive scope.
     ///
-    /// The adapter mirrors the documentation approach of the other modules,
-    /// highlighting that render telemetry wraps the body and descriptor
-    /// telemetry defaults are merged before exposing attributes to Sycamore's
-    /// view! macro.
+    /// The adapter mirrors the analytics-first lifecycle of the other modules:
+    /// descriptor telemetry is merged up-front, a [`TelemetryContext`] enriched
+    /// with attribute metadata scopes the render span, telemetry delegates fire
+    /// before consumer callbacks, and [`CheckboxState`] transitions occur via
+    /// [`CheckboxState::toggle`], [`CheckboxState::focus`],
+    /// [`CheckboxState::blur`], and [`CheckboxState::on_key`] after analytics
+    /// capture so UI updates funnel through the shared headless state machine.
     #[component]
     pub fn SycamoreCheckbox<G: Html>(cx: Scope, props: SycamoreCheckboxProps) -> Template<G> {
-        let context =
-            TelemetryContext::new("rustic_ui_material::checkbox::sycamore::SycamoreCheckbox")
-                .with_analytics(props.checkbox.telemetry.analytics_id.clone())
-                .with_automation(props.checkbox.telemetry.automation_id.clone());
+        let (context, _descriptor, snapshot) = descriptor_with_context(
+            "rustic_ui_material::checkbox::sycamore::SycamoreCheckbox",
+            &props.checkbox,
+            &props.state,
+        );
+        let state_handle = Rc::new(RefCell::new(props.state.clone()));
         instrument_render(&props.checkbox.telemetry, context, || {
-            let descriptor = merge_descriptor_telemetry(
-                super::build_descriptor(&props.checkbox, &props.state),
-                &props.checkbox.telemetry,
-            );
-            let label = descriptor.label().to_string();
-            let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
-            let class = attr_map.remove("class").unwrap_or_default();
-            let role = attr_map.remove("role").unwrap_or_default();
-            let aria_checked = attr_map
-                .remove("aria-checked")
-                .unwrap_or_else(|| String::from("false"));
-            let aria_disabled = attr_map.remove("aria-disabled");
-            let tabindex = attr_map
-                .remove("tabindex")
-                .unwrap_or_else(|| String::from("0"));
-            let data_checked = attr_map
-                .remove("data-checked")
-                .unwrap_or_else(|| String::from("false"));
-            let data_focus_visible = attr_map
-                .remove("data-focus-visible")
-                .unwrap_or_else(|| String::from("false"));
-            let data_indeterminate = attr_map
-                .remove("data-indeterminate")
-                .unwrap_or_else(|| String::from("false"));
+            let label = snapshot.label.clone();
+            let class = snapshot.class.clone();
+            let role = snapshot.role.clone();
+            let aria_checked = snapshot.aria_checked.clone();
+            let aria_disabled = snapshot.aria_disabled.clone();
+            let tabindex = snapshot.tabindex.clone();
+            let data_checked = snapshot.data_checked.clone();
+            let data_focus_visible = snapshot.data_focus_visible.clone();
+            let data_indeterminate = snapshot.data_indeterminate.clone();
+            let on_click = {
+                let telemetry = props.telemetry_delegate.clone();
+                let on_change = props.on_change.clone();
+                let checkbox = props.checkbox.clone();
+                let state = Rc::clone(&state_handle);
+                move |_| {
+                    let change = {
+                        let state = state.borrow();
+                        build_change_event(&checkbox, &state)
+                    };
+                    if let Some(delegate) = &telemetry {
+                        delegate(CheckboxTelemetryEvent::Change(change.clone()));
+                    }
+                    if let Some(cb) = &on_change {
+                        cb(change.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.toggle(|_| {});
+                    }
+                }
+            };
+            let on_focus = {
+                let telemetry = props.telemetry_delegate.clone();
+                let on_focus = props.on_focus.clone();
+                let checkbox = props.checkbox.clone();
+                let state = Rc::clone(&state_handle);
+                move |_| {
+                    let focus = {
+                        let state = state.borrow();
+                        build_focus_event(&checkbox, &state, true)
+                    };
+                    if let Some(delegate) = &telemetry {
+                        delegate(CheckboxTelemetryEvent::Focus(focus.clone()));
+                    }
+                    if let Some(cb) = &on_focus {
+                        cb(focus.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.focus();
+                    }
+                }
+            };
+            let on_blur = {
+                let telemetry = props.telemetry_delegate.clone();
+                let on_blur = props.on_blur.clone();
+                let checkbox = props.checkbox.clone();
+                let state = Rc::clone(&state_handle);
+                move |_| {
+                    let blur = {
+                        let state = state.borrow();
+                        build_focus_event(&checkbox, &state, false)
+                    };
+                    if let Some(delegate) = &telemetry {
+                        delegate(CheckboxTelemetryEvent::Blur(blur.clone()));
+                    }
+                    if let Some(cb) = &on_blur {
+                        cb(blur.clone());
+                    }
+                    {
+                        let mut state = state.borrow_mut();
+                        state.blur();
+                    }
+                }
+            };
+            let on_key = {
+                let telemetry = props.telemetry_delegate.clone();
+                let on_key = props.on_key.clone();
+                let on_change = props.on_change.clone();
+                let checkbox = props.checkbox.clone();
+                let state = Rc::clone(&state_handle);
+                move |event: KeyboardEvent| {
+                    let key = event.key();
+                    if let Some(control) = control_key_from_str(&key) {
+                        let (key_event, change) = {
+                            let state = state.borrow();
+                            (
+                                build_key_event(&checkbox, &state, control),
+                                build_change_event(&checkbox, &state),
+                            )
+                        };
+                        if let Some(delegate) = &telemetry {
+                            delegate(CheckboxTelemetryEvent::Key(key_event.clone()));
+                            delegate(CheckboxTelemetryEvent::Change(change.clone()));
+                        }
+                        if let Some(cb) = &on_key {
+                            cb(key_event.clone());
+                        }
+                        if let Some(change_cb) = &on_change {
+                            change_cb(change.clone());
+                        }
+                        {
+                            let mut state = state.borrow_mut();
+                            state.on_key(control, |_| {});
+                        }
+                    }
+                }
+            };
 
             view! { cx,
                 span(
@@ -1312,6 +1685,10 @@ pub mod sycamore {
                     data_checked=data_checked,
                     data_focus_visible=data_focus_visible,
                     data_indeterminate=data_indeterminate,
+                    on:click=on_click,
+                    on:focus=on_focus,
+                    on:blur=on_blur,
+                    on:keydown=on_key,
                 ) { (label) }
             }
         })

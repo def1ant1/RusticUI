@@ -10,11 +10,21 @@
 //! struct they can configure to bolt analytics, tracing, and error
 //! collection into RusticUI widgets.
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::Arc;
 
 use tracing::{field, span, Level, Span};
+
+/// Context describing the component instance currently being rendered.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TelemetryDescriptorMetadata {
+    /// Human readable label surfaced by the descriptor.
+    pub label: String,
+    /// Attribute snapshot captured at render time to aid debugging.
+    pub attributes: BTreeMap<String, String>,
+}
 
 /// Context describing the component instance currently being rendered.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -25,6 +35,8 @@ pub struct TelemetryContext {
     pub analytics_id: Option<String>,
     /// Optional automation identifier associated with the rendered element.
     pub automation_id: Option<String>,
+    /// Snapshot of descriptor metadata captured when entering the span.
+    pub descriptor: Option<TelemetryDescriptorMetadata>,
 }
 
 impl TelemetryContext {
@@ -35,6 +47,7 @@ impl TelemetryContext {
             component,
             analytics_id: None,
             automation_id: None,
+            descriptor: None,
         }
     }
 
@@ -49,6 +62,30 @@ impl TelemetryContext {
     #[must_use]
     pub fn with_automation(mut self, automation_id: Option<String>) -> Self {
         self.automation_id = automation_id;
+        self
+    }
+
+    /// Attach descriptor metadata to the context so downstream telemetry spans
+    /// can reason about the rendered attributes without re-computing them.
+    #[must_use]
+    pub fn with_descriptor_metadata<I, K, V>(
+        mut self,
+        label: impl Into<String>,
+        attributes: I,
+    ) -> Self
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: Into<String>,
+        V: Into<String>,
+    {
+        let mut map = BTreeMap::new();
+        for (key, value) in attributes {
+            map.insert(key.into(), value.into());
+        }
+        self.descriptor = Some(TelemetryDescriptorMetadata {
+            label: label.into(),
+            attributes: map,
+        });
         self
     }
 }
@@ -156,13 +193,25 @@ where
         .as_deref()
         .filter(|value| !value.is_empty())
         .unwrap_or("n/a");
+    let descriptor_label = context
+        .descriptor
+        .as_ref()
+        .map(|descriptor| descriptor.label.as_str())
+        .unwrap_or("n/a");
+    let descriptor_attribute_count = context
+        .descriptor
+        .as_ref()
+        .map(|descriptor| descriptor.attributes.len())
+        .unwrap_or_default();
     let span = hooks.span.clone().unwrap_or_else(|| {
         span!(
             Level::INFO,
             "rustic_ui_component",
             component = context.component,
             analytics_id = field::display(analytics),
-            automation_id = field::display(automation)
+            automation_id = field::display(automation),
+            descriptor_label = field::display(descriptor_label),
+            descriptor_attributes = descriptor_attribute_count
         )
     });
     let _guard = span.enter();
@@ -180,6 +229,8 @@ where
                 component = context.component,
                 analytics_id = analytics,
                 automation_id = automation,
+                descriptor_label = descriptor_label,
+                descriptor_attributes = descriptor_attribute_count,
                 message = %message,
                 "adapter render panic"
             );
