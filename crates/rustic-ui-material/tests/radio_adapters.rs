@@ -174,11 +174,9 @@ impl RadioHarness {
     fn focus_option(&mut self, index: usize) -> RadioFocusEvent {
         let analytics = self.analytics_event(index, self.state.selected_index());
         let payload = self.focus_payload(index, true);
-        self
-            .telemetry_events
+        self.telemetry_events
             .push(RadioTelemetryEvent::Analytics(analytics));
-        self
-            .telemetry_events
+        self.telemetry_events
             .push(RadioTelemetryEvent::Focus(payload.clone()));
         self.focus_events.push(payload.clone());
         self.state.focus(index);
@@ -188,11 +186,9 @@ impl RadioHarness {
     fn blur_option(&mut self, index: usize) -> RadioFocusEvent {
         let analytics = self.analytics_event(index, self.state.selected_index());
         let payload = self.focus_payload(index, false);
-        self
-            .telemetry_events
+        self.telemetry_events
             .push(RadioTelemetryEvent::Analytics(analytics));
-        self
-            .telemetry_events
+        self.telemetry_events
             .push(RadioTelemetryEvent::Blur(payload.clone()));
         self.blur_events.push(payload.clone());
         self.state.blur();
@@ -203,17 +199,14 @@ impl RadioHarness {
         let previous = self.state.selected_index();
         let analytics = self.analytics_event(index, previous);
         let change = self.change_payload(previous, index);
-        self
-            .telemetry_events
+        self.telemetry_events
             .push(RadioTelemetryEvent::Analytics(analytics));
-        self
-            .telemetry_events
+        self.telemetry_events
             .push(RadioTelemetryEvent::Change(change.clone()));
         self.state.select(index, |_| {});
         self.state.focus(index);
         let commit = self.commit_payload(self.state.selected_index(), index);
-        self
-            .telemetry_events
+        self.telemetry_events
             .push(RadioTelemetryEvent::Commit(commit));
         self.change_events.push(change.clone());
         change
@@ -222,8 +215,7 @@ impl RadioHarness {
     fn key_from(&mut self, origin: usize, key: ControlKey) -> RadioKeyEvent {
         let previous = self.state.selected_index();
         let analytics = self.analytics_event(origin, previous);
-        self
-            .telemetry_events
+        self.telemetry_events
             .push(RadioTelemetryEvent::Analytics(analytics));
 
         let mut selected_after = None;
@@ -233,27 +225,25 @@ impl RadioHarness {
 
         let payload = self.key_payload(origin, key, previous, selected_after);
         self.key_events.push(payload.clone());
+        self.telemetry_events
+            .push(RadioTelemetryEvent::Key(payload.clone()));
 
         if let Some(next_index) = selected_after {
             let focus_event = self.focus_payload(next_index, true);
-            self
-                .telemetry_events
+            self.telemetry_events
                 .push(RadioTelemetryEvent::Focus(focus_event));
 
             if next_index != origin {
                 let blur_event = self.focus_payload(origin, false);
-                self
-                    .telemetry_events
+                self.telemetry_events
                     .push(RadioTelemetryEvent::Blur(blur_event));
             }
 
             let change = self.change_payload(previous, next_index);
-            self
-                .telemetry_events
+            self.telemetry_events
                 .push(RadioTelemetryEvent::Change(change.clone()));
             let commit = self.commit_payload(self.state.selected_index(), next_index);
-            self
-                .telemetry_events
+            self.telemetry_events
                 .push(RadioTelemetryEvent::Commit(commit));
             self.change_events.push(change);
         }
@@ -274,12 +264,8 @@ where
     assert!(initial_markup.contains("role=\"radiogroup\""));
     assert!(initial_markup.contains("aria-orientation=\"horizontal\""));
     assert!(initial_markup.contains("data-orientation=\"horizontal\""));
-    assert!(initial_markup.contains(&format!(
-        "data-rustic-analytics-id=\"{analytics_id}\""
-    )));
-    assert!(initial_markup.contains(&format!(
-        "data-automation-id=\"{automation_id}\""
-    )));
+    assert!(initial_markup.contains(&format!("data-rustic-analytics-id=\"{analytics_id}\"")));
+    assert!(initial_markup.contains(&format!("data-automation-id=\"{automation_id}\"")));
     assert!(initial_markup.contains("data-e2e=\"radio-group-under-test\""));
     assert!(initial_markup.contains("data-option-flag=\"alpha\""));
     assert!(initial_markup.contains("style=\"position: relative;\""));
@@ -342,7 +328,7 @@ where
     assert_eq!(contexts.len(), 5);
     drop(contexts);
 
-    assert_eq!(harness.telemetry_events.len(), 12);
+    assert_eq!(harness.telemetry_events.len(), 13);
     let telemetry = &harness.telemetry_events;
     assert!(matches!(
         telemetry[0],
@@ -388,21 +374,29 @@ where
     ));
     assert!(matches!(
         telemetry[8],
+        RadioTelemetryEvent::Key(ref evt)
+            if evt.key == ControlKey::ArrowRight
+                && evt.previous == Some(1)
+                && evt.next == Some(2)
+                && evt.label == "Beta"
+    ));
+    assert!(matches!(
+        telemetry[9],
         RadioTelemetryEvent::Focus(ref evt)
             if evt.focused && evt.index == 2 && evt.label == "Gamma"
     ));
     assert!(matches!(
-        telemetry[9],
+        telemetry[10],
         RadioTelemetryEvent::Blur(ref evt)
             if !evt.focused && evt.index == 1 && evt.label == "Beta"
     ));
     assert!(matches!(
-        telemetry[10],
+        telemetry[11],
         RadioTelemetryEvent::Change(ref evt)
             if evt.previous == Some(1) && evt.next == 2 && evt.label == "Gamma"
     ));
     assert!(matches!(
-        telemetry[11],
+        telemetry[12],
         RadioTelemetryEvent::Commit(ref evt)
             if evt.selected == Some(2) && evt.label == "Gamma"
     ));

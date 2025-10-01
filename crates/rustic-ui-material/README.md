@@ -146,6 +146,22 @@ Leptos, Dioxus, and Sycamore renders all include the disabled metadata. When
 augmenting the component ensure any additional markup preserves these hooks so
 end-to-end automation continues to function.
 
+## Radio group telemetry orchestration
+
+Material radio groups now expose a telemetry contract that mirrors the
+checkbox and switch integrations. `RadioTelemetryEvent` includes analytics,
+key, focus, blur, change, and commit variants so enterprise dashboards can trace
+every interaction across SSR and hydration renders. Adapters emit telemetry in
+the deterministic order `analytics → key → focus/blur → change → commit` before
+invoking consumer callbacks, ensuring QA suites observe the exact state the user
+experienced.【F:crates/rustic-ui-material/src/radio.rs†L95-L214】【F:crates/rustic-ui-material/src/radio.rs†L930-L1110】【F:crates/rustic-ui-material/src/radio.rs†L2620-L2798】【F:crates/rustic-ui-material/tests/radio_adapters.rs†L188-L272】
+
+Keyboard flows now forward a dedicated `RadioKeyEvent` to telemetry delegates in
+addition to the existing change payloads. Regression tests cover pointer
+selection, focus transitions, and keyboard commits across Yew, Leptos, Dioxus,
+and Sycamore adapters to guarantee analytics ordering remains stable as new
+frameworks or descriptors are added.【F:crates/rustic-ui-material/src/radio.rs†L2700-L2798】【F:crates/rustic-ui-material/src/radio.rs†L3460-L3568】【F:crates/rustic-ui-material/src/radio.rs†L4580-L4662】【F:crates/rustic-ui-material/tests/radio_adapters.rs†L188-L272】
+
 ## Dialog, popover, and text field adapters
 
 The Material adapters for `Dialog`, `Popover`, and `TextField` lean directly on

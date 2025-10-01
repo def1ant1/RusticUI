@@ -88,11 +88,11 @@ the rendered DOM.
 | `Commit` | Post-mutation selection snapshot, including controlled state. | `selected`, `controlled`, `analytics_id`, `automation_id`, `label` |
 | `Key` | Keyboard interaction metadata. | `key`, `previous`, `next`, `disabled`, `analytics_id`, `automation_id`, `label` |
 
-All adapters emit events in the deterministic order `Analytics → Focus/Blur →
-Change → Commit → callback`, with optional `Key` payloads inserted before
-`Change` when the interaction is keyboard-driven. Tests across every framework
-validate that telemetry fires before user callbacks and that commits capture the
-final selection snapshot—even in controlled radio groups.【F:crates/rustic-ui-material/src/radio.rs†L120-L212】【F:crates/rustic-ui-material/src/radio.rs†L2633-L2709】【F:crates/rustic-ui-material/src/radio.rs†L2709-L2793】【F:crates/rustic-ui-material/tests/radio_adapters.rs†L188-L260】
+All adapters emit events in the deterministic order `Analytics → Key →
+Focus/Blur → Change → Commit → callback`, with pointer interactions simply
+skipping the keyboard payload. Tests across every framework validate that
+telemetry fires before user callbacks and that commits capture the final
+selection snapshot—even in controlled radio groups.【F:crates/rustic-ui-material/src/radio.rs†L118-L213】【F:crates/rustic-ui-material/src/radio.rs†L2620-L2798】【F:crates/rustic-ui-material/src/radio.rs†L3190-L3286】【F:crates/rustic-ui-material/tests/radio_adapters.rs†L188-L272】
 
 ## Yew example: register a telemetry delegate
 

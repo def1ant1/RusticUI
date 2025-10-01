@@ -120,6 +120,8 @@ pub struct RadioKeyEvent {
 pub enum RadioTelemetryEvent {
     /// Analytics metadata observed prior to any other telemetry.
     Analytics(RadioAnalyticsEvent),
+    /// Keyboard interaction payload captured before focus or selection updates.
+    Key(RadioKeyEvent),
     /// Focus gained for a specific option.
     Focus(RadioFocusEvent),
     /// Focus lost for a specific option.
@@ -976,7 +978,7 @@ pub mod react {
                         )
                     };
 
-                    let mut events = Vec::with_capacity(5);
+                    let mut events = Vec::with_capacity(6);
                     events.push(analytics_event);
 
                     let selected_after = Rc::new(RefCell::new(None));
@@ -988,7 +990,12 @@ pub mod react {
                         });
                     }
 
-                    if let Some(next_index) = *selected_after.borrow() {
+                    let next_index = *selected_after.borrow();
+                    let key_payload =
+                        build_key_event(&origin_option, control, previous, next_index, disabled);
+                    events.push(RadioTelemetryEvent::Key(key_payload));
+
+                    if let Some(next_index) = next_index {
                         let focused_option = options[next_index].clone();
                         let focus_event = {
                             let state_ref = state.borrow();
@@ -1189,6 +1196,47 @@ pub mod react {
                     &object,
                     &JsValue::from_str("label"),
                     &JsValue::from_str(&analytics.label),
+                )
+                .expect("set label");
+            }
+            Event::Key(key) => {
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("kind"),
+                    &JsValue::from_str("key"),
+                )
+                .expect("set kind");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("key"),
+                    &JsValue::from_str(match key.key {
+                        ControlKey::Space => "Space",
+                        ControlKey::Enter => "Enter",
+                        ControlKey::ArrowUp => "ArrowUp",
+                        ControlKey::ArrowDown => "ArrowDown",
+                        ControlKey::ArrowLeft => "ArrowLeft",
+                        ControlKey::ArrowRight => "ArrowRight",
+                        ControlKey::Home => "Home",
+                        ControlKey::End => "End",
+                    }),
+                )
+                .expect("set key");
+                push_optional_usize(&object, "previous", key.previous).expect("set previous");
+                push_optional_usize(&object, "next", key.next).expect("set next");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("disabled"),
+                    &JsValue::from_bool(key.disabled),
+                )
+                .expect("set disabled");
+                push_optional_string(&object, "analyticsId", &key.analytics_id)
+                    .expect("set analyticsId");
+                push_optional_string(&object, "automationId", &key.automation_id)
+                    .expect("set automationId");
+                Reflect::set(
+                    &object,
+                    &JsValue::from_str("label"),
+                    &JsValue::from_str(&key.label),
                 )
                 .expect("set label");
             }
@@ -1397,11 +1445,29 @@ pub mod react {
         }
 
         fn call_handler(props: &Object, key: &str) {
+            call_handler_with_event(props, key, JsValue::UNDEFINED);
+        }
+
+        fn call_handler_with_event(props: &Object, key: &str, event: JsValue) {
             if let Ok(handler) = Reflect::get(props, &JsValue::from_str(key)) {
                 if let Ok(function) = handler.dyn_into::<Function>() {
-                    let _ = function.call1(&JsValue::NULL, &JsValue::UNDEFINED);
+                    let _ = function.call1(&JsValue::NULL, &event);
                 }
             }
+        }
+
+        fn keyboard_event(key: &str) -> JsValue {
+            let event = Object::new();
+            Reflect::set(&event, &JsValue::from_str("key"), &JsValue::from_str(key))
+                .expect("set key");
+
+            let prevent = Closure::wrap(Box::new(|| {}) as Box<dyn FnMut()>);
+            let function = prevent.as_ref().clone();
+            Reflect::set(&event, &JsValue::from_str("preventDefault"), &function)
+                .expect("set preventDefault");
+            prevent.forget();
+
+            event.into()
         }
 
         fn event_kinds(events: &js_sys::Array) -> Vec<String> {
@@ -1485,6 +1551,24 @@ pub mod react {
             assert_eq!(role, "radio");
             assert_eq!(aria_checked, "true");
             assert_eq!(data_index, "0");
+        }
+
+        #[wasm_bindgen_test]
+        fn keydown_emits_key_focus_and_commit_sequence() {
+            let state = Rc::new(RefCell::new(sample_state_uncontrolled()));
+            let snapshot = build_snapshot(&state.borrow());
+            let (delegate, events) = telemetry_collector();
+            let (props, state_handle) =
+                build_option_props(Rc::clone(&state), &snapshot, Some(delegate), 0);
+
+            call_handler_with_event(&props, "onKeyDown", keyboard_event("ArrowRight"));
+
+            let kinds = event_kinds(&events);
+            assert_eq!(
+                kinds,
+                vec!["analytics", "key", "focus", "blur", "change", "commit"]
+            );
+            assert_eq!(state_handle.borrow().selected_index(), Some(1));
         }
     }
 
@@ -1807,13 +1891,14 @@ pub mod yew {
                         });
                     }
 
-                    let mut telemetry_events = Vec::with_capacity(5);
+                    let mut telemetry_events = Vec::with_capacity(6);
                     telemetry_events.push(analytics_event);
 
                     let next_index = *selected_after.borrow();
-                    let mut change_payload = None;
-                    let mut key_payload =
+                    let key_payload =
                         build_key_event(&origin_option, control, previous, next_index, disabled);
+                    telemetry_events.push(RadioTelemetryEvent::Key(key_payload.clone()));
+                    let mut change_payload = None;
 
                     if let Some(next_index) = next_index {
                         let focused_option = options[next_index].clone();
@@ -1890,9 +1975,10 @@ pub mod yew {
     /// * Event handler factories centralise wiring per option, guaranteeing each
     ///   closure emits telemetry **before** invoking consumer callbacks while
     ///   also funnelling mutations through the shared [`RadioGroupState`].
-    /// * Pointer and keyboard interactions emit analytics → change → commit in
-    ///   order, focus transitions emit analytics → focus/blur, and keyboard
-    ///   flows optionally append change/commit snapshots when selection changes.
+    /// * Pointer interactions emit analytics → change → commit in order, focus
+    ///   transitions emit analytics → focus/blur, and keyboard flows emit
+    ///   analytics → key → focus/blur → change → commit so automation suites can
+    ///   validate navigation intent separately from the resulting selection.
     ///
     /// Extensive inline documentation exists so governance teams can audit the
     /// behaviour and so future contributors can extend the logic without
@@ -2202,14 +2288,14 @@ pub mod leptos {
 
                 refresh();
 
-                let mut telemetry_events = Vec::with_capacity(5);
+                let mut telemetry_events = Vec::with_capacity(6);
                 telemetry_events.push(analytics_event);
 
                 let next_index = *selected_after.borrow();
-                let mut change_payload = None;
-
                 let key_payload =
                     build_key_event(&origin_option, control, previous, next_index, disabled);
+                telemetry_events.push(RadioTelemetryEvent::Key(key_payload.clone()));
+                let mut change_payload = None;
 
                 if let Some(next_index) = next_index {
                     let focused_option = options[next_index].clone();
@@ -2764,11 +2850,13 @@ pub mod leptos {
             assert_eq!(harness.state.borrow().selected_index(), Some(1));
 
             let telemetry = harness.telemetry_events.borrow();
+            assert_eq!(telemetry.len(), 6);
             assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
-            assert!(matches!(telemetry[1], RadioTelemetryEvent::Focus(_)));
-            assert!(matches!(telemetry[2], RadioTelemetryEvent::Blur(_)));
-            assert!(matches!(telemetry[3], RadioTelemetryEvent::Change(_)));
-            assert!(matches!(telemetry[4], RadioTelemetryEvent::Commit(_)));
+            assert!(matches!(telemetry[1], RadioTelemetryEvent::Key(_)));
+            assert!(matches!(telemetry[2], RadioTelemetryEvent::Focus(_)));
+            assert!(matches!(telemetry[3], RadioTelemetryEvent::Blur(_)));
+            assert!(matches!(telemetry[4], RadioTelemetryEvent::Change(_)));
+            assert!(matches!(telemetry[5], RadioTelemetryEvent::Commit(_)));
             drop(telemetry);
 
             let keys = harness.key_events.borrow();
@@ -2782,14 +2870,15 @@ pub mod leptos {
             drop(changes);
 
             let order = harness.order.borrow();
-            assert_eq!(order.len(), 7);
+            assert_eq!(order.len(), 8);
             assert!(order[0].starts_with("telemetry::Analytics"));
-            assert!(order[1].starts_with("telemetry::Focus"));
-            assert!(order[2].starts_with("telemetry::Blur"));
-            assert!(order[3].starts_with("telemetry::Change"));
-            assert!(order[4].starts_with("telemetry::Commit"));
-            assert_eq!(order[5], "callback::key");
-            assert_eq!(order[6], "callback::change");
+            assert!(order[1].starts_with("telemetry::Key"));
+            assert!(order[2].starts_with("telemetry::Focus"));
+            assert!(order[3].starts_with("telemetry::Blur"));
+            assert!(order[4].starts_with("telemetry::Change"));
+            assert!(order[5].starts_with("telemetry::Commit"));
+            assert_eq!(order[6], "callback::key");
+            assert_eq!(order[7], "callback::change");
             drop(order);
 
             assert_eq!(*harness.refresh_counter.borrow(), 1);
@@ -3178,14 +3267,14 @@ pub mod dioxus {
 
                 refresh();
 
-                let mut telemetry_events = Vec::with_capacity(5);
+                let mut telemetry_events = Vec::with_capacity(6);
                 telemetry_events.push(analytics_event);
 
                 let next_index = *selected_after.borrow();
-                let mut change_payload = None;
-
                 let key_payload =
                     build_key_event(&origin_option, control, previous, next_index, disabled);
+                telemetry_events.push(RadioTelemetryEvent::Key(key_payload.clone()));
+                let mut change_payload = None;
 
                 if let Some(next_index) = next_index {
                     let focused_option = options[next_index].clone();
@@ -3741,11 +3830,13 @@ pub mod dioxus {
             assert_eq!(harness.state.borrow().selected_index(), Some(1));
 
             let telemetry = harness.telemetry_events.borrow();
+            assert_eq!(telemetry.len(), 6);
             assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
-            assert!(matches!(telemetry[1], RadioTelemetryEvent::Focus(_)));
-            assert!(matches!(telemetry[2], RadioTelemetryEvent::Blur(_)));
-            assert!(matches!(telemetry[3], RadioTelemetryEvent::Change(_)));
-            assert!(matches!(telemetry[4], RadioTelemetryEvent::Commit(_)));
+            assert!(matches!(telemetry[1], RadioTelemetryEvent::Key(_)));
+            assert!(matches!(telemetry[2], RadioTelemetryEvent::Focus(_)));
+            assert!(matches!(telemetry[3], RadioTelemetryEvent::Blur(_)));
+            assert!(matches!(telemetry[4], RadioTelemetryEvent::Change(_)));
+            assert!(matches!(telemetry[5], RadioTelemetryEvent::Commit(_)));
             drop(telemetry);
 
             let keys = harness.key_events.borrow();
@@ -3759,14 +3850,15 @@ pub mod dioxus {
             drop(changes);
 
             let order = harness.order.borrow();
-            assert_eq!(order.len(), 7);
+            assert_eq!(order.len(), 8);
             assert!(order[0].starts_with("telemetry::Analytics"));
-            assert!(order[1].starts_with("telemetry::Focus"));
-            assert!(order[2].starts_with("telemetry::Blur"));
-            assert!(order[3].starts_with("telemetry::Change"));
-            assert!(order[4].starts_with("telemetry::Commit"));
-            assert_eq!(order[5], "callback::key");
-            assert_eq!(order[6], "callback::change");
+            assert!(order[1].starts_with("telemetry::Key"));
+            assert!(order[2].starts_with("telemetry::Focus"));
+            assert!(order[3].starts_with("telemetry::Blur"));
+            assert!(order[4].starts_with("telemetry::Change"));
+            assert!(order[5].starts_with("telemetry::Commit"));
+            assert_eq!(order[6], "callback::key");
+            assert_eq!(order[7], "callback::change");
             drop(order);
 
             assert_eq!(*harness.refresh_counter.borrow(), 1);
@@ -4095,14 +4187,14 @@ pub mod sycamore {
                     });
                 }
 
-                let mut telemetry_events = Vec::with_capacity(5);
+                let mut telemetry_events = Vec::with_capacity(6);
                 telemetry_events.push(analytics_event);
 
                 let next_index = *selected_after.borrow();
-                let mut change_payload = None;
-
                 let key_payload =
                     build_key_event(&origin_option, control, previous, next_index, disabled);
+                telemetry_events.push(RadioTelemetryEvent::Key(key_payload.clone()));
+                let mut change_payload = None;
 
                 if let Some(next_index) = next_index {
                     let focused_option = options[next_index].clone();
@@ -4535,11 +4627,13 @@ pub mod sycamore {
             assert_eq!(harness.state.borrow().selected_index(), Some(1));
 
             let telemetry = harness.telemetry_events.borrow();
+            assert_eq!(telemetry.len(), 6);
             assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
-            assert!(matches!(telemetry[1], RadioTelemetryEvent::Focus(_)));
-            assert!(matches!(telemetry[2], RadioTelemetryEvent::Blur(_)));
-            assert!(matches!(telemetry[3], RadioTelemetryEvent::Change(_)));
-            assert!(matches!(telemetry[4], RadioTelemetryEvent::Commit(_)));
+            assert!(matches!(telemetry[1], RadioTelemetryEvent::Key(_)));
+            assert!(matches!(telemetry[2], RadioTelemetryEvent::Focus(_)));
+            assert!(matches!(telemetry[3], RadioTelemetryEvent::Blur(_)));
+            assert!(matches!(telemetry[4], RadioTelemetryEvent::Change(_)));
+            assert!(matches!(telemetry[5], RadioTelemetryEvent::Commit(_)));
             drop(telemetry);
 
             let keys = harness.key_events.borrow();
@@ -4547,14 +4641,15 @@ pub mod sycamore {
             assert_eq!(keys[0].key, ControlKey::ArrowRight);
 
             let order = harness.order.borrow();
-            assert_eq!(order.len(), 7);
+            assert_eq!(order.len(), 8);
             assert!(order[0].starts_with("telemetry::Analytics"));
-            assert!(order[1].starts_with("telemetry::Focus"));
-            assert!(order[2].starts_with("telemetry::Blur"));
-            assert!(order[3].starts_with("telemetry::Change"));
-            assert!(order[4].starts_with("telemetry::Commit"));
-            assert_eq!(order[5], "callback::key");
-            assert_eq!(order[6], "callback::change");
+            assert!(order[1].starts_with("telemetry::Key"));
+            assert!(order[2].starts_with("telemetry::Focus"));
+            assert!(order[3].starts_with("telemetry::Blur"));
+            assert!(order[4].starts_with("telemetry::Change"));
+            assert!(order[5].starts_with("telemetry::Commit"));
+            assert_eq!(order[6], "callback::key");
+            assert_eq!(order[7], "callback::change");
         }
 
         #[test]
