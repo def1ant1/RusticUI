@@ -96,6 +96,25 @@ pub struct RadioCommitEvent {
     pub label: String,
 }
 
+/// Canonical payload emitted for keyboard interactions across adapters.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RadioKeyEvent {
+    /// Normalised control key derived from the browser event.
+    pub key: ControlKey,
+    /// Previously selected index prior to the key interaction.
+    pub previous: Option<usize>,
+    /// Next index requested by the interaction (if any).
+    pub next: Option<usize>,
+    /// Whether the group was disabled while the event fired.
+    pub disabled: bool,
+    /// Analytics identifier mirrored from the descriptor, if present.
+    pub analytics_id: Option<String>,
+    /// Automation identifier mirrored from the descriptor, if present.
+    pub automation_id: Option<String>,
+    /// Human friendly label rendered beside the originating option.
+    pub label: String,
+}
+
 /// Unified telemetry event surfaced to React consumers.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RadioTelemetryEvent {
@@ -169,6 +188,38 @@ fn build_commit_event(
         analytics_id: option.analytics_id.clone(),
         automation_id: option.automation_id.clone(),
         label: option.label.clone(),
+    }
+}
+
+fn build_key_event(
+    option: &RadioOptionSnapshot,
+    key: ControlKey,
+    previous: Option<usize>,
+    next: Option<usize>,
+    disabled: bool,
+) -> RadioKeyEvent {
+    RadioKeyEvent {
+        key,
+        previous,
+        next,
+        disabled,
+        analytics_id: option.analytics_id.clone(),
+        automation_id: option.automation_id.clone(),
+        label: option.label.clone(),
+    }
+}
+
+fn control_key_from_str(key: &str) -> Option<ControlKey> {
+    match key {
+        " " | "Space" | "Spacebar" => Some(ControlKey::Space),
+        "Enter" => Some(ControlKey::Enter),
+        "ArrowUp" => Some(ControlKey::ArrowUp),
+        "ArrowDown" => Some(ControlKey::ArrowDown),
+        "ArrowLeft" => Some(ControlKey::ArrowLeft),
+        "ArrowRight" => Some(ControlKey::ArrowRight),
+        "Home" => Some(ControlKey::Home),
+        "End" => Some(ControlKey::End),
+        _ => None,
     }
 }
 
@@ -622,20 +673,6 @@ pub mod react {
                 && function_option_eq(&self.on_blur, &other.on_blur)
                 && function_option_eq(&self.on_key_down, &other.on_key_down)
                 && function_option_eq(&self.telemetry_delegate, &other.telemetry_delegate)
-        }
-    }
-
-    fn control_key_from_str(key: &str) -> Option<ControlKey> {
-        match key {
-            " " | "Space" | "Spacebar" => Some(ControlKey::Space),
-            "Enter" => Some(ControlKey::Enter),
-            "ArrowUp" => Some(ControlKey::ArrowUp),
-            "ArrowDown" => Some(ControlKey::ArrowDown),
-            "ArrowLeft" => Some(ControlKey::ArrowLeft),
-            "ArrowRight" => Some(ControlKey::ArrowRight),
-            "Home" => Some(ControlKey::Home),
-            "End" => Some(ControlKey::End),
-            _ => None,
         }
     }
 
@@ -1443,8 +1480,11 @@ pub mod react {
 pub mod yew {
     //! Yew adapter implemented with `#[function_component]` for idiomatic usage.
     use super::*;
+    use std::{cell::RefCell, rc::Rc};
+    use yew::events::{Event, FocusEvent, KeyboardEvent, MouseEvent};
+    use yew::html::{onblur, onchange, onclick, onfocus, onkeydown};
     use yew::prelude::*;
-    use yew::virtual_dom::VNode;
+    use yew::virtual_dom::{Listener, VNode};
 
     /// Properties accepted by [`YewRadioGroup`].
     #[derive(Properties, Clone, PartialEq)]
@@ -1456,9 +1496,358 @@ pub mod yew {
         /// Telemetry hooks applied around the Yew render lifecycle.
         #[prop_or_default]
         pub telemetry: TelemetryHooks,
+        /// Optional change callback invoked with [`RadioChangeEvent`].
+        #[prop_or_default]
+        pub on_change: Option<Callback<RadioChangeEvent>>,
+        /// Optional focus callback invoked when an option gains focus.
+        #[prop_or_default]
+        pub on_focus: Option<Callback<RadioFocusEvent>>,
+        /// Optional blur callback invoked when an option loses focus.
+        #[prop_or_default]
+        pub on_blur: Option<Callback<RadioFocusEvent>>,
+        /// Optional keyboard callback invoked with normalized key payloads.
+        #[prop_or_default]
+        pub on_key: Option<Callback<RadioKeyEvent>>,
+        /// Optional telemetry delegate receiving structured payloads.
+        #[prop_or_default]
+        pub telemetry_delegate: Option<Callback<RadioTelemetryEvent>>,
+    }
+
+    fn emit_telemetry(
+        delegate: &Option<Callback<RadioTelemetryEvent>>,
+        events: &[RadioTelemetryEvent],
+    ) {
+        if let Some(callback) = delegate {
+            for event in events {
+                callback.emit(event.clone());
+            }
+        }
+    }
+
+    #[derive(Clone)]
+    struct YewOptionHandlers {
+        onclick: Rc<dyn Listener>,
+        onchange: Rc<dyn Listener>,
+        onfocus: Rc<dyn Listener>,
+        onblur: Rc<dyn Listener>,
+        onkeydown: Rc<dyn Listener>,
+    }
+
+    #[derive(Clone)]
+    struct YewOptionHandlerBuilder {
+        state: Rc<RefCell<RadioGroupState>>,
+        options: Rc<Vec<RadioOptionSnapshot>>,
+        on_change: Option<Callback<RadioChangeEvent>>,
+        on_focus: Option<Callback<RadioFocusEvent>>,
+        on_blur: Option<Callback<RadioFocusEvent>>,
+        on_key: Option<Callback<RadioKeyEvent>>,
+        telemetry_delegate: Option<Callback<RadioTelemetryEvent>>,
+    }
+
+    impl YewOptionHandlerBuilder {
+        fn new(
+            state: Rc<RefCell<RadioGroupState>>,
+            options: Rc<Vec<RadioOptionSnapshot>>,
+            on_change: Option<Callback<RadioChangeEvent>>,
+            on_focus: Option<Callback<RadioFocusEvent>>,
+            on_blur: Option<Callback<RadioFocusEvent>>,
+            on_key: Option<Callback<RadioKeyEvent>>,
+            telemetry_delegate: Option<Callback<RadioTelemetryEvent>>,
+        ) -> Self {
+            Self {
+                state,
+                options,
+                on_change,
+                on_focus,
+                on_blur,
+                on_key,
+                telemetry_delegate,
+            }
+        }
+
+        fn build(&self, index: usize) -> YewOptionHandlers {
+            let (onclick, onchange) = self.build_select_handlers(index);
+            let onfocus = self.build_focus_handler(index);
+            let onblur = self.build_blur_handler(index);
+            let onkeydown = self.build_key_handler(index);
+            YewOptionHandlers {
+                onclick,
+                onchange,
+                onfocus,
+                onblur,
+                onkeydown,
+            }
+        }
+
+        fn build_select_handlers(&self, index: usize) -> (Rc<dyn Listener>, Rc<dyn Listener>) {
+            let state = Rc::clone(&self.state);
+            let option = self.options[index].clone();
+            let telemetry = self.telemetry_delegate.clone();
+            let on_change = self.on_change.clone();
+
+            // Wrap the choreography in a single runner so both `onclick` and `onchange`
+            // listeners can delegate to the same logic without duplicating telemetry
+            // ordering. Automation pipelines rely on this deterministic sequence:
+            // 1. Capture analytics metadata before mutating any state.
+            // 2. Emit the `RadioChangeEvent` snapshot requested by the interaction.
+            // 3. Drive the shared [`RadioGroupState`] via [`RadioGroupState::select`].
+            // 4. Emit the post-mutation `RadioCommitEvent` snapshot.
+            // 5. Finally invoke user callbacks, ensuring analytics is always emitted
+            //    before consumer side effects run.
+            let runner: Rc<RefCell<Box<dyn FnMut()>>> = Rc::new(RefCell::new(Box::new({
+                move || {
+                    let (analytics_event, previous, controlled, disabled) = {
+                        let state_ref = state.borrow();
+                        (
+                            RadioTelemetryEvent::Analytics(build_analytics_event(
+                                &option, &state_ref, index,
+                            )),
+                            state_ref.selected_index(),
+                            state_ref.is_controlled(),
+                            state_ref.disabled(),
+                        )
+                    };
+
+                    let change_event = build_change_event(&option, previous, index, disabled);
+                    let mut telemetry_events = Vec::with_capacity(3);
+                    telemetry_events.push(analytics_event);
+                    telemetry_events.push(RadioTelemetryEvent::Change(change_event.clone()));
+
+                    {
+                        let mut state_mut = state.borrow_mut();
+                        state_mut.select(index, |_| {});
+                        state_mut.focus(index);
+                    }
+
+                    let selected_after = {
+                        let state_ref = state.borrow();
+                        state_ref.selected_index().or(Some(index))
+                    };
+                    let commit_event = build_commit_event(&option, selected_after, controlled);
+                    telemetry_events.push(RadioTelemetryEvent::Commit(commit_event));
+
+                    emit_telemetry(&telemetry, &telemetry_events);
+
+                    if let Some(callback) = &on_change {
+                        callback.emit(change_event);
+                    }
+                }
+            })));
+
+            let click_runner = Rc::clone(&runner);
+            let onclick_callback = Callback::from(move |_event: MouseEvent| {
+                (click_runner.borrow_mut())();
+            });
+            let onchange_runner = Rc::clone(&runner);
+            let onchange_callback = Callback::from(move |_event: Event| {
+                (onchange_runner.borrow_mut())();
+            });
+
+            let onclick_listener: Rc<dyn Listener> =
+                Rc::new(onclick::Wrapper::new(onclick_callback));
+            let onchange_listener: Rc<dyn Listener> =
+                Rc::new(onchange::Wrapper::new(onchange_callback));
+
+            (onclick_listener, onchange_listener)
+        }
+
+        fn build_focus_handler(&self, index: usize) -> Rc<dyn Listener> {
+            let state = Rc::clone(&self.state);
+            let option = self.options[index].clone();
+            let telemetry = self.telemetry_delegate.clone();
+            let on_focus = self.on_focus.clone();
+
+            let callback = Callback::from(move |_event: FocusEvent| {
+                let (analytics_event, focus_payload) = {
+                    let state_ref = state.borrow();
+                    (
+                        RadioTelemetryEvent::Analytics(build_analytics_event(
+                            &option, &state_ref, index,
+                        )),
+                        build_focus_event(&option, &state_ref, index, true),
+                    )
+                };
+
+                let telemetry_events = vec![
+                    analytics_event,
+                    RadioTelemetryEvent::Focus(focus_payload.clone()),
+                ];
+                emit_telemetry(&telemetry, &telemetry_events);
+
+                {
+                    let mut state_mut = state.borrow_mut();
+                    state_mut.focus(index);
+                }
+
+                if let Some(callback) = &on_focus {
+                    callback.emit(focus_payload);
+                }
+            });
+
+            Rc::new(onfocus::Wrapper::new(callback))
+        }
+
+        fn build_blur_handler(&self, index: usize) -> Rc<dyn Listener> {
+            let state = Rc::clone(&self.state);
+            let option = self.options[index].clone();
+            let telemetry = self.telemetry_delegate.clone();
+            let on_blur = self.on_blur.clone();
+
+            let callback = Callback::from(move |_event: FocusEvent| {
+                let (analytics_event, blur_payload) = {
+                    let state_ref = state.borrow();
+                    (
+                        RadioTelemetryEvent::Analytics(build_analytics_event(
+                            &option, &state_ref, index,
+                        )),
+                        build_focus_event(&option, &state_ref, index, false),
+                    )
+                };
+
+                let telemetry_events = vec![
+                    analytics_event,
+                    RadioTelemetryEvent::Blur(blur_payload.clone()),
+                ];
+                emit_telemetry(&telemetry, &telemetry_events);
+
+                {
+                    let mut state_mut = state.borrow_mut();
+                    state_mut.blur();
+                }
+
+                if let Some(callback) = &on_blur {
+                    callback.emit(blur_payload);
+                }
+            });
+
+            Rc::new(onblur::Wrapper::new(callback))
+        }
+
+        fn build_key_handler(&self, index: usize) -> Rc<dyn Listener> {
+            let state = Rc::clone(&self.state);
+            let options = Rc::clone(&self.options);
+            let telemetry = self.telemetry_delegate.clone();
+            let on_key = self.on_key.clone();
+            let on_change = self.on_change.clone();
+            let origin_option = self.options[index].clone();
+
+            let callback = Callback::from(move |event: KeyboardEvent| {
+                if let Some(control) = control_key_from_str(event.key().as_str()) {
+                    event.prevent_default();
+
+                    let (analytics_event, previous, controlled, disabled) = {
+                        let state_ref = state.borrow();
+                        (
+                            RadioTelemetryEvent::Analytics(build_analytics_event(
+                                &origin_option,
+                                &state_ref,
+                                index,
+                            )),
+                            state_ref.selected_index(),
+                            state_ref.is_controlled(),
+                            state_ref.disabled(),
+                        )
+                    };
+
+                    let selected_after = Rc::new(RefCell::new(None));
+                    {
+                        let mut state_mut = state.borrow_mut();
+                        let recorder = Rc::clone(&selected_after);
+                        state_mut.on_key(control, move |selected| {
+                            recorder.borrow_mut().replace(selected);
+                        });
+                    }
+
+                    let mut telemetry_events = Vec::with_capacity(5);
+                    telemetry_events.push(analytics_event);
+
+                    let next_index = *selected_after.borrow();
+                    let mut change_payload = None;
+                    let mut key_payload =
+                        build_key_event(&origin_option, control, previous, next_index, disabled);
+
+                    if let Some(next_index) = next_index {
+                        let focused_option = options[next_index].clone();
+                        let focus_event = {
+                            let state_ref = state.borrow();
+                            RadioTelemetryEvent::Focus(build_focus_event(
+                                &focused_option,
+                                &state_ref,
+                                next_index,
+                                true,
+                            ))
+                        };
+                        telemetry_events.push(focus_event);
+
+                        if next_index != index {
+                            let blur_event = {
+                                let state_ref = state.borrow();
+                                RadioTelemetryEvent::Blur(build_focus_event(
+                                    &origin_option,
+                                    &state_ref,
+                                    index,
+                                    false,
+                                ))
+                            };
+                            telemetry_events.push(blur_event);
+                        }
+
+                        let change_event =
+                            build_change_event(&focused_option, previous, next_index, disabled);
+                        telemetry_events.push(RadioTelemetryEvent::Change(change_event.clone()));
+
+                        let committed = {
+                            let state_ref = state.borrow();
+                            state_ref.selected_index().or(Some(next_index))
+                        };
+                        telemetry_events.push(RadioTelemetryEvent::Commit(build_commit_event(
+                            &focused_option,
+                            committed,
+                            controlled,
+                        )));
+
+                        change_payload = Some(change_event);
+                    }
+
+                    emit_telemetry(&telemetry, &telemetry_events);
+
+                    if let Some(callback) = &on_key {
+                        callback.emit(key_payload);
+                    }
+
+                    if let (Some(callback), Some(change_event)) =
+                        (on_change.as_ref(), change_payload)
+                    {
+                        callback.emit(change_event);
+                    }
+                }
+            });
+
+            Rc::new(onkeydown::Wrapper::new(callback))
+        }
     }
 
     /// Radio group rendered via Yew.
+    ///
+    /// The implementation mirrors the enterprise telemetry choreography used by
+    /// the React adapter to keep analytics, automation and state transitions in
+    /// lockstep:
+    ///
+    /// * [`TelemetryHooks`] from the props and [`RadioGroupProps`] are merged so
+    ///   analytics identifiers flow consistently regardless of where they are
+    ///   configured.
+    /// * [`descriptor_with_context`] seeds a [`TelemetryContext`] that captures
+    ///   the fully-qualified component path and descriptor metadata.
+    /// * Event handler factories centralise wiring per option, guaranteeing each
+    ///   closure emits telemetry **before** invoking consumer callbacks while
+    ///   also funnelling mutations through the shared [`RadioGroupState`].
+    /// * Pointer and keyboard interactions emit analytics → change → commit in
+    ///   order, focus transitions emit analytics → focus/blur, and keyboard
+    ///   flows optionally append change/commit snapshots when selection changes.
+    ///
+    /// Extensive inline documentation exists so governance teams can audit the
+    /// behaviour and so future contributors can extend the logic without
+    /// repeating boilerplate across options.
     #[function_component(YewRadioGroup)]
     pub fn yew_radio_group(props: &YewRadioGroupProps) -> Html {
         let telemetry = super::merged_telemetry(&props.telemetry, &props.group.telemetry);
@@ -1469,20 +1858,39 @@ pub mod yew {
             &props.state,
         );
         instrument_render(&telemetry, context, move || {
-            let mut node = html! {
-                <div>
-                    { for snapshot.options.iter().map(|option| {
-                        let option_attrs = option.themed_attributes.clone();
-                        let mut child = html! { <span>{option.label.clone()}</span> };
-                        if let VNode::VTag(ref mut tag) = child {
-                            for (key, value) in option_attrs {
-                                tag.add_attribute(key, value);
-                            }
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let options = Rc::new(snapshot.options.clone());
+            let handler_builder = Rc::new(YewOptionHandlerBuilder::new(
+                Rc::clone(&state_handle),
+                Rc::clone(&options),
+                props.on_change.clone(),
+                props.on_focus.clone(),
+                props.on_blur.clone(),
+                props.on_key.clone(),
+                props.telemetry_delegate.clone(),
+            ));
+
+            let option_nodes = options.iter().enumerate().map({
+                let builder = Rc::clone(&handler_builder);
+                move |(index, option)| {
+                    let option_snapshot = option.clone();
+                    let handlers = builder.build(index);
+                    let mut child = html! { <span>{option_snapshot.label.clone()}</span> };
+                    if let VNode::VTag(ref mut tag) = child {
+                        for (key, value) in option_snapshot.themed_attributes.clone() {
+                            tag.add_attribute(key, value);
                         }
-                        child
-                    }) }
-                </div>
-            };
+                        tag.add_listener(Rc::clone(&handlers.onclick));
+                        tag.add_listener(Rc::clone(&handlers.onchange));
+                        tag.add_listener(Rc::clone(&handlers.onfocus));
+                        tag.add_listener(Rc::clone(&handlers.onblur));
+                        tag.add_listener(Rc::clone(&handlers.onkeydown));
+                    }
+                    child
+                }
+            });
+
+            let mut node = html! { <div>{ for option_nodes }</div> };
 
             if let VNode::VTag(ref mut tag) = node {
                 for (key, value) in snapshot.group_thematic_attributes.clone() {
