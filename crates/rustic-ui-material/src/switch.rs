@@ -20,7 +20,6 @@
 
 use rustic_ui_headless::switch::SwitchState;
 use rustic_ui_styled_engine::{css_with_theme, Style};
-use std::collections::HashMap;
 
 use crate::selection_control::{self, ToggleControlDescriptor};
 
@@ -48,11 +47,6 @@ fn build_descriptor(props: &SwitchProps, state: &SwitchState) -> ToggleControlDe
 fn render_html(props: &SwitchProps, state: &SwitchState) -> String {
     let descriptor = build_descriptor(props, state);
     selection_control::render_toggle_html(&descriptor)
-}
-
-#[allow(dead_code)]
-fn attributes_to_map(pairs: Vec<(String, String)>) -> HashMap<String, String> {
-    pairs.into_iter().collect()
 }
 
 /// Builds the switch track and thumb styling from the active theme tokens. By
@@ -247,34 +241,62 @@ pub mod leptos {
     pub fn LeptosSwitch(props: LeptosSwitchProps) -> impl IntoView {
         let descriptor = super::build_descriptor(&props.switch, &props.state);
         let label = descriptor.label().to_string();
-        let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
-        let class = attr_map.remove("class").unwrap_or_default();
-        let role = attr_map.remove("role").unwrap_or_else(|| "switch".into());
-        let aria_checked = attr_map
-            .remove("aria-checked")
-            .unwrap_or_else(|| String::from("false"));
-        let aria_disabled = attr_map.remove("aria-disabled");
-        let tabindex = attr_map
-            .remove("tabindex")
-            .unwrap_or_else(|| String::from("0"));
-        let data_on = attr_map
-            .remove("data-on")
-            .unwrap_or_else(|| String::from("false"));
-        let data_focus_visible = attr_map
-            .remove("data-focus-visible")
-            .unwrap_or_else(|| String::from("false"));
+        let mut element = leptos::html::span();
+        let mut role_present = false;
+        let mut aria_checked_present = false;
+        let mut tabindex_present = false;
+        let mut data_on_present = false;
+        let mut data_focus_visible_present = false;
 
-        view! {
-            <span
-                class=class
-                role=role
-                aria-checked=aria_checked
-                aria-disabled=aria_disabled
-                tabindex=tabindex
-                data-on=data_on
-                data-focus-visible=data_focus_visible
-            >{label}</span>
+        for (key, value) in descriptor.themed_attributes() {
+            match key.as_str() {
+                "class" => {
+                    // Preserve class ordering so Leptos hydration mirrors SSR output.
+                    element = element.class(value);
+                }
+                "role" => {
+                    role_present = true;
+                    element = element.attr(key, value);
+                }
+                "aria-checked" => {
+                    aria_checked_present = true;
+                    element = element.attr(key, value);
+                }
+                "tabindex" => {
+                    tabindex_present = true;
+                    element = element.attr(key, value);
+                }
+                "data-on" => {
+                    data_on_present = true;
+                    element = element.attr(key, value);
+                }
+                "data-focus-visible" => {
+                    data_focus_visible_present = true;
+                    element = element.attr(key, value);
+                }
+                _ => {
+                    element = element.attr(key, value);
+                }
+            }
         }
+
+        if !role_present {
+            element = element.attr("role", "switch");
+        }
+        if !aria_checked_present {
+            element = element.attr("aria-checked", "false");
+        }
+        if !tabindex_present {
+            element = element.attr("tabindex", "0");
+        }
+        if !data_on_present {
+            element = element.attr("data-on", "false");
+        }
+        if !data_focus_visible_present {
+            element = element.attr("data-focus-visible", "false");
+        }
+
+        element.child(label).into_view()
     }
 }
 
@@ -298,22 +320,32 @@ pub mod dioxus {
     pub fn DioxusSwitch(cx: Scope<DioxusSwitchProps>) -> Element {
         let descriptor = super::build_descriptor(&cx.props().switch, &cx.props().state);
         let label = descriptor.label().to_string();
-        let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
-        let class = attr_map.remove("class").unwrap_or_default();
-        let role = attr_map.remove("role").unwrap_or_default();
-        let aria_checked = attr_map
-            .remove("aria-checked")
-            .unwrap_or_else(|| String::from("false"));
-        let aria_disabled = attr_map.remove("aria-disabled");
-        let tabindex = attr_map
-            .remove("tabindex")
-            .unwrap_or_else(|| String::from("0"));
-        let data_on = attr_map
-            .remove("data-on")
-            .unwrap_or_else(|| String::from("false"));
-        let data_focus_visible = attr_map
-            .remove("data-focus-visible")
-            .unwrap_or_else(|| String::from("false"));
+        let mut class = String::new();
+        let mut role = None;
+        let mut aria_checked = None;
+        let mut aria_disabled = None;
+        let mut tabindex = None;
+        let mut data_on = None;
+        let mut data_focus_visible = None;
+
+        for (key, value) in descriptor.themed_attributes() {
+            match key.as_str() {
+                "class" => class = value,
+                "role" => role = Some(value),
+                "aria-checked" => aria_checked = Some(value),
+                "aria-disabled" => aria_disabled = Some(value),
+                "tabindex" => tabindex = Some(value),
+                "data-on" => data_on = Some(value),
+                "data-focus-visible" => data_focus_visible = Some(value),
+                _ => {}
+            }
+        }
+
+        let role = role.unwrap_or_default();
+        let aria_checked = aria_checked.unwrap_or_else(|| String::from("false"));
+        let tabindex = tabindex.unwrap_or_else(|| String::from("0"));
+        let data_on = data_on.unwrap_or_else(|| String::from("false"));
+        let data_focus_visible = data_focus_visible.unwrap_or_else(|| String::from("false"));
 
         cx.render(rsx! {
             span {
@@ -353,22 +385,32 @@ pub mod sycamore {
     pub fn SycamoreSwitch<G: Html>(cx: Scope, props: SycamoreSwitchProps) -> Template<G> {
         let descriptor = super::build_descriptor(&props.switch, &props.state);
         let label = descriptor.label().to_string();
-        let mut attr_map = super::attributes_to_map(descriptor.themed_attributes());
-        let class = attr_map.remove("class").unwrap_or_default();
-        let role = attr_map.remove("role").unwrap_or_default();
-        let aria_checked = attr_map
-            .remove("aria-checked")
-            .unwrap_or_else(|| String::from("false"));
-        let aria_disabled = attr_map.remove("aria-disabled");
-        let tabindex = attr_map
-            .remove("tabindex")
-            .unwrap_or_else(|| String::from("0"));
-        let data_on = attr_map
-            .remove("data-on")
-            .unwrap_or_else(|| String::from("false"));
-        let data_focus_visible = attr_map
-            .remove("data-focus-visible")
-            .unwrap_or_else(|| String::from("false"));
+        let mut class = String::new();
+        let mut role = None;
+        let mut aria_checked = None;
+        let mut aria_disabled = None;
+        let mut tabindex = None;
+        let mut data_on = None;
+        let mut data_focus_visible = None;
+
+        for (key, value) in descriptor.themed_attributes() {
+            match key.as_str() {
+                "class" => class = value,
+                "role" => role = Some(value),
+                "aria-checked" => aria_checked = Some(value),
+                "aria-disabled" => aria_disabled = Some(value),
+                "tabindex" => tabindex = Some(value),
+                "data-on" => data_on = Some(value),
+                "data-focus-visible" => data_focus_visible = Some(value),
+                _ => {}
+            }
+        }
+
+        let role = role.unwrap_or_default();
+        let aria_checked = aria_checked.unwrap_or_else(|| String::from("false"));
+        let tabindex = tabindex.unwrap_or_else(|| String::from("0"));
+        let data_on = data_on.unwrap_or_else(|| String::from("false"));
+        let data_focus_visible = data_focus_visible.unwrap_or_else(|| String::from("false"));
 
         view! { cx,
             span(

@@ -20,7 +20,6 @@
 
 use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
 use rustic_ui_styled_engine::{css_with_theme, Style};
-use std::collections::HashMap;
 
 use crate::selection_control::{self, RadioGroupDescriptor, RadioOptionDescriptor};
 
@@ -77,11 +76,6 @@ fn build_descriptor(props: &RadioGroupProps, state: &RadioGroupState) -> RadioGr
 fn render_html(props: &RadioGroupProps, state: &RadioGroupState) -> String {
     let descriptor = build_descriptor(props, state);
     selection_control::render_radio_group_html(&descriptor)
-}
-
-#[allow(dead_code)]
-fn attributes_to_map(pairs: Vec<(String, String)>) -> HashMap<String, String> {
-    pairs.into_iter().collect()
 }
 
 /// Generates layout styling for the radio group container, including
@@ -301,44 +295,61 @@ pub mod leptos {
     #[component]
     pub fn LeptosRadioGroup(props: LeptosRadioGroupProps) -> impl IntoView {
         let descriptor = super::build_descriptor(&props.group, &props.state);
-        let mut group_map = super::attributes_to_map(descriptor.group_thematic_attributes());
-        let class = group_map.remove("class").unwrap_or_default();
-        let role = group_map
-            .remove("role")
-            .unwrap_or_else(|| String::from("radiogroup"));
-        let aria_orientation = group_map
-            .remove("aria-orientation")
-            .unwrap_or_else(|| String::from("horizontal"));
-        let aria_disabled = group_map.remove("aria-disabled");
-        let data_orientation = group_map
-            .remove("data-orientation")
-            .unwrap_or_else(|| String::from("horizontal"));
+        let mut class = String::new();
+        let mut role = None;
+        let mut aria_orientation = None;
+        let mut aria_disabled = None;
+        let mut data_orientation = None;
+
+        for (key, value) in descriptor.group_thematic_attributes() {
+            match key.as_str() {
+                "class" => class = value,
+                "role" => role = Some(value),
+                "aria-orientation" => aria_orientation = Some(value),
+                "aria-disabled" => aria_disabled = Some(value),
+                "data-orientation" => data_orientation = Some(value),
+                _ => {}
+            }
+        }
+
+        let role = role.unwrap_or_else(|| String::from("radiogroup"));
+        let aria_orientation = aria_orientation.unwrap_or_else(|| String::from("horizontal"));
+        let data_orientation = data_orientation.unwrap_or_else(|| String::from("horizontal"));
 
         let option_views: Vec<View> = descriptor
             .options()
             .iter()
             .map(|option| {
-                let mut option_map = super::attributes_to_map(option.themed_attributes());
-                let option_class = option_map.remove("class").unwrap_or_default();
-                let option_role = option_map
-                    .remove("role")
-                    .unwrap_or_else(|| String::from("radio"));
-                let aria_checked = option_map
-                    .remove("aria-checked")
-                    .unwrap_or_else(|| String::from("false"));
-                let aria_disabled_opt = option_map.remove("aria-disabled");
-                let tabindex = option_map
-                    .remove("tabindex")
-                    .unwrap_or_else(|| String::from("0"));
-                let data_checked = option_map
-                    .remove("data-checked")
-                    .unwrap_or_else(|| String::from("false"));
-                let data_focus_visible = option_map
-                    .remove("data-focus-visible")
-                    .unwrap_or_else(|| String::from("false"));
-                let data_index = option_map
-                    .remove("data-index")
-                    .unwrap_or_else(|| String::from("0"));
+                let mut option_class = String::new();
+                let mut option_role = None;
+                let mut aria_checked = None;
+                let mut aria_disabled_opt = None;
+                let mut tabindex = None;
+                let mut data_checked = None;
+                let mut data_focus_visible = None;
+                let mut data_index = None;
+
+                for (key, value) in option.themed_attributes() {
+                    match key.as_str() {
+                        "class" => option_class = value,
+                        "role" => option_role = Some(value),
+                        "aria-checked" => aria_checked = Some(value),
+                        "aria-disabled" => aria_disabled_opt = Some(value),
+                        "tabindex" => tabindex = Some(value),
+                        "data-checked" => data_checked = Some(value),
+                        "data-focus-visible" => data_focus_visible = Some(value),
+                        "data-index" => data_index = Some(value),
+                        _ => {}
+                    }
+                }
+
+                let option_role = option_role.unwrap_or_else(|| String::from("radio"));
+                let aria_checked = aria_checked.unwrap_or_else(|| String::from("false"));
+                let tabindex = tabindex.unwrap_or_else(|| String::from("0"));
+                let data_checked = data_checked.unwrap_or_else(|| String::from("false"));
+                let data_focus_visible =
+                    data_focus_visible.unwrap_or_else(|| String::from("false"));
+                let data_index = data_index.unwrap_or_else(|| String::from("0"));
                 let label = option.label().to_string();
 
                 view! {
@@ -388,18 +399,26 @@ pub mod dioxus {
     /// Radio group rendered as a Dioxus component.
     pub fn DioxusRadioGroup(cx: Scope<DioxusRadioGroupProps>) -> Element {
         let descriptor = super::build_descriptor(&cx.props().group, &cx.props().state);
-        let mut group_map = super::attributes_to_map(descriptor.group_thematic_attributes());
-        let class = group_map.remove("class").unwrap_or_default();
-        let role = group_map
-            .remove("role")
-            .unwrap_or_else(|| String::from("radiogroup"));
-        let aria_orientation = group_map
-            .remove("aria-orientation")
-            .unwrap_or_else(|| String::from("horizontal"));
-        let aria_disabled = group_map.remove("aria-disabled");
-        let data_orientation = group_map
-            .remove("data-orientation")
-            .unwrap_or_else(|| String::from("horizontal"));
+        let mut class = String::new();
+        let mut role = None;
+        let mut aria_orientation = None;
+        let mut aria_disabled = None;
+        let mut data_orientation = None;
+
+        for (key, value) in descriptor.group_thematic_attributes() {
+            match key.as_str() {
+                "class" => class = value,
+                "role" => role = Some(value),
+                "aria-orientation" => aria_orientation = Some(value),
+                "aria-disabled" => aria_disabled = Some(value),
+                "data-orientation" => data_orientation = Some(value),
+                _ => {}
+            }
+        }
+
+        let role = role.unwrap_or_else(|| String::from("radiogroup"));
+        let aria_orientation = aria_orientation.unwrap_or_else(|| String::from("horizontal"));
+        let data_orientation = data_orientation.unwrap_or_else(|| String::from("horizontal"));
 
         cx.render(rsx! {
             div {
@@ -409,27 +428,36 @@ pub mod dioxus {
                 aria_disabled: aria_disabled,
                 data_orientation: data_orientation,
                 { descriptor.options().iter().map(|option| {
-                    let mut option_map = super::attributes_to_map(option.themed_attributes());
-                    let option_class = option_map.remove("class").unwrap_or_default();
-                    let option_role = option_map
-                        .remove("role")
-                        .unwrap_or_else(|| String::from("radio"));
-                    let aria_checked = option_map
-                        .remove("aria-checked")
-                        .unwrap_or_else(|| String::from("false"));
-                    let aria_disabled_opt = option_map.remove("aria-disabled");
-                    let tabindex = option_map
-                        .remove("tabindex")
-                        .unwrap_or_else(|| String::from("0"));
-                    let data_checked = option_map
-                        .remove("data-checked")
-                        .unwrap_or_else(|| String::from("false"));
-                    let data_focus_visible = option_map
-                        .remove("data-focus-visible")
-                        .unwrap_or_else(|| String::from("false"));
-                    let data_index = option_map
-                        .remove("data-index")
-                        .unwrap_or_else(|| String::from("0"));
+                    let mut option_class = String::new();
+                    let mut option_role = None;
+                    let mut aria_checked = None;
+                    let mut aria_disabled_opt = None;
+                    let mut tabindex = None;
+                    let mut data_checked = None;
+                    let mut data_focus_visible = None;
+                    let mut data_index = None;
+
+                    for (key, value) in option.themed_attributes() {
+                        match key.as_str() {
+                            "class" => option_class = value,
+                            "role" => option_role = Some(value),
+                            "aria-checked" => aria_checked = Some(value),
+                            "aria-disabled" => aria_disabled_opt = Some(value),
+                            "tabindex" => tabindex = Some(value),
+                            "data-checked" => data_checked = Some(value),
+                            "data-focus-visible" => data_focus_visible = Some(value),
+                            "data-index" => data_index = Some(value),
+                            _ => {}
+                        }
+                    }
+
+                    let option_role = option_role.unwrap_or_else(|| String::from("radio"));
+                    let aria_checked = aria_checked.unwrap_or_else(|| String::from("false"));
+                    let tabindex = tabindex.unwrap_or_else(|| String::from("0"));
+                    let data_checked = data_checked.unwrap_or_else(|| String::from("false"));
+                    let data_focus_visible =
+                        data_focus_visible.unwrap_or_else(|| String::from("false"));
+                    let data_index = data_index.unwrap_or_else(|| String::from("0"));
                     let label = option.label().to_string();
 
                     rsx! {
@@ -473,44 +501,61 @@ pub mod sycamore {
     #[component]
     pub fn SycamoreRadioGroup<G: Html>(cx: Scope, props: SycamoreRadioGroupProps) -> Template<G> {
         let descriptor = super::build_descriptor(&props.group, &props.state);
-        let mut group_map = super::attributes_to_map(descriptor.group_thematic_attributes());
-        let class = group_map.remove("class").unwrap_or_default();
-        let role = group_map
-            .remove("role")
-            .unwrap_or_else(|| String::from("radiogroup"));
-        let aria_orientation = group_map
-            .remove("aria-orientation")
-            .unwrap_or_else(|| String::from("horizontal"));
-        let aria_disabled = group_map.remove("aria-disabled");
-        let data_orientation = group_map
-            .remove("data-orientation")
-            .unwrap_or_else(|| String::from("horizontal"));
+        let mut class = String::new();
+        let mut role = None;
+        let mut aria_orientation = None;
+        let mut aria_disabled = None;
+        let mut data_orientation = None;
+
+        for (key, value) in descriptor.group_thematic_attributes() {
+            match key.as_str() {
+                "class" => class = value,
+                "role" => role = Some(value),
+                "aria-orientation" => aria_orientation = Some(value),
+                "aria-disabled" => aria_disabled = Some(value),
+                "data-orientation" => data_orientation = Some(value),
+                _ => {}
+            }
+        }
+
+        let role = role.unwrap_or_else(|| String::from("radiogroup"));
+        let aria_orientation = aria_orientation.unwrap_or_else(|| String::from("horizontal"));
+        let data_orientation = data_orientation.unwrap_or_else(|| String::from("horizontal"));
 
         let option_views: Vec<View<G>> = descriptor
             .options()
             .iter()
             .map(|option| {
-                let mut option_map = super::attributes_to_map(option.themed_attributes());
-                let option_class = option_map.remove("class").unwrap_or_default();
-                let option_role = option_map
-                    .remove("role")
-                    .unwrap_or_else(|| String::from("radio"));
-                let aria_checked = option_map
-                    .remove("aria-checked")
-                    .unwrap_or_else(|| String::from("false"));
-                let aria_disabled_opt = option_map.remove("aria-disabled");
-                let tabindex = option_map
-                    .remove("tabindex")
-                    .unwrap_or_else(|| String::from("0"));
-                let data_checked = option_map
-                    .remove("data-checked")
-                    .unwrap_or_else(|| String::from("false"));
-                let data_focus_visible = option_map
-                    .remove("data-focus-visible")
-                    .unwrap_or_else(|| String::from("false"));
-                let data_index = option_map
-                    .remove("data-index")
-                    .unwrap_or_else(|| String::from("0"));
+                let mut option_class = String::new();
+                let mut option_role = None;
+                let mut aria_checked = None;
+                let mut aria_disabled_opt = None;
+                let mut tabindex = None;
+                let mut data_checked = None;
+                let mut data_focus_visible = None;
+                let mut data_index = None;
+
+                for (key, value) in option.themed_attributes() {
+                    match key.as_str() {
+                        "class" => option_class = value,
+                        "role" => option_role = Some(value),
+                        "aria-checked" => aria_checked = Some(value),
+                        "aria-disabled" => aria_disabled_opt = Some(value),
+                        "tabindex" => tabindex = Some(value),
+                        "data-checked" => data_checked = Some(value),
+                        "data-focus-visible" => data_focus_visible = Some(value),
+                        "data-index" => data_index = Some(value),
+                        _ => {}
+                    }
+                }
+
+                let option_role = option_role.unwrap_or_else(|| String::from("radio"));
+                let aria_checked = aria_checked.unwrap_or_else(|| String::from("false"));
+                let tabindex = tabindex.unwrap_or_else(|| String::from("0"));
+                let data_checked = data_checked.unwrap_or_else(|| String::from("false"));
+                let data_focus_visible =
+                    data_focus_visible.unwrap_or_else(|| String::from("false"));
+                let data_index = data_index.unwrap_or_else(|| String::from("0"));
                 let label = option.label().to_string();
 
                 view! { cx,
