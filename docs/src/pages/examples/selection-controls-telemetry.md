@@ -151,7 +151,11 @@ stream.【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crate
 
 ```rust
 use std::rc::Rc;
-use rustic_ui_headless::{checkbox::CheckboxState, switch::SwitchState};
+use rustic_ui_headless::{
+    checkbox::CheckboxState,
+    radio::{RadioGroupState, RadioOrientation},
+    switch::SwitchState,
+};
 use rustic_ui_material::{
     checkbox::{
         CheckboxProps, CheckboxTelemetryEvent,
@@ -160,6 +164,10 @@ use rustic_ui_material::{
     switch::{
         SwitchProps, SwitchTelemetryEvent,
         leptos::{LeptosSwitch, LeptosSwitchProps},
+    },
+    radio::{
+        RadioChangeEvent, RadioGroupProps, RadioTelemetryEvent,
+        leptos::{LeptosRadioGroup, LeptosRadioGroupProps},
     },
 };
 
@@ -218,7 +226,31 @@ fn leptos_checkbox_view() -> impl leptos::IntoView {
         telemetry_delegate: Some(switch_delegate),
     });
 
-    (checkbox, switch)
+    let radio_delegate: Rc<dyn Fn(RadioTelemetryEvent)> = Rc::new(|event| {
+        analytics::record("selection.radio.telemetry", Some(format!("{:?}", event)));
+    });
+
+    let radio_change: Rc<dyn Fn(RadioChangeEvent)> = Rc::new(|event| {
+        analytics::record("selection.radio.change", Some(event.next.to_string()));
+    });
+
+    let radio_state = RadioGroupState::uncontrolled(
+        vec!["Visa".into(), "Mastercard".into(), "Amex".into()],
+        false,
+        RadioOrientation::Vertical,
+        Some(1),
+    );
+
+    let mut radio_props = LeptosRadioGroupProps::new(
+        RadioGroupProps::from_state(&radio_state),
+        radio_state.clone(),
+    );
+    radio_props.on_change = Some(radio_change);
+    radio_props.telemetry_delegate = Some(radio_delegate);
+
+    let radio_group = LeptosRadioGroup(radio_props);
+
+    (checkbox, switch, radio_group)
 }
 ```
 
