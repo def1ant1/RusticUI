@@ -56,30 +56,83 @@ The helper mirrors the shape of `TelemetryHooks`, which includes optional
 analytics/automation IDs, span overrides, and render callbacks that fire for all
 adapters.【F:crates/rustic-ui-material/src/telemetry.rs†L132-L189】
 
+## Attach telemetry to radio groups
+
+Radio controls reuse the same hooks as checkboxes and switches. Every
+`RadioGroupProps` exposes a `telemetry: TelemetryHooks` field, and the adapter
+props (`YewRadioGroupProps`, `ReactRadioGroupProps`, `LeptosRadioGroupProps`,
+`DioxusRadioGroupProps`, `SycamoreRadioGroupProps`) merge the hooks supplied at
+the adapter level with the group-level hooks. This guarantees that analytics and
+automation identifiers emitted while rendering each framework stay aligned with
+the descriptors shipped by the headless state machine—even when teams inject
+framework overrides.【F:crates/rustic-ui-material/src/radio.rs†L120-L135】【F:crates/rustic-ui-material/src/radio.rs†L1885-L1930】【F:crates/rustic-ui-material/src/radio.rs†L2316-L2355】【F:crates/rustic-ui-material/src/radio.rs†L3310-L3344】【F:crates/rustic-ui-material/src/radio.rs†L382-408】
+
+The descriptors themselves stay authoritative for SSR and hydration. Every
+adapter renders attributes and inline styles provided by the descriptor snapshot,
+and regression tests assert that server output retains ARIA metadata, themed
+attributes, and custom data hooks so the client runtime can hydrate safely with
+no manual DOM reconciliation.【F:crates/rustic-ui-material/src/radio.rs†L270-L315】【F:crates/rustic-ui-material/src/radio.rs†L562-L579】【F:crates/rustic-ui-material/src/radio.rs†L2799-L2856】【F:crates/rustic-ui-material/src/radio.rs†L3823-L3896】【F:crates/rustic-ui-material/src/radio.rs†L4561-L4597】
+
+### Radio telemetry payloads
+
+Radio events include analytics context, focus transitions, selection intents,
+commit snapshots, and key metadata. Each payload mirrors the descriptor’s
+automation IDs and label so monitoring pipelines can correlate telemetry with
+the rendered DOM.
+
+| Variant | Purpose | Key fields |
+| --- | --- | --- |
+| `Analytics` | Snapshot of the option prior to any interaction. | `index`, `selected`, `disabled`, `analytics_id`, `automation_id`, `label` |
+| `Focus` / `Blur` | Visibility transitions for an option. | `index`, `focused`, `disabled`, `analytics_id`, `automation_id`, `label` |
+| `Change` | Selection intent emitted before state mutates. | `previous`, `next`, `disabled`, `analytics_id`, `automation_id`, `label` |
+| `Commit` | Post-mutation selection snapshot, including controlled state. | `selected`, `controlled`, `analytics_id`, `automation_id`, `label` |
+| `Key` | Keyboard interaction metadata. | `key`, `previous`, `next`, `disabled`, `analytics_id`, `automation_id`, `label` |
+
+All adapters emit events in the deterministic order `Analytics → Focus/Blur →
+Change → Commit → callback`, with optional `Key` payloads inserted before
+`Change` when the interaction is keyboard-driven. Tests across every framework
+validate that telemetry fires before user callbacks and that commits capture the
+final selection snapshot—even in controlled radio groups.【F:crates/rustic-ui-material/src/radio.rs†L120-L212】【F:crates/rustic-ui-material/src/radio.rs†L2633-L2709】【F:crates/rustic-ui-material/src/radio.rs†L2709-L2793】【F:crates/rustic-ui-material/tests/radio_adapters.rs†L188-L260】
+
 ## Yew example: register a telemetry delegate
 
 Yew adapters accept idiomatic `Callback<T>` handlers and forward
-`CheckboxTelemetryEvent` and `SwitchTelemetryEvent` payloads to the telemetry
-delegate **before** invoking user callbacks, guaranteeing deterministic
-analytics ordering.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1120】【F:crates/rustic-ui-material/src/switch.rs†L883-L1042】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L17-L74】【F:crates/rustic-ui-material/tests/switch_adapters.rs†L1-L38】
+`CheckboxTelemetryEvent`, `SwitchTelemetryEvent`, and `RadioTelemetryEvent`
+payloads to the telemetry delegate **before** invoking user callbacks,
+guaranteeing deterministic analytics ordering.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1120】【F:crates/rustic-ui-material/src/switch.rs†L883-L1042】【F:crates/rustic-ui-material/src/radio.rs†L1538-L1708】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L17-L74】【F:crates/rustic-ui-material/tests/radio_adapters.rs†L188-L260】
 
 ```rust
-use rustic_ui_headless::{checkbox::CheckboxState, switch::SwitchState};
+use rustic_ui_headless::{
+    checkbox::CheckboxState,
+    radio::{RadioGroupState, RadioOrientation},
+    switch::SwitchState,
+};
 use rustic_ui_material::{
     checkbox::{
         CheckboxChangeEvent, CheckboxProps, CheckboxTelemetryEvent,
         yew::{YewCheckbox, YewCheckboxProps},
     },
+    radio::{
+        self, RadioChangeEvent, RadioGroupProps, RadioTelemetryEvent,
+        yew::{YewRadioGroup, YewRadioGroupProps},
+    },
     switch::{
         SwitchProps, SwitchTelemetryEvent,
         yew::{YewSwitch, YewSwitchProps},
     },
+    TelemetryHooks,
 };
 use yew::prelude::*;
 
 #[function_component(MarketingOptIn)]
 fn marketing_opt_in() -> Html {
     let state = CheckboxState::uncontrolled(false, false);
+    let radio_state = RadioGroupState::uncontrolled(
+        vec!["Cash".into(), "Card".into(), "Invoice".into()],
+        false,
+        RadioOrientation::Horizontal,
+        Some(0),
+    );
     let telemetry_log = use_state(|| Vec::<String>::new());
 
     let checkbox_delegate = {
@@ -99,6 +152,25 @@ fn marketing_opt_in() -> Html {
             telemetry_log.set({
                 let mut next = (*telemetry_log).clone();
                 next.push(format!("switch::{event:?}"));
+                next
+            });
+        })
+    };
+
+    let radio_delegate = {
+        let telemetry_log = telemetry_log.clone();
+        Callback::from(move |event: RadioTelemetryEvent| {
+            if let RadioTelemetryEvent::Commit(commit) = &event {
+                metrics::gauge!(
+                    "marketing.opt_in.radio.selected",
+                    commit.selected.unwrap_or_default() as f64,
+                    "controlled" => commit.controlled.to_string(),
+                );
+            }
+
+            telemetry_log.set({
+                let mut next = (*telemetry_log).clone();
+                next.push(format!("radio::{event:?}"));
                 next
             });
         })
@@ -128,6 +200,23 @@ fn marketing_opt_in() -> Html {
                 state={SwitchState::uncontrolled(false, false)}
                 telemetry_delegate={Some(switch_delegate)}
                 on_change={None}
+                on_focus={None}
+                on_blur={None}
+                on_key={None}
+            />
+            <YewRadioGroup
+                group={RadioGroupProps {
+                    option_labels: radio_state.options().to_vec(),
+                    telemetry: analytics_hooks("marketing.opt_in.radio"),
+                    additional_group_attributes: vec![],
+                    additional_option_attributes: vec![],
+                }}
+                state={radio_state.clone()}
+                telemetry={TelemetryHooks::default()}
+                telemetry_delegate={Some(radio_delegate.clone())}
+                on_change={Some(Callback::from(|event: RadioChangeEvent| {
+                    tracing::info!(target: "marketing.radio", ?event, "radio change");
+                }))}
                 on_focus={None}
                 on_blur={None}
                 on_key={None}
@@ -170,8 +259,11 @@ pub fn payment_methods(cx: Scope) -> Element {
         RadioOrientation::Horizontal,
         Some(2),
     );
-    let telemetry: Rc<dyn Fn(RadioTelemetryEvent)> = Rc::new(|event| {
-        println!("telemetry::{:?}", event);
+    let telemetry: Rc<dyn Fn(RadioTelemetryEvent)> = Rc::new(|event| match event {
+        RadioTelemetryEvent::Commit(commit) => {
+            println!("radio commit => {:?}", commit.selected);
+        }
+        other => println!("telemetry::{:?}", other),
     });
     let on_change: Rc<dyn Fn(RadioChangeEvent)> = Rc::new(|event| {
         println!("radio-change next={}", event.next);
@@ -210,6 +302,9 @@ fn PaymentMethods<G: Html>(cx: Scope) -> View<G> {
         Some(2),
     );
     let telemetry: Rc<dyn Fn(RadioTelemetryEvent)> = Rc::new(|event| {
+        if let RadioTelemetryEvent::Commit(commit) = &event {
+            println!("commit => {:?}", commit.selected);
+        }
         println!("telemetry::{:?}", event);
     });
     let on_change: Rc<dyn Fn(RadioChangeEvent)> = Rc::new(|event| {
@@ -345,18 +440,33 @@ guarantees.【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:c
 ## React adapter integration
 
 React consumers receive a JavaScript object describing each telemetry payload.
-`kind` identifies the event (`"change"`, `"focus"`, `"blur"`, or `"key"`), and
-subsequent fields mirror the Rust structs. Register a single delegate to forward
-those events into your analytics provider for both checkboxes and
-switches.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】【F:crates/rustic-ui-material/src/switch.rs†L697-L882】
+`kind` identifies the event (`"analytics"`, `"change"`, `"focus"`, `"blur"`,
+`"key"`, or `"commit"` for radios), and subsequent fields mirror the Rust
+structs. Register a single delegate to forward those events into your analytics
+provider for checkboxes, switches, and radios.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】【F:crates/rustic-ui-material/src/switch.rs†L697-L882】【F:crates/rustic-ui-material/src/radio.rs†L480-L703】
 
 ```tsx
-import { ReactCheckbox } from 'rustic-ui-material/checkbox';
-import { ReactSwitch } from 'rustic-ui-material/switch';
-import { ReactRadioGroup } from 'rustic-ui-material/radio';
+import {
+  ReactCheckbox,
+  CheckboxTelemetryEvent,
+} from 'rustic-ui-material/checkbox';
+import {
+  ReactSwitch,
+  SwitchTelemetryEvent,
+} from 'rustic-ui-material/switch';
+import {
+  ReactRadioGroup,
+  RadioTelemetryEvent,
+  RadioCommitEvent,
+} from 'rustic-ui-material/radio';
 
-const telemetryDelegate = (event: any) => {
+const telemetryDelegate = (
+  event: CheckboxTelemetryEvent | SwitchTelemetryEvent | RadioTelemetryEvent,
+) => {
   switch (event.kind) {
+    case 'analytics':
+      analytics.track('selection.analytics', event);
+      break;
     case 'change':
       analytics.track('selection.change', {
         previous: event.previous,
@@ -364,6 +474,9 @@ const telemetryDelegate = (event: any) => {
         analyticsId: event.analyticsId,
         automationId: event.automationId,
       });
+      break;
+    case 'commit':
+      analytics.track('selection.commit', event as RadioCommitEvent);
       break;
     case 'focus':
       analytics.track('selection.focus', event);
@@ -375,6 +488,10 @@ const telemetryDelegate = (event: any) => {
       analytics.track('selection.key', { key: event.key, next: event.next });
       break;
   }
+};
+
+const onRadioCommit = (event: RadioCommitEvent) => {
+  posthog.capture('radio.commit', event);
 };
 
 <>
@@ -395,6 +512,7 @@ const telemetryDelegate = (event: any) => {
     on_focus={handleRadioFocus}
     on_blur={handleRadioBlur}
     on_key_down={handleRadioKeyDown}
+    on_commit={onRadioCommit}
     telemetry_delegate={telemetryDelegate}
   />
 </>;
@@ -408,9 +526,10 @@ user handlers run.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】�
 Radio groups additionally sequence telemetry in the order `analytics → focus/
 blur → change → commit` so analytics pipelines see the interaction intent before
 the shared headless state mutates. The React adapter exposes explicit
-`on_change`, `on_focus`, `on_blur`, and `on_key_down` callbacks that run *after*
-telemetry and state updates, guaranteeing consumer side effects observe a fully
-committed selection snapshot.【F:crates/rustic-ui-material/src/radio.rs†L480-L703】
+`on_change`, `on_focus`, `on_blur`, `on_key_down`, and `on_commit` callbacks that
+run *after* telemetry and state updates, guaranteeing consumer side effects
+observe a fully committed selection snapshot and the descriptor-authored
+attributes already attached to the DOM.【F:crates/rustic-ui-material/src/radio.rs†L480-L703】【F:crates/rustic-ui-material/src/radio.rs†L270-L315】
 
 `checkboxPropsFromWasm` and `checkboxStateFromWasm` represent the `CheckboxProps`
 and `CheckboxState` values exported by the wasm bundle; the React adapter expects
@@ -428,6 +547,9 @@ suite:
 3. Keyboard interactions emit a `Key` payload **and** an immediately-following
    `Change` payload so analytics pipelines can correlate the physical key with
    the resulting checked state.【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L210-L299】
+4. Radio groups emit a `Commit` payload after the shared runner resolves the
+   final selection, ensuring controlled groups surface the pre-hydration state
+   alongside the committed snapshot.【F:crates/rustic-ui-material/src/radio.rs†L2633-L2709】【F:crates/rustic-ui-material/tests/radio_adapters.rs†L188-L260】
 
 Use these guarantees to stitch telemetry into enterprise monitoring stacks
 without writing adapter-specific plumbing.

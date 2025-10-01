@@ -112,20 +112,21 @@ The selection control samples wire checkbox, switch, and radio state machines
 into framework adapters via shared render helpers, keeping automation and ARIA
 contracts identical across runtimes.【F:examples/selection-controls-yew/README.md†L1-L44】
 
-Recent telemetry updates mean every checkbox adapter (React, Yew, Leptos,
-Dioxus, and Sycamore) now emits a deterministic event stream **before** user
-callbacks fire. Each render enters the shared `instrument_render` span with a
-`TelemetryContext` that captures the component path, analytics/automation IDs,
-and a descriptor snapshot of the rendered attributes so observability pipelines
-see exactly which DOM attributes were generated.【F:crates/rustic-ui-material/src/checkbox.rs†L205-L227】【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1012】【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/telemetry.rs†L22-L78】
+Recent telemetry updates mean every checkbox, switch, **and radio** adapter
+(React, Yew, Leptos, Dioxus, and Sycamore) now emits a deterministic event
+stream **before** user callbacks fire. Each render enters the shared
+`instrument_render` span with a `TelemetryContext` that captures the component
+path, analytics/automation IDs, and a descriptor snapshot of the rendered
+attributes so observability pipelines see exactly which DOM attributes were
+generated.【F:crates/rustic-ui-material/src/checkbox.rs†L205-L227】【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1012】【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/radio.rs†L1885-L1930】【F:crates/rustic-ui-material/src/telemetry.rs†L22-L78】
 
 All adapters expose matching props: optional `on_change`, `on_focus`, `on_blur`,
-`on_key`, and a `telemetry_delegate` hook that receives
-`CheckboxTelemetryEvent::Change`, `::Focus`, `::Blur`, and `::Key` payloads.
+`on_key`, and a `telemetry_delegate` hook that receives normalized payloads.
 Pointer toggles deliver a single `Change` payload, focus transitions emit
-`Focus`/`Blur`, and keyboard interactions publish a `Key` event immediately
-followed by an additional `Change` payload so analytics systems can capture both
-the physical key and the resulting toggle in order.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1120】【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L17-L74】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L210-L299】
+`Focus`/`Blur`, keyboard interactions publish a `Key` event immediately followed
+by a `Change`, and radio groups emit an additional `Commit` payload to summarise
+the post-mutation selection (including controlled-state context) before consumer
+callbacks run.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1120】【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:crates/rustic-ui-material/src/radio.rs†L2633-L2709】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L210-L299】【F:crates/rustic-ui-material/tests/radio_adapters.rs†L188-L260】
 
 Use the examples as reference implementations when integrating multiple control
 surfaces into dashboards. Start by seeding `TelemetryHooks` with analytics and
