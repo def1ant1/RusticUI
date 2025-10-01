@@ -112,9 +112,30 @@ The selection control samples wire checkbox, switch, and radio state machines
 into framework adapters via shared render helpers, keeping automation and ARIA
 contracts identical across runtimes.【F:examples/selection-controls-yew/README.md†L1-L44】
 
+Recent telemetry updates mean every checkbox adapter (React, Yew, Leptos,
+Dioxus, and Sycamore) now emits a deterministic event stream **before** user
+callbacks fire. Each render enters the shared `instrument_render` span with a
+`TelemetryContext` that captures the component path, analytics/automation IDs,
+and a descriptor snapshot of the rendered attributes so observability pipelines
+see exactly which DOM attributes were generated.【F:crates/rustic-ui-material/src/checkbox.rs†L205-L227】【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1012】【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/telemetry.rs†L22-L78】
+
+All adapters expose matching props: optional `on_change`, `on_focus`, `on_blur`,
+`on_key`, and a `telemetry_delegate` hook that receives
+`CheckboxTelemetryEvent::Change`, `::Focus`, `::Blur`, and `::Key` payloads.
+Pointer toggles deliver a single `Change` payload, focus transitions emit
+`Focus`/`Blur`, and keyboard interactions publish a `Key` event immediately
+followed by an additional `Change` payload so analytics systems can capture both
+the physical key and the resulting toggle in order.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1120】【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L17-L74】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L210-L299】
+
 Use the examples as reference implementations when integrating multiple control
-surfaces into dashboards; the snippets highlight how to reuse the headless
-machines without duplicating markup.
+surfaces into dashboards. Start by seeding `TelemetryHooks` with analytics and
+automation identifiers (plus optional `on_render`/`on_error` callbacks) and pass
+a framework-specific telemetry delegate that forwards the normalized payloads to
+your analytics sink before executing local business logic.【F:crates/rustic-ui-material/src/checkbox.rs†L1-L78】【F:crates/rustic-ui-material/src/telemetry.rs†L132-L189】
+
+The standalone [selection control telemetry walkthrough](./selection-controls-telemetry.md)
+contains copy-and-paste snippets for registering handlers in each supported
+adapter and interpreting the emitted contexts.
 
 ## Feedback surfaces (`examples/feedback-*`)
 
