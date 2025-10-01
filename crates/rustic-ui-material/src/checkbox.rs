@@ -28,14 +28,175 @@
 //! front allows SSR, WASM bridges, and component frameworks to produce matching
 //! telemetry payloads without bolting on per-platform patches, keeping
 //! enterprise monitoring pipelines aligned across runtimes.
+//!
+//! Every adapter now exposes optional change/focus/blur/key callbacks alongside
+//! a telemetry delegate so large applications can bubble structured
+//! [`CheckboxTelemetryEvent`] payloads into centralized analytics collectors.
+//! The helpers reuse the headless [`CheckboxState`] to compute prior/next
+//! values, ensuring automation harnesses attached to React, Yew, Leptos,
+//! Dioxus, or Sycamore receive identical event contracts without writing
+//! adapter-specific plumbing.
 
 use crate::{
     selection_control::{self, ToggleControlDescriptor},
     telemetry::{instrument_render, TelemetryContext, TelemetryHooks},
 };
-use rustic_ui_headless::checkbox::CheckboxState;
+use rustic_ui_headless::{
+    checkbox::{CheckboxState, CheckboxValue},
+    interaction::ControlKey,
+};
 use rustic_ui_styled_engine::{css_with_theme, Style};
 use std::collections::HashMap;
+
+/// Canonical payload emitted when checkbox state changes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CheckboxChangeEvent {
+    /// Previously resolved checked state prior to the interaction.
+    pub previous: CheckboxValue,
+    /// Next logical state requested by the user interaction.
+    pub next: CheckboxValue,
+    /// Whether the checkbox was disabled when the interaction was attempted.
+    pub disabled: bool,
+    /// Identifier mirrored to analytics sinks (if configured).
+    pub analytics_id: Option<String>,
+    /// Identifier mirrored to automation sinks (if configured).
+    pub automation_id: Option<String>,
+    /// Human friendly label rendered alongside the checkbox.
+    pub label: String,
+}
+
+/// Canonical payload emitted when focus visibility changes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CheckboxFocusEvent {
+    /// Whether focus was gained (`true`) or lost (`false`).
+    pub focused: bool,
+    /// Current checked state at the time the focus transition occurred.
+    pub checked: CheckboxValue,
+    /// Whether the checkbox was disabled while the focus event fired.
+    pub disabled: bool,
+    /// Identifier mirrored to analytics sinks (if configured).
+    pub analytics_id: Option<String>,
+    /// Identifier mirrored to automation sinks (if configured).
+    pub automation_id: Option<String>,
+    /// Human friendly label rendered alongside the checkbox.
+    pub label: String,
+}
+
+/// Canonical payload emitted for keyboard interactions.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CheckboxKeyEvent {
+    /// Normalised control key derived from the browser event.
+    pub key: ControlKey,
+    /// Previously resolved checked state prior to the key interaction.
+    pub previous: CheckboxValue,
+    /// Next logical state requested by the key press (if any).
+    pub next: CheckboxValue,
+    /// Whether the checkbox was disabled when the key was pressed.
+    pub disabled: bool,
+    /// Identifier mirrored to analytics sinks (if configured).
+    pub analytics_id: Option<String>,
+    /// Identifier mirrored to automation sinks (if configured).
+    pub automation_id: Option<String>,
+    /// Human friendly label rendered alongside the checkbox.
+    pub label: String,
+}
+
+/// Telemetry payload variants surfaced across adapters.
+#[derive(Clone, Debug, PartialEq)]
+pub enum CheckboxTelemetryEvent {
+    /// Change request triggered via pointer or keyboard interaction.
+    Change(CheckboxChangeEvent),
+    /// Focus gained with the accompanying state metadata.
+    Focus(CheckboxFocusEvent),
+    /// Focus lost with the accompanying state metadata.
+    Blur(CheckboxFocusEvent),
+    /// Raw keyboard interaction payload.
+    Key(CheckboxKeyEvent),
+}
+
+#[allow(dead_code)]
+fn analytics_id(props: &CheckboxProps) -> Option<String> {
+    props.telemetry.analytics_id.clone()
+}
+
+#[allow(dead_code)]
+fn automation_id(props: &CheckboxProps) -> Option<String> {
+    props.telemetry.automation_id.clone()
+}
+
+#[allow(dead_code)]
+fn build_change_event(props: &CheckboxProps, state: &CheckboxState) -> CheckboxChangeEvent {
+    let previous = state.checked();
+    let next = if state.disabled() {
+        previous
+    } else {
+        toggled_value(previous)
+    };
+    CheckboxChangeEvent {
+        previous,
+        next,
+        disabled: state.disabled(),
+        analytics_id: analytics_id(props),
+        automation_id: automation_id(props),
+        label: props.label.clone(),
+    }
+}
+
+fn build_focus_event(
+    props: &CheckboxProps,
+    state: &CheckboxState,
+    focused: bool,
+) -> CheckboxFocusEvent {
+    CheckboxFocusEvent {
+        focused,
+        checked: state.checked(),
+        disabled: state.disabled(),
+        analytics_id: analytics_id(props),
+        automation_id: automation_id(props),
+        label: props.label.clone(),
+    }
+}
+
+#[allow(dead_code)]
+fn build_key_event(
+    props: &CheckboxProps,
+    state: &CheckboxState,
+    key: ControlKey,
+) -> CheckboxKeyEvent {
+    let previous = state.checked();
+    let next = if state.disabled() {
+        previous
+    } else {
+        toggled_value(previous)
+    };
+    CheckboxKeyEvent {
+        key,
+        previous,
+        next,
+        disabled: state.disabled(),
+        analytics_id: analytics_id(props),
+        automation_id: automation_id(props),
+        label: props.label.clone(),
+    }
+}
+
+#[allow(dead_code)]
+fn control_key_from_str(key: &str) -> Option<ControlKey> {
+    match key {
+        " " | "Spacebar" | "Space" => Some(ControlKey::Space),
+        "Enter" => Some(ControlKey::Enter),
+        _ => None,
+    }
+}
+
+#[allow(dead_code)]
+fn toggled_value(value: CheckboxValue) -> CheckboxValue {
+    match value {
+        CheckboxValue::Off => CheckboxValue::On,
+        CheckboxValue::On => CheckboxValue::Off,
+        CheckboxValue::Indeterminate => CheckboxValue::On,
+    }
+}
 
 /// Props shared across all framework adapters.
 #[derive(Clone, Debug, PartialEq)]
@@ -163,12 +324,42 @@ pub mod react {
     pub type Jsx = JsValue;
 
     /// Properties consumed by the React checkbox component.
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Debug)]
     pub struct ReactCheckboxProps {
         /// Visual label rendered beside the checkbox indicator.
         pub checkbox: CheckboxProps,
         /// Headless state machine powering ARIA metadata.
         pub state: CheckboxState,
+        /// Optional React `onChange` handler bridging to enterprise orchestrators.
+        pub on_change: Option<Function>,
+        /// Optional React `onFocus` handler forwarding focus analytics payloads.
+        pub on_focus: Option<Function>,
+        /// Optional React `onBlur` handler forwarding blur analytics payloads.
+        pub on_blur: Option<Function>,
+        /// Optional React `onKeyDown` handler forwarding keyboard payloads.
+        pub on_key: Option<Function>,
+        /// Optional telemetry payload delegate invoked by surrounding shells.
+        pub telemetry_delegate: Option<Function>,
+    }
+
+    fn function_option_eq(lhs: &Option<Function>, rhs: &Option<Function>) -> bool {
+        match (lhs, rhs) {
+            (Some(a), Some(b)) => JsValue::from(a).strict_eq(&JsValue::from(b)),
+            (None, None) => true,
+            _ => false,
+        }
+    }
+
+    impl PartialEq for ReactCheckboxProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.checkbox == other.checkbox
+                && self.state == other.state
+                && function_option_eq(&self.on_change, &other.on_change)
+                && function_option_eq(&self.on_focus, &other.on_focus)
+                && function_option_eq(&self.on_blur, &other.on_blur)
+                && function_option_eq(&self.on_key, &other.on_key)
+                && function_option_eq(&self.telemetry_delegate, &other.telemetry_delegate)
+        }
     }
 
     fn create_element(tag: &str, props: Object, children: &[JsValue]) -> JsValue {
@@ -192,7 +383,7 @@ pub mod react {
             .expect("React.createElement invocation")
     }
 
-    fn build_props_object(pairs: Vec<(String, String)>) -> Object {
+    fn build_props_object(pairs: Vec<(String, String)>, props: &ReactCheckboxProps) -> Object {
         let object = Object::new();
         for (key, value) in pairs {
             Reflect::set(
@@ -201,6 +392,26 @@ pub mod react {
                 &JsValue::from_str(&value),
             )
             .expect("set React prop");
+        }
+        if let Some(handler) = &props.on_change {
+            Reflect::set(&object, &JsValue::from_str("onChange"), handler)
+                .expect("set onChange handler");
+        }
+        if let Some(handler) = &props.on_focus {
+            Reflect::set(&object, &JsValue::from_str("onFocus"), handler)
+                .expect("set onFocus handler");
+        }
+        if let Some(handler) = &props.on_blur {
+            Reflect::set(&object, &JsValue::from_str("onBlur"), handler)
+                .expect("set onBlur handler");
+        }
+        if let Some(handler) = &props.on_key {
+            Reflect::set(&object, &JsValue::from_str("onKeyDown"), handler)
+                .expect("set onKeyDown handler");
+        }
+        if let Some(delegate) = &props.telemetry_delegate {
+            Reflect::set(&object, &JsValue::from_str("telemetryDelegate"), delegate)
+                .expect("set telemetry delegate");
         }
         object
     }
@@ -214,7 +425,7 @@ pub mod react {
             let descriptor = super::build_descriptor(&props.checkbox, &props.state);
             let label = descriptor.label().to_string();
             let attributes = descriptor.themed_attributes();
-            let props_object = build_props_object(attributes);
+            let props_object = build_props_object(attributes, props);
             create_element("span", props_object, &[JsValue::from_str(&label)])
         })
     }
@@ -225,6 +436,7 @@ pub mod yew {
     //! Yew adapter implemented with `#[function_component]` so downstream apps
     //! can compose the checkbox like any other Yew widget.
     use super::*;
+    use yew::events::{FocusEvent, KeyboardEvent, MouseEvent};
     use yew::prelude::*;
     use yew::virtual_dom::VNode;
 
@@ -235,6 +447,21 @@ pub mod yew {
         pub checkbox: CheckboxProps,
         /// Headless state machine providing accessibility metadata.
         pub state: CheckboxState,
+        /// Optional change callback invoked with [`CheckboxChangeEvent`].
+        #[prop_or_default]
+        pub on_change: Option<Callback<CheckboxChangeEvent>>,
+        /// Optional focus callback invoked when the checkbox gains focus.
+        #[prop_or_default]
+        pub on_focus: Option<Callback<CheckboxFocusEvent>>,
+        /// Optional blur callback invoked when the checkbox loses focus.
+        #[prop_or_default]
+        pub on_blur: Option<Callback<CheckboxFocusEvent>>,
+        /// Optional keyboard callback invoked with normalized control keys.
+        #[prop_or_default]
+        pub on_key: Option<Callback<CheckboxKeyEvent>>,
+        /// Optional telemetry delegate invoked with structured payloads.
+        #[prop_or_default]
+        pub telemetry_delegate: Option<Callback<CheckboxTelemetryEvent>>,
     }
 
     /// Checkbox rendered as a Yew component.
@@ -247,7 +474,80 @@ pub mod yew {
             let descriptor = super::build_descriptor(&props.checkbox, &props.state);
             let label = descriptor.label().to_string();
             let attrs = descriptor.themed_attributes();
-            let mut node = html! { <span>{label}</span> };
+            let change_handler = {
+                let on_change = props.on_change.clone();
+                let telemetry = props.telemetry_delegate.clone();
+                let checkbox = props.checkbox.clone();
+                let state = props.state.clone();
+                Callback::from(move |_event: MouseEvent| {
+                    let change = build_change_event(&checkbox, &state);
+                    if let Some(cb) = &on_change {
+                        cb.emit(change.clone());
+                    }
+                    if let Some(delegate) = &telemetry {
+                        delegate.emit(CheckboxTelemetryEvent::Change(change));
+                    }
+                })
+            };
+            let focus_handler = {
+                let on_focus = props.on_focus.clone();
+                let telemetry = props.telemetry_delegate.clone();
+                let checkbox = props.checkbox.clone();
+                let state = props.state.clone();
+                Callback::from(move |_event: FocusEvent| {
+                    let focus = build_focus_event(&checkbox, &state, true);
+                    if let Some(cb) = &on_focus {
+                        cb.emit(focus.clone());
+                    }
+                    if let Some(delegate) = &telemetry {
+                        delegate.emit(CheckboxTelemetryEvent::Focus(focus));
+                    }
+                })
+            };
+            let blur_handler = {
+                let on_blur = props.on_blur.clone();
+                let telemetry = props.telemetry_delegate.clone();
+                let checkbox = props.checkbox.clone();
+                let state = props.state.clone();
+                Callback::from(move |_event: FocusEvent| {
+                    let blur = build_focus_event(&checkbox, &state, false);
+                    if let Some(cb) = &on_blur {
+                        cb.emit(blur.clone());
+                    }
+                    if let Some(delegate) = &telemetry {
+                        delegate.emit(CheckboxTelemetryEvent::Blur(blur));
+                    }
+                })
+            };
+            let key_handler = {
+                let on_key = props.on_key.clone();
+                let on_change = props.on_change.clone();
+                let telemetry = props.telemetry_delegate.clone();
+                let checkbox = props.checkbox.clone();
+                let state = props.state.clone();
+                Callback::from(move |event: KeyboardEvent| {
+                    if let Some(control) = control_key_from_str(event.key().as_str()) {
+                        event.prevent_default();
+                        let key_event = build_key_event(&checkbox, &state, control);
+                        if let Some(cb) = &on_key {
+                            cb.emit(key_event.clone());
+                        }
+                        if let Some(delegate) = &telemetry {
+                            delegate.emit(CheckboxTelemetryEvent::Key(key_event.clone()));
+                        }
+                        if let Some(change_cb) = &on_change {
+                            let change = build_change_event(&checkbox, &state);
+                            change_cb.emit(change.clone());
+                            if let Some(delegate) = &telemetry {
+                                delegate.emit(CheckboxTelemetryEvent::Change(change));
+                            }
+                        }
+                    }
+                })
+            };
+            let mut node = html! {
+                <span onclick={change_handler} onfocus={focus_handler} onblur={blur_handler} onkeydown={key_handler}>{label}</span>
+            };
             if let VNode::VTag(ref mut tag) = node {
                 for (key, value) in attrs {
                     tag.add_attribute(key, value);
@@ -264,7 +564,9 @@ pub mod leptos {
     //! the checkbox while sharing the descriptor wiring used by other
     //! frameworks.
     use super::*;
+    use leptos::ev::{FocusEvent, KeyboardEvent, MouseEvent};
     use leptos::prelude::*;
+    use std::rc::Rc;
 
     /// Properties accepted by [`LeptosCheckbox`].
     #[derive(Clone)]
@@ -273,6 +575,16 @@ pub mod leptos {
         pub checkbox: CheckboxProps,
         /// Headless state machine describing behavior and ARIA metadata.
         pub state: CheckboxState,
+        /// Optional change callback emitted when toggles occur.
+        pub on_change: Option<Rc<dyn Fn(CheckboxChangeEvent)>>,
+        /// Optional focus callback emitted when focus is gained.
+        pub on_focus: Option<Rc<dyn Fn(CheckboxFocusEvent)>>,
+        /// Optional blur callback emitted when focus is lost.
+        pub on_blur: Option<Rc<dyn Fn(CheckboxFocusEvent)>>,
+        /// Optional key callback emitted with normalized control keys.
+        pub on_key: Option<Rc<dyn Fn(CheckboxKeyEvent)>>,
+        /// Optional telemetry delegate invoked with structured payloads.
+        pub telemetry_delegate: Option<Rc<dyn Fn(CheckboxTelemetryEvent)>>,
     }
 
     #[component]
@@ -302,6 +614,77 @@ pub mod leptos {
             let data_indeterminate = attr_map
                 .remove("data-indeterminate")
                 .unwrap_or_else(|| String::from("false"));
+            let on_click = {
+                let on_change = props.on_change.clone();
+                let telemetry = props.telemetry_delegate.clone();
+                let checkbox = props.checkbox.clone();
+                let state = props.state.clone();
+                move |_event: MouseEvent| {
+                    let change = build_change_event(&checkbox, &state);
+                    if let Some(cb) = &on_change {
+                        cb(change.clone());
+                    }
+                    if let Some(delegate) = &telemetry {
+                        delegate(CheckboxTelemetryEvent::Change(change));
+                    }
+                }
+            };
+            let on_focus = {
+                let on_focus = props.on_focus.clone();
+                let telemetry = props.telemetry_delegate.clone();
+                let checkbox = props.checkbox.clone();
+                let state = props.state.clone();
+                move |_event: FocusEvent| {
+                    let focus = build_focus_event(&checkbox, &state, true);
+                    if let Some(cb) = &on_focus {
+                        cb(focus.clone());
+                    }
+                    if let Some(delegate) = &telemetry {
+                        delegate(CheckboxTelemetryEvent::Focus(focus));
+                    }
+                }
+            };
+            let on_blur = {
+                let on_blur = props.on_blur.clone();
+                let telemetry = props.telemetry_delegate.clone();
+                let checkbox = props.checkbox.clone();
+                let state = props.state.clone();
+                move |_event: FocusEvent| {
+                    let blur = build_focus_event(&checkbox, &state, false);
+                    if let Some(cb) = &on_blur {
+                        cb(blur.clone());
+                    }
+                    if let Some(delegate) = &telemetry {
+                        delegate(CheckboxTelemetryEvent::Blur(blur));
+                    }
+                }
+            };
+            let on_key = {
+                let on_key = props.on_key.clone();
+                let on_change = props.on_change.clone();
+                let telemetry = props.telemetry_delegate.clone();
+                let checkbox = props.checkbox.clone();
+                let state = props.state.clone();
+                move |event: KeyboardEvent| {
+                    if let Some(control) = control_key_from_str(event.key().as_str()) {
+                        event.prevent_default();
+                        let key_event = build_key_event(&checkbox, &state, control);
+                        if let Some(cb) = &on_key {
+                            cb(key_event.clone());
+                        }
+                        if let Some(delegate) = &telemetry {
+                            delegate(CheckboxTelemetryEvent::Key(key_event.clone()));
+                        }
+                        if let Some(change_cb) = &on_change {
+                            let change = build_change_event(&checkbox, &state);
+                            change_cb(change.clone());
+                            if let Some(delegate) = &telemetry {
+                                delegate(CheckboxTelemetryEvent::Change(change));
+                            }
+                        }
+                    }
+                }
+            };
 
             view! {
                 <span
@@ -313,6 +696,10 @@ pub mod leptos {
                     data-checked=data_checked
                     data-focus-visible=data_focus_visible
                     data-indeterminate=data_indeterminate
+                    on:click=on_click
+                    on:focus=on_focus
+                    on:blur=on_blur
+                    on:keydown=on_key
                 >{label}</span>
             }
         })
@@ -325,14 +712,52 @@ pub mod dioxus {
     //! Dioxus shells without falling back to raw HTML strings.
     use super::*;
     use dioxus::prelude::*;
+    use std::rc::Rc;
 
     /// Properties accepted by [`DioxusCheckbox`].
-    #[derive(Props, Clone, PartialEq)]
+    #[derive(Props, Clone)]
     pub struct DioxusCheckboxProps {
         /// Visual configuration for the checkbox.
         pub checkbox: CheckboxProps,
         /// Headless state machine describing accessibility metadata.
         pub state: CheckboxState,
+        /// Optional change callback executed by client integrations.
+        #[props(optional)]
+        pub on_change: Option<Rc<dyn Fn(CheckboxChangeEvent)>>,
+        /// Optional focus callback executed by client integrations.
+        #[props(optional)]
+        pub on_focus: Option<Rc<dyn Fn(CheckboxFocusEvent)>>,
+        /// Optional blur callback executed by client integrations.
+        #[props(optional)]
+        pub on_blur: Option<Rc<dyn Fn(CheckboxFocusEvent)>>,
+        /// Optional keyboard callback executed by client integrations.
+        #[props(optional)]
+        pub on_key: Option<Rc<dyn Fn(CheckboxKeyEvent)>>,
+        /// Optional telemetry delegate invoked by automation shells.
+        #[props(optional)]
+        pub telemetry_delegate: Option<Rc<dyn Fn(CheckboxTelemetryEvent)>>,
+    }
+
+    fn rc_option_eq<T: ?Sized>(lhs: &Option<Rc<T>>, rhs: &Option<Rc<T>>) -> bool {
+        match (lhs, rhs) {
+            (Some(a), Some(b)) => Rc::ptr_eq(a, b),
+            (None, None) => true,
+            _ => false,
+        }
+    }
+
+    impl PartialEq for DioxusCheckboxProps {
+        fn eq(&self, other: &Self) -> bool {
+            self.checkbox == other.checkbox
+                && self.state.checked() == other.state.checked()
+                && self.state.disabled() == other.state.disabled()
+                && self.state.focus_visible() == other.state.focus_visible()
+                && rc_option_eq(&self.on_change, &other.on_change)
+                && rc_option_eq(&self.on_focus, &other.on_focus)
+                && rc_option_eq(&self.on_blur, &other.on_blur)
+                && rc_option_eq(&self.on_key, &other.on_key)
+                && rc_option_eq(&self.telemetry_delegate, &other.telemetry_delegate)
+        }
     }
 
     /// Checkbox rendered through the Dioxus virtual DOM.
@@ -385,6 +810,7 @@ pub mod dioxus {
 pub mod sycamore {
     //! Sycamore adapter returning a [`Template`] for signal driven surfaces.
     use super::*;
+    use std::rc::Rc;
     use sycamore::prelude::*;
 
     /// Alias matching the return type expected by Sycamore component macros.
@@ -397,6 +823,16 @@ pub mod sycamore {
         pub checkbox: CheckboxProps,
         /// Headless state machine wiring ARIA metadata.
         pub state: CheckboxState,
+        /// Optional change callback executed by client integrations.
+        pub on_change: Option<Rc<dyn Fn(CheckboxChangeEvent)>>,
+        /// Optional focus callback executed by client integrations.
+        pub on_focus: Option<Rc<dyn Fn(CheckboxFocusEvent)>>,
+        /// Optional blur callback executed by client integrations.
+        pub on_blur: Option<Rc<dyn Fn(CheckboxFocusEvent)>>,
+        /// Optional keyboard callback executed by client integrations.
+        pub on_key: Option<Rc<dyn Fn(CheckboxKeyEvent)>>,
+        /// Optional telemetry delegate invoked by automation shells.
+        pub telemetry_delegate: Option<Rc<dyn Fn(CheckboxTelemetryEvent)>>,
     }
 
     /// Checkbox rendered within a Sycamore reactive scope.
