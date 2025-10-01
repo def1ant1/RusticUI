@@ -14,11 +14,16 @@ archived Material UI change history now lives in [`docs/archives/material-ui-cha
 - Documented the forwarding contract in the telemetry guide so developers know
   Leptos keeps new automation hooks in sync with other frameworks by default.
   【F:docs/src/pages/examples/selection-controls-telemetry.md†L70-L92】
+- Mirrored the automation-friendly attribute spreading inside the Sycamore
+  radio adapter, interning descriptor keys once and reusing Sycamore's
+  `..attrs` spread so future style/class/data additions land without touching
+  the adapter source. 【F:crates/rustic-ui-material/src/radio.rs†L3879-L3940】【F:crates/rustic-ui-material/src/radio.rs†L4205-L4277】
 
 ### Verification
 
 - `cargo fmt`
 - `cargo test -p rustic-ui-material --lib --features leptos`
+- `cargo test -p rustic-ui-material --lib --features sycamore`
 
 ## 2025-07-19 – React radio telemetry orchestration
 

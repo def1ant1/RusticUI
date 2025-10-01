@@ -3858,8 +3858,9 @@ pub mod sycamore {
     //! Sycamore adapter returning a [`Template`] for reactive dashboards.
     use super::*;
     use ::sycamore as sycamore_crate;
-    use std::{cell::RefCell, rc::Rc};
+    use std::{borrow::Cow, cell::RefCell, collections::HashMap, rc::Rc, sync::OnceLock};
     use sycamore_crate::prelude::*;
+    use sycamore_crate::reactive::MaybeDyn;
     use sycamore_crate::web::html::event::KeyboardEvent;
     use sycamore_crate::{component, view};
 
@@ -4159,6 +4160,42 @@ pub mod sycamore {
         }
     }
 
+    /// Cache converting descriptor attribute keys into `'static` references so the
+    /// Sycamore spread APIs can mirror whatever new metadata the snapshot
+    /// delivers without adding yet another `match` statement every time the
+    /// theming engine grows.  We intentionally intern the strings instead of
+    /// leaking per render so long-lived dashboards remain leak free even as new
+    /// experiments introduce additional attributes.
+    fn intern_attribute_key(key: &str) -> &'static str {
+        static INTERNER: OnceLock<std::sync::Mutex<HashMap<String, &'static str>>> =
+            OnceLock::new();
+        let map = INTERNER.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+        let mut guard = map.lock().expect("attribute interner poisoned");
+        if let Some(existing) = guard.get(key) {
+            return *existing;
+        }
+
+        let owned = key.to_string();
+        let leaked: &'static str = Box::leak(owned.clone().into_boxed_str());
+        guard.insert(owned, leaked);
+        leaked
+    }
+
+    /// Translate the descriptor-provided attribute pairs into Sycamore's
+    /// [`Attributes`] spread helper so every current and future key from the
+    /// snapshot automatically lands on the DOM element.  By funnelling the
+    /// conversion through this helper we avoid scattering manual bindings (and
+    /// the inevitable missed updates) throughout the view! macro.
+    fn sycamore_attributes_from_pairs(pairs: &[(String, String)]) -> Attributes {
+        let mut attrs = Attributes::new();
+        for (key, value) in pairs {
+            let interned = intern_attribute_key(key);
+            let attr_value = MaybeDyn::Static(Some(Cow::Owned(value.clone())));
+            attrs.set_attribute(interned, attr_value);
+        }
+        attrs
+    }
+
     /// Properties accepted by [`SycamoreRadioGroup`].
     #[derive(Clone)]
     pub struct SycamoreRadioGroupProps {
@@ -4231,19 +4268,17 @@ pub mod sycamore {
                         let blur_runner = handlers.blur.clone();
                         let key_runner = handlers.key.clone();
                         let label = option.label.clone();
+                        let themed_attributes = option.themed_attributes.clone();
+                        // Convert the descriptor snapshot into a Sycamore spread so any
+                        // new keys added by the theming pipeline flow directly into the
+                        // rendered span without editing this adapter again.  Future
+                        // contributors should extend `RadioOptionDescriptor` rather than
+                        // binding individual attributes here.
+                        let option_attributes = sycamore_attributes_from_pairs(&themed_attributes);
 
                         view! { cx,
                             span(
-                                class=option.class.clone(),
-                                role=option.role.clone(),
-                                aria_checked=option.aria_checked.clone(),
-                                aria_disabled=option.aria_disabled.clone(),
-                                tabindex=option.tabindex.clone(),
-                                data_checked=option.data_checked.clone(),
-                                data_focus_visible=option.data_focus_visible.clone(),
-                                data_index=option.data_index.clone(),
-                                data_rustic_analytics_id=option.analytics_id.clone(),
-                                data_automation_id=option.automation_id.clone(),
+                                ..option_attributes,
                                 on:click=move |_| select_runner(),
                                 on:change=move |_| select_runner(),
                                 on:focus=move |_| focus_runner(),
@@ -4262,16 +4297,15 @@ pub mod sycamore {
                 .collect();
 
             let options_fragment = View::new_fragment(option_views);
+            let group_attribute_pairs = snapshot.group_thematic_attributes.clone();
+            // Mirror the option spread for the container so the automation/theme
+            // pipeline can add new keys (for example, inline styles or
+            // experiment-driven data hooks) in one place: the descriptor.
+            let group_attributes = sycamore_attributes_from_pairs(&group_attribute_pairs);
 
             view! { cx,
                 div(
-                    class=snapshot.class.clone(),
-                    role=snapshot.role.clone(),
-                    aria_orientation=snapshot.aria_orientation.clone(),
-                    aria_disabled=snapshot.aria_disabled.clone(),
-                    data_orientation=snapshot.data_orientation.clone(),
-                    data_rustic_analytics_id=snapshot.analytics_id.clone(),
-                    data_automation_id=snapshot.automation_id.clone(),
+                    ..group_attributes,
                 ) { (options_fragment) }
             }
         })
@@ -4543,6 +4577,46 @@ pub mod sycamore {
             assert!(html.contains("role=\"radiogroup\""));
             assert!(html.contains("data-index=\"0\""));
             assert!(html.contains("data-orientation=\"vertical\""));
+        }
+
+        #[test]
+        fn sycamore_spreads_descriptor_extra_attributes() {
+            use sycamore_crate::render_to_string;
+
+            let state = RadioGroupState::uncontrolled(
+                vec!["North".into(), "South".into()],
+                false,
+                RadioOrientation::Vertical,
+                Some(0),
+            );
+            let mut props = RadioGroupProps::from_state(&state);
+            // Simulate a theme override and inline style injected by automation so
+            // we can confirm the Sycamore adapter defers to the descriptor
+            // snapshot rather than re-listing attributes manually.
+            props
+                .additional_group_attributes
+                .push(("style".into(), "display:grid".into()));
+            props
+                .additional_group_attributes
+                .push(("class".into(), "group-override".into()));
+            props.additional_option_attributes = vec![
+                vec![
+                    ("style".into(), "color:red".into()),
+                    ("class".into(), "option-override".into()),
+                ],
+                Vec::new(),
+            ];
+
+            let markup = render_to_string(|cx| {
+                let props = SycamoreRadioGroupProps::new(props.clone(), state.clone());
+                SycamoreRadioGroup::<sycamore_crate::web::Html>(cx, props)
+            });
+
+            let html = markup.to_string();
+            assert!(html.contains("group-override"));
+            assert!(html.contains("style=\"display:grid\""));
+            assert!(html.contains("option-override"));
+            assert!(html.contains("style=\"color:red\""));
         }
     }
 }
