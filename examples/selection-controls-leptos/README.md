@@ -6,12 +6,16 @@ markup using the `leptos` adapters and mount it with `leptos::html::Div` or the
 
 ```rust
 use leptos::*;
+use std::rc::Rc;
 use rustic_ui_headless::checkbox::CheckboxState;
 use rustic_ui_headless::switch::SwitchState;
 use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
 use rustic_ui_material::checkbox::{self, CheckboxProps};
 use rustic_ui_material::switch::{self, SwitchProps};
-use rustic_ui_material::radio::{self, RadioGroupProps};
+use rustic_ui_material::radio::{
+    RadioChangeEvent, RadioGroupProps, RadioTelemetryEvent,
+    leptos::{LeptosRadioGroup, LeptosRadioGroupProps},
+};
 
 #[component]
 pub fn SelectionControls() -> impl IntoView {
@@ -24,10 +28,28 @@ pub fn SelectionControls() -> impl IntoView {
         Some(1),
     );
 
+    let radio_delegate: Rc<dyn Fn(RadioTelemetryEvent)> = Rc::new(|event| {
+        leptos::logging::log!("radio telemetry: {:?}", event);
+    });
+    let radio_change: Rc<dyn Fn(RadioChangeEvent)> = Rc::new(|event| {
+        leptos::logging::log!("radio changed to {}", event.next);
+    });
+
+    let mut radio_props = LeptosRadioGroupProps::new(
+        RadioGroupProps::from_state(&radio_state),
+        radio_state.clone(),
+    );
+    radio_props.on_change = Some(radio_change);
+    radio_props.telemetry_delegate = Some(radio_delegate);
+
+    let radio_group = LeptosRadioGroup(radio_props);
+
     view! {
-        <div inner_html=checkbox::leptos::render(&CheckboxProps::new("Save card"), &checkbox_state)/>
-        <div inner_html=switch::leptos::render(&SwitchProps::new("Enable auto-pay"), &switch_state)/>
-        <div inner_html=radio::leptos::render(&RadioGroupProps::from_state(&radio_state), &radio_state)/>
+        <div>
+            <div inner_html=checkbox::leptos::render(&CheckboxProps::new("Save card"), &checkbox_state)/>
+            <div inner_html=switch::leptos::render(&SwitchProps::new("Enable auto-pay"), &switch_state)/>
+            {radio_group}
+        </div>
     }
 }
 ```
