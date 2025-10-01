@@ -101,6 +101,7 @@ CI relies on this command to build and run WebAssembly tests for both `rustic-ui
 (cd crates/rustic-ui-joy && wasm-pack test --headless --chrome -- --no-default-features --features sycamore)
 
 # Material adapters
+(cd crates/rustic-ui-material && wasm-pack test --headless --chrome -- --no-default-features --features react)
 (cd crates/rustic-ui-material && wasm-pack test --headless --chrome -- --no-default-features --features yew)
 (cd crates/rustic-ui-material && wasm-pack test --headless --chrome -- --no-default-features --features leptos)
 (cd crates/rustic-ui-material && wasm-pack test --headless --chrome -- --no-default-features --features dioxus)

@@ -3,6 +3,20 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## 2025-07-19 – React radio telemetry orchestration
+
+### Highlights
+
+- Wrapped the React radio adapter with centralized option handler builders so telemetry emissions (`analytics`, `focus`, `blur`, `change`, `commit`) occur before shared state mutations and consumer callbacks, mirroring the checkbox/switch governance guarantees.【F:crates/rustic-ui-material/src/radio.rs†L480-L835】
+- Added wasm-bindgen tests that exercise uncontrolled/controlled transitions, telemetry ordering, and attribute preservation for React radio groups to keep regressions from landing unnoticed.【F:crates/rustic-ui-material/src/radio.rs†L700-L803】
+- Documented the new React radio callbacks and CI command so teams wire telemetry delegates consistently across frameworks.【F:docs/src/pages/examples/selection-controls-telemetry.md†L239-L309】【F:docs/rust-ci.md†L104-L111】
+
+### Verification
+
+- `cargo fmt`
+- `cargo test -p rustic-ui-material --lib --features react` *(fails on host because the React adapters depend on wasm-only `wasm-bindgen` APIs; run `wasm-pack test --headless --chrome -- --no-default-features --features react` once the toolchain is available).*
+- `wasm-pack test --node crates/rustic-ui-material -- --no-default-features --features react` *(tool unavailable in container; see docs for CI instructions).*
+
 ## 2025-07-12 – InputBase automation blueprints
 
 ### Highlights
