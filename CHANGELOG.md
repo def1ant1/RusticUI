@@ -3,6 +3,23 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## Unreleased – Leptos radio attribute forwarding
+
+### Highlights
+
+- Extended the Leptos radio adapter to automatically spread any extra themed
+  attributes (such as inline `style` overrides) captured from the descriptor so
+  automation suites no longer need manual updates when design tokens evolve.
+  【F:crates/rustic-ui-material/src/radio.rs†L383-L433】【F:crates/rustic-ui-material/src/radio.rs†L2268-L2374】
+- Documented the forwarding contract in the telemetry guide so developers know
+  Leptos keeps new automation hooks in sync with other frameworks by default.
+  【F:docs/src/pages/examples/selection-controls-telemetry.md†L70-L92】
+
+### Verification
+
+- `cargo fmt`
+- `cargo test -p rustic-ui-material --lib --features leptos`
+
 ## 2025-07-19 – React radio telemetry orchestration
 
 ### Highlights
