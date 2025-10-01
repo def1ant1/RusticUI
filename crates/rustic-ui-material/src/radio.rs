@@ -231,6 +231,13 @@ pub struct RadioGroupProps {
     /// Telemetry hooks invoked when rendering adapters for analytics and
     /// automation instrumentation.
     pub telemetry: TelemetryHooks,
+    /// Additional attributes appended to the group container prior to theming.
+    /// The helper exists so tests (and eventually applications) can request
+    /// inline overrides without touching adapter internals.
+    pub additional_group_attributes: Vec<(String, String)>,
+    /// Additional attributes appended to individual options before theming.
+    /// The outer index maps directly to the option index.
+    pub additional_option_attributes: Vec<Vec<(String, String)>>,
 }
 
 impl RadioGroupProps {
@@ -238,6 +245,8 @@ impl RadioGroupProps {
         Self {
             option_labels: option_labels.into(),
             telemetry: TelemetryHooks::default(),
+            additional_group_attributes: Vec::new(),
+            additional_option_attributes: Vec::new(),
         }
     }
 
@@ -245,6 +254,8 @@ impl RadioGroupProps {
         Self {
             option_labels: state.options().to_vec(),
             telemetry: TelemetryHooks::default(),
+            additional_group_attributes: Vec::new(),
+            additional_option_attributes: Vec::new(),
         }
     }
 
@@ -276,6 +287,10 @@ fn build_descriptor(
         .with_group_attributes(state.group_aria_attributes())
         .group_attribute("data-orientation", orientation_value);
 
+    for (key, value) in &props.additional_group_attributes {
+        descriptor = descriptor.group_attribute(key.clone(), value.clone());
+    }
+
     descriptor = apply_group_telemetry(descriptor, telemetry);
 
     for (index, option) in state.options().iter().enumerate() {
@@ -284,6 +299,16 @@ fn build_descriptor(
             .with_attributes(state.option_aria_attributes(index))
             .attribute("data-index", index.to_string());
         let option_descriptor = apply_option_telemetry(option_descriptor, telemetry);
+        let option_descriptor =
+            if let Some(additional) = props.additional_option_attributes.get(index) {
+                additional
+                    .iter()
+                    .fold(option_descriptor, |descriptor, (key, value)| {
+                        descriptor.attribute(key.clone(), value.clone())
+                    })
+            } else {
+                option_descriptor
+            };
         descriptor = descriptor.option(option_descriptor);
     }
 
@@ -380,6 +405,16 @@ fn merged_telemetry(primary: &TelemetryHooks, fallback: &TelemetryHooks) -> Tele
 struct RadioOptionSnapshot {
     label: String,
     themed_attributes: Vec<(String, String)>,
+    /// Attribute pairs produced by [`RadioOptionDescriptor::themed_attributes`]
+    /// that the snapshot does not recognise yet.
+    ///
+    /// We store these eagerly so framework adapters can forward future theme
+    /// metadata (for example, `style` or `data-*` hooks emitted by new
+    /// automation features) without requiring a release that teaches every
+    /// renderer about the new key.  Doing so keeps downstream apps free from
+    /// manual "patch in this attribute" workarounds and lets CI highlight the
+    /// precise spot when additional attribute awareness is eventually required.
+    extra_attributes: Vec<(String, String)>,
     class: String,
     role: String,
     aria_checked: String,
@@ -405,6 +440,7 @@ impl RadioOptionSnapshot {
         let mut data_index = String::from("0");
         let mut analytics_id = None;
         let mut automation_id = None;
+        let mut extra_attributes = Vec::new();
 
         for (key, value) in &themed_attributes {
             match key.as_str() {
@@ -418,13 +454,14 @@ impl RadioOptionSnapshot {
                 "data-index" => data_index = value.clone(),
                 "data-rustic-analytics-id" => analytics_id = Some(value.clone()),
                 "data-automation-id" => automation_id = Some(value.clone()),
-                _ => {}
+                _ => extra_attributes.push((key.clone(), value.clone())),
             }
         }
 
         Self {
             label: descriptor.label().to_string(),
             themed_attributes,
+            extra_attributes,
             class,
             role,
             aria_checked,
@@ -443,6 +480,16 @@ impl RadioOptionSnapshot {
 struct RadioGroupDescriptorSnapshot {
     label: String,
     group_thematic_attributes: Vec<(String, String)>,
+    /// Attribute pairs emitted by [`RadioGroupDescriptor::group_thematic_attributes`]
+    /// that do not have a dedicated field in the snapshot yet.
+    ///
+    /// Preserving these values allows framework adapters to forward newly
+    /// introduced theme data (think inline `style` rules injected by
+    /// automation-driven layout experiments) without shipping a synchronized
+    /// update across every renderer.  Future releases can still promote the
+    /// attributes to first-class fields, but until then the passthrough keeps
+    /// enterprise pipelines free from bespoke patches.
+    extra_attributes: Vec<(String, String)>,
     class: String,
     role: String,
     aria_orientation: String,
@@ -463,6 +510,7 @@ impl RadioGroupDescriptorSnapshot {
         let mut data_orientation = String::from("horizontal");
         let mut analytics_id = None;
         let mut automation_id = None;
+        let mut extra_attributes = Vec::new();
 
         for (key, value) in &group_thematic_attributes {
             match key.as_str() {
@@ -473,7 +521,7 @@ impl RadioGroupDescriptorSnapshot {
                 "data-orientation" => data_orientation = value.clone(),
                 "data-rustic-analytics-id" => analytics_id = Some(value.clone()),
                 "data-automation-id" => automation_id = Some(value.clone()),
-                _ => {}
+                _ => extra_attributes.push((key.clone(), value.clone())),
             }
         }
 
@@ -488,6 +536,7 @@ impl RadioGroupDescriptorSnapshot {
         Self {
             label,
             group_thematic_attributes,
+            extra_attributes,
             class,
             role,
             aria_orientation,
@@ -1909,7 +1958,7 @@ pub mod leptos {
     //! metadata.
     use super::*;
     use leptos::ev::{Event, FocusEvent, KeyboardEvent, MouseEvent};
-    use leptos::prelude::*;
+    use leptos::{prelude::*, Attribute};
     use std::{cell::RefCell, rc::Rc};
 
     /// Convenience alias for telemetry delegates captured by handler closures.
@@ -2392,6 +2441,21 @@ pub mod leptos {
                                         .automation_id
                                         .clone()
                                 }
+                                // Keep the passthrough inline so automation owners can
+                                // lean on descriptor evolution instead of hand-updating
+                                // every adapter when new attributes land. Returning the
+                                // collected [`Attribute`] items ensures Leptos applies
+                                // them without duplicate boilerplate.
+                                ..move || {
+                                    snapshot_signal_for_option
+                                        .get()
+                                        .options[index_for_option]
+                                        .extra_attributes
+                                        .iter()
+                                        .cloned()
+                                        .map(|(key, value)| Attribute::from((key, value)))
+                                        .collect::<Vec<_>>()
+                                }
                                 on:click=move |_event: MouseEvent| select_runner()
                                 on:change=move |_event: Event| select_runner()
                                 on:focus=move |_event: FocusEvent| focus_runner()
@@ -2431,6 +2495,20 @@ pub mod leptos {
                     }
                     attr:data-automation-id=move || {
                         group_snapshot.get().automation_id.clone()
+                    }
+                    // The dynamic spread mirrors the option handling above so
+                    // CI covers both the container and child spans whenever
+                    // designers introduce fresh theme-driven attributes. This
+                    // keeps downstream teams from copy/pasting attribute
+                    // wiring in automation suites.
+                    ..move || {
+                        group_snapshot
+                            .get()
+                            .extra_attributes
+                            .iter()
+                            .cloned()
+                            .map(|(key, value)| Attribute::from((key, value)))
+                            .collect::<Vec<_>>()
                     }
                 >{options_fragment}</div>
             }
@@ -2736,6 +2814,58 @@ pub mod leptos {
             assert!(markup.contains("role=\"radiogroup\""));
             assert!(markup.contains("data-index=\"0\""));
             assert!(markup.contains("data-orientation=\"vertical\""));
+        }
+
+        #[test]
+        fn leptos_dynamic_attributes_forward_new_theme_pairs() {
+            // Regression guard: when the descriptor emits additional themed
+            // attributes (e.g. inline `style` overrides rolled out by design
+            // automation), Leptos must surface them automatically so QA does
+            // not need to duplicate attribute wiring manually.
+            let state = RadioGroupState::uncontrolled(
+                vec!["Primary".into(), "Secondary".into(), "Tertiary".into()],
+                false,
+                RadioOrientation::Horizontal,
+                Some(1),
+            );
+            let mut group_props = RadioGroupProps::from_state(&state);
+            group_props
+                .additional_group_attributes
+                .push(("style".into(), "position: relative;".into()));
+            group_props.additional_option_attributes = vec![
+                vec![("style".into(), "color: red;".into())],
+                vec![("style".into(), "color: blue;".into())],
+                Vec::new(),
+            ];
+            let props = LeptosRadioGroupProps {
+                group: group_props,
+                state: state.clone(),
+                telemetry: TelemetryHooks::default(),
+                on_change: None,
+                on_focus: None,
+                on_blur: None,
+                on_key: None,
+                telemetry_delegate: None,
+            };
+
+            let html = leptos::ssr::render_to_string({
+                let props = props.clone();
+                move || LeptosRadioGroup(props.clone())
+            });
+
+            let markup = html.to_string();
+            assert!(
+                markup.contains("style=\"position: relative;\""),
+                "group style attribute missing: {markup}"
+            );
+            assert!(
+                markup.contains("style=\"color: red;\""),
+                "option style attribute missing: {markup}"
+            );
+            assert!(
+                markup.contains("class=\""),
+                "class attribute should still be rendered alongside dynamic spread: {markup}"
+            );
         }
     }
 }

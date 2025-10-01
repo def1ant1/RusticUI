@@ -325,6 +325,11 @@ fn leptos_checkbox_view() -> impl leptos::IntoView {
 }
 ```
 
+> **Automation note:** Leptos adapters now forward every themed attribute that
+> reaches the descriptors (including inline `style` hooks produced by
+> automation rollouts). Teams can rely on design tokens evolving centrally
+> without revisiting component glue code each time new data attributes appear.
+
 This pattern applies unchanged to `DioxusCheckboxProps`, `DioxusSwitchProps`,
 `SycamoreCheckboxProps`, and `SycamoreSwitchProps`, which all consume
 `Rc<dyn Fn(_TelemetryEvent)>` delegates with identical ordering
