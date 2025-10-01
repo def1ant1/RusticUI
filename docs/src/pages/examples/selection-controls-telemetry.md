@@ -1,10 +1,11 @@
 # Selection control telemetry walkthrough
 
 Enterprise dashboards can now treat RusticUI selection controls as rich telemetry
-producers. Every checkbox adapter shares the same render instrumentation: the
-adapter enters `instrument_render`, emits a `TelemetryContext` describing the
-component, analytics, automation identifiers, and descriptor snapshot, and only
-then renders the DOM node.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1012】【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/telemetry.rs†L22-L78】【F:crates/rustic-ui-material/src/telemetry.rs†L132-L189】
+producers. Every checkbox **and switch** adapter shares the same render
+instrumentation: the adapter enters `instrument_render`, emits a
+`TelemetryContext` describing the component, analytics, automation identifiers,
+and descriptor snapshot, and only then renders the DOM
+node.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1012】【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/switch.rs†L1031-L1150】【F:crates/rustic-ui-material/src/switch.rs†L1325-L1420】【F:crates/rustic-ui-material/src/telemetry.rs†L22-L78】【F:crates/rustic-ui-material/src/telemetry.rs†L132-L189】
 
 The sections below demonstrate how to seed shared hooks, attach adapter-specific
 telemetry delegates, and decode the resulting payloads across frameworks.
@@ -58,48 +59,80 @@ adapters.【F:crates/rustic-ui-material/src/telemetry.rs†L132-L189】
 ## Yew example: register a telemetry delegate
 
 Yew adapters accept idiomatic `Callback<T>` handlers and forward
-`CheckboxTelemetryEvent` payloads to the telemetry delegate **before** invoking
-user callbacks, guaranteeing deterministic analytics ordering.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1120】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L17-L74】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L210-L299】
+`CheckboxTelemetryEvent` and `SwitchTelemetryEvent` payloads to the telemetry
+delegate **before** invoking user callbacks, guaranteeing deterministic
+analytics ordering.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1120】【F:crates/rustic-ui-material/src/switch.rs†L883-L1042】【F:crates/rustic-ui-material/tests/checkbox_adapters.rs†L17-L74】【F:crates/rustic-ui-material/tests/switch_adapters.rs†L1-L38】
 
 ```rust
-use rustic_ui_headless::checkbox::CheckboxState;
-use rustic_ui_material::checkbox::{
-    CheckboxChangeEvent, CheckboxProps, CheckboxTelemetryEvent,
-    yew::{YewCheckbox, YewCheckboxProps},
+use rustic_ui_headless::{checkbox::CheckboxState, switch::SwitchState};
+use rustic_ui_material::{
+    checkbox::{
+        CheckboxChangeEvent, CheckboxProps, CheckboxTelemetryEvent,
+        yew::{YewCheckbox, YewCheckboxProps},
+    },
+    switch::{
+        SwitchProps, SwitchTelemetryEvent,
+        yew::{YewSwitch, YewSwitchProps},
+    },
 };
 use yew::prelude::*;
 
 #[function_component(MarketingOptIn)]
 fn marketing_opt_in() -> Html {
     let state = CheckboxState::uncontrolled(false, false);
-    let telemetry_log = use_state(|| Vec::new());
+    let telemetry_log = use_state(|| Vec::<String>::new());
 
-    let delegate = {
+    let checkbox_delegate = {
         let telemetry_log = telemetry_log.clone();
         Callback::from(move |event: CheckboxTelemetryEvent| {
             telemetry_log.set({
                 let mut next = (*telemetry_log).clone();
-                next.push(event);
+                next.push(format!("checkbox::{event:?}"));
+                next
+            });
+        })
+    };
+
+    let switch_delegate = {
+        let telemetry_log = telemetry_log.clone();
+        Callback::from(move |event: SwitchTelemetryEvent| {
+            telemetry_log.set({
+                let mut next = (*telemetry_log).clone();
+                next.push(format!("switch::{event:?}"));
                 next
             });
         })
     };
 
     html! {
-        <YewCheckbox
-            checkbox={CheckboxProps {
-                label: "Email updates".into(),
-                telemetry: analytics_hooks("marketing.opt_in"),
-            }}
-            state={state}
-            telemetry_delegate={Some(delegate)}
-            on_change={Some(Callback::from(|event: CheckboxChangeEvent| {
-                metrics::increment!("marketing.opt_in.change", "state" => format!("{:?}", event.next));
-            }))}
-            on_focus={None}
-            on_blur={None}
-            on_key={None}
-        />
+        <>
+            <YewCheckbox
+                checkbox={CheckboxProps {
+                    label: "Email updates".into(),
+                    telemetry: analytics_hooks("marketing.opt_in"),
+                }}
+                state={state.clone()}
+                telemetry_delegate={Some(checkbox_delegate.clone())}
+                on_change={Some(Callback::from(|event: CheckboxChangeEvent| {
+                    metrics::increment!("marketing.opt_in.change", "state" => format!("{:?}", event.next));
+                }))}
+                on_focus={None}
+                on_blur={None}
+                on_key={None}
+            />
+            <YewSwitch
+                switch={SwitchProps {
+                    label: "Push alerts".into(),
+                    telemetry: analytics_hooks("marketing.opt_in.switch"),
+                }}
+                state={SwitchState::uncontrolled(false, false)}
+                telemetry_delegate={Some(switch_delegate)}
+                on_change={None}
+                on_focus={None}
+                on_blur={None}
+                on_key={None}
+            />
+        </>
     }
 }
 ```
@@ -112,19 +145,26 @@ internal ordering.
 
 Leptos, Dioxus, and Sycamore share the same lifecycle: each closure emits the
 telemetry payload, then the consumer callback, and finally mutates the headless
-state machine. Pass an `Rc<dyn Fn(CheckboxTelemetryEvent)>` delegate to receive
-that stream.【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:crates/rustic-ui-material/src/checkbox.rs†L1548-L1662】
+state machine. Pass an `Rc<dyn Fn(CheckboxTelemetryEvent)>` or
+`Rc<dyn Fn(SwitchTelemetryEvent)>` delegate to receive that
+stream.【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:crates/rustic-ui-material/src/checkbox.rs†L1548-L1662】【F:crates/rustic-ui-material/src/switch.rs†L1044-L1323】
 
 ```rust
 use std::rc::Rc;
-use rustic_ui_headless::checkbox::CheckboxState;
-use rustic_ui_material::checkbox::{
-    CheckboxProps, CheckboxTelemetryEvent,
-    leptos::{LeptosCheckbox, LeptosCheckboxProps},
+use rustic_ui_headless::{checkbox::CheckboxState, switch::SwitchState};
+use rustic_ui_material::{
+    checkbox::{
+        CheckboxProps, CheckboxTelemetryEvent,
+        leptos::{LeptosCheckbox, LeptosCheckboxProps},
+    },
+    switch::{
+        SwitchProps, SwitchTelemetryEvent,
+        leptos::{LeptosSwitch, LeptosSwitchProps},
+    },
 };
 
 fn leptos_checkbox_view() -> impl leptos::IntoView {
-    let delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = Rc::new(|event| {
+    let checkbox_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = Rc::new(|event| {
         match event {
             CheckboxTelemetryEvent::Change(change) => {
                 analytics::record("selection.change", change.analytics_id.clone());
@@ -135,7 +175,24 @@ fn leptos_checkbox_view() -> impl leptos::IntoView {
         }
     });
 
-    LeptosCheckbox(LeptosCheckboxProps {
+    let switch_delegate: Rc<dyn Fn(SwitchTelemetryEvent)> = Rc::new(|event| {
+        match event {
+            SwitchTelemetryEvent::Change(change) => {
+                analytics::record("selection.switch.change", change.analytics_id.clone());
+            }
+            SwitchTelemetryEvent::Focus(focus) => {
+                analytics::record("selection.switch.focus", focus.analytics_id.clone())
+            }
+            SwitchTelemetryEvent::Blur(blur) => {
+                analytics::record("selection.switch.blur", blur.analytics_id.clone())
+            }
+            SwitchTelemetryEvent::Key(key) => {
+                analytics::record("selection.switch.key", Some(format!("{:?}", key.key)))
+            }
+        }
+    });
+
+    let checkbox = LeptosCheckbox(LeptosCheckboxProps {
         checkbox: CheckboxProps {
             label: "SMS updates".into(),
             telemetry: analytics_hooks("marketing.opt_in"),
@@ -145,24 +202,42 @@ fn leptos_checkbox_view() -> impl leptos::IntoView {
         on_focus: None,
         on_blur: None,
         on_key: None,
-        telemetry_delegate: Some(delegate),
-    })
+        telemetry_delegate: Some(checkbox_delegate),
+    });
+
+    let switch = LeptosSwitch(LeptosSwitchProps {
+        switch: SwitchProps {
+            label: "Geo-fencing".into(),
+            telemetry: analytics_hooks("marketing.opt_in"),
+        },
+        state: SwitchState::uncontrolled(false, false),
+        on_change: None,
+        on_focus: None,
+        on_blur: None,
+        on_key: None,
+        telemetry_delegate: Some(switch_delegate),
+    });
+
+    (checkbox, switch)
 }
 ```
 
-This pattern applies unchanged to `DioxusCheckboxProps` and
-`SycamoreCheckboxProps`, which both consume `Rc<dyn Fn(CheckboxTelemetryEvent)>`
-telemetry delegates.【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:crates/rustic-ui-material/src/checkbox.rs†L1548-L1662】
+This pattern applies unchanged to `DioxusCheckboxProps`, `DioxusSwitchProps`,
+`SycamoreCheckboxProps`, and `SycamoreSwitchProps`, which all consume
+`Rc<dyn Fn(_TelemetryEvent)>` delegates with identical ordering
+guarantees.【F:crates/rustic-ui-material/src/checkbox.rs†L1333-L1463】【F:crates/rustic-ui-material/src/checkbox.rs†L1548-L1662】【F:crates/rustic-ui-material/src/switch.rs†L1152-L1323】
 
 ## React adapter integration
 
 React consumers receive a JavaScript object describing each telemetry payload.
 `kind` identifies the event (`"change"`, `"focus"`, `"blur"`, or `"key"`), and
 subsequent fields mirror the Rust structs. Register a single delegate to forward
-those events into your analytics provider.
+those events into your analytics provider for both checkboxes and
+switches.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】【F:crates/rustic-ui-material/src/switch.rs†L697-L882】
 
 ```tsx
 import { ReactCheckbox } from 'rustic-ui-material/checkbox';
+import { ReactSwitch } from 'rustic-ui-material/switch';
 
 const telemetryDelegate = (event: any) => {
   switch (event.kind) {
@@ -186,16 +261,23 @@ const telemetryDelegate = (event: any) => {
   }
 };
 
-<ReactCheckbox
-  checkbox={checkboxPropsFromWasm}
-  state={checkboxStateFromWasm}
-  telemetry_delegate={telemetryDelegate}
-/>;
+<>
+  <ReactCheckbox
+    checkbox={checkboxPropsFromWasm}
+    state={checkboxStateFromWasm}
+    telemetry_delegate={telemetryDelegate}
+  />
+  <ReactSwitch
+    switch={switchPropsFromWasm}
+    state={switchStateFromWasm}
+    telemetry_delegate={telemetryDelegate}
+  />
+</>;
 ```
 
 The delegate signature matches the `Function` stored in
-`ReactCheckboxProps::telemetry_delegate`, and events are emitted before any user
-handlers run.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】
+`ReactCheckboxProps::telemetry_delegate` and `ReactSwitchProps::telemetry_delegate`,
+and events are emitted before any user handlers run.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】【F:crates/rustic-ui-material/src/switch.rs†L697-L882】
 
 `checkboxPropsFromWasm` and `checkboxStateFromWasm` represent the `CheckboxProps`
 and `CheckboxState` values exported by the wasm bundle; the React adapter expects
