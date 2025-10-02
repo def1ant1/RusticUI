@@ -27,6 +27,52 @@ fn sample_state() -> RadioGroupState {
     )
 }
 
+fn controlled_state() -> RadioGroupState {
+    RadioGroupState::controlled(
+        vec!["Alpha".into(), "Beta".into(), "Gamma".into()],
+        false,
+        RadioOrientation::Horizontal,
+        Some(0),
+    )
+}
+
+fn preview_keyboard_target(state: &RadioGroupState, key: ControlKey) -> Option<usize> {
+    if state.disabled() || state.len() == 0 {
+        return None;
+    }
+
+    let len = state.len();
+    let mut focus_index = state
+        .focus_visible_index()
+        .or(state.selected_index())
+        .unwrap_or(0)
+        .min(len - 1);
+
+    match key {
+        ControlKey::Space | ControlKey::Enter => Some(focus_index),
+        ControlKey::Home => Some(0),
+        ControlKey::End => Some(len - 1),
+        ControlKey::ArrowRight => match state.orientation() {
+            RadioOrientation::Horizontal => Some((focus_index + 1) % len),
+            RadioOrientation::Vertical => None,
+        },
+        ControlKey::ArrowDown => Some((focus_index + 1) % len),
+        ControlKey::ArrowLeft => match state.orientation() {
+            RadioOrientation::Horizontal => Some(if focus_index == 0 {
+                len - 1
+            } else {
+                focus_index - 1
+            }),
+            RadioOrientation::Vertical => None,
+        },
+        ControlKey::ArrowUp => Some(if focus_index == 0 {
+            len - 1
+        } else {
+            focus_index - 1
+        }),
+    }
+}
+
 /// Mirror the checkbox adapter tests by wiring telemetry spies so render
 /// instrumentation can be asserted without replicating adapter internals in the
 /// suites below.
@@ -203,9 +249,16 @@ impl RadioHarness {
             .push(RadioTelemetryEvent::Analytics(analytics));
         self.telemetry_events
             .push(RadioTelemetryEvent::Change(change.clone()));
-        self.state.select(index, |_| {});
+        if !self.state.is_controlled() {
+            self.state.select(index, |_| {});
+        }
         self.state.focus(index);
-        let commit = self.commit_payload(self.state.selected_index(), index);
+        let selected_after = if self.state.is_controlled() {
+            previous
+        } else {
+            self.state.selected_index()
+        };
+        let commit = self.commit_payload(selected_after, index);
         self.telemetry_events
             .push(RadioTelemetryEvent::Commit(commit));
         self.change_events.push(change.clone());
@@ -218,10 +271,15 @@ impl RadioHarness {
         self.telemetry_events
             .push(RadioTelemetryEvent::Analytics(analytics));
 
-        let mut selected_after = None;
-        self.state.on_key(key, |selected| {
-            selected_after = Some(selected);
-        });
+        let selected_after = if self.state.is_controlled() {
+            preview_keyboard_target(&self.state, key)
+        } else {
+            let mut next = None;
+            self.state.on_key(key, |selected| {
+                next = Some(selected);
+            });
+            next
+        };
 
         let payload = self.key_payload(origin, key, previous, selected_after);
         self.key_events.push(payload.clone());
@@ -242,7 +300,11 @@ impl RadioHarness {
             let change = self.change_payload(previous, next_index);
             self.telemetry_events
                 .push(RadioTelemetryEvent::Change(change.clone()));
-            let commit = self.commit_payload(self.state.selected_index(), next_index);
+            let commit = if self.state.is_controlled() {
+                self.commit_payload(previous, next_index)
+            } else {
+                self.commit_payload(self.state.selected_index(), next_index)
+            };
             self.telemetry_events
                 .push(RadioTelemetryEvent::Commit(commit));
             self.change_events.push(change);
@@ -417,6 +479,75 @@ where
     assert_eq!(harness.key_events[0].next, Some(2));
 }
 
+fn exercise_controlled_adapter<F>(framework: &str, render_fn: F)
+where
+    F: Fn(&RadioGroupProps, &RadioGroupState) -> String,
+{
+    let analytics_id = format!("analytics::radio::{framework}::controlled");
+    let automation_id = format!("automation::radio::{framework}::controlled");
+    let mut harness = RadioHarness::new(analytics_id.clone(), automation_id.clone());
+    harness.state = controlled_state();
+    harness.props.option_labels = harness.state.options().to_vec();
+
+    let initial_selected = harness.state.selected_index();
+    assert_eq!(initial_selected, Some(0));
+
+    let _initial_markup = render_fn(&harness.props, &harness.state);
+
+    let pointer_change = harness.pointer_select(1);
+    assert_eq!(pointer_change.previous, initial_selected);
+    assert_eq!(pointer_change.next, 1);
+    assert_eq!(harness.state.selected_index(), initial_selected);
+
+    assert_eq!(harness.telemetry_events.len(), 3);
+    let pointer_commit = harness
+        .telemetry_events
+        .iter()
+        .find_map(|event| match event {
+            RadioTelemetryEvent::Commit(evt) => Some(evt.clone()),
+            _ => None,
+        })
+        .expect("pointer commit telemetry");
+    assert!(pointer_commit.controlled);
+    assert_eq!(pointer_commit.selected, initial_selected);
+    assert_eq!(harness.change_events.len(), 1);
+    assert_eq!(harness.change_events[0], pointer_change);
+
+    harness.telemetry_events.clear();
+
+    let key_event = harness.key_from(pointer_change.next, ControlKey::ArrowRight);
+    assert_eq!(key_event.previous, initial_selected);
+    assert_eq!(key_event.next, Some(2));
+    assert_eq!(harness.state.selected_index(), initial_selected);
+
+    let key_commit = harness
+        .telemetry_events
+        .iter()
+        .find_map(|event| match event {
+            RadioTelemetryEvent::Commit(evt) => Some(evt.clone()),
+            _ => None,
+        })
+        .expect("key commit telemetry");
+    assert!(key_commit.controlled);
+    assert_eq!(key_commit.selected, initial_selected);
+
+    let key_change = harness
+        .telemetry_events
+        .iter()
+        .find_map(|event| match event {
+            RadioTelemetryEvent::Change(evt) => Some(evt.clone()),
+            _ => None,
+        })
+        .expect("key change telemetry");
+    assert_eq!(key_change.previous, initial_selected);
+    assert_eq!(key_change.next, key_event.next.unwrap());
+
+    assert_eq!(harness.change_events.len(), 2);
+    assert_eq!(harness.change_events[1], key_change);
+    assert_eq!(harness.key_events.len(), 1);
+    assert_eq!(harness.key_events[0], key_event);
+}
+
 #[cfg(feature = "yew")]
 mod yew_tests {
     use super::*;
@@ -424,6 +555,11 @@ mod yew_tests {
     #[test]
     fn telemetry_and_markup_follow_state_transitions() {
         exercise_adapter("yew", radio::yew::render);
+    }
+
+    #[test]
+    fn controlled_mode_emits_telemetry_without_mutating_state() {
+        exercise_controlled_adapter("yew", radio::yew::render);
     }
 }
 
@@ -435,6 +571,11 @@ mod leptos_tests {
     fn telemetry_and_markup_follow_state_transitions() {
         exercise_adapter("leptos", radio::leptos::render);
     }
+
+    #[test]
+    fn controlled_mode_emits_telemetry_without_mutating_state() {
+        exercise_controlled_adapter("leptos", radio::leptos::render);
+    }
 }
 
 #[cfg(feature = "dioxus")]
@@ -445,6 +586,11 @@ mod dioxus_tests {
     fn telemetry_and_markup_follow_state_transitions() {
         exercise_adapter("dioxus", radio::dioxus::render);
     }
+
+    #[test]
+    fn controlled_mode_emits_telemetry_without_mutating_state() {
+        exercise_controlled_adapter("dioxus", radio::dioxus::render);
+    }
 }
 
 #[cfg(feature = "sycamore")]
@@ -454,5 +600,10 @@ mod sycamore_tests {
     #[test]
     fn telemetry_and_markup_follow_state_transitions() {
         exercise_adapter("sycamore", radio::sycamore::render);
+    }
+
+    #[test]
+    fn controlled_mode_emits_telemetry_without_mutating_state() {
+        exercise_controlled_adapter("sycamore", radio::sycamore::render);
     }
 }
