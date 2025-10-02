@@ -20,6 +20,20 @@ The table below lists available framework adapters:
 | `dioxus`  | Dioxus components | compiles `mui-system/dioxus` and `mui-styled-engine/dioxus` |
 | `sycamore`| Sycamore components | hooks into `mui-system/sycamore` |
 
+### Testing Dioxus integrations
+
+The Dioxus adapters ship telemetry-heavy unit tests that mirror production
+render lifecycles. Enable the feature flag when running the workspace test
+suite:
+
+```bash
+cargo test --features dioxus
+```
+
+The tests execute against the native host toolchain—no `wasm32` target or
+browser runtime is required—so any platform that can compile the crate can run
+the analytics choreography checks.
+
 ## Icons
 
 `mui-icons-material`—the RusticUI icon pipeline during the transition period—ships thousands of SVGs, each behind its own feature. The crate enables `all-icons` by default for convenience. In production disable the default and cherry‑pick only the icons your UI references:

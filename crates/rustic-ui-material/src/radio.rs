@@ -4438,7 +4438,7 @@ pub mod dioxus {
         })
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, feature = "dioxus"))]
     mod tests {
         use super::*;
         use ::dioxus::prelude::VirtualDom;
@@ -4496,7 +4496,9 @@ pub mod dioxus {
                     let order = Rc::clone(&order);
                     let events = Rc::clone(&telemetry_events);
                     Rc::new(move |event| {
-                        order.borrow_mut().push(format!("telemetry::{:?}", event));
+                        order
+                            .borrow_mut()
+                            .push(format!("telemetry:{}", telemetry_kind(&event)));
                         events.borrow_mut().push(event);
                     })
                 };
@@ -4571,10 +4573,23 @@ pub mod dioxus {
             }
         }
 
+        fn telemetry_kind(event: &RadioTelemetryEvent) -> &'static str {
+            match event {
+                RadioTelemetryEvent::Analytics(_) => "analytics",
+                RadioTelemetryEvent::Focus(_) => "focus",
+                RadioTelemetryEvent::Blur(_) => "blur",
+                RadioTelemetryEvent::Change(_) => "change",
+                RadioTelemetryEvent::Commit(_) => "commit",
+                RadioTelemetryEvent::Key(_) => "key",
+            }
+        }
+
         #[test]
         fn uncontrolled_select_emits_change_and_commit_before_callbacks() {
             let harness = Harness::new(false);
             let handlers = harness.builder.build(1);
+            // Selection telemetry fires analytics -> change -> commit before
+            // invoking consumer callbacks to keep automation snapshots aligned.
             handlers.select();
 
             assert_eq!(harness.state.borrow().selected_index(), Some(1));
@@ -4598,11 +4613,15 @@ pub mod dioxus {
             drop(changes);
 
             let order = harness.order.borrow();
-            assert_eq!(order.len(), 4);
-            assert!(order[0].starts_with("telemetry::Analytics"));
-            assert!(order[1].starts_with("telemetry::Change"));
-            assert!(order[2].starts_with("telemetry::Commit"));
-            assert_eq!(order[3], "callback::change");
+            assert_eq!(
+                order.as_slice(),
+                [
+                    "telemetry:analytics",
+                    "telemetry:change",
+                    "telemetry:commit",
+                    "callback::change",
+                ]
+            );
             drop(order);
 
             assert_eq!(*harness.refresh_counter.borrow(), 1);
@@ -4612,6 +4631,8 @@ pub mod dioxus {
         fn controlled_select_notifies_without_mutating_selection() {
             let harness = Harness::new(true);
             let handlers = harness.builder.build(2);
+            // Controlled selections follow the same telemetry ordering while
+            // preserving the externally managed state snapshot.
             handlers.select();
 
             assert_eq!(harness.state.borrow().selected_index(), Some(0));
@@ -4635,7 +4656,15 @@ pub mod dioxus {
             drop(changes);
 
             let order = harness.order.borrow();
-            assert_eq!(order[3], "callback::change");
+            assert_eq!(
+                order.as_slice(),
+                [
+                    "telemetry:analytics",
+                    "telemetry:change",
+                    "telemetry:commit",
+                    "callback::change",
+                ]
+            );
             drop(order);
 
             assert_eq!(*harness.refresh_counter.borrow(), 1);
@@ -4645,8 +4674,11 @@ pub mod dioxus {
         fn focus_and_blur_emit_telemetry_and_update_focus_state() {
             let harness = Harness::new(false);
             let handlers = harness.builder.build(1);
+            // Focus telemetry must precede callbacks so governance tooling sees
+            // the roving focus change before shells react.
             handlers.focus();
             assert_eq!(harness.state.borrow().focus_visible_index(), Some(1));
+            // Blur repeats the analytics-first choreography while clearing focus.
             handlers.blur();
             assert_eq!(harness.state.borrow().focus_visible_index(), None);
 
@@ -4668,13 +4700,17 @@ pub mod dioxus {
             drop(telemetry);
 
             let order = harness.order.borrow();
-            assert_eq!(order.len(), 6);
-            assert!(order[0].starts_with("telemetry::Analytics"));
-            assert!(order[1].starts_with("telemetry::Focus"));
-            assert_eq!(order[2], "callback::focus");
-            assert!(order[3].starts_with("telemetry::Analytics"));
-            assert!(order[4].starts_with("telemetry::Blur"));
-            assert_eq!(order[5], "callback::blur");
+            assert_eq!(
+                order.as_slice(),
+                [
+                    "telemetry:analytics",
+                    "telemetry:focus",
+                    "callback::focus",
+                    "telemetry:analytics",
+                    "telemetry:blur",
+                    "callback::blur",
+                ]
+            );
             drop(order);
 
             assert_eq!(*harness.refresh_counter.borrow(), 2);
@@ -4684,6 +4720,8 @@ pub mod dioxus {
         fn keyboard_navigation_emits_key_change_and_commit() {
             let harness = Harness::new(false);
             let handlers = harness.builder.build(0);
+            // Keyboard navigation emits analytics/key/focus/blur before change and
+            // commit to guarantee auditors can trace every stage of the cycle.
             handlers.key(ControlKey::ArrowRight);
 
             assert_eq!(harness.state.borrow().selected_index(), Some(1));
@@ -4709,15 +4747,19 @@ pub mod dioxus {
             drop(changes);
 
             let order = harness.order.borrow();
-            assert_eq!(order.len(), 8);
-            assert!(order[0].starts_with("telemetry::Analytics"));
-            assert!(order[1].starts_with("telemetry::Key"));
-            assert!(order[2].starts_with("telemetry::Focus"));
-            assert!(order[3].starts_with("telemetry::Blur"));
-            assert!(order[4].starts_with("telemetry::Change"));
-            assert!(order[5].starts_with("telemetry::Commit"));
-            assert_eq!(order[6], "callback::key");
-            assert_eq!(order[7], "callback::change");
+            assert_eq!(
+                order.as_slice(),
+                [
+                    "telemetry:analytics",
+                    "telemetry:key",
+                    "telemetry:focus",
+                    "telemetry:blur",
+                    "telemetry:change",
+                    "telemetry:commit",
+                    "callback::key",
+                    "callback::change",
+                ]
+            );
             drop(order);
 
             assert_eq!(*harness.refresh_counter.borrow(), 1);

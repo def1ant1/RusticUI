@@ -1583,7 +1583,7 @@ pub mod dioxus {
     use super::*;
     use ::dioxus::prelude::events::{FocusEvent, KeyboardEvent, MouseEvent};
     use ::dioxus::prelude::*;
-    use keyboard_types::Key;
+    use keyboard_types::{ControlKey, Key};
     use std::{cell::RefCell, rc::Rc};
 
     /// Properties accepted by [`DioxusCheckbox`].
@@ -1661,6 +1661,7 @@ pub mod dioxus {
             &props.state,
         );
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
+        let interactions = CheckboxInteractionFactory::new(props, Rc::clone(&state_handle));
         instrument_render(&props.checkbox.telemetry, context, || {
             let label = snapshot.label.clone();
             let class = snapshot.class.clone();
@@ -1671,115 +1672,10 @@ pub mod dioxus {
             let data_checked = snapshot.data_checked.clone();
             let data_focus_visible = snapshot.data_focus_visible.clone();
             let data_indeterminate = snapshot.data_indeterminate.clone();
-            let onclick = {
-                let telemetry = props.telemetry_delegate.clone();
-                let on_change = props.on_change.clone();
-                let checkbox = props.checkbox.clone();
-                let state = Rc::clone(&state_handle);
-                move |_event: MouseEvent| {
-                    let change = {
-                        let state = state.borrow();
-                        build_change_event(&checkbox, &state)
-                    };
-                    if let Some(delegate) = &telemetry {
-                        delegate(CheckboxTelemetryEvent::Change(change.clone()));
-                    }
-                    if let Some(cb) = &on_change {
-                        cb(change.clone());
-                    }
-                    {
-                        let mut state = state.borrow_mut();
-                        if !state.is_controlled() {
-                            state.toggle(|_| {});
-                        }
-                    }
-                }
-            };
-            let on_focus = {
-                let telemetry = props.telemetry_delegate.clone();
-                let on_focus = props.on_focus.clone();
-                let checkbox = props.checkbox.clone();
-                let state = Rc::clone(&state_handle);
-                move |_event: FocusEvent| {
-                    let focus = {
-                        let state = state.borrow();
-                        build_focus_event(&checkbox, &state, true)
-                    };
-                    if let Some(delegate) = &telemetry {
-                        delegate(CheckboxTelemetryEvent::Focus(focus.clone()));
-                    }
-                    if let Some(cb) = &on_focus {
-                        cb(focus.clone());
-                    }
-                    {
-                        let mut state = state.borrow_mut();
-                        state.focus();
-                    }
-                }
-            };
-            let on_blur = {
-                let telemetry = props.telemetry_delegate.clone();
-                let on_blur = props.on_blur.clone();
-                let checkbox = props.checkbox.clone();
-                let state = Rc::clone(&state_handle);
-                move |_event: FocusEvent| {
-                    let blur = {
-                        let state = state.borrow();
-                        build_focus_event(&checkbox, &state, false)
-                    };
-                    if let Some(delegate) = &telemetry {
-                        delegate(CheckboxTelemetryEvent::Blur(blur.clone()));
-                    }
-                    if let Some(cb) = &on_blur {
-                        cb(blur.clone());
-                    }
-                    {
-                        let mut state = state.borrow_mut();
-                        state.blur();
-                    }
-                }
-            };
-            let on_key = {
-                let telemetry = props.telemetry_delegate.clone();
-                let on_key = props.on_key.clone();
-                let on_change = props.on_change.clone();
-                let checkbox = props.checkbox.clone();
-                let state = Rc::clone(&state_handle);
-                move |event: KeyboardEvent| {
-                    let key = match event.data.key() {
-                        Key::Space | Key::Character(ref ch) if ch == " " => Some(" ".to_string()),
-                        Key::Enter => Some("Enter".to_string()),
-                        _ => None,
-                    };
-                    if let Some(name) = key {
-                        if let Some(control) = control_key_from_str(&name) {
-                            let (key_event, change) = {
-                                let state = state.borrow();
-                                (
-                                    build_key_event(&checkbox, &state, control),
-                                    build_change_event(&checkbox, &state),
-                                )
-                            };
-                            if let Some(delegate) = &telemetry {
-                                delegate(CheckboxTelemetryEvent::Key(key_event.clone()));
-                                delegate(CheckboxTelemetryEvent::Change(change.clone()));
-                            }
-                            if let Some(cb) = &on_key {
-                                cb(key_event.clone());
-                            }
-                            if let Some(change_cb) = &on_change {
-                                change_cb(change.clone());
-                            }
-                            {
-                                let mut state = state.borrow_mut();
-                                if !state.is_controlled() {
-                                    state.on_key(control, |_| {});
-                                }
-                            }
-                        }
-                    }
-                }
-            };
+            let onclick = interactions.on_click_handler();
+            let on_focus = interactions.on_focus_handler();
+            let on_blur = interactions.on_blur_handler();
+            let on_key = interactions.on_key_handler();
 
             cx.render(rsx! {
                 span {
@@ -1799,6 +1695,433 @@ pub mod dioxus {
                 }
             })
         })
+    }
+
+    #[derive(Clone)]
+    struct CheckboxInteractionFactory {
+        checkbox: CheckboxProps,
+        state: Rc<RefCell<CheckboxState>>,
+        telemetry_delegate: Option<Rc<dyn Fn(CheckboxTelemetryEvent)>>,
+        on_change: Option<Rc<dyn Fn(CheckboxChangeEvent)>>,
+        on_focus: Option<Rc<dyn Fn(CheckboxFocusEvent)>>,
+        on_blur: Option<Rc<dyn Fn(CheckboxFocusEvent)>>,
+        on_key: Option<Rc<dyn Fn(CheckboxKeyEvent)>>,
+    }
+
+    impl CheckboxInteractionFactory {
+        fn new(props: &DioxusCheckboxProps, state: Rc<RefCell<CheckboxState>>) -> Self {
+            Self {
+                checkbox: props.checkbox.clone(),
+                state,
+                telemetry_delegate: props.telemetry_delegate.clone(),
+                on_change: props.on_change.clone(),
+                on_focus: props.on_focus.clone(),
+                on_blur: props.on_blur.clone(),
+                on_key: props.on_key.clone(),
+            }
+        }
+
+        fn on_click_handler(&self) -> impl Fn(MouseEvent) + 'static {
+            let interactions = self.clone();
+            move |_event: MouseEvent| {
+                interactions.dispatch_click();
+            }
+        }
+
+        fn on_focus_handler(&self) -> impl Fn(FocusEvent) + 'static {
+            let interactions = self.clone();
+            move |_event: FocusEvent| {
+                interactions.dispatch_focus();
+            }
+        }
+
+        fn on_blur_handler(&self) -> impl Fn(FocusEvent) + 'static {
+            let interactions = self.clone();
+            move |_event: FocusEvent| {
+                interactions.dispatch_blur();
+            }
+        }
+
+        fn on_key_handler(&self) -> impl Fn(KeyboardEvent) + 'static {
+            let interactions = self.clone();
+            move |event: KeyboardEvent| {
+                interactions.dispatch_keyboard_event(event.data.key());
+            }
+        }
+
+        fn dispatch_click(&self) {
+            let change = {
+                let state = self.state.borrow();
+                build_change_event(&self.checkbox, &state)
+            };
+            if let Some(delegate) = &self.telemetry_delegate {
+                delegate(CheckboxTelemetryEvent::Change(change.clone()));
+            }
+            if let Some(cb) = &self.on_change {
+                cb(change.clone());
+            }
+            {
+                let mut state = self.state.borrow_mut();
+                if !state.is_controlled() {
+                    state.toggle(|_| {});
+                }
+            }
+        }
+
+        fn dispatch_focus(&self) {
+            let focus = {
+                let state = self.state.borrow();
+                build_focus_event(&self.checkbox, &state, true)
+            };
+            if let Some(delegate) = &self.telemetry_delegate {
+                delegate(CheckboxTelemetryEvent::Focus(focus.clone()));
+            }
+            if let Some(cb) = &self.on_focus {
+                cb(focus.clone());
+            }
+            {
+                let mut state = self.state.borrow_mut();
+                state.focus();
+            }
+        }
+
+        fn dispatch_blur(&self) {
+            let blur = {
+                let state = self.state.borrow();
+                build_focus_event(&self.checkbox, &state, false)
+            };
+            if let Some(delegate) = &self.telemetry_delegate {
+                delegate(CheckboxTelemetryEvent::Blur(blur.clone()));
+            }
+            if let Some(cb) = &self.on_blur {
+                cb(blur.clone());
+            }
+            {
+                let mut state = self.state.borrow_mut();
+                state.blur();
+            }
+        }
+
+        fn dispatch_keyboard_event(&self, key: Key) {
+            if let Some(control) = self.control_from_key(key) {
+                self.dispatch_control_key(control);
+            }
+        }
+
+        fn dispatch_control_key(&self, control: ControlKey) {
+            let (key_event, change) = {
+                let state = self.state.borrow();
+                (
+                    build_key_event(&self.checkbox, &state, control),
+                    build_change_event(&self.checkbox, &state),
+                )
+            };
+            if let Some(delegate) = &self.telemetry_delegate {
+                delegate(CheckboxTelemetryEvent::Key(key_event.clone()));
+                delegate(CheckboxTelemetryEvent::Change(change.clone()));
+            }
+            if let Some(cb) = &self.on_key {
+                cb(key_event.clone());
+            }
+            if let Some(cb) = &self.on_change {
+                cb(change.clone());
+            }
+            {
+                let mut state = self.state.borrow_mut();
+                if !state.is_controlled() {
+                    state.on_key(control, |_| {});
+                }
+            }
+        }
+
+        fn control_from_key(&self, key: Key) -> Option<ControlKey> {
+            match key {
+                Key::Space | Key::Character(ref ch) if ch == " " => Some(ControlKey::Space),
+                Key::Enter => Some(ControlKey::Enter),
+                _ => None,
+            }
+        }
+
+        #[cfg(all(test, feature = "dioxus"))]
+        fn testing_handle(&self) -> CheckboxInteractionTestHandle {
+            CheckboxInteractionTestHandle {
+                interactions: self.clone(),
+            }
+        }
+    }
+
+    #[cfg(all(test, feature = "dioxus"))]
+    #[derive(Clone)]
+    struct CheckboxInteractionTestHandle {
+        interactions: CheckboxInteractionFactory,
+    }
+
+    #[cfg(all(test, feature = "dioxus"))]
+    impl CheckboxInteractionTestHandle {
+        fn click(&self) {
+            self.interactions.dispatch_click();
+        }
+
+        fn focus(&self) {
+            self.interactions.dispatch_focus();
+        }
+
+        fn blur(&self) {
+            self.interactions.dispatch_blur();
+        }
+
+        fn key(&self, control: ControlKey) {
+            self.interactions.dispatch_control_key(control);
+        }
+
+        fn key_from(&self, key: Key) {
+            self.interactions.dispatch_keyboard_event(key);
+        }
+    }
+
+    #[cfg(all(test, feature = "dioxus"))]
+    mod tests {
+        use super::*;
+        use crate::selection_control::CheckboxValue;
+        use keyboard_types::{ControlKey, Key};
+
+        struct Harness {
+            state: Rc<RefCell<CheckboxState>>,
+            telemetry_events: Rc<RefCell<Vec<CheckboxTelemetryEvent>>>,
+            change_events: Rc<RefCell<Vec<CheckboxChangeEvent>>>,
+            focus_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+            blur_events: Rc<RefCell<Vec<CheckboxFocusEvent>>>,
+            key_events: Rc<RefCell<Vec<CheckboxKeyEvent>>>,
+            order: Rc<RefCell<Vec<String>>>,
+            tester: CheckboxInteractionTestHandle,
+        }
+
+        impl Harness {
+            fn new(controlled: bool) -> Self {
+                let checkbox = CheckboxProps::new("Dioxus checkbox telemetry");
+                let state = if controlled {
+                    CheckboxState::controlled(false, CheckboxValue::Off)
+                } else {
+                    CheckboxState::uncontrolled(false, CheckboxValue::Off)
+                };
+                let telemetry_events = Rc::new(RefCell::new(Vec::new()));
+                let change_events = Rc::new(RefCell::new(Vec::new()));
+                let focus_events = Rc::new(RefCell::new(Vec::new()));
+                let blur_events = Rc::new(RefCell::new(Vec::new()));
+                let key_events = Rc::new(RefCell::new(Vec::new()));
+                let order = Rc::new(RefCell::new(Vec::new()));
+
+                let telemetry_delegate = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&telemetry_events);
+                    Rc::new(move |event: CheckboxTelemetryEvent| {
+                        order
+                            .borrow_mut()
+                            .push(format!("telemetry:{}", event_kind(&event)));
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let on_change = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&change_events);
+                    Rc::new(move |event: CheckboxChangeEvent| {
+                        order.borrow_mut().push("callback::change".into());
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let on_focus = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&focus_events);
+                    Rc::new(move |event: CheckboxFocusEvent| {
+                        order.borrow_mut().push("callback::focus".into());
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let on_blur = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&blur_events);
+                    Rc::new(move |event: CheckboxFocusEvent| {
+                        order.borrow_mut().push("callback::blur".into());
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let on_key = {
+                    let order = Rc::clone(&order);
+                    let events = Rc::clone(&key_events);
+                    Rc::new(move |event: CheckboxKeyEvent| {
+                        order.borrow_mut().push("callback::key".into());
+                        events.borrow_mut().push(event);
+                    })
+                };
+
+                let props = DioxusCheckboxProps {
+                    checkbox,
+                    state: state.clone(),
+                    on_change: Some(on_change),
+                    on_focus: Some(on_focus),
+                    on_blur: Some(on_blur),
+                    on_key: Some(on_key),
+                    telemetry_delegate: Some(telemetry_delegate),
+                };
+                let state = Rc::new(RefCell::new(state));
+                let factory = CheckboxInteractionFactory::new(&props, Rc::clone(&state));
+                let tester = factory.testing_handle();
+
+                Self {
+                    state,
+                    telemetry_events,
+                    change_events,
+                    focus_events,
+                    blur_events,
+                    key_events,
+                    order,
+                    tester,
+                }
+            }
+        }
+
+        fn event_kind(event: &CheckboxTelemetryEvent) -> &'static str {
+            match event {
+                CheckboxTelemetryEvent::Change(_) => "change",
+                CheckboxTelemetryEvent::Focus(_) => "focus",
+                CheckboxTelemetryEvent::Blur(_) => "blur",
+                CheckboxTelemetryEvent::Key(_) => "key",
+            }
+        }
+
+        #[test]
+        fn uncontrolled_checkbox_sequences_events_and_updates_state() {
+            let harness = Harness::new(false);
+
+            // Click toggles the uncontrolled checkbox after emitting telemetry.
+            harness.tester.click();
+            assert_eq!(
+                harness.order.borrow().as_slice(),
+                ["telemetry:change", "callback::change"]
+            );
+            assert_eq!(harness.change_events.borrow().len(), 1);
+            let change_from_callback = harness.change_events.borrow()[0].clone();
+            match &harness.telemetry_events.borrow()[0] {
+                CheckboxTelemetryEvent::Change(change) => {
+                    assert_eq!(change.previous, CheckboxValue::Off);
+                    assert_eq!(change.next, CheckboxValue::On);
+                    assert_eq!(change.next, change_from_callback.next);
+                }
+                other => panic!("unexpected telemetry after click: {other:?}"),
+            }
+            assert!(matches!(
+                harness.state.borrow().checked(),
+                CheckboxValue::On
+            ));
+
+            harness.order.borrow_mut().clear();
+
+            // Focus should flip focus visibility before consumer callbacks run.
+            harness.tester.focus();
+            assert_eq!(
+                harness.order.borrow().as_slice(),
+                ["telemetry:focus", "callback::focus"]
+            );
+            assert!(harness.state.borrow().focus_visible());
+            let focus_snapshot = harness.focus_events.borrow()[0].clone();
+            match &harness.telemetry_events.borrow()[1] {
+                CheckboxTelemetryEvent::Focus(event) => {
+                    assert!(event.focused);
+                    assert_eq!(event.checked, CheckboxValue::On);
+                    assert_eq!(event.checked, focus_snapshot.checked);
+                }
+                other => panic!("unexpected telemetry after focus: {other:?}"),
+            }
+
+            harness.order.borrow_mut().clear();
+
+            // Blur clears focus while respecting telemetry ordering.
+            harness.tester.blur();
+            assert_eq!(
+                harness.order.borrow().as_slice(),
+                ["telemetry:blur", "callback::blur"]
+            );
+            assert!(!harness.state.borrow().focus_visible());
+            let blur_snapshot = harness.blur_events.borrow()[0].clone();
+            match &harness.telemetry_events.borrow()[2] {
+                CheckboxTelemetryEvent::Blur(event) => {
+                    assert!(!event.focused);
+                    assert_eq!(event.checked, CheckboxValue::On);
+                    assert_eq!(event.checked, blur_snapshot.checked);
+                }
+                other => panic!("unexpected telemetry after blur: {other:?}"),
+            }
+
+            harness.order.borrow_mut().clear();
+
+            // Keyboard interactions emit key + change telemetry before callbacks.
+            harness.tester.key_from(Key::Space);
+            assert_eq!(
+                harness.order.borrow().as_slice(),
+                [
+                    "telemetry:key",
+                    "telemetry:change",
+                    "callback::key",
+                    "callback::change",
+                ]
+            );
+            let key_payload = harness.key_events.borrow()[0].clone();
+            match &harness.telemetry_events.borrow()[3] {
+                CheckboxTelemetryEvent::Key(event) => {
+                    assert_eq!(event.key, ControlKey::Space);
+                    assert_eq!(event.next, key_payload.next);
+                }
+                other => panic!("unexpected telemetry after key: {other:?}"),
+            }
+            match &harness.telemetry_events.borrow()[4] {
+                CheckboxTelemetryEvent::Change(event) => {
+                    assert_eq!(event.next, CheckboxValue::Off);
+                }
+                other => panic!("unexpected telemetry after key change: {other:?}"),
+            }
+            assert!(matches!(
+                harness.state.borrow().checked(),
+                CheckboxValue::Off
+            ));
+        }
+
+        #[test]
+        fn controlled_checkbox_never_mutates_checked_state() {
+            let harness = Harness::new(true);
+
+            harness.tester.click();
+            harness.tester.focus();
+            harness.tester.blur();
+            harness.tester.key(ControlKey::Enter);
+
+            // Controlled adapters still deliver telemetry + callbacks but never
+            // mutate the shared state machine.
+            assert!(harness
+                .telemetry_events
+                .borrow()
+                .iter()
+                .any(|event| matches!(event, CheckboxTelemetryEvent::Change(_))));
+            assert!(harness
+                .telemetry_events
+                .borrow()
+                .iter()
+                .any(|event| matches!(event, CheckboxTelemetryEvent::Key(_))));
+            assert!(matches!(
+                harness.state.borrow().checked(),
+                CheckboxValue::Off
+            ));
+            let order = harness.order.borrow();
+            for chunk in order.chunks(2) {
+                assert!(chunk
+                    .first()
+                    .expect("telemetry should precede callbacks")
+                    .starts_with("telemetry"));
+            }
+        }
     }
 }
 
