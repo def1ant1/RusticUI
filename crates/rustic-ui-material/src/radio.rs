@@ -1025,21 +1025,23 @@ pub mod react {
                     let mut events = Vec::with_capacity(6);
                     events.push(analytics_event);
 
-                    let next_index = if controlled {
-                        let state_ref = state.borrow();
-                        preview_keyboard_target(&state_ref, control)
-                    } else {
-                        let selected_after = Rc::new(RefCell::new(None));
-                        {
-                            let mut state_mut = state.borrow_mut();
-                            let recorder = Rc::clone(&selected_after);
-                            state_mut.on_key(control, move |selected| {
-                                recorder.borrow_mut().replace(selected);
-                            });
-                        }
+                    let selected_after = Rc::new(RefCell::new(None));
+                    {
+                        let mut state_mut = state.borrow_mut();
+                        let recorder = Rc::clone(&selected_after);
+                        // Controlled adapters still pipeline keyboard intents
+                        // through the headless state so the roving focus marker is
+                        // updated by `RadioGroupState::focus`. The callback only
+                        // records the requested index, leaving controlled React
+                        // callers responsible for syncing selection while avoiding
+                        // accidental mutations because the `select` helper skips
+                        // persisting state when `ToggleMode::Controlled` is active.
+                        state_mut.on_key(control, move |selected| {
+                            recorder.borrow_mut().replace(selected);
+                        });
+                    }
 
-                        *selected_after.borrow()
-                    };
+                    let next_index = *selected_after.borrow();
                     let key_payload =
                         build_key_event(&origin_option, control, previous, next_index, disabled);
                     events.push(RadioTelemetryEvent::Key(key_payload));
@@ -1048,6 +1050,10 @@ pub mod react {
                         let focused_option = options[next_index].clone();
                         let focus_event = {
                             let state_ref = state.borrow();
+                            // Focus telemetry is emitted immediately after the
+                            // keyboard handler runs so downstream analytics can
+                            // observe the roving focus destination even when the
+                            // external React store keeps selection unchanged.
                             RadioTelemetryEvent::Focus(build_focus_event(
                                 &focused_option,
                                 &state_ref,
@@ -1620,6 +1626,56 @@ pub mod react {
                 vec!["analytics", "key", "focus", "blur", "change", "commit"]
             );
             assert_eq!(state_handle.borrow().selected_index(), Some(1));
+        }
+
+        #[wasm_bindgen_test]
+        fn controlled_keydown_advances_focus_and_reports_next_index() {
+            let state = Rc::new(RefCell::new(sample_state_controlled()));
+            let snapshot = build_snapshot(&state.borrow());
+            let (delegate, events) = telemetry_collector();
+            let (props, state_handle) =
+                build_option_props(Rc::clone(&state), &snapshot, Some(delegate), 1);
+
+            call_handler_with_event(&props, "onKeyDown", keyboard_event("ArrowRight"));
+
+            let handle = state_handle.borrow();
+            assert_eq!(handle.selected_index(), Some(1));
+            assert_eq!(handle.focus_visible_index(), Some(2));
+            drop(handle);
+
+            let kinds = event_kinds(&events);
+            assert_eq!(
+                kinds,
+                vec!["analytics", "key", "focus", "blur", "change", "commit"]
+            );
+
+            let key_event = events.get(1);
+            let key_next = Reflect::get(&key_event, &JsValue::from_str("next"))
+                .ok()
+                .and_then(|value| value.as_f64())
+                .map(|value| value as usize);
+            assert_eq!(key_next, Some(2));
+
+            let focus_event = events.get(2);
+            let focus_index = Reflect::get(&focus_event, &JsValue::from_str("index"))
+                .ok()
+                .and_then(|value| value.as_f64())
+                .map(|value| value as usize);
+            assert_eq!(focus_index, Some(2));
+
+            let blur_event = events.get(3);
+            let blur_index = Reflect::get(&blur_event, &JsValue::from_str("index"))
+                .ok()
+                .and_then(|value| value.as_f64())
+                .map(|value| value as usize);
+            assert_eq!(blur_index, Some(1));
+
+            let commit_event = events.get(5);
+            let commit_selected = Reflect::get(&commit_event, &JsValue::from_str("selected"))
+                .ok()
+                .and_then(|value| value.as_f64())
+                .map(|value| value as usize);
+            assert_eq!(commit_selected, Some(1));
         }
     }
 
