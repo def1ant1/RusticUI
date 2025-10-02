@@ -482,16 +482,53 @@ where
     assert_eq!(key_event.next, Some(2));
     assert_eq!(harness.state.selected_index(), initial_selected);
 
-    if framework == "yew" {
-        // Enterprise governance expects controlled Yew integrations to advance the
-        // roving focus index even though the caller owns the commit.  Asserting the
-        // focus telemetry immediately after the keyboard step documents the order:
-        // pointer intent → commit audit → keyboard intent → focus audit.
+    if matches!(framework, "yew" | "leptos") {
+        // Enterprise governance expects controlled adapters to advance the roving
+        // focus index even though the caller owns the commit.  Auditors review
+        // this assertion to confirm pointer intent → commit audit → keyboard intent
+        // → focus audit remains intact across frameworks before production rollout.
         assert_eq!(
             harness.state.focus_visible_index(),
             key_event.next,
-            "Yew controlled radio groups must expose focus movement for audit logs",
+            "{} controlled radio groups must expose focus movement for audit logs",
+            framework,
         );
+
+        // Telemetry due diligence: validate the key payload forwarded to SOC
+        // tooling points at the same option index recorded by the roving focus
+        // machinery.  This keeps enterprise monitoring in lockstep with the core
+        // interaction contract regardless of rendering surface.
+        let key_telemetry = harness
+            .telemetry_events
+            .iter()
+            .find_map(|event| match event {
+                RadioTelemetryEvent::Key(evt) => Some(evt.clone()),
+                _ => None,
+            })
+            .expect("key telemetry");
+        assert_eq!(key_telemetry.next, key_event.next);
+
+        let focus_telemetry = harness
+            .telemetry_events
+            .iter()
+            .find_map(|event| match event {
+                RadioTelemetryEvent::Focus(evt) => Some(evt.clone()),
+                _ => None,
+            })
+            .expect("focus telemetry");
+        assert!(focus_telemetry.focused);
+        assert_eq!(focus_telemetry.index, key_event.next.unwrap());
+
+        let blur_telemetry = harness
+            .telemetry_events
+            .iter()
+            .find_map(|event| match event {
+                RadioTelemetryEvent::Blur(evt) => Some(evt.clone()),
+                _ => None,
+            })
+            .expect("blur telemetry");
+        assert!(!blur_telemetry.focused);
+        assert_eq!(blur_telemetry.index, pointer_change.next);
     }
 
     let key_commit = harness

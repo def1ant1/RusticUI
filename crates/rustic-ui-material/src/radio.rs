@@ -2410,19 +2410,32 @@ pub mod leptos {
                     )
                 };
 
-                let next_index = if controlled {
-                    let state_ref = state.borrow();
-                    preview_keyboard_target(&state_ref, control)
-                } else {
-                    let selected_after = Rc::new(RefCell::new(None));
-                    {
-                        let mut state_mut = state.borrow_mut();
-                        let recorder = Rc::clone(&selected_after);
-                        state_mut.on_key(control, move |selected| {
-                            recorder.borrow_mut().replace(selected);
-                        });
+                let selected_after = Rc::new(RefCell::new(None));
+                {
+                    // Governance-grade focus audit trail: even in controlled mode we
+                    // forward the key press into the headless state machine so the
+                    // canonical roving focus algorithm records which option would be
+                    // highlighted.  Framework adapters only own the commit step; by
+                    // sourcing the focus intent from `on_key` we ensure telemetry is
+                    // anchored to the same index the core engine calculated, keeping
+                    // accessibility reviewers and SOC teams in sync.
+                    let mut state_mut = state.borrow_mut();
+                    let recorder = Rc::clone(&selected_after);
+                    state_mut.on_key(control, move |selected| {
+                        recorder.borrow_mut().replace(selected);
+                    });
+                }
+
+                let next_index = {
+                    let resolved = selected_after.borrow().copied();
+                    if resolved.is_some() {
+                        resolved
+                    } else if controlled {
+                        let state_ref = state.borrow();
+                        preview_keyboard_target(&state_ref, control)
+                    } else {
+                        None
                     }
-                    *selected_after.borrow()
                 };
 
                 refresh();
