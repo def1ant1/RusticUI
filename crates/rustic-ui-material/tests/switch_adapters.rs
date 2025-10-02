@@ -58,7 +58,7 @@ struct ControlledHarness {
 
 impl ControlledHarness {
     fn new_controlled() -> Self {
-        let mut props = SwitchProps::new("Notifications");
+        let mut props = SwitchProps::new("Notifications", TelemetryHooks::default());
         props.telemetry.analytics_id = Some("switch.analytics.controlled".into());
         props.telemetry.automation_id = Some("switch.automation.controlled".into());
         Self {
@@ -138,7 +138,7 @@ mod yew_tests {
 
     #[test]
     fn renders_on_state() {
-        let props = SwitchProps::new("Notifications");
+        let props = SwitchProps::new("Notifications", TelemetryHooks::default());
         let mut state = SwitchState::uncontrolled(false, false);
         state.toggle(|_| {});
         let out = switch::yew::render(&props, &state);
@@ -158,7 +158,7 @@ mod leptos_tests {
 
     #[test]
     fn renders_off_state() {
-        let props = SwitchProps::new("Notifications");
+        let props = SwitchProps::new("Notifications", TelemetryHooks::default());
         let state = SwitchState::uncontrolled(false, false);
         let out = switch::leptos::render(&props, &state);
         assert!(out.contains("role=\"switch\""));
@@ -179,7 +179,7 @@ mod dioxus_tests {
     fn includes_focus_attribute() {
         let mut state = SwitchState::uncontrolled(false, false);
         state.focus();
-        let props = SwitchProps::new("Notifications");
+        let props = SwitchProps::new("Notifications", TelemetryHooks::default());
         let out = switch::dioxus::render(&props, &state);
         assert!(out.contains("data-focus-visible"));
     }
@@ -196,7 +196,7 @@ mod sycamore_tests {
 
     #[test]
     fn renders_basic_markup() {
-        let props = SwitchProps::new("Notifications");
+        let props = SwitchProps::new("Notifications", TelemetryHooks::default());
         let state = SwitchState::uncontrolled(false, false);
         let out = switch::sycamore::render(&props, &state);
         assert!(out.contains("role=\"switch\""));

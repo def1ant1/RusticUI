@@ -17,6 +17,12 @@
 //!
 //! Each adapter reads from the same descriptor so automation selectors and ARIA
 //! metadata stay synchronized across frameworks and SSR pipelines.
+//!
+//! Central platform teams can register analytics, focus, state transition,
+//! commit acknowledgement, and panic handlers once via [`RadioGroupProps`]'s
+//! hook accessors. Those hooks proxy directly to [`TelemetryHooks`], ensuring
+//! enterprise observability stacks ingest consistent payloads regardless of the
+//! frontend framework driving the radio group.
 
 use rustic_ui_headless::{
     interaction::ControlKey,
@@ -26,7 +32,11 @@ use rustic_ui_styled_engine::{css_with_theme, Style};
 
 use crate::{
     selection_control::{self, RadioGroupDescriptor, RadioOptionDescriptor},
-    telemetry::{instrument_render, TelemetryContext, TelemetryHooks},
+    telemetry::{
+        instrument_render, TelemetryAnalyticsCallback, TelemetryCommitCallback, TelemetryContext,
+        TelemetryErrorCallback, TelemetryFocusCallback, TelemetryHooks,
+        TelemetryStateChangeCallback,
+    },
 };
 
 /// Telemetry payload emitted when radio option analytics identifiers are
@@ -280,19 +290,19 @@ pub struct RadioGroupProps {
 }
 
 impl RadioGroupProps {
-    pub fn new(option_labels: impl Into<Vec<String>>) -> Self {
+    pub fn new(option_labels: impl Into<Vec<String>>, telemetry: TelemetryHooks) -> Self {
         Self {
             option_labels: option_labels.into(),
-            telemetry: TelemetryHooks::default(),
+            telemetry,
             additional_group_attributes: Vec::new(),
             additional_option_attributes: Vec::new(),
         }
     }
 
-    pub fn from_state(state: &RadioGroupState) -> Self {
+    pub fn from_state(state: &RadioGroupState, telemetry: TelemetryHooks) -> Self {
         Self {
             option_labels: state.options().to_vec(),
-            telemetry: TelemetryHooks::default(),
+            telemetry,
             additional_group_attributes: Vec::new(),
             additional_option_attributes: Vec::new(),
         }
@@ -302,6 +312,33 @@ impl RadioGroupProps {
     pub fn with_telemetry(mut self, telemetry: TelemetryHooks) -> Self {
         self.telemetry = telemetry;
         self
+    }
+
+    /// Optional analytics hook configured on the shared [`TelemetryHooks`].
+    pub fn analytics_hook(&self) -> Option<&std::sync::Arc<TelemetryAnalyticsCallback>> {
+        self.telemetry.on_analytics.as_ref()
+    }
+
+    /// Optional focus transition hook configured on the shared
+    /// [`TelemetryHooks`].
+    pub fn focus_transition_hook(&self) -> Option<&std::sync::Arc<TelemetryFocusCallback>> {
+        self.telemetry.on_focus_transition.as_ref()
+    }
+
+    /// Optional state change hook configured on the shared [`TelemetryHooks`].
+    pub fn state_change_hook(&self) -> Option<&std::sync::Arc<TelemetryStateChangeCallback>> {
+        self.telemetry.on_state_change.as_ref()
+    }
+
+    /// Optional commit acknowledgement hook configured on the shared
+    /// [`TelemetryHooks`].
+    pub fn commit_ack_hook(&self) -> Option<&std::sync::Arc<TelemetryCommitCallback>> {
+        self.telemetry.on_commit_ack.as_ref()
+    }
+
+    /// Optional error hook configured on the shared [`TelemetryHooks`].
+    pub fn error_hook(&self) -> Option<&std::sync::Arc<TelemetryErrorCallback>> {
+        self.telemetry.on_error.as_ref()
     }
 }
 
@@ -433,6 +470,22 @@ fn merged_telemetry(primary: &TelemetryHooks, fallback: &TelemetryHooks) -> Tele
             .on_render
             .clone()
             .or_else(|| fallback.on_render.clone()),
+        on_analytics: primary
+            .on_analytics
+            .clone()
+            .or_else(|| fallback.on_analytics.clone()),
+        on_focus_transition: primary
+            .on_focus_transition
+            .clone()
+            .or_else(|| fallback.on_focus_transition.clone()),
+        on_state_change: primary
+            .on_state_change
+            .clone()
+            .or_else(|| fallback.on_state_change.clone()),
+        on_commit_ack: primary
+            .on_commit_ack
+            .clone()
+            .or_else(|| fallback.on_commit_ack.clone()),
         on_error: primary
             .on_error
             .clone()
@@ -1459,7 +1512,7 @@ pub mod react {
         }
 
         fn build_snapshot(state: &RadioGroupState) -> RadioGroupDescriptorSnapshot {
-            let props = RadioGroupProps::from_state(state);
+            let props = RadioGroupProps::from_state(state, TelemetryHooks::default());
             let telemetry = TelemetryHooks::default();
             let (_ctx, _descriptor, snapshot) = super::super::descriptor_with_context(
                 "rustic_ui_material::radio::react::tests::snapshot",
@@ -2374,7 +2427,7 @@ pub mod yew {
 
         fn build_props(controlled: bool) -> (YewRadioGroupProps, RadioHarness) {
             let labels = vec!["Alpha".to_string(), "Beta".to_string()];
-            let mut group = RadioGroupProps::new(labels.clone());
+            let mut group = RadioGroupProps::new(labels.clone(), TelemetryHooks::default());
             group.telemetry.analytics_id = Some(format!("radio.group.analytics.{controlled}"));
             group.telemetry.automation_id = Some(format!("radio.group.automation.{controlled}"));
 
@@ -3409,7 +3462,7 @@ pub mod leptos {
                     };
 
                     let mut props = LeptosRadioGroupProps::new(
-                        RadioGroupProps::from_state(&state),
+                        RadioGroupProps::from_state(&state, TelemetryHooks::default()),
                         state.clone(),
                     );
 
@@ -3718,8 +3771,10 @@ pub mod leptos {
                 RadioOrientation::Vertical,
                 Some(0),
             );
-            let props =
-                LeptosRadioGroupProps::new(RadioGroupProps::from_state(&state), state.clone());
+            let props = LeptosRadioGroupProps::new(
+                RadioGroupProps::from_state(&state, TelemetryHooks::default()),
+                state.clone(),
+            );
             let html = leptos::ssr::render_to_string({
                 let props = props.clone();
                 move || LeptosRadioGroup(props.clone())
@@ -3739,7 +3794,7 @@ pub mod leptos {
                 RadioOrientation::Horizontal,
                 Some(1),
             );
-            let mut group_props = RadioGroupProps::from_state(&state);
+            let mut group_props = RadioGroupProps::from_state(&state, TelemetryHooks::default());
             group_props
                 .additional_group_attributes
                 .push(("style".into(), "position: relative;".into()));
@@ -4473,7 +4528,7 @@ pub mod dioxus {
                         Some(0),
                     )
                 };
-                let group = RadioGroupProps::from_state(&state);
+                let group = RadioGroupProps::from_state(&state, TelemetryHooks::default());
                 let telemetry = TelemetryHooks::default();
                 let (_context, _descriptor, snapshot) = super::descriptor_with_context(
                     "rustic_ui_material::radio::dioxus::tests::Harness",
@@ -4773,7 +4828,7 @@ pub mod dioxus {
                 RadioOrientation::Horizontal,
                 Some(0),
             );
-            let mut group = RadioGroupProps::from_state(&state);
+            let mut group = RadioGroupProps::from_state(&state, TelemetryHooks::default());
             group
                 .additional_group_attributes
                 .push(("style".into(), "position: relative;".into()));
@@ -4821,7 +4876,7 @@ pub mod dioxus {
                 Some(0),
             );
             let props = DioxusRadioGroupProps {
-                group: RadioGroupProps::from_state(&state),
+                group: RadioGroupProps::from_state(&state, TelemetryHooks::default()),
                 state: state.clone(),
                 on_change: None,
                 on_focus: None,
@@ -5355,7 +5410,7 @@ pub mod sycamore {
                         Some(0),
                     )
                 };
-                let group = RadioGroupProps::from_state(&state);
+                let group = RadioGroupProps::from_state(&state, TelemetryHooks::default());
                 let telemetry = TelemetryHooks::default();
                 let (_context, _descriptor, snapshot) = super::super::descriptor_with_context(
                     "rustic_ui_material::radio::sycamore::tests::Harness",
@@ -5628,8 +5683,10 @@ pub mod sycamore {
                 RadioOrientation::Vertical,
                 Some(0),
             );
-            let props =
-                SycamoreRadioGroupProps::new(RadioGroupProps::from_state(&state), state.clone());
+            let props = SycamoreRadioGroupProps::new(
+                RadioGroupProps::from_state(&state, TelemetryHooks::default()),
+                state.clone(),
+            );
             let markup = render_to_string(|cx| {
                 SycamoreRadioGroup::<sycamore_crate::web::Html>(cx, props.clone())
             });
@@ -5650,7 +5707,7 @@ pub mod sycamore {
                 RadioOrientation::Vertical,
                 Some(0),
             );
-            let mut props = RadioGroupProps::from_state(&state);
+            let mut props = RadioGroupProps::from_state(&state, TelemetryHooks::default());
             // Simulate a theme override and inline style injected by automation so
             // we can confirm the Sycamore adapter defers to the descriptor
             // snapshot rather than re-listing attributes manually.
@@ -5688,7 +5745,10 @@ mod tests {
 
     #[test]
     fn render_html_includes_all_options() {
-        let props = RadioGroupProps::new(vec!["A".to_string(), "B".to_string()]);
+        let props = RadioGroupProps::new(
+            vec!["A".to_string(), "B".to_string()],
+            TelemetryHooks::default(),
+        );
         let state = RadioGroupState::uncontrolled(
             vec!["A".into(), "B".into()],
             false,
@@ -5702,7 +5762,10 @@ mod tests {
 
     #[test]
     fn descriptor_exposes_aria_metadata() {
-        let props = RadioGroupProps::new(vec!["A".to_string(), "B".to_string()]);
+        let props = RadioGroupProps::new(
+            vec!["A".to_string(), "B".to_string()],
+            TelemetryHooks::default(),
+        );
         let state = RadioGroupState::uncontrolled(
             vec!["A".into(), "B".into()],
             false,

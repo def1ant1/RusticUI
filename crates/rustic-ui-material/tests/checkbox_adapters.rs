@@ -130,7 +130,7 @@ mod yew_tests {
 
         fn new_with_state(state: CheckboxState) -> Self {
             let contexts = Arc::new(Mutex::new(Vec::new()));
-            let mut props = CheckboxProps::new("Marketing opt-in");
+            let mut props = CheckboxProps::new("Marketing opt-in", TelemetryHooks::default());
             props.telemetry = instrumented_hooks(
                 "analytics::checkbox::yew",
                 "automation::checkbox::yew",
@@ -397,7 +397,7 @@ mod leptos_tests {
 
         fn new_with_state(state: CheckboxState) -> Self {
             let contexts = Arc::new(Mutex::new(Vec::new()));
-            let mut props = CheckboxProps::new("Release automation");
+            let mut props = CheckboxProps::new("Release automation", TelemetryHooks::default());
             props.telemetry = instrumented_hooks(
                 "analytics::checkbox::leptos",
                 "automation::checkbox::leptos",
@@ -663,7 +663,7 @@ mod dioxus_tests {
 
         fn new_with_state(state: CheckboxState) -> Self {
             let contexts = Arc::new(Mutex::new(Vec::new()));
-            let mut props = CheckboxProps::new("Nightly deployments");
+            let mut props = CheckboxProps::new("Nightly deployments", TelemetryHooks::default());
             props.telemetry = instrumented_hooks(
                 "analytics::checkbox::dioxus",
                 "automation::checkbox::dioxus",
@@ -924,7 +924,7 @@ mod sycamore_tests {
 
         fn new_with_state(state: CheckboxState) -> Self {
             let contexts = Arc::new(Mutex::new(Vec::new()));
-            let mut props = CheckboxProps::new("Finance approvals");
+            let mut props = CheckboxProps::new("Finance approvals", TelemetryHooks::default());
             props.telemetry = instrumented_hooks(
                 "analytics::checkbox::sycamore",
                 "automation::checkbox::sycamore",
