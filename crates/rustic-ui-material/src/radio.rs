@@ -1,28 +1,124 @@
-//! Material radio group built atop the headless [`RadioGroupState`].
+//! Material radio group built atop the headless [`RadioGroupState`] and the
+//! descriptor system that unifies SSR and hydration across frameworks.
 //!
-//! Feature gates expose first-class components for each supported framework
-//! while the shared [`RadioGroupDescriptor`](crate::selection_control::RadioGroupDescriptor)
-//! guarantees consistent styling and automation hooks:
+//! [`RadioGroupDescriptor`](crate::selection_control::RadioGroupDescriptor) and
+//! [`RadioOptionDescriptor`](crate::selection_control::RadioOptionDescriptor)
+//! capture ARIA, automation, and theming metadata once so both server renderers
+//! and client adapters consume the same snapshot:
 //!
-//! * `react` – [`react::ReactRadioGroup`] yields [`Jsx`] through the
-//!   `wasm_bindgen` bridge, wiring descriptors directly into React elements.
-//! * `yew` – [`yew::YewRadioGroup`] leverages `#[function_component]` so Yew apps
-//!   can bind to the group without string conversions.
-//! * `leptos` – [`leptos::LeptosRadioGroup`] composes with `#[component]` and
-//!   returns a [`leptos::View`].
-//! * `dioxus` – [`dioxus::DioxusRadioGroup`] uses `rsx!` for idiomatic Dioxus
-//!   rendering.
-//! * `sycamore` – [`sycamore::SycamoreRadioGroup`] returns a Sycamore
-//!   [`Template`](sycamore::view::Template) for signal driven dashboards.
+//! * [`render_radio_group_html`](crate::selection_control::render_radio_group_html)
+//!   serializes HTML for SSR, static hosting, or streaming pipelines while reusing
+//!   the descriptor’s hydration-safe attributes.
+//! * Framework adapters for React, Yew, Leptos, Dioxus, and Sycamore hydrate by
+//!   reading the descriptor’s themed attribute vectors, ensuring automation
+//!   selectors, analytics hooks, and ARIA metadata remain identical to the SSR
+//!   output.
 //!
-//! Each adapter reads from the same descriptor so automation selectors and ARIA
-//! metadata stay synchronized across frameworks and SSR pipelines.
+//! Feature gates let teams activate only the clients they deploy without giving
+//! up descriptor parity:
 //!
-//! Central platform teams can register analytics, focus, state transition,
-//! commit acknowledgement, and panic handlers once via [`RadioGroupProps`]'s
-//! hook accessors. Those hooks proxy directly to [`TelemetryHooks`], ensuring
-//! enterprise observability stacks ingest consistent payloads regardless of the
-//! frontend framework driving the radio group.
+//! * `react` – [`react::ReactRadioGroup`] mirrors descriptor attributes into
+//!   [`Jsx`] nodes so React hydrates without recomputing group state.
+//! * `yew` – [`yew::YewRadioGroup`] renders a `Html` tree seeded by descriptor
+//!   snapshots to avoid checksum drift.
+//! * `leptos` – [`leptos::LeptosRadioGroup`] composes with `#[component]`,
+//!   reusing descriptors inside the Leptos signal graph for reactive hydration.
+//! * `dioxus` – [`dioxus::DioxusRadioGroup`] maps descriptor metadata into
+//!   `rsx!` markup for WASM-based shells.
+//! * `sycamore` – [`sycamore::SycamoreRadioGroup`] outputs
+//!   [`Template`](sycamore::view::Template) instances hydrated directly from the
+//!   descriptor cache.
+//!
+//! # Feature flags & setup
+//!
+//! ```toml
+//! rustic-ui-material = {
+//!     version = "0.1",
+//!     default-features = false,
+//!     features = ["forms", "react", "yew", "leptos", "dioxus", "sycamore"]
+//! }
+//! tracing = "0.1"
+//! ```
+//!
+//! Configure a `tracing` subscriber (for example with
+//! `tracing_subscriber::fmt::init()`) before hydrating adapters so
+//! [`TelemetryHooks`] can forward render spans, analytics payloads, and error
+//! reports into your observability stack.
+//!
+//! # Descriptor-driven SSR & hydration
+//!
+//! ```rust,no_run
+//! use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+//! use rustic_ui_material::radio::RadioGroupProps;
+//! use rustic_ui_material::selection_control::{
+//!     render_radio_group_html, RadioGroupDescriptor, RadioOptionDescriptor,
+//! };
+//! use rustic_ui_material::telemetry::TelemetryHooks;
+//! use rustic_ui_styled_engine::{css, Style};
+//! use std::sync::Arc;
+//! use tracing::info;
+//!
+//! # #[cfg(feature = "leptos")]
+//! use rustic_ui_material::radio::leptos::{LeptosRadioGroup, LeptosRadioGroupProps};
+//!
+//! # fn orchestrate_radio_round_trip() {
+//!     let state = RadioGroupState::uncontrolled(
+//!         vec!["Email".to_string(), "SMS".to_string()],
+//!         false,
+//!         RadioOrientation::Horizontal,
+//!         Some(0),
+//!     );
+//!     let group_style = Style::new(css!("display: grid; gap: 0.5rem;"))
+//!         .expect("style to compile");
+//!     let option_style = Style::new(css!("padding: 0.25rem 0.5rem;"))
+//!         .expect("style to compile");
+//!     let descriptor = RadioGroupDescriptor::new(group_style.clone())
+//!         .with_group_attributes(state.group_aria_attributes())
+//!         .option(
+//!             RadioOptionDescriptor::new("Email", option_style.clone())
+//!                 .with_attributes(state.option_aria_attributes(0)),
+//!         )
+//!         .option(
+//!             RadioOptionDescriptor::new("SMS", option_style.clone())
+//!                 .with_attributes(state.option_aria_attributes(1)),
+//!         );
+//!
+//!     // SSR produces deterministic markup using the descriptor metadata.
+//!     let ssr_html = render_radio_group_html(&descriptor);
+//!     assert!(ssr_html.contains("role=\"radiogroup\""));
+//!
+//!     // Hydration merges telemetry hooks so analytics fire before user
+//!     // callbacks while keeping descriptor attributes intact.
+//!     let mut telemetry = TelemetryHooks::default();
+//!     telemetry.analytics_id = Some("radio.delivery".into());
+//!     telemetry.on_render = Some(Arc::new(|ctx| {
+//!         info!(target: "rusticui.telemetry", component = ctx.component, "hydrated");
+//!     }));
+//!
+//!     # #[cfg(feature = "leptos")]
+//!     {
+//!         let props = LeptosRadioGroupProps {
+//!             group: RadioGroupProps::from_state(&state, telemetry.clone()),
+//!             state: state.clone(),
+//!             telemetry: telemetry.clone(),
+//!             on_change: None,
+//!             on_focus: None,
+//!             on_blur: None,
+//!             on_key: None,
+//!             telemetry_delegate: None,
+//!         };
+//!         let view = LeptosRadioGroup(props);
+//!         let _ = view;
+//!     }
+//! }
+//! # orchestrate_radio_round_trip();
+//! ```
+//!
+//! Register analytics, focus, state transition, commit acknowledgement, and
+//! panic handlers on [`TelemetryHooks`] before rendering. Doing so guarantees
+//! SSR markup, hydration adapters, and enterprise observability pipelines all
+//! reuse the same descriptor-provided metadata regardless of whether React,
+//! Yew, Leptos, Dioxus, or Sycamore drives the client surface.
 
 use rustic_ui_headless::{
     interaction::ControlKey,

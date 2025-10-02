@@ -1,34 +1,108 @@
-//! Material switch built from the headless [`SwitchState`].
+//! Material switch built from the headless [`SwitchState`] and the shared
+//! descriptor pipeline that aligns SSR output with multi-framework hydration.
 //!
-//! Feature-gated adapters expose idiomatic components per framework while
-//! sharing styling, accessibility metadata, and telemetry ordering via
+//! Every render path flows through
 //! [`ToggleControlDescriptor`](crate::selection_control::ToggleControlDescriptor)
-//! and the helper dispatchers defined below.
+//! so the same attribute snapshot drives:
 //!
-//! * `react` – [`react::ReactSwitch`] returns [`Jsx`] using the `wasm_bindgen`
-//!   bridge and the shared descriptor metadata.
-//! * `yew` – [`yew::YewSwitch`] is decorated with `#[function_component]` for
-//!   seamless use in Yew apps.
-//! * `leptos` – [`leptos::LeptosSwitch`] leverages the Leptos `#[component]`
-//!   macro and returns a [`leptos::View`].
-//! * `dioxus` – [`dioxus::DioxusSwitch`] renders markup with `rsx!` so Dioxus
-//!   shells gain first-class primitives instead of raw HTML strings.
-//! * `sycamore` – [`sycamore::SycamoreSwitch`] yields a Sycamore
-//!   [`Template`](sycamore::view::Template) for signal-driven experiences.
+//! * [`render_toggle_html`](crate::selection_control::render_toggle_html) for
+//!   deterministic SSR fragments that can be cached or streamed.
+//! * React, Yew, Leptos, Dioxus, and Sycamore adapters which hydrate with the
+//!   exact attribute set captured during SSR, preventing hydration checksum
+//!   drift and ensuring analytics markers stay stable.
 //!
-//! All adapters derive their attributes from the same descriptor ensuring parity
-//! between SSR and client renders regardless of framework. Telemetry hooks and
-//! analytics callbacks are routed through [`instrument_render`],
-//! [`TelemetryContext`], and the dispatch helpers so analytics capture always
-//! precedes local side effects. Controlled integrations remain authoritative
-//! because every adapter checks [`SwitchState::is_controlled`] before mutating
-//! the cached state while still emitting telemetry and change callbacks.
+//! Feature gates allow teams to activate only the clients they deploy while
+//! retaining descriptor consistency:
 //!
-//! Enterprise teams can now wire analytics batching, focus visibility, state
-//! mutation, commit acknowledgement, and panic handling delegates through the
-//! hook accessors on [`SwitchProps`]. Doing so keeps compliance logging, SRE
-//! alerting, and growth dashboards synchronized without sprinkling repetitive
-//! wiring logic into every adapter.
+//! * `react` – [`react::ReactSwitch`] mirrors SSR attributes into [`Jsx`] nodes
+//!   via the `wasm_bindgen` bridge so React hydrates without recomputing ARIA
+//!   metadata.
+//! * `yew` – [`yew::YewSwitch`] leverages `#[function_component]` so the
+//!   descriptor’s themed attribute pairs map directly onto the Yew virtual DOM.
+//! * `leptos` – [`leptos::LeptosSwitch`] composes with `#[component]`, feeding
+//!   descriptor metadata into Leptos signals for reactive hydration.
+//! * `dioxus` – [`dioxus::DioxusSwitch`] uses `rsx!`, reusing the descriptor to
+//!   seed Dioxus’ virtual DOM snapshots.
+//! * `sycamore` – [`sycamore::SycamoreSwitch`] produces
+//!   [`Template`](sycamore::view::Template) instances that hydrate directly from
+//!   the descriptor cache.
+//!
+//! # Feature flags & setup
+//!
+//! ```toml
+//! rustic-ui-material = {
+//!     version = "0.1",
+//!     default-features = false,
+//!     features = ["forms", "react", "yew", "leptos", "dioxus", "sycamore"]
+//! }
+//! tracing = "0.1"
+//! ```
+//!
+//! Ensure a `tracing` subscriber (for example
+//! `tracing_subscriber::fmt::init()`) is installed before hydrating adapters so
+//! [`TelemetryHooks`] can pipe render spans, analytics payloads, and error
+//! reports into your observability fabric automatically.
+//!
+//! # Descriptor-driven SSR & hydration
+//!
+//! ```rust,no_run
+//! use rustic_ui_headless::switch::SwitchState;
+//! use rustic_ui_material::selection_control::{render_toggle_html, ToggleControlDescriptor};
+//! use rustic_ui_material::switch::SwitchProps;
+//! use rustic_ui_material::telemetry::TelemetryHooks;
+//! use rustic_ui_styled_engine::{css, Style};
+//! use std::sync::Arc;
+//! use tracing::info;
+//!
+//! # #[cfg(feature = "yew")]
+//! use rustic_ui_material::switch::yew::{YewSwitch, YewSwitchProps};
+//! # #[cfg(feature = "yew")]
+//! use yew::html::Html;
+//!
+//! # fn orchestrate_switch_round_trip() {
+//!     let state = SwitchState::uncontrolled(false, false);
+//!     let descriptor = ToggleControlDescriptor::new(
+//!         "Notifications",
+//!         Style::new(css!("display: inline-flex;"))
+//!             .expect("style to compile"),
+//!     )
+//!     .with_attributes(state.aria_attributes());
+//!
+//!     // Server renderers emit deterministic HTML using the descriptor.
+//!     let ssr_html = render_toggle_html(&descriptor);
+//!     assert!(ssr_html.contains("data-on=\"false\""));
+//!
+//!     // Hydration paths merge telemetry so analytics spans fire before user
+//!     // callbacks. The descriptor attributes are reused verbatim.
+//!     let mut telemetry = TelemetryHooks::default();
+//!     telemetry.analytics_id = Some("switch.notifications".into());
+//!     telemetry.on_render = Some(Arc::new(|ctx| {
+//!         info!(target = "rusticui.telemetry", component = ctx.component, "hydrated");
+//!     }));
+//!
+//!     # #[cfg(feature = "yew")]
+//!     {
+//!         let props = YewSwitchProps {
+//!             switch: SwitchProps::new("Notifications", telemetry.clone()),
+//!             state: state.clone(),
+//!             on_change: None,
+//!             on_focus: None,
+//!             on_blur: None,
+//!             on_key: None,
+//!             telemetry_delegate: None,
+//!         };
+//!         let view: Html = YewSwitch(&props);
+//!         let _ = view;
+//!     }
+//! }
+//! # orchestrate_switch_round_trip();
+//! ```
+//!
+//! Controlled integrations remain authoritative because each adapter checks
+//! [`SwitchState::is_controlled`] before mutating local snapshots while still
+//! emitting telemetry and change callbacks. Populate [`TelemetryHooks`]
+//! *before* rendering so SSR output, hydration, analytics, and automation hooks
+//! all reuse the same descriptor-driven attributes across runtimes.
 
 use crate::{
     selection_control::{self, ToggleControlDescriptor},

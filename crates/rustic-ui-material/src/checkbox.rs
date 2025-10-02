@@ -1,49 +1,118 @@
-//! Material flavored checkbox built on the headless [`CheckboxState`].
+//! Material flavored checkbox built on the headless [`CheckboxState`] and the
+//! descriptor pipeline shared across RusticUI selection controls.
 //!
-//! Feature flags expose idiomatic components for each supported framework so
-//! enterprise teams can wire the same behavioral core into multi-runtime
-//! surfaces without maintaining parallel markup:
+//! The module routes every render path through
+//! [`ToggleControlDescriptor`](crate::selection_control::ToggleControlDescriptor)
+//! so the same attribute snapshot powers:
+//!
+//! * Server-side serialization via
+//!   [`render_toggle_html`](crate::selection_control::render_toggle_html) for
+//!   HTML-first frameworks and static-site generators.
+//! * Client adapters for React, Yew, Leptos, Dioxus, and Sycamore which reuse
+//!   those attributes during hydration to avoid checksum drift while the
+//!   descriptor feeds the shared style registry.
+//!
+//! Each adapter is feature gated so enterprise teams can compose a tailored
+//! footprint while still sharing the same automation-friendly metadata:
 //!
 //! * `react` – Enables [`react::ReactCheckbox`] which returns [`Jsx`] elements
-//!   via the `wasm_bindgen` bridge and delegates style injection to the shared
-//!   descriptor helpers.
-//! * `yew` – Enables [`yew::YewCheckbox`] driven by `#[function_component]` for
-//!   seamless integration with existing Yew applications.
+//!   via the `wasm_bindgen` bridge while mirroring SSR attributes into the
+//!   client render for hydration safety.
+//! * `yew` – Enables [`yew::YewCheckbox`] implemented with
+//!   `#[function_component]` so attribute pairs land directly in the Yew `Html`
+//!   node tree without re-stringifying during hydration.
 //! * `leptos` – Enables [`leptos::LeptosCheckbox`] composed with
-//!   `#[component]`, returning a [`leptos::View`] so Leptos signals can hydrate
-//!   without diff churn.
+//!   `#[component]`; descriptors feed Leptos `View` nodes so signal-driven
+//!   updates respect SSR state.
 //! * `dioxus` – Enables [`dioxus::DioxusCheckbox`] implemented with `rsx!`
-//!   markup for ergonomic client rendering and SSR parity.
+//!   markup, ensuring the WASM runtime consumes the same descriptor snapshot
+//!   emitted on the server.
 //! * `sycamore` – Enables [`sycamore::SycamoreCheckbox`] returning a Sycamore
-//!   [`Template`](sycamore::view::Template) for teams building signal-driven
-//!   dashboards.
+//!   [`Template`](sycamore::view::Template) that hydrates from the descriptor’s
+//!   attribute cache without custom glue.
 //!
-//! All adapters delegate attribute hydration to the shared
-//! [`ToggleControlDescriptor`](crate::selection_control::ToggleControlDescriptor)
-//! so automation hooks and ARIA metadata remain consistent across frameworks.
+//! # Feature flags & setup
 //!
-//! Downstream orchestration layers should populate the analytics and automation
-//! identifiers within [`TelemetryHooks`] *before* calling any render helper so
-//! every adapter emits identical instrumentation. Providing the identifiers up
-//! front allows SSR, WASM bridges, and component frameworks to produce matching
-//! telemetry payloads without bolting on per-platform patches, keeping
-//! enterprise monitoring pipelines aligned across runtimes.
+//! ```toml
+//! rustic-ui-material = {
+//!     version = "0.1",
+//!     default-features = false,
+//!     features = ["forms", "react", "yew", "leptos", "dioxus", "sycamore"]
+//! }
+//! tracing = "0.1"
+//! ```
 //!
-//! The same `TelemetryHooks` handle higher-order enterprise observability.
-//! Teams pipe analytics beacons, focus transitions, state mutations, commit
-//! acknowledgements, and panic reports into centralized data planes by wiring
-//! closures into the new hook accessors on [`CheckboxProps`]. The props expose
-//! trait-object accessors so automated pipelines can subscribe once and receive
-//! uniform payloads across React, Yew, Leptos, Sycamore, and Dioxus surfaces
-//! without hand-coding framework-specific glue.
+//! Enable `react`, `yew`, `leptos`, `dioxus`, or `sycamore` depending on the
+//! client runtimes you need, and ensure your telemetry stack configures a
+//! `tracing` subscriber (for example via `tracing_subscriber::fmt()`) before
+//! hydrating any widgets so `TelemetryHooks` callbacks can emit spans and
+//! metrics deterministically.
 //!
-//! Every adapter now exposes optional change/focus/blur/key callbacks alongside
-//! a telemetry delegate so large applications can bubble structured
-//! [`CheckboxTelemetryEvent`] payloads into centralized analytics collectors.
-//! The helpers reuse the headless [`CheckboxState`] to compute prior/next
-//! values, ensuring automation harnesses attached to React, Yew, Leptos,
-//! Dioxus, or Sycamore receive identical event contracts without writing
-//! adapter-specific plumbing.
+//! # Descriptor-driven SSR & hydration
+//!
+//! The descriptor API keeps SSR and CSR perfectly aligned. Server renderers call
+//! [`render_toggle_html`](crate::selection_control::render_toggle_html) to
+//! serialize HTML while client adapters hydrate from the same attribute cache.
+//!
+//! ```rust,no_run
+//! use rustic_ui_headless::checkbox::{CheckboxState, CheckboxValue};
+//! use rustic_ui_material::checkbox::CheckboxProps;
+//! use rustic_ui_material::selection_control::{render_toggle_html, ToggleControlDescriptor};
+//! use rustic_ui_material::telemetry::TelemetryHooks;
+//! use rustic_ui_styled_engine::{css, Style};
+//! use std::sync::Arc;
+//! use tracing::info;
+//!
+//! # #[cfg(feature = "react")]
+//! use rustic_ui_material::checkbox::react::{ReactCheckbox, ReactCheckboxProps};
+//!
+//! # fn orchestrate_descriptor_round_trip() {
+//!     let state = CheckboxState::uncontrolled(false, CheckboxValue::Off);
+//!     let descriptor = ToggleControlDescriptor::new(
+//!         "Accept terms",
+//!         Style::new(css!("display: inline-flex; align-items: center;"))
+//!             .expect("style to compile"),
+//!     )
+//!     .with_attributes(state.aria_attributes());
+//!
+//!     // SSR builds a stable HTML fragment that already includes hydration-safe
+//!     // data attributes and scoped class names.
+//!     let ssr_html = render_toggle_html(&descriptor);
+//!     assert!(ssr_html.contains("aria-checked=\"false\""));
+//!
+//!     // Hydration reuses the descriptor metadata so analytics and automation
+//!     // selectors stay identical across runtimes.
+//!     let mut telemetry = TelemetryHooks::default();
+//!     telemetry.analytics_id = Some("checkbox.accept".into());
+//!     telemetry.automation_id = Some("accept-terms".into());
+//!     telemetry.on_render = Some(Arc::new(|ctx| {
+//!         info!(target: "rusticui.telemetry", component = ctx.component, "hydrated");
+//!     }));
+//!
+//!     # #[cfg(feature = "react")]
+//!     {
+//!         let props = ReactCheckboxProps {
+//!             checkbox: CheckboxProps::new("Accept terms", telemetry.clone()),
+//!             state: state.clone(),
+//!             on_change: None,
+//!             on_focus: None,
+//!             on_blur: None,
+//!             on_key: None,
+//!             telemetry_delegate: None,
+//!         };
+//!         let node = ReactCheckbox(&props);
+//!         let _ = node;
+//!     }
+//! }
+//! # orchestrate_descriptor_round_trip();
+//! ```
+//!
+//! Populate the analytics and automation identifiers inside [`TelemetryHooks`]
+//! *before* rendering so SSR, WASM bridges, and component adapters all reuse the
+//! same data attributes. Doing so keeps enterprise instrumentation aligned
+//! across observability stacks, prevents hydration mismatches, and minimises the
+//! manual wiring typically required to coordinate React, Yew, Leptos, Dioxus,
+//! and Sycamore surfaces.
 
 use crate::{
     selection_control::{self, ToggleControlDescriptor},
