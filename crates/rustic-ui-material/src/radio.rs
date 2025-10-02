@@ -225,6 +225,43 @@ fn control_key_from_str(key: &str) -> Option<ControlKey> {
     }
 }
 
+fn preview_keyboard_target(state: &RadioGroupState, key: ControlKey) -> Option<usize> {
+    if state.disabled() || state.len() == 0 {
+        return None;
+    }
+
+    let len = state.len();
+    let mut focus_index = state
+        .focus_visible_index()
+        .or(state.selected_index())
+        .unwrap_or(0)
+        .min(len - 1);
+
+    match key {
+        ControlKey::Space | ControlKey::Enter => Some(focus_index),
+        ControlKey::Home => Some(0),
+        ControlKey::End => Some(len - 1),
+        ControlKey::ArrowRight => match state.orientation() {
+            RadioOrientation::Horizontal => Some((focus_index + 1) % len),
+            RadioOrientation::Vertical => None,
+        },
+        ControlKey::ArrowDown => Some((focus_index + 1) % len),
+        ControlKey::ArrowLeft => match state.orientation() {
+            RadioOrientation::Horizontal => Some(if focus_index == 0 {
+                len - 1
+            } else {
+                focus_index - 1
+            }),
+            RadioOrientation::Vertical => None,
+        },
+        ControlKey::ArrowUp => Some(if focus_index == 0 {
+            len - 1
+        } else {
+            focus_index - 1
+        }),
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct RadioGroupProps {
     /// Optional custom labels for each option. When omitted the state's option
@@ -798,8 +835,13 @@ pub mod react {
             // 1. Emit analytics metadata immediately so upstream pipelines
             //    capture the raw interaction context before mutation.
             // 2. Emit the domain specific event (change in this case).
-            // 3. Invoke the shared headless state machine (`select`).
-            // 4. Emit the commit snapshot reflecting the resulting state.
+            // 3. When uncontrolled, invoke the shared headless state machine
+            //    (`select`). Controlled callers intentionally skip the
+            //    mutation so local snapshots remain untouched while telemetry
+            //    still records the attempt for auditors.
+            // 4. Emit the commit snapshot reflecting the resulting state –
+            //    controlled flows reuse the pre-interaction selection so
+            //    analytics can reconcile the unchanged data point.
             // 5. Delegate to user provided callbacks, guaranteeing side
             //    effects only observe telemetry that already shipped.
             let closure = Closure::wrap(Box::new(move |event: JsValue| {
@@ -821,12 +863,14 @@ pub mod react {
                     &option, previous, index, disabled,
                 )));
 
-                {
+                if !controlled {
                     let mut state_mut = state.borrow_mut();
                     state_mut.select(index, |_| {});
                 }
 
-                let selected_after = {
+                let selected_after = if controlled {
+                    previous
+                } else {
                     let state_ref = state.borrow();
                     state_ref.selected_index().or(Some(index))
                 };
@@ -981,16 +1025,21 @@ pub mod react {
                     let mut events = Vec::with_capacity(6);
                     events.push(analytics_event);
 
-                    let selected_after = Rc::new(RefCell::new(None));
-                    {
-                        let mut state_mut = state.borrow_mut();
-                        let recorder = Rc::clone(&selected_after);
-                        state_mut.on_key(control, move |selected| {
-                            recorder.borrow_mut().replace(selected);
-                        });
-                    }
+                    let next_index = if controlled {
+                        let state_ref = state.borrow();
+                        preview_keyboard_target(&state_ref, control)
+                    } else {
+                        let selected_after = Rc::new(RefCell::new(None));
+                        {
+                            let mut state_mut = state.borrow_mut();
+                            let recorder = Rc::clone(&selected_after);
+                            state_mut.on_key(control, move |selected| {
+                                recorder.borrow_mut().replace(selected);
+                            });
+                        }
 
-                    let next_index = *selected_after.borrow();
+                        *selected_after.borrow()
+                    };
                     let key_payload =
                         build_key_event(&origin_option, control, previous, next_index, disabled);
                     events.push(RadioTelemetryEvent::Key(key_payload));
@@ -1028,7 +1077,9 @@ pub mod react {
                             disabled,
                         )));
 
-                        let committed = {
+                        let committed = if controlled {
+                            previous
+                        } else {
                             let state_ref = state.borrow();
                             state_ref.selected_index().or(Some(next_index))
                         };
@@ -1723,8 +1774,13 @@ pub mod yew {
             // ordering. Automation pipelines rely on this deterministic sequence:
             // 1. Capture analytics metadata before mutating any state.
             // 2. Emit the `RadioChangeEvent` snapshot requested by the interaction.
-            // 3. Drive the shared [`RadioGroupState`] via [`RadioGroupState::select`].
-            // 4. Emit the post-mutation `RadioCommitEvent` snapshot.
+            // 3. Drive the shared [`RadioGroupState`] via [`RadioGroupState::select`]
+            //    when operating uncontrolled. Controlled flows intentionally skip
+            //    the mutation so render snapshots remain in lock-step with the
+            //    external owner while still documenting the attempt.
+            // 4. Emit the post-mutation `RadioCommitEvent` snapshot. In controlled
+            //    mode the event reuses the previous selection, providing auditors a
+            //    clear signal that UI state did not shift.
             // 5. Finally invoke user callbacks, ensuring analytics is always emitted
             //    before consumer side effects run.
             let runner: Rc<RefCell<Box<dyn FnMut()>>> = Rc::new(RefCell::new(Box::new({
@@ -1748,13 +1804,19 @@ pub mod yew {
 
                     {
                         let mut state_mut = state.borrow_mut();
-                        state_mut.select(index, |_| {});
+                        if !controlled {
+                            state_mut.select(index, |_| {});
+                        }
                         state_mut.focus(index);
                     }
 
                     let selected_after = {
-                        let state_ref = state.borrow();
-                        state_ref.selected_index().or(Some(index))
+                        if controlled {
+                            previous
+                        } else {
+                            let state_ref = state.borrow();
+                            state_ref.selected_index().or(Some(index))
+                        }
                     };
                     let commit_event = build_commit_event(&option, selected_after, controlled);
                     telemetry_events.push(RadioTelemetryEvent::Commit(commit_event));
@@ -1882,19 +1944,25 @@ pub mod yew {
                         )
                     };
 
-                    let selected_after = Rc::new(RefCell::new(None));
-                    {
-                        let mut state_mut = state.borrow_mut();
-                        let recorder = Rc::clone(&selected_after);
-                        state_mut.on_key(control, move |selected| {
-                            recorder.borrow_mut().replace(selected);
-                        });
-                    }
+                    let next_index = if controlled {
+                        let state_ref = state.borrow();
+                        preview_keyboard_target(&state_ref, control)
+                    } else {
+                        let selected_after = Rc::new(RefCell::new(None));
+                        {
+                            let mut state_mut = state.borrow_mut();
+                            let recorder = Rc::clone(&selected_after);
+                            state_mut.on_key(control, move |selected| {
+                                recorder.borrow_mut().replace(selected);
+                            });
+                        }
+
+                        *selected_after.borrow()
+                    };
 
                     let mut telemetry_events = Vec::with_capacity(6);
                     telemetry_events.push(analytics_event);
 
-                    let next_index = *selected_after.borrow();
                     let key_payload =
                         build_key_event(&origin_option, control, previous, next_index, disabled);
                     telemetry_events.push(RadioTelemetryEvent::Key(key_payload.clone()));
@@ -1930,7 +1998,9 @@ pub mod yew {
                             build_change_event(&focused_option, previous, next_index, disabled);
                         telemetry_events.push(RadioTelemetryEvent::Change(change_event.clone()));
 
-                        let committed = {
+                        let committed = if controlled {
+                            previous
+                        } else {
                             let state_ref = state.borrow();
                             state_ref.selected_index().or(Some(next_index))
                         };
@@ -2158,13 +2228,17 @@ pub mod leptos {
 
                 {
                     let mut state_mut = state.borrow_mut();
-                    state_mut.select(index, |_| {});
+                    if !controlled {
+                        state_mut.select(index, |_| {});
+                    }
                     state_mut.focus(index);
                 }
 
                 refresh();
 
-                let selected_after = {
+                let selected_after = if controlled {
+                    previous
+                } else {
                     let state_ref = state.borrow();
                     state_ref.selected_index().or(Some(index))
                 };
@@ -2277,21 +2351,25 @@ pub mod leptos {
                     )
                 };
 
-                let selected_after = Rc::new(RefCell::new(None));
-                {
-                    let mut state_mut = state.borrow_mut();
-                    let recorder = Rc::clone(&selected_after);
-                    state_mut.on_key(control, move |selected| {
-                        recorder.borrow_mut().replace(selected);
-                    });
-                }
+                let next_index = if controlled {
+                    let state_ref = state.borrow();
+                    preview_keyboard_target(&state_ref, control)
+                } else {
+                    let selected_after = Rc::new(RefCell::new(None));
+                    {
+                        let mut state_mut = state.borrow_mut();
+                        let recorder = Rc::clone(&selected_after);
+                        state_mut.on_key(control, move |selected| {
+                            recorder.borrow_mut().replace(selected);
+                        });
+                    }
+                    *selected_after.borrow()
+                };
 
                 refresh();
 
                 let mut telemetry_events = Vec::with_capacity(6);
                 telemetry_events.push(analytics_event);
-
-                let next_index = *selected_after.borrow();
                 let key_payload =
                     build_key_event(&origin_option, control, previous, next_index, disabled);
                 telemetry_events.push(RadioTelemetryEvent::Key(key_payload.clone()));
@@ -2327,7 +2405,9 @@ pub mod leptos {
                         build_change_event(&focused_option, previous, next_index, disabled);
                     telemetry_events.push(RadioTelemetryEvent::Change(change_event.clone()));
 
-                    let committed = {
+                    let committed = if controlled {
+                        previous
+                    } else {
                         let state_ref = state.borrow();
                         state_ref.selected_index().or(Some(next_index))
                     };
@@ -3128,13 +3208,17 @@ pub mod dioxus {
                     // Drive the shared state machine so keyboard focus follows
                     // the selection just like the other renderers.
                     let mut state_mut = state.borrow_mut();
-                    state_mut.select(index, |_| {});
+                    if !controlled {
+                        state_mut.select(index, |_| {});
+                    }
                     state_mut.focus(index);
                 }
 
                 refresh();
 
-                let selected_after = {
+                let selected_after = if controlled {
+                    previous
+                } else {
                     let state_ref = state.borrow();
                     state_ref.selected_index().or(Some(index))
                 };
@@ -3256,21 +3340,25 @@ pub mod dioxus {
                     )
                 };
 
-                let selected_after = Rc::new(RefCell::new(None));
-                {
-                    let mut state_mut = state.borrow_mut();
-                    let recorder = Rc::clone(&selected_after);
-                    state_mut.on_key(control, move |selected| {
-                        recorder.borrow_mut().replace(selected);
-                    });
-                }
+                let next_index = if controlled {
+                    let state_ref = state.borrow();
+                    preview_keyboard_target(&state_ref, control)
+                } else {
+                    let selected_after = Rc::new(RefCell::new(None));
+                    {
+                        let mut state_mut = state.borrow_mut();
+                        let recorder = Rc::clone(&selected_after);
+                        state_mut.on_key(control, move |selected| {
+                            recorder.borrow_mut().replace(selected);
+                        });
+                    }
+                    *selected_after.borrow()
+                };
 
                 refresh();
 
                 let mut telemetry_events = Vec::with_capacity(6);
                 telemetry_events.push(analytics_event);
-
-                let next_index = *selected_after.borrow();
                 let key_payload =
                     build_key_event(&origin_option, control, previous, next_index, disabled);
                 telemetry_events.push(RadioTelemetryEvent::Key(key_payload.clone()));
@@ -3306,7 +3394,9 @@ pub mod dioxus {
                         build_change_event(&focused_option, previous, next_index, disabled);
                     telemetry_events.push(RadioTelemetryEvent::Change(change_event.clone()));
 
-                    let committed = {
+                    let committed = if controlled {
+                        previous
+                    } else {
                         let state_ref = state.borrow();
                         state_ref.selected_index().or(Some(next_index))
                     };
@@ -4065,11 +4155,15 @@ pub mod sycamore {
 
                 {
                     let mut state_mut = state.borrow_mut();
-                    state_mut.select(index, |_| {});
+                    if !controlled {
+                        state_mut.select(index, |_| {});
+                    }
                     state_mut.focus(index);
                 }
 
-                let selected_after = {
+                let selected_after = if controlled {
+                    previous
+                } else {
                     let state_ref = state.borrow();
                     state_ref.selected_index().or(Some(index))
                 };
@@ -4178,19 +4272,23 @@ pub mod sycamore {
                     )
                 };
 
-                let selected_after = Rc::new(RefCell::new(None));
-                {
-                    let mut state_mut = state.borrow_mut();
-                    let recorder = Rc::clone(&selected_after);
-                    state_mut.on_key(control, move |selected| {
-                        recorder.borrow_mut().replace(selected);
-                    });
-                }
+                let next_index = if controlled {
+                    let state_ref = state.borrow();
+                    preview_keyboard_target(&state_ref, control)
+                } else {
+                    let selected_after = Rc::new(RefCell::new(None));
+                    {
+                        let mut state_mut = state.borrow_mut();
+                        let recorder = Rc::clone(&selected_after);
+                        state_mut.on_key(control, move |selected| {
+                            recorder.borrow_mut().replace(selected);
+                        });
+                    }
+                    *selected_after.borrow()
+                };
 
                 let mut telemetry_events = Vec::with_capacity(6);
                 telemetry_events.push(analytics_event);
-
-                let next_index = *selected_after.borrow();
                 let key_payload =
                     build_key_event(&origin_option, control, previous, next_index, disabled);
                 telemetry_events.push(RadioTelemetryEvent::Key(key_payload.clone()));
@@ -4226,7 +4324,9 @@ pub mod sycamore {
                         build_change_event(&focused_option, previous, next_index, disabled);
                     telemetry_events.push(RadioTelemetryEvent::Change(change_event.clone()));
 
-                    let committed = {
+                    let committed = if controlled {
+                        previous
+                    } else {
                         let state_ref = state.borrow();
                         state_ref.selected_index().or(Some(next_index))
                     };
