@@ -1228,6 +1228,144 @@ pub mod yew {
         pub telemetry_delegate: Option<Callback<SwitchTelemetryEvent>>,
     }
 
+    #[cfg(any(test, not(test)))]
+    pub(crate) fn build_yew_switch_handlers(
+        switch_props: SwitchProps,
+        state_handle: Rc<RefCell<SwitchState>>,
+        on_change: Option<Callback<SwitchChangeEvent>>,
+        on_focus: Option<Callback<SwitchFocusEvent>>,
+        on_blur: Option<Callback<SwitchFocusEvent>>,
+        on_key: Option<Callback<SwitchKeyEvent>>,
+        telemetry_delegate: Option<Callback<SwitchTelemetryEvent>>,
+    ) -> (
+        Callback<MouseEvent>,
+        Callback<FocusEvent>,
+        Callback<FocusEvent>,
+        Callback<KeyboardEvent>,
+    ) {
+        let switch_props = Rc::new(switch_props);
+
+        let change_handler = {
+            let on_change = on_change.clone();
+            let telemetry = telemetry_delegate.clone();
+            let switch_props = Rc::clone(&switch_props);
+            let state = Rc::clone(&state_handle);
+            Callback::from(move |_event: MouseEvent| {
+                let mut telemetry_runner = telemetry.clone().map(|delegate| {
+                    Box::new(move |event: SwitchTelemetryEvent| delegate.emit(event))
+                        as Box<dyn FnMut(SwitchTelemetryEvent)>
+                });
+                let mut change_runner = on_change.clone().map(|callback| {
+                    Box::new(move |event: SwitchChangeEvent| callback.emit(event))
+                        as Box<dyn FnMut(SwitchChangeEvent)>
+                });
+                let telemetry_ref = telemetry_runner
+                    .as_mut()
+                    .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchTelemetryEvent));
+                let change_ref = change_runner
+                    .as_mut()
+                    .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchChangeEvent));
+                let mut state = state.borrow_mut();
+                dispatch_change_event(&switch_props, &mut state, telemetry_ref, change_ref);
+            })
+        };
+
+        let focus_handler = {
+            let on_focus = on_focus.clone();
+            let telemetry = telemetry_delegate.clone();
+            let switch_props = Rc::clone(&switch_props);
+            let state = Rc::clone(&state_handle);
+            Callback::from(move |_event: FocusEvent| {
+                let mut telemetry_runner = telemetry.clone().map(|delegate| {
+                    Box::new(move |event: SwitchTelemetryEvent| delegate.emit(event))
+                        as Box<dyn FnMut(SwitchTelemetryEvent)>
+                });
+                let mut focus_runner = on_focus.clone().map(|callback| {
+                    Box::new(move |event: SwitchFocusEvent| callback.emit(event))
+                        as Box<dyn FnMut(SwitchFocusEvent)>
+                });
+                let telemetry_ref = telemetry_runner
+                    .as_mut()
+                    .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchTelemetryEvent));
+                let focus_ref = focus_runner
+                    .as_mut()
+                    .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchFocusEvent));
+                let mut state = state.borrow_mut();
+                dispatch_focus_event(&switch_props, &mut state, true, telemetry_ref, focus_ref);
+            })
+        };
+
+        let blur_handler = {
+            let on_blur = on_blur.clone();
+            let telemetry = telemetry_delegate.clone();
+            let switch_props = Rc::clone(&switch_props);
+            let state = Rc::clone(&state_handle);
+            Callback::from(move |_event: FocusEvent| {
+                let mut telemetry_runner = telemetry.clone().map(|delegate| {
+                    Box::new(move |event: SwitchTelemetryEvent| delegate.emit(event))
+                        as Box<dyn FnMut(SwitchTelemetryEvent)>
+                });
+                let mut blur_runner = on_blur.clone().map(|callback| {
+                    Box::new(move |event: SwitchFocusEvent| callback.emit(event))
+                        as Box<dyn FnMut(SwitchFocusEvent)>
+                });
+                let telemetry_ref = telemetry_runner
+                    .as_mut()
+                    .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchTelemetryEvent));
+                let blur_ref = blur_runner
+                    .as_mut()
+                    .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchFocusEvent));
+                let mut state = state.borrow_mut();
+                dispatch_focus_event(&switch_props, &mut state, false, telemetry_ref, blur_ref);
+            })
+        };
+
+        let key_handler = {
+            let on_key = on_key.clone();
+            let on_change = on_change.clone();
+            let telemetry = telemetry_delegate.clone();
+            let switch_props = Rc::clone(&switch_props);
+            let state = Rc::clone(&state_handle);
+            Callback::from(move |event: KeyboardEvent| {
+                if let Some(control) = control_key_from_str(event.key().as_str()) {
+                    event.prevent_default();
+                    let mut telemetry_runner = telemetry.clone().map(|delegate| {
+                        Box::new(move |event: SwitchTelemetryEvent| delegate.emit(event))
+                            as Box<dyn FnMut(SwitchTelemetryEvent)>
+                    });
+                    let mut key_runner = on_key.clone().map(|callback| {
+                        Box::new(move |event: SwitchKeyEvent| callback.emit(event))
+                            as Box<dyn FnMut(SwitchKeyEvent)>
+                    });
+                    let mut change_runner = on_change.clone().map(|callback| {
+                        Box::new(move |event: SwitchChangeEvent| callback.emit(event))
+                            as Box<dyn FnMut(SwitchChangeEvent)>
+                    });
+                    let telemetry_ref = telemetry_runner
+                        .as_mut()
+                        .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchTelemetryEvent));
+                    let key_ref = key_runner
+                        .as_mut()
+                        .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchKeyEvent));
+                    let change_ref = change_runner
+                        .as_mut()
+                        .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchChangeEvent));
+                    let mut state = state.borrow_mut();
+                    dispatch_key_event(
+                        &switch_props,
+                        &mut state,
+                        control,
+                        telemetry_ref,
+                        key_ref,
+                        change_ref,
+                    );
+                }
+            })
+        };
+
+        (change_handler, focus_handler, blur_handler, key_handler)
+    }
+
     /// Switch rendered inside Yew applications.
     ///
     /// Controlled parents stay authoritative because the adapter defers local
@@ -1245,120 +1383,16 @@ pub mod yew {
         instrument_render(&props.switch.telemetry, context, || {
             let label = snapshot.label.clone();
             let attrs = snapshot.themed_attributes.clone();
-            let change_handler = {
-                let on_change = props.on_change.clone();
-                let telemetry = props.telemetry_delegate.clone();
-                let switch_props = props.switch.clone();
-                let state = Rc::clone(&state_handle);
-                Callback::from(move |_event: MouseEvent| {
-                    let mut telemetry_runner = telemetry.clone().map(|delegate| {
-                        Box::new(move |event: SwitchTelemetryEvent| delegate.emit(event))
-                            as Box<dyn FnMut(SwitchTelemetryEvent)>
-                    });
-                    let mut change_runner = on_change.clone().map(|callback| {
-                        Box::new(move |event: SwitchChangeEvent| callback.emit(event))
-                            as Box<dyn FnMut(SwitchChangeEvent)>
-                    });
-                    let telemetry_ref = telemetry_runner
-                        .as_mut()
-                        .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchTelemetryEvent));
-                    let change_ref = change_runner
-                        .as_mut()
-                        .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchChangeEvent));
-                    let mut state = state.borrow_mut();
-                    dispatch_change_event(&switch_props, &mut state, telemetry_ref, change_ref);
-                })
-            };
-            let focus_handler = {
-                let on_focus = props.on_focus.clone();
-                let telemetry = props.telemetry_delegate.clone();
-                let switch_props = props.switch.clone();
-                let state = Rc::clone(&state_handle);
-                Callback::from(move |_event: FocusEvent| {
-                    let mut telemetry_runner = telemetry.clone().map(|delegate| {
-                        Box::new(move |event: SwitchTelemetryEvent| delegate.emit(event))
-                            as Box<dyn FnMut(SwitchTelemetryEvent)>
-                    });
-                    let mut focus_runner = on_focus.clone().map(|callback| {
-                        Box::new(move |event: SwitchFocusEvent| callback.emit(event))
-                            as Box<dyn FnMut(SwitchFocusEvent)>
-                    });
-                    let telemetry_ref = telemetry_runner
-                        .as_mut()
-                        .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchTelemetryEvent));
-                    let focus_ref = focus_runner
-                        .as_mut()
-                        .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchFocusEvent));
-                    let mut state = state.borrow_mut();
-                    dispatch_focus_event(&switch_props, &mut state, true, telemetry_ref, focus_ref);
-                })
-            };
-            let blur_handler = {
-                let on_blur = props.on_blur.clone();
-                let telemetry = props.telemetry_delegate.clone();
-                let switch_props = props.switch.clone();
-                let state = Rc::clone(&state_handle);
-                Callback::from(move |_event: FocusEvent| {
-                    let mut telemetry_runner = telemetry.clone().map(|delegate| {
-                        Box::new(move |event: SwitchTelemetryEvent| delegate.emit(event))
-                            as Box<dyn FnMut(SwitchTelemetryEvent)>
-                    });
-                    let mut blur_runner = on_blur.clone().map(|callback| {
-                        Box::new(move |event: SwitchFocusEvent| callback.emit(event))
-                            as Box<dyn FnMut(SwitchFocusEvent)>
-                    });
-                    let telemetry_ref = telemetry_runner
-                        .as_mut()
-                        .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchTelemetryEvent));
-                    let blur_ref = blur_runner
-                        .as_mut()
-                        .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchFocusEvent));
-                    let mut state = state.borrow_mut();
-                    dispatch_focus_event(&switch_props, &mut state, false, telemetry_ref, blur_ref);
-                })
-            };
-            let key_handler = {
-                let on_key = props.on_key.clone();
-                let on_change = props.on_change.clone();
-                let telemetry = props.telemetry_delegate.clone();
-                let switch_props = props.switch.clone();
-                let state = Rc::clone(&state_handle);
-                Callback::from(move |event: KeyboardEvent| {
-                    if let Some(control) = control_key_from_str(event.key().as_str()) {
-                        event.prevent_default();
-                        let mut telemetry_runner = telemetry.clone().map(|delegate| {
-                            Box::new(move |event: SwitchTelemetryEvent| delegate.emit(event))
-                                as Box<dyn FnMut(SwitchTelemetryEvent)>
-                        });
-                        let mut key_runner = on_key.clone().map(|callback| {
-                            Box::new(move |event: SwitchKeyEvent| callback.emit(event))
-                                as Box<dyn FnMut(SwitchKeyEvent)>
-                        });
-                        let mut change_runner = on_change.clone().map(|callback| {
-                            Box::new(move |event: SwitchChangeEvent| callback.emit(event))
-                                as Box<dyn FnMut(SwitchChangeEvent)>
-                        });
-                        let telemetry_ref = telemetry_runner
-                            .as_mut()
-                            .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchTelemetryEvent));
-                        let key_ref = key_runner
-                            .as_mut()
-                            .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchKeyEvent));
-                        let change_ref = change_runner
-                            .as_mut()
-                            .map(|runner| runner.as_mut() as &mut dyn FnMut(SwitchChangeEvent));
-                        let mut state = state.borrow_mut();
-                        dispatch_key_event(
-                            &switch_props,
-                            &mut state,
-                            control,
-                            telemetry_ref,
-                            key_ref,
-                            change_ref,
-                        );
-                    }
-                })
-            };
+            let (change_handler, focus_handler, blur_handler, key_handler) =
+                build_yew_switch_handlers(
+                    props.switch.clone(),
+                    Rc::clone(&state_handle),
+                    props.on_change.clone(),
+                    props.on_focus.clone(),
+                    props.on_blur.clone(),
+                    props.on_key.clone(),
+                    props.telemetry_delegate.clone(),
+                );
 
             let mut node = html! { <span>{label}</span> };
             if let VNode::VTag(ref mut tag) = node {
@@ -1372,6 +1406,318 @@ pub mod yew {
             }
             node
         })
+    }
+
+    #[cfg(all(test, feature = "yew"))]
+    mod tests {
+        use super::*;
+        use ::yew::Callback;
+        use wasm_bindgen_test::*;
+        use web_sys::{
+            FocusEvent as WebFocusEvent, KeyboardEvent as WebKeyboardEvent, KeyboardEventInit,
+            MouseEvent as WebMouseEvent,
+        };
+
+        wasm_bindgen_test_configure!(run_in_browser);
+
+        struct SwitchHarness {
+            telemetry: Rc<RefCell<Vec<SwitchTelemetryEvent>>>,
+            changes: Rc<RefCell<Vec<SwitchChangeEvent>>>,
+            focuses: Rc<RefCell<Vec<SwitchFocusEvent>>>,
+            blurs: Rc<RefCell<Vec<SwitchFocusEvent>>>,
+            keys: Rc<RefCell<Vec<SwitchKeyEvent>>>,
+        }
+
+        impl SwitchHarness {
+            fn new() -> Self {
+                Self {
+                    telemetry: Rc::new(RefCell::new(Vec::new())),
+                    changes: Rc::new(RefCell::new(Vec::new())),
+                    focuses: Rc::new(RefCell::new(Vec::new())),
+                    blurs: Rc::new(RefCell::new(Vec::new())),
+                    keys: Rc::new(RefCell::new(Vec::new())),
+                }
+            }
+        }
+
+        fn build_props(controlled: bool) -> (YewSwitchProps, SwitchHarness) {
+            let mut switch = SwitchProps::new("Telemetry switch");
+            switch.telemetry.analytics_id =
+                Some(format!("switch.telemetry.analytics.{controlled}"));
+            switch.telemetry.automation_id =
+                Some(format!("switch.telemetry.automation.{controlled}"));
+
+            let state = if controlled {
+                SwitchState::controlled(false, false)
+            } else {
+                SwitchState::uncontrolled(false, false)
+            };
+
+            let harness = SwitchHarness::new();
+
+            let props = YewSwitchProps {
+                switch,
+                state,
+                on_change: Some({
+                    let sink = Rc::clone(&harness.changes);
+                    Callback::from(move |event: SwitchChangeEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+                on_focus: Some({
+                    let sink = Rc::clone(&harness.focuses);
+                    Callback::from(move |event: SwitchFocusEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+                on_blur: Some({
+                    let sink = Rc::clone(&harness.blurs);
+                    Callback::from(move |event: SwitchFocusEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+                on_key: Some({
+                    let sink = Rc::clone(&harness.keys);
+                    Callback::from(move |event: SwitchKeyEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+                telemetry_delegate: Some({
+                    let sink = Rc::clone(&harness.telemetry);
+                    Callback::from(move |event: SwitchTelemetryEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+            };
+
+            (props, harness)
+        }
+
+        fn space_key_event() -> WebKeyboardEvent {
+            let mut init = KeyboardEventInit::new();
+            init.key(" ");
+            init.bubbles(true);
+            init.cancelable(true);
+            WebKeyboardEvent::new_with_keyboard_event_init_dict("keydown", &init)
+                .expect("keyboard event should construct")
+        }
+
+        /// Verifies that uncontrolled switches surface telemetry in the
+        /// analytics → change → focus → blur → key → change order without
+        /// regressing the state machine coordination auditors rely on.
+        #[wasm_bindgen_test]
+        fn uncontrolled_handlers_follow_enterprise_choreography() {
+            let (props, harness) = build_props(false);
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let (change_handler, focus_handler, blur_handler, key_handler) =
+                build_yew_switch_handlers(
+                    props.switch.clone(),
+                    Rc::clone(&state_handle),
+                    props.on_change.clone(),
+                    props.on_focus.clone(),
+                    props.on_blur.clone(),
+                    props.on_key.clone(),
+                    props.telemetry_delegate.clone(),
+                );
+
+            change_handler.emit(WebMouseEvent::new("click").unwrap());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    1,
+                    "pointer change emits a single telemetry frame"
+                );
+                match &telemetry[0] {
+                    SwitchTelemetryEvent::Change(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.changes.borrow()[0],
+                            "telemetry change payload mirrors consumer callback",
+                        );
+                    }
+                    other => panic!("expected change telemetry, received {other:?}"),
+                }
+            }
+            assert!(
+                state_handle.borrow().on(),
+                "uncontrolled toggle flips the local snapshot"
+            );
+
+            focus_handler.emit(WebFocusEvent::new("focus").unwrap());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    2,
+                    "focus appends analytics + focus telemetry"
+                );
+                match &telemetry[1] {
+                    SwitchTelemetryEvent::Focus(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.focuses.borrow()[0],
+                            "focus telemetry matches consumer callback snapshot",
+                        );
+                    }
+                    other => panic!("expected focus telemetry, received {other:?}"),
+                }
+            }
+            assert!(
+                state_handle.borrow().focus_visible(),
+                "focus handler toggles focus-visible state for uncontrolled switches",
+            );
+
+            blur_handler.emit(WebFocusEvent::new("blur").unwrap());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    3,
+                    "blur appends analytics + blur telemetry"
+                );
+                match &telemetry[2] {
+                    SwitchTelemetryEvent::Blur(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.blurs.borrow()[0],
+                            "blur telemetry matches consumer callback snapshot",
+                        );
+                    }
+                    other => panic!("expected blur telemetry, received {other:?}"),
+                }
+            }
+            assert!(
+                !state_handle.borrow().focus_visible(),
+                "blur handler clears focus-visible state",
+            );
+
+            key_handler.emit(space_key_event());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    5,
+                    "keyboard path emits key + change telemetry"
+                );
+                match &telemetry[3] {
+                    SwitchTelemetryEvent::Key(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.keys.borrow()[0],
+                            "key telemetry mirrors consumer payload",
+                        );
+                    }
+                    other => panic!("expected key telemetry, received {other:?}"),
+                }
+                match &telemetry[4] {
+                    SwitchTelemetryEvent::Change(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.changes.borrow()[1],
+                            "keyboard change telemetry matches consumer snapshot",
+                        );
+                    }
+                    other => panic!("expected change telemetry, received {other:?}"),
+                }
+            }
+            assert!(
+                !state_handle.borrow().on(),
+                "keyboard toggle returns uncontrolled state to the original snapshot",
+            );
+        }
+
+        /// Ensures controlled adapters emit telemetry without mutating their
+        /// cached [`SwitchState`] so caller owned truth remains authoritative.
+        #[wasm_bindgen_test]
+        fn controlled_handlers_preserve_snapshot_while_streaming_telemetry() {
+            let (props, harness) = build_props(true);
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let (change_handler, focus_handler, blur_handler, key_handler) =
+                build_yew_switch_handlers(
+                    props.switch.clone(),
+                    Rc::clone(&state_handle),
+                    props.on_change.clone(),
+                    props.on_focus.clone(),
+                    props.on_blur.clone(),
+                    props.on_key.clone(),
+                    props.telemetry_delegate.clone(),
+                );
+
+            change_handler.emit(WebMouseEvent::new("click").unwrap());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    1,
+                    "controlled pointer emits a single telemetry frame"
+                );
+                match &telemetry[0] {
+                    SwitchTelemetryEvent::Change(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.changes.borrow()[0],
+                            "change telemetry matches consumer payload",
+                        );
+                        assert_eq!(event.previous, false);
+                        assert_eq!(event.next, true);
+                    }
+                    other => panic!("expected change telemetry, received {other:?}"),
+                }
+            }
+            assert!(
+                !state_handle.borrow().on(),
+                "controlled pointer interactions do not mutate the cached snapshot",
+            );
+
+            focus_handler.emit(WebFocusEvent::new("focus").unwrap());
+            blur_handler.emit(WebFocusEvent::new("blur").unwrap());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert!(
+                    matches!(&telemetry[1], SwitchTelemetryEvent::Focus(_)),
+                    "focus telemetry remains second in the sequence",
+                );
+                assert!(
+                    matches!(&telemetry[2], SwitchTelemetryEvent::Blur(_)),
+                    "blur telemetry follows focus for controlled flows",
+                );
+            }
+            assert!(
+                !state_handle.borrow().focus_visible(),
+                "controlled blur clears focus-visible state",
+            );
+
+            key_handler.emit(space_key_event());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    5,
+                    "controlled keyboard emits key + change telemetry"
+                );
+                assert!(
+                    matches!(&telemetry[3], SwitchTelemetryEvent::Key(_)),
+                    "key telemetry remains ahead of change events",
+                );
+                match &telemetry[4] {
+                    SwitchTelemetryEvent::Change(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.changes.borrow()[1],
+                            "controlled keyboard change telemetry matches consumer snapshot",
+                        );
+                        assert_eq!(event.previous, false);
+                        assert_eq!(event.next, true);
+                    }
+                    other => panic!("expected change telemetry, received {other:?}"),
+                }
+            }
+            assert!(
+                !state_handle.borrow().on(),
+                "controlled keyboard interactions keep the cached snapshot immutable",
+            );
+        }
     }
 }
 #[cfg(feature = "leptos")]

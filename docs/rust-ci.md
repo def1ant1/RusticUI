@@ -85,6 +85,16 @@ cargo test -p rustic-ui-material sycamore:: --features sycamore
 
 Each suite consumes the shared fixtures in `crates/rustic-ui-material/tests/common/fixtures.rs` so updating the canonical props or Joy analytics hooks automatically propagates across frameworks.
 
+### Yew adapter telemetry harnesses
+The Material telemetry harnesses for Yew live alongside the adapters so governance teams can assert analytics ordering without spinning up React parity checks. Because the tests emit synthetic `web_sys` events, they must execute against the `wasm32-unknown-unknown` target with the `wasm-bindgen-test` runner enabled:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo test -p rustic-ui-material --features yew --target wasm32-unknown-unknown -- --nocapture
+```
+
+The command spins up the headless wasm harness, executes the inline unit suites (including the switch and radio telemetry choreography checks), and leaves console logging enabled so analytics sequencing can be audited locally. When browser automation is required, the same assertions run under Chrome via `wasm-pack test --headless --chrome -- --no-default-features --features yew`.
+
 ### WebAssembly integration tests
 Interactive components execute inside a headless Chrome instance using the `wasm-bindgen-test` harness. Install Chrome/Chromium locally so `wasm-pack test --headless --chrome` can launch the browser. The fastest way to exercise every crate/feature pair is:
 
