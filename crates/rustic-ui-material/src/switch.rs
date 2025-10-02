@@ -20,7 +20,9 @@
 //! between SSR and client renders regardless of framework. Telemetry hooks and
 //! analytics callbacks are routed through [`instrument_render`],
 //! [`TelemetryContext`], and the dispatch helpers so analytics capture always
-//! precedes local side effects.
+//! precedes local side effects. Controlled integrations remain authoritative
+//! because every adapter checks [`SwitchState::is_controlled`] before mutating
+//! the cached state while still emitting telemetry and change callbacks.
 
 use crate::{
     selection_control::{self, ToggleControlDescriptor},
@@ -384,7 +386,11 @@ fn dispatch_change_event(
     if let Some(callback) = change_callback {
         callback(change.clone());
     }
-    state.toggle(|_| {});
+    // Controlled switches are orchestrated by the caller, so we only mutate
+    // our local snapshot when the state machine owns the truth.
+    if !state.is_controlled() {
+        state.toggle(|_| {});
+    }
     change
 }
 
@@ -436,7 +442,11 @@ fn dispatch_key_event(
     if let Some(callback) = change_callback {
         callback(change_event.clone());
     }
-    state.on_key(key, |_| {});
+    // Keyboard interactions should not mutate controlled snapshots; callers
+    // will sync the new value through [`SwitchState::sync_on`] instead.
+    if !state.is_controlled() {
+        state.on_key(key, |_| {});
+    }
     (key_event, change_event)
 }
 
@@ -761,7 +771,9 @@ pub mod react {
             }
             {
                 let mut state = state.borrow_mut();
-                state.toggle(|_| {});
+                if !state.is_controlled() {
+                    state.toggle(|_| {});
+                }
             }
         }) as Box<dyn FnMut(JsValue)>);
 
@@ -895,7 +907,9 @@ pub mod react {
 
                 {
                     let mut state = state.borrow_mut();
-                    state.on_key(key, |_| {});
+                    if !state.is_controlled() {
+                        state.on_key(key, |_| {});
+                    }
                 }
             }
         }) as Box<dyn FnMut(JsValue)>);
@@ -934,8 +948,10 @@ pub mod react {
     /// * After telemetry delegates and consumer callbacks run, the captured
     ///   [`SwitchState`] is mutated via [`SwitchState::toggle`],
     ///   [`SwitchState::focus`], [`SwitchState::blur`], and
-    ///   [`SwitchState::on_key`] so UI transitions always flow through the
-    ///   shared headless state machine.
+    ///   [`SwitchState::on_key`] **only when the state is uncontrolled**. The
+    ///   guard against [`SwitchState::is_controlled`] keeps host-managed truth
+    ///   authoritative while still allowing analytics and change hooks to fire
+    ///   in deterministic order.
     pub fn ReactSwitch(props: &ReactSwitchProps) -> Jsx {
         let (context, _descriptor, snapshot) = descriptor_with_context(
             "rustic_ui_material::switch::react::ReactSwitch",
@@ -986,6 +1002,11 @@ pub mod yew {
     }
 
     /// Switch rendered inside Yew applications.
+    ///
+    /// Controlled parents stay authoritative because the adapter defers local
+    /// mutations whenever [`SwitchState::is_controlled`] returns `true`, while
+    /// still emitting telemetry and change callbacks before invoking user
+    /// handlers.
     #[function_component(YewSwitch)]
     pub fn yew_switch(props: &YewSwitchProps) -> Html {
         let (context, _descriptor, snapshot) = descriptor_with_context(
@@ -1154,6 +1175,9 @@ pub mod leptos {
         pub telemetry_delegate: Option<Rc<dyn Fn(SwitchTelemetryEvent)>>,
     }
 
+    /// Controlled integrations rely on [`SwitchState::is_controlled`] guards so
+    /// host-managed state stays canonical even as telemetry and change hooks run
+    /// for observability.
     #[component]
     pub fn LeptosSwitch(props: LeptosSwitchProps) -> impl IntoView {
         let (context, _descriptor, snapshot) = descriptor_with_context(
@@ -1338,6 +1362,10 @@ pub mod dioxus {
     }
 
     /// Switch rendered as a Dioxus component.
+    ///
+    /// The adapter mirrors the telemetry-first sequencing while skipping local
+    /// mutations whenever [`SwitchState::is_controlled`] reports that the host
+    /// owns the truth, guaranteeing analytics still fire before user handlers.
     pub fn DioxusSwitch(cx: Scope<DioxusSwitchProps>) -> Element {
         let props = cx.props();
         let (context, _descriptor, snapshot) = descriptor_with_context(
@@ -1373,7 +1401,9 @@ pub mod dioxus {
                     }
                     {
                         let mut state = state.borrow_mut();
-                        state.toggle(|_| {});
+                        if !state.is_controlled() {
+                            state.toggle(|_| {});
+                        }
                     }
                 }
             };
@@ -1454,7 +1484,9 @@ pub mod dioxus {
                             }
                             {
                                 let mut state = state.borrow_mut();
-                                state.on_key(control, |_| {});
+                                if !state.is_controlled() {
+                                    state.on_key(control, |_| {});
+                                }
                             }
                         }
                     }
@@ -1511,6 +1543,10 @@ pub mod sycamore {
     }
 
     /// Switch rendered within a Sycamore reactive scope.
+    ///
+    /// Controlled pipelines respect [`SwitchState::is_controlled`] so local
+    /// snapshots remain pristine while telemetry and user callbacks execute in
+    /// the documented order.
     #[component]
     pub fn SycamoreSwitch<G: Html>(cx: Scope, props: SycamoreSwitchProps) -> Template<G> {
         let (context, _descriptor, snapshot) = descriptor_with_context(
@@ -1546,7 +1582,9 @@ pub mod sycamore {
                     }
                     {
                         let mut state = state.borrow_mut();
-                        state.toggle(|_| {});
+                        if !state.is_controlled() {
+                            state.toggle(|_| {});
+                        }
                     }
                 }
             };
@@ -1622,7 +1660,9 @@ pub mod sycamore {
                         }
                         {
                             let mut state = state.borrow_mut();
-                            state.on_key(control, |_| {});
+                            if !state.is_controlled() {
+                                state.on_key(control, |_| {});
+                            }
                         }
                     }
                 }
