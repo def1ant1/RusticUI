@@ -36,43 +36,6 @@ fn controlled_state() -> RadioGroupState {
     )
 }
 
-fn preview_keyboard_target(state: &RadioGroupState, key: ControlKey) -> Option<usize> {
-    if state.disabled() || state.len() == 0 {
-        return None;
-    }
-
-    let len = state.len();
-    let mut focus_index = state
-        .focus_visible_index()
-        .or(state.selected_index())
-        .unwrap_or(0)
-        .min(len - 1);
-
-    match key {
-        ControlKey::Space | ControlKey::Enter => Some(focus_index),
-        ControlKey::Home => Some(0),
-        ControlKey::End => Some(len - 1),
-        ControlKey::ArrowRight => match state.orientation() {
-            RadioOrientation::Horizontal => Some((focus_index + 1) % len),
-            RadioOrientation::Vertical => None,
-        },
-        ControlKey::ArrowDown => Some((focus_index + 1) % len),
-        ControlKey::ArrowLeft => match state.orientation() {
-            RadioOrientation::Horizontal => Some(if focus_index == 0 {
-                len - 1
-            } else {
-                focus_index - 1
-            }),
-            RadioOrientation::Vertical => None,
-        },
-        ControlKey::ArrowUp => Some(if focus_index == 0 {
-            len - 1
-        } else {
-            focus_index - 1
-        }),
-    }
-}
-
 /// Mirror the checkbox adapter tests by wiring telemetry spies so render
 /// instrumentation can be asserted without replicating adapter internals in the
 /// suites below.
@@ -271,15 +234,14 @@ impl RadioHarness {
         self.telemetry_events
             .push(RadioTelemetryEvent::Analytics(analytics));
 
-        let selected_after = if self.state.is_controlled() {
-            preview_keyboard_target(&self.state, key)
-        } else {
-            let mut next = None;
-            self.state.on_key(key, |selected| {
-                next = Some(selected);
-            });
-            next
-        };
+        let mut selected_after = None;
+        // Test harness mirrors adapter behaviour by always routing keyboard input
+        // through the headless state machine.  This ensures the roving focus index
+        // observed by governance telemetry is identical to what enterprise apps
+        // will emit once the framework level wiring forwards the same callbacks.
+        self.state.on_key(key, |selected| {
+            selected_after = Some(selected);
+        });
 
         let payload = self.key_payload(origin, key, previous, selected_after);
         self.key_events.push(payload.clone());
@@ -520,6 +482,18 @@ where
     assert_eq!(key_event.next, Some(2));
     assert_eq!(harness.state.selected_index(), initial_selected);
 
+    if framework == "yew" {
+        // Enterprise governance expects controlled Yew integrations to advance the
+        // roving focus index even though the caller owns the commit.  Asserting the
+        // focus telemetry immediately after the keyboard step documents the order:
+        // pointer intent → commit audit → keyboard intent → focus audit.
+        assert_eq!(
+            harness.state.focus_visible_index(),
+            key_event.next,
+            "Yew controlled radio groups must expose focus movement for audit logs",
+        );
+    }
+
     let key_commit = harness
         .telemetry_events
         .iter()
@@ -559,6 +533,9 @@ mod yew_tests {
 
     #[test]
     fn controlled_mode_emits_telemetry_without_mutating_state() {
+        // Governance note: `exercise_controlled_adapter` executes pointer flow
+        // first so auditors can correlate the initial commit snapshot before the
+        // subsequent keyboard navigation asserts the roving focus telemetry.
         exercise_controlled_adapter("yew", radio::yew::render);
     }
 }
