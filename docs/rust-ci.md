@@ -95,6 +95,16 @@ cargo test -p rustic-ui-material --features yew --target wasm32-unknown-unknown 
 
 The command spins up the headless wasm harness, executes the inline unit suites (including the switch and radio telemetry choreography checks), and leaves console logging enabled so analytics sequencing can be audited locally. When browser automation is required, the same assertions run under Chrome via `wasm-pack test --headless --chrome -- --no-default-features --features yew`.
 
+### Leptos adapter telemetry harnesses
+The Leptos radio telemetry harness mirrors the Yew coverage so security and analytics teams can validate focus/change/commit ordering across frameworks. Because the closures now expect real `leptos::ev` instances, run the suites against the WebAssembly target:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo test -p rustic-ui-material --features leptos --target wasm32-unknown-unknown -- --nocapture
+```
+
+For full browser automation (required when validating Chrome-specific behaviour), execute the same suites via `wasm-pack test --headless --chrome -- --no-default-features --features leptos`. Both commands ensure the telemetry delegates exercise analytics → focus/blur → change → commit ordering for controlled and uncontrolled scenarios before changes reach staging.
+
 ### WebAssembly integration tests
 Interactive components execute inside a headless Chrome instance using the `wasm-bindgen-test` harness. Install Chrome/Chromium locally so `wasm-pack test --headless --chrome` can launch the browser. The fastest way to exercise every crate/feature pair is:
 

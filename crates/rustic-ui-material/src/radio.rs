@@ -3083,6 +3083,36 @@ pub mod leptos {
         }
     }
 
+    #[cfg_attr(test, allow(dead_code))]
+    pub(crate) fn build_click_handler(runner: Rc<dyn Fn()>) -> impl Fn(MouseEvent) {
+        move |_event: MouseEvent| runner()
+    }
+
+    #[cfg_attr(test, allow(dead_code))]
+    pub(crate) fn build_change_handler(runner: Rc<dyn Fn()>) -> impl Fn(Event) {
+        move |_event: Event| runner()
+    }
+
+    #[cfg_attr(test, allow(dead_code))]
+    pub(crate) fn build_focus_handler(runner: Rc<dyn Fn()>) -> impl Fn(FocusEvent) {
+        move |_event: FocusEvent| runner()
+    }
+
+    #[cfg_attr(test, allow(dead_code))]
+    pub(crate) fn build_blur_handler(runner: Rc<dyn Fn()>) -> impl Fn(FocusEvent) {
+        move |_event: FocusEvent| runner()
+    }
+
+    #[cfg_attr(test, allow(dead_code))]
+    pub(crate) fn build_keydown_handler(runner: Rc<dyn Fn(ControlKey)>) -> impl Fn(KeyboardEvent) {
+        move |event: KeyboardEvent| {
+            if let Some(control) = control_key_from_str(event.key().as_str()) {
+                event.prevent_default();
+                runner(control);
+            }
+        }
+    }
+
     /// Properties accepted by [`LeptosRadioGroup`].
     #[derive(Clone)]
     pub struct LeptosRadioGroupProps {
@@ -3185,6 +3215,12 @@ pub mod leptos {
                         let snapshot_signal_for_option = snapshot_signal.clone();
                         let index_for_option = index;
 
+                        let click_handler = build_click_handler(select_runner.clone());
+                        let change_handler = build_change_handler(select_runner.clone());
+                        let focus_handler = build_focus_handler(focus_runner.clone());
+                        let blur_handler = build_blur_handler(blur_runner.clone());
+                        let key_handler = build_keydown_handler(key_runner.clone());
+
                         view! {
                             <span
                                 class=move || {
@@ -3272,16 +3308,11 @@ pub mod leptos {
                                         .map(|(key, value)| Attribute::from((key, value)))
                                         .collect::<Vec<_>>()
                                 }
-                                on:click=move |_event: MouseEvent| select_runner()
-                                on:change=move |_event: Event| select_runner()
-                                on:focus=move |_event: FocusEvent| focus_runner()
-                                on:blur=move |_event: FocusEvent| blur_runner()
-                                on:keydown=move |event: KeyboardEvent| {
-                                    if let Some(control) = control_key_from_str(event.key().as_str()) {
-                                        event.prevent_default();
-                                        key_runner(control);
-                                    }
-                                }
+                                on:click=click_handler
+                                on:change=change_handler
+                                on:focus=focus_handler
+                                on:blur=blur_handler
+                                on:keydown=key_handler
                             >{move || {
                                 snapshot_signal_for_option
                                     .get()
@@ -3331,287 +3362,352 @@ pub mod leptos {
         })
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, feature = "leptos"))]
     mod tests {
         use super::*;
 
-        struct Harness {
-            state: Rc<RefCell<RadioGroupState>>,
-            options: Rc<Vec<RadioOptionSnapshot>>,
-            order: Rc<RefCell<Vec<String>>>,
-            telemetry_events: Rc<RefCell<Vec<RadioTelemetryEvent>>>,
-            change_events: Rc<RefCell<Vec<RadioChangeEvent>>>,
-            focus_events: Rc<RefCell<Vec<RadioFocusEvent>>>,
-            blur_events: Rc<RefCell<Vec<RadioFocusEvent>>>,
-            key_events: Rc<RefCell<Vec<RadioKeyEvent>>>,
-            refresh_counter: Rc<RefCell<usize>>,
-            builder: Rc<LeptosOptionHandlerBuilder>,
-        }
+        #[cfg(target_arch = "wasm32")]
+        mod wasm {
+            use super::*;
+            use wasm_bindgen_test::*;
+            use web_sys::{
+                FocusEvent as WebFocusEvent, KeyboardEvent as WebKeyboardEvent, KeyboardEventInit,
+                MouseEvent as WebMouseEvent,
+            };
 
-        impl Harness {
-            fn new(controlled: bool) -> Self {
-                let state = if controlled {
-                    RadioGroupState::controlled(
-                        vec!["Alpha".into(), "Beta".into(), "Gamma".into()],
-                        false,
-                        RadioOrientation::Horizontal,
-                        Some(0),
-                    )
-                } else {
-                    RadioGroupState::uncontrolled(
-                        vec!["Alpha".into(), "Beta".into(), "Gamma".into()],
-                        false,
-                        RadioOrientation::Horizontal,
-                        Some(0),
-                    )
-                };
-                let group = RadioGroupProps::from_state(&state);
-                let telemetry = TelemetryHooks::default();
-                let (_context, _descriptor, snapshot) = super::super::descriptor_with_context(
-                    "rustic_ui_material::radio::leptos::tests::Harness",
-                    &group,
-                    &telemetry,
-                    &state,
-                );
+            wasm_bindgen_test_configure!(run_in_browser);
 
-                let state_handle = Rc::new(RefCell::new(state));
-                let options = Rc::new(snapshot.options.clone());
-                let order = Rc::new(RefCell::new(Vec::new()));
-                let telemetry_events = Rc::new(RefCell::new(Vec::new()));
-                let change_events = Rc::new(RefCell::new(Vec::new()));
-                let focus_events = Rc::new(RefCell::new(Vec::new()));
-                let blur_events = Rc::new(RefCell::new(Vec::new()));
-                let key_events = Rc::new(RefCell::new(Vec::new()));
-                let refresh_counter = Rc::new(RefCell::new(0usize));
+            #[derive(Clone)]
+            struct EventHarness {
+                state: Rc<RefCell<RadioGroupState>>,
+                order: Rc<RefCell<Vec<String>>>,
+                telemetry: Rc<RefCell<Vec<RadioTelemetryEvent>>>,
+                changes: Rc<RefCell<Vec<RadioChangeEvent>>>,
+                focuses: Rc<RefCell<Vec<RadioFocusEvent>>>,
+                blurs: Rc<RefCell<Vec<RadioFocusEvent>>>,
+                keys: Rc<RefCell<Vec<RadioKeyEvent>>>,
+                refresh_counter: Rc<RefCell<usize>>,
+                builder: Rc<LeptosOptionHandlerBuilder>,
+            }
 
-                let telemetry_delegate: TelemetryDelegate = {
-                    let order = Rc::clone(&order);
-                    let events = Rc::clone(&telemetry_events);
-                    Rc::new(move |event| {
-                        order.borrow_mut().push(format!("telemetry::{:?}", event));
-                        events.borrow_mut().push(event);
-                    })
-                };
+            impl EventHarness {
+                fn new(controlled: bool) -> Self {
+                    let state = if controlled {
+                        RadioGroupState::controlled(
+                            vec!["Alpha".into(), "Beta".into(), "Gamma".into()],
+                            false,
+                            RadioOrientation::Horizontal,
+                            Some(0),
+                        )
+                    } else {
+                        RadioGroupState::uncontrolled(
+                            vec!["Alpha".into(), "Beta".into(), "Gamma".into()],
+                            false,
+                            RadioOrientation::Horizontal,
+                            Some(0),
+                        )
+                    };
 
-                let on_change: ChangeCallback = {
-                    let order = Rc::clone(&order);
-                    let events = Rc::clone(&change_events);
-                    Rc::new(move |event| {
-                        order.borrow_mut().push("callback::change".into());
-                        events.borrow_mut().push(event);
-                    })
-                };
+                    let mut props = LeptosRadioGroupProps::new(
+                        RadioGroupProps::from_state(&state),
+                        state.clone(),
+                    );
 
-                let on_focus: FocusCallback = {
-                    let order = Rc::clone(&order);
-                    let events = Rc::clone(&focus_events);
-                    Rc::new(move |event| {
-                        order.borrow_mut().push("callback::focus".into());
-                        events.borrow_mut().push(event);
-                    })
-                };
+                    let order = Rc::new(RefCell::new(Vec::new()));
+                    let telemetry = Rc::new(RefCell::new(Vec::new()));
+                    let changes = Rc::new(RefCell::new(Vec::new()));
+                    let focuses = Rc::new(RefCell::new(Vec::new()));
+                    let blurs = Rc::new(RefCell::new(Vec::new()));
+                    let keys = Rc::new(RefCell::new(Vec::new()));
 
-                let on_blur: FocusCallback = {
-                    let order = Rc::clone(&order);
-                    let events = Rc::clone(&blur_events);
-                    Rc::new(move |event| {
-                        order.borrow_mut().push("callback::blur".into());
-                        events.borrow_mut().push(event);
-                    })
-                };
+                    let telemetry_delegate: TelemetryDelegate = {
+                        let order = Rc::clone(&order);
+                        let events = Rc::clone(&telemetry);
+                        Rc::new(move |event| {
+                            order.borrow_mut().push(match event {
+                                RadioTelemetryEvent::Analytics(_) => "telemetry::analytics".into(),
+                                RadioTelemetryEvent::Focus(_) => "telemetry::focus".into(),
+                                RadioTelemetryEvent::Blur(_) => "telemetry::blur".into(),
+                                RadioTelemetryEvent::Change(_) => "telemetry::change".into(),
+                                RadioTelemetryEvent::Commit(_) => "telemetry::commit".into(),
+                                RadioTelemetryEvent::Key(_) => "telemetry::key".into(),
+                            });
+                            events.borrow_mut().push(event);
+                        })
+                    };
 
-                let on_key: KeyCallback = {
-                    let order = Rc::clone(&order);
-                    let events = Rc::clone(&key_events);
-                    Rc::new(move |event| {
-                        order.borrow_mut().push("callback::key".into());
-                        events.borrow_mut().push(event);
-                    })
-                };
+                    let on_change: ChangeCallback = {
+                        let order = Rc::clone(&order);
+                        let events = Rc::clone(&changes);
+                        Rc::new(move |event| {
+                            order.borrow_mut().push("callback::change".into());
+                            events.borrow_mut().push(event);
+                        })
+                    };
 
-                let refresh = {
-                    let counter = Rc::clone(&refresh_counter);
-                    Rc::new(move || {
-                        let mut count = counter.borrow_mut();
-                        *count = count.wrapping_add(1);
-                    }) as Rc<dyn Fn()>
-                };
+                    let on_focus: FocusCallback = {
+                        let order = Rc::clone(&order);
+                        let events = Rc::clone(&focuses);
+                        Rc::new(move |event| {
+                            order.borrow_mut().push("callback::focus".into());
+                            events.borrow_mut().push(event);
+                        })
+                    };
 
-                let builder = Rc::new(LeptosOptionHandlerBuilder::new(
-                    Rc::clone(&state_handle),
-                    Rc::clone(&options),
-                    Some(on_change),
-                    Some(on_focus),
-                    Some(on_blur),
-                    Some(on_key),
-                    Some(telemetry_delegate),
-                    refresh,
-                ));
+                    let on_blur: FocusCallback = {
+                        let order = Rc::clone(&order);
+                        let events = Rc::clone(&blurs);
+                        Rc::new(move |event| {
+                            order.borrow_mut().push("callback::blur".into());
+                            events.borrow_mut().push(event);
+                        })
+                    };
 
-                Self {
-                    state: state_handle,
-                    options,
-                    order,
-                    telemetry_events,
-                    change_events,
-                    focus_events,
-                    blur_events,
-                    key_events,
-                    refresh_counter,
-                    builder,
+                    let on_key: KeyCallback = {
+                        let order = Rc::clone(&order);
+                        let events = Rc::clone(&keys);
+                        Rc::new(move |event| {
+                            order.borrow_mut().push("callback::key".into());
+                            events.borrow_mut().push(event);
+                        })
+                    };
+
+                    props.on_change = Some(on_change.clone());
+                    props.on_focus = Some(on_focus.clone());
+                    props.on_blur = Some(on_blur.clone());
+                    props.on_key = Some(on_key.clone());
+                    props.telemetry_delegate = Some(telemetry_delegate.clone());
+
+                    let (_context, _descriptor, snapshot) = super::super::descriptor_with_context(
+                        "rustic_ui_material::radio::leptos::tests::EventHarness",
+                        &props.group,
+                        &props.telemetry,
+                        &props.state,
+                    );
+
+                    let state_handle = Rc::new(RefCell::new(props.state.clone()));
+                    let options = Rc::new(snapshot.options.clone());
+                    let refresh_counter = Rc::new(RefCell::new(0usize));
+                    let refresh = {
+                        let counter = Rc::clone(&refresh_counter);
+                        Rc::new(move || {
+                            let mut count = counter.borrow_mut();
+                            *count = count.wrapping_add(1);
+                        }) as Rc<dyn Fn()>
+                    };
+
+                    let builder = Rc::new(LeptosOptionHandlerBuilder::new(
+                        Rc::clone(&state_handle),
+                        options,
+                        props.on_change.clone(),
+                        props.on_focus.clone(),
+                        props.on_blur.clone(),
+                        props.on_key.clone(),
+                        props.telemetry_delegate.clone(),
+                        refresh,
+                    ));
+
+                    Self {
+                        state: state_handle,
+                        order,
+                        telemetry,
+                        changes,
+                        focuses,
+                        blurs,
+                        keys,
+                        refresh_counter,
+                        builder,
+                    }
                 }
             }
-        }
 
-        #[test]
-        fn uncontrolled_select_emits_change_and_commit_before_callbacks() {
-            let harness = Harness::new(false);
-            let handlers = harness.builder.build(1);
-            handlers.select();
+            fn assert_sequence(expected: &[&str], actual: &RefCell<Vec<String>>) {
+                let actual = actual.borrow();
+                let labels: Vec<&str> = actual.iter().map(|value| value.as_str()).collect();
+                assert_eq!(
+                    labels, expected,
+                    "expected sequence {:?} received {:?}",
+                    expected, labels
+                );
+            }
 
-            assert_eq!(harness.state.borrow().selected_index(), Some(1));
+            fn build_keyboard_event(key: &str) -> WebKeyboardEvent {
+                let mut init = KeyboardEventInit::new();
+                init.key(key);
+                WebKeyboardEvent::new_with_keyboard_event_init_dict("keydown", &init)
+                    .expect("keyboard event")
+            }
 
-            let telemetry = harness.telemetry_events.borrow();
-            assert_eq!(telemetry.len(), 3);
-            assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
-            assert!(matches!(
-                telemetry[1],
-                RadioTelemetryEvent::Change(ref evt) if evt.next == 1
-            ));
-            assert!(matches!(
-                telemetry[2],
-                RadioTelemetryEvent::Commit(ref evt) if evt.selected == Some(1)
-            ));
-            drop(telemetry);
+            #[wasm_bindgen_test]
+            fn uncontrolled_interactions_emit_enterprise_telemetry() {
+                let harness = EventHarness::new(false);
+                let handlers = harness.builder.build(0);
 
-            let changes = harness.change_events.borrow();
-            assert_eq!(changes.len(), 1);
-            assert_eq!(changes[0].next, 1);
-            drop(changes);
+                // Focus telemetry must precede consumer callbacks so enterprise dashboards
+                // observe the roving-focus change before shell code mutates the DOM.
+                let focus_handler = build_focus_handler(handlers.focus.clone());
+                focus_handler(WebFocusEvent::new("focus").expect("focus event"));
 
-            let order = harness.order.borrow();
-            assert_eq!(order.len(), 4);
-            assert!(order[0].starts_with("telemetry::Analytics"));
-            assert!(order[1].starts_with("telemetry::Change"));
-            assert!(order[2].starts_with("telemetry::Commit"));
-            assert_eq!(order[3], "callback::change");
-            drop(order);
+                // Blur analytics run before consumer callbacks to guarantee observability
+                // systems capture the losing-control metadata even if the callback panics.
+                let blur_handler = build_blur_handler(handlers.blur.clone());
+                blur_handler(WebFocusEvent::new("blur").expect("blur event"));
 
-            assert_eq!(*harness.refresh_counter.borrow(), 1);
-        }
+                // Selection analytics must commit before callbacks fire so auditors can
+                // validate that the change payload matches the headless state snapshot.
+                let click_handler = build_click_handler(handlers.select.clone());
+                click_handler(WebMouseEvent::new("click").expect("click event"));
 
-        #[test]
-        fn controlled_select_notifies_without_mutating_selection() {
-            let harness = Harness::new(true);
-            let handlers = harness.builder.build(2);
-            handlers.select();
+                // Keyboard intents require analytics and focus ordering to match SOC
+                // requirements so governance tooling can trace each input modality.
+                let key_handler = build_keydown_handler(handlers.key.clone());
+                key_handler(build_keyboard_event("ArrowRight"));
 
-            assert_eq!(harness.state.borrow().selected_index(), Some(0));
+                assert_eq!(harness.state.borrow().selected_index(), Some(1));
 
-            let telemetry = harness.telemetry_events.borrow();
-            assert_eq!(telemetry.len(), 3);
-            assert!(matches!(
-                telemetry[1],
-                RadioTelemetryEvent::Change(ref evt) if evt.next == 2
-            ));
-            assert!(matches!(
-                telemetry[2],
-                RadioTelemetryEvent::Commit(ref evt) if evt.selected == Some(0)
-            ));
-            drop(telemetry);
+                assert_sequence(
+                    &[
+                        "telemetry::analytics",
+                        "telemetry::focus",
+                        "callback::focus",
+                        "telemetry::analytics",
+                        "telemetry::blur",
+                        "callback::blur",
+                        "telemetry::analytics",
+                        "telemetry::change",
+                        "telemetry::commit",
+                        "callback::change",
+                        "telemetry::analytics",
+                        "telemetry::key",
+                        "telemetry::focus",
+                        "telemetry::blur",
+                        "telemetry::change",
+                        "telemetry::commit",
+                        "callback::key",
+                        "callback::change",
+                    ],
+                    &harness.order,
+                );
 
-            let changes = harness.change_events.borrow();
-            assert_eq!(changes.len(), 1);
-            assert_eq!(changes[0].next, 2);
-            drop(changes);
+                let telemetry = harness.telemetry.borrow();
+                let change_events: Vec<_> = telemetry
+                    .iter()
+                    .filter_map(|event| match event {
+                        RadioTelemetryEvent::Change(evt) => Some(evt.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                let focus_events: Vec<_> = telemetry
+                    .iter()
+                    .filter_map(|event| match event {
+                        RadioTelemetryEvent::Focus(evt) => Some(evt.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                let blur_events: Vec<_> = telemetry
+                    .iter()
+                    .filter_map(|event| match event {
+                        RadioTelemetryEvent::Blur(evt) => Some(evt.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                let key_events: Vec<_> = telemetry
+                    .iter()
+                    .filter_map(|event| match event {
+                        RadioTelemetryEvent::Key(evt) => Some(evt.clone()),
+                        _ => None,
+                    })
+                    .collect();
 
-            let order = harness.order.borrow();
-            assert_eq!(order[3], "callback::change");
-            drop(order);
+                let change_callbacks = harness.changes.borrow();
+                let focus_callbacks = harness.focuses.borrow();
+                let blur_callbacks = harness.blurs.borrow();
+                let key_callbacks = harness.keys.borrow();
 
-            assert_eq!(*harness.refresh_counter.borrow(), 1);
-        }
+                assert_eq!(focus_callbacks.len(), 1);
+                assert_eq!(focus_callbacks[0], focus_events[0]);
+                assert_eq!(blur_callbacks.len(), 1);
+                assert_eq!(blur_callbacks[0], blur_events[0]);
+                assert_eq!(change_callbacks.len(), 2);
+                assert_eq!(change_callbacks[0], change_events[0]);
+                assert_eq!(change_callbacks[1], change_events[1]);
+                assert_eq!(key_callbacks.len(), 1);
+                assert_eq!(key_callbacks[0], key_events[0]);
 
-        #[test]
-        fn focus_and_blur_emit_telemetry_and_update_focus_state() {
-            let harness = Harness::new(false);
-            let handlers = harness.builder.build(1);
-            handlers.focus();
-            assert_eq!(harness.state.borrow().focus_visible_index(), Some(1));
-            handlers.blur();
-            assert_eq!(harness.state.borrow().focus_visible_index(), None);
+                drop(change_callbacks);
+                drop(focus_callbacks);
+                drop(blur_callbacks);
+                drop(key_callbacks);
+                drop(telemetry);
 
-            let focus_events = harness.focus_events.borrow();
-            assert_eq!(focus_events.len(), 1);
-            assert_eq!(focus_events[0].index, 1);
-            drop(focus_events);
+                assert_eq!(*harness.refresh_counter.borrow(), 2);
+            }
 
-            let blur_events = harness.blur_events.borrow();
-            assert_eq!(blur_events.len(), 1);
-            assert_eq!(blur_events[0].index, 1);
-            drop(blur_events);
+            #[wasm_bindgen_test]
+            fn controlled_interactions_preserve_caller_state() {
+                let harness = EventHarness::new(true);
+                let handlers = harness.builder.build(0);
 
-            let telemetry = harness.telemetry_events.borrow();
-            assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
-            assert!(matches!(telemetry[1], RadioTelemetryEvent::Focus(_)));
-            assert!(matches!(telemetry[2], RadioTelemetryEvent::Analytics(_)));
-            assert!(matches!(telemetry[3], RadioTelemetryEvent::Blur(_)));
-            drop(telemetry);
+                let click_handler = build_click_handler(handlers.select.clone());
+                click_handler(WebMouseEvent::new("click").expect("click event"));
 
-            let order = harness.order.borrow();
-            assert_eq!(order.len(), 6);
-            assert!(order[0].starts_with("telemetry::Analytics"));
-            assert!(order[1].starts_with("telemetry::Focus"));
-            assert_eq!(order[2], "callback::focus");
-            assert!(order[3].starts_with("telemetry::Analytics"));
-            assert!(order[4].starts_with("telemetry::Blur"));
-            assert_eq!(order[5], "callback::blur");
-            drop(order);
+                let key_handler = build_keydown_handler(handlers.key.clone());
+                key_handler(build_keyboard_event("ArrowRight"));
 
-            assert_eq!(*harness.refresh_counter.borrow(), 2);
-        }
+                assert_eq!(harness.state.borrow().selected_index(), Some(0));
 
-        #[test]
-        fn keyboard_navigation_emits_key_change_and_commit() {
-            let harness = Harness::new(false);
-            let handlers = harness.builder.build(0);
-            handlers.key(ControlKey::ArrowRight);
+                let telemetry = harness.telemetry.borrow();
+                let change_events: Vec<_> = telemetry
+                    .iter()
+                    .filter_map(|event| match event {
+                        RadioTelemetryEvent::Change(evt) => Some(evt.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                let commit_events: Vec<_> = telemetry
+                    .iter()
+                    .filter_map(|event| match event {
+                        RadioTelemetryEvent::Commit(evt) => Some(evt.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                let key_events: Vec<_> = telemetry
+                    .iter()
+                    .filter_map(|event| match event {
+                        RadioTelemetryEvent::Key(evt) => Some(evt.clone()),
+                        _ => None,
+                    })
+                    .collect();
 
-            assert_eq!(harness.state.borrow().selected_index(), Some(1));
+                assert!(commit_events.iter().all(|event| event.controlled));
 
-            let telemetry = harness.telemetry_events.borrow();
-            assert_eq!(telemetry.len(), 6);
-            assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
-            assert!(matches!(telemetry[1], RadioTelemetryEvent::Key(_)));
-            assert!(matches!(telemetry[2], RadioTelemetryEvent::Focus(_)));
-            assert!(matches!(telemetry[3], RadioTelemetryEvent::Blur(_)));
-            assert!(matches!(telemetry[4], RadioTelemetryEvent::Change(_)));
-            assert!(matches!(telemetry[5], RadioTelemetryEvent::Commit(_)));
-            drop(telemetry);
+                let change_callbacks = harness.changes.borrow();
+                let key_callbacks = harness.keys.borrow();
 
-            let keys = harness.key_events.borrow();
-            assert_eq!(keys.len(), 1);
-            assert_eq!(keys[0].key, ControlKey::ArrowRight);
-            drop(keys);
+                assert_eq!(change_callbacks.len(), 2);
+                assert_eq!(change_callbacks[0], change_events[0]);
+                assert_eq!(change_callbacks[1], change_events[1]);
+                assert_eq!(key_callbacks.len(), 1);
+                assert_eq!(key_callbacks[0], key_events[0]);
 
-            let changes = harness.change_events.borrow();
-            assert_eq!(changes.len(), 1);
-            assert_eq!(changes[0].next, 1);
-            drop(changes);
-
-            let order = harness.order.borrow();
-            assert_eq!(order.len(), 8);
-            assert!(order[0].starts_with("telemetry::Analytics"));
-            assert!(order[1].starts_with("telemetry::Key"));
-            assert!(order[2].starts_with("telemetry::Focus"));
-            assert!(order[3].starts_with("telemetry::Blur"));
-            assert!(order[4].starts_with("telemetry::Change"));
-            assert!(order[5].starts_with("telemetry::Commit"));
-            assert_eq!(order[6], "callback::key");
-            assert_eq!(order[7], "callback::change");
-            drop(order);
-
-            assert_eq!(*harness.refresh_counter.borrow(), 1);
+                assert_sequence(
+                    &[
+                        "telemetry::analytics",
+                        "telemetry::change",
+                        "telemetry::commit",
+                        "callback::change",
+                        "telemetry::analytics",
+                        "telemetry::key",
+                        "telemetry::focus",
+                        "telemetry::blur",
+                        "telemetry::change",
+                        "telemetry::commit",
+                        "callback::key",
+                        "callback::change",
+                    ],
+                    &harness.order,
+                );
+            }
         }
 
         #[test]
@@ -3637,10 +3733,6 @@ pub mod leptos {
 
         #[test]
         fn leptos_dynamic_attributes_forward_new_theme_pairs() {
-            // Regression guard: when the descriptor emits additional themed
-            // attributes (e.g. inline `style` overrides rolled out by design
-            // automation), Leptos must surface them automatically so QA does
-            // not need to duplicate attribute wiring manually.
             let state = RadioGroupState::uncontrolled(
                 vec!["Primary".into(), "Secondary".into(), "Tertiary".into()],
                 false,
