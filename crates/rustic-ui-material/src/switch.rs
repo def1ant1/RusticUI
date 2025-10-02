@@ -928,6 +928,233 @@ pub mod react {
         }
     }
 
+    #[cfg(all(test, feature = "react"))]
+    mod tests {
+        use super::*;
+        use js_sys::{Function, Object, Reflect};
+        use wasm_bindgen::closure::Closure;
+        use wasm_bindgen_test::*;
+
+        wasm_bindgen_test_configure!(run_in_browser);
+
+        fn parse_control_key(value: &JsValue) -> ControlKey {
+            match value
+                .as_string()
+                .expect("key telemetry should encode control keys")
+                .as_str()
+            {
+                "space" => ControlKey::Space,
+                "enter" => ControlKey::Enter,
+                other => panic!("unexpected control key {other}"),
+            }
+        }
+
+        fn optional_string(object: &JsValue, key: &str) -> Option<String> {
+            Reflect::get(object, &JsValue::from_str(key))
+                .ok()
+                .and_then(|value| value.as_string())
+        }
+
+        fn decode_switch_event(value: &JsValue) -> SwitchTelemetryEvent {
+            let kind = Reflect::get(value, &JsValue::from_str("kind"))
+                .expect("telemetry payload exposes kind metadata")
+                .as_string()
+                .expect("telemetry kind should be a string");
+            match kind.as_str() {
+                "change" => SwitchTelemetryEvent::Change(SwitchChangeEvent {
+                    previous: Reflect::get(value, &JsValue::from_str("previous"))
+                        .expect("previous should be set")
+                        .as_bool()
+                        .expect("previous encodes a bool"),
+                    next: Reflect::get(value, &JsValue::from_str("next"))
+                        .expect("next should be set")
+                        .as_bool()
+                        .expect("next encodes a bool"),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "focus" => SwitchTelemetryEvent::Focus(SwitchFocusEvent {
+                    focused: Reflect::get(value, &JsValue::from_str("focused"))
+                        .expect("focused should be set")
+                        .as_bool()
+                        .expect("focused encodes a bool"),
+                    on: Reflect::get(value, &JsValue::from_str("on"))
+                        .expect("on should be set")
+                        .as_bool()
+                        .expect("on encodes a bool"),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "blur" => SwitchTelemetryEvent::Blur(SwitchFocusEvent {
+                    focused: Reflect::get(value, &JsValue::from_str("focused"))
+                        .expect("focused should be set")
+                        .as_bool()
+                        .expect("focused encodes a bool"),
+                    on: Reflect::get(value, &JsValue::from_str("on"))
+                        .expect("on should be set")
+                        .as_bool()
+                        .expect("on encodes a bool"),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "key" => SwitchTelemetryEvent::Key(SwitchKeyEvent {
+                    key: parse_control_key(
+                        &Reflect::get(value, &JsValue::from_str("key")).expect("key should be set"),
+                    ),
+                    previous: Reflect::get(value, &JsValue::from_str("previous"))
+                        .expect("previous should be set")
+                        .as_bool()
+                        .expect("previous encodes a bool"),
+                    next: Reflect::get(value, &JsValue::from_str("next"))
+                        .expect("next should be set")
+                        .as_bool()
+                        .expect("next encodes a bool"),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                other => panic!("unexpected telemetry kind {other}"),
+            }
+        }
+
+        fn telemetry_recorder() -> (
+            Function,
+            Rc<RefCell<Vec<SwitchTelemetryEvent>>>,
+            Closure<dyn FnMut(JsValue)>,
+        ) {
+            let events = Rc::new(RefCell::new(Vec::new()));
+            let stored = Rc::clone(&events);
+            let closure = Closure::wrap(Box::new(move |value: JsValue| {
+                let event = decode_switch_event(&value);
+                stored.borrow_mut().push(event);
+            }) as Box<dyn FnMut(JsValue)>);
+            let function: Function = closure.as_ref().clone().unchecked_into();
+            (function, events, closure)
+        }
+
+        fn event_kinds(events: &[SwitchTelemetryEvent]) -> Vec<&'static str> {
+            events
+                .iter()
+                .map(|event| match event {
+                    SwitchTelemetryEvent::Change(_) => "change",
+                    SwitchTelemetryEvent::Focus(_) => "focus",
+                    SwitchTelemetryEvent::Blur(_) => "blur",
+                    SwitchTelemetryEvent::Key(_) => "key",
+                })
+                .collect()
+        }
+
+        fn invoke(handler: &Option<Function>, event: JsValue) {
+            if let Some(function) = handler {
+                let _ = function.call1(&JsValue::NULL, &event);
+            }
+        }
+
+        fn keyboard_event(key: &str) -> JsValue {
+            let event = Object::new();
+            Reflect::set(&event, &JsValue::from_str("key"), &JsValue::from_str(key))
+                .expect("set key");
+            let prevent = Closure::wrap(Box::new(|| {}) as Box<dyn FnMut()>);
+            Reflect::set(
+                &event,
+                &JsValue::from_str("preventDefault"),
+                prevent.as_ref(),
+            )
+            .expect("set preventDefault");
+            prevent.forget();
+            event.into()
+        }
+
+        fn build_props(state: SwitchState, telemetry: Option<Function>) -> ReactSwitchProps {
+            ReactSwitchProps {
+                switch: SwitchProps::new("Notifications"),
+                state,
+                on_change: None,
+                on_focus: None,
+                on_blur: None,
+                on_key: None,
+                telemetry_delegate: telemetry,
+            }
+        }
+
+        #[wasm_bindgen_test]
+        fn uncontrolled_handlers_emit_ordered_telemetry() {
+            let (delegate, events, closure) = telemetry_recorder();
+            let props = build_props(SwitchState::uncontrolled(false, false), Some(delegate));
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let handlers = handlers(&props, Rc::clone(&state_handle));
+
+            // Focus telemetry should lead so analytics observe the untouched switch.
+            invoke(&handlers.on_focus, JsValue::UNDEFINED);
+            invoke(&handlers.on_blur, JsValue::UNDEFINED);
+
+            // Key payloads precede change events to honour the analytics → key/focus
+            // → change choreography shared across adapters.
+            invoke(&handlers.on_key, keyboard_event(" "));
+
+            // Pointer toggles run after keyboard telemetry, ensuring mutation commits
+            // happen last in the sequence.
+            invoke(&handlers.on_change, JsValue::UNDEFINED);
+
+            let kinds = event_kinds(&events.borrow());
+            assert_eq!(kinds, vec!["focus", "blur", "key", "change", "change"]);
+            assert!(!state_handle.borrow().on());
+            drop(closure);
+        }
+
+        #[wasm_bindgen_test]
+        fn controlled_handlers_preserve_state() {
+            let (delegate, events, closure) = telemetry_recorder();
+            let props = build_props(SwitchState::controlled(false, false), Some(delegate));
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let handlers = handlers(&props, Rc::clone(&state_handle));
+
+            invoke(&handlers.on_key, keyboard_event("Enter"));
+            invoke(&handlers.on_change, JsValue::UNDEFINED);
+
+            // Controlled consumers receive telemetry while retaining their external
+            // truth, demonstrating analytics → key → change ordering without local
+            // mutation.
+            assert_eq!(
+                event_kinds(&events.borrow()),
+                vec!["key", "change", "change"]
+            );
+            assert!(!state_handle.borrow().on());
+            drop(closure);
+        }
+    }
+
     /// React component rendering the Material switch.
     ///
     /// * A [`TelemetryContext`] seeded with the fully-qualified component path

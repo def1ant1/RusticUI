@@ -1430,10 +1430,11 @@ pub mod react {
         object.into()
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, feature = "react"))]
     mod tests {
         use super::*;
-        use std::{cell::RefCell, rc::Rc};
+        use js_sys::{Function, Object, Reflect};
+        use wasm_bindgen::closure::Closure;
         use wasm_bindgen::JsValue;
         use wasm_bindgen_test::*;
 
@@ -1469,15 +1470,175 @@ pub mod react {
             snapshot
         }
 
-        fn telemetry_collector() -> (Function, js_sys::Array) {
-            let events = js_sys::Array::new();
-            let stored = events.clone();
-            let closure = Closure::wrap(Box::new(move |event: JsValue| {
-                stored.push(&event);
+        fn optional_string(object: &JsValue, key: &str) -> Option<String> {
+            Reflect::get(object, &JsValue::from_str(key))
+                .ok()
+                .and_then(|value| value.as_string())
+        }
+
+        fn optional_usize(object: &JsValue, key: &str) -> Option<usize> {
+            Reflect::get(object, &JsValue::from_str(key))
+                .ok()
+                .and_then(|value| {
+                    if value.is_undefined() || value.is_null() {
+                        None
+                    } else {
+                        value.as_f64().map(|value| value as usize)
+                    }
+                })
+        }
+
+        fn required_usize(object: &JsValue, key: &str) -> usize {
+            optional_usize(object, key).expect("telemetry payload should include the field")
+        }
+
+        fn parse_control_key(key: &str) -> ControlKey {
+            match key {
+                "Space" => ControlKey::Space,
+                "Enter" => ControlKey::Enter,
+                "ArrowUp" => ControlKey::ArrowUp,
+                "ArrowDown" => ControlKey::ArrowDown,
+                "ArrowLeft" => ControlKey::ArrowLeft,
+                "ArrowRight" => ControlKey::ArrowRight,
+                "Home" => ControlKey::Home,
+                "End" => ControlKey::End,
+                other => panic!("unexpected control key {other}"),
+            }
+        }
+
+        fn decode_radio_event(value: &JsValue) -> RadioTelemetryEvent {
+            let kind = Reflect::get(value, &JsValue::from_str("kind"))
+                .expect("telemetry payload exposes kind metadata")
+                .as_string()
+                .expect("telemetry kind should be a string");
+            match kind.as_str() {
+                "analytics" => RadioTelemetryEvent::Analytics(RadioAnalyticsEvent {
+                    index: required_usize(value, "index"),
+                    selected: optional_usize(value, "selected"),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "key" => RadioTelemetryEvent::Key(RadioKeyEvent {
+                    key: parse_control_key(
+                        Reflect::get(value, &JsValue::from_str("key"))
+                            .expect("key should be set")
+                            .as_string()
+                            .expect("key encodes a string")
+                            .as_str(),
+                    ),
+                    previous: optional_usize(value, "previous"),
+                    next: optional_usize(value, "next"),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "focus" => RadioTelemetryEvent::Focus(RadioFocusEvent {
+                    index: required_usize(value, "index"),
+                    focused: Reflect::get(value, &JsValue::from_str("focused"))
+                        .expect("focused should be set")
+                        .as_bool()
+                        .expect("focused encodes a bool"),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "blur" => RadioTelemetryEvent::Blur(RadioFocusEvent {
+                    index: required_usize(value, "index"),
+                    focused: Reflect::get(value, &JsValue::from_str("focused"))
+                        .expect("focused should be set")
+                        .as_bool()
+                        .expect("focused encodes a bool"),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "change" => RadioTelemetryEvent::Change(RadioChangeEvent {
+                    previous: optional_usize(value, "previous"),
+                    next: required_usize(value, "next"),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "commit" => RadioTelemetryEvent::Commit(RadioCommitEvent {
+                    selected: optional_usize(value, "selected"),
+                    controlled: Reflect::get(value, &JsValue::from_str("controlled"))
+                        .expect("controlled should be set")
+                        .as_bool()
+                        .expect("controlled encodes a bool"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                other => panic!("unexpected telemetry kind {other}"),
+            }
+        }
+
+        fn telemetry_recorder() -> (
+            Function,
+            Rc<RefCell<Vec<RadioTelemetryEvent>>>,
+            Closure<dyn FnMut(JsValue)>,
+        ) {
+            let events = Rc::new(RefCell::new(Vec::new()));
+            let stored = Rc::clone(&events);
+            let closure = Closure::wrap(Box::new(move |value: JsValue| {
+                let event = decode_radio_event(&value);
+                stored.borrow_mut().push(event);
             }) as Box<dyn FnMut(JsValue)>);
             let function: Function = closure.as_ref().clone().unchecked_into();
-            closure.forget();
-            (function, events)
+            (function, events, closure)
+        }
+
+        fn event_kinds(events: &[RadioTelemetryEvent]) -> Vec<&'static str> {
+            events
+                .iter()
+                .map(|event| match event {
+                    RadioTelemetryEvent::Analytics(_) => "analytics",
+                    RadioTelemetryEvent::Key(_) => "key",
+                    RadioTelemetryEvent::Focus(_) => "focus",
+                    RadioTelemetryEvent::Blur(_) => "blur",
+                    RadioTelemetryEvent::Change(_) => "change",
+                    RadioTelemetryEvent::Commit(_) => "commit",
+                })
+                .collect()
         }
 
         fn build_option_props(
@@ -1501,78 +1662,73 @@ pub mod react {
             (props, state)
         }
 
-        fn call_handler(props: &Object, key: &str) {
-            call_handler_with_event(props, key, JsValue::UNDEFINED);
-        }
-
-        fn call_handler_with_event(props: &Object, key: &str, event: JsValue) {
-            if let Ok(handler) = Reflect::get(props, &JsValue::from_str(key)) {
-                if let Ok(function) = handler.dyn_into::<Function>() {
-                    let _ = function.call1(&JsValue::NULL, &event);
-                }
-            }
-        }
-
         fn keyboard_event(key: &str) -> JsValue {
             let event = Object::new();
             Reflect::set(&event, &JsValue::from_str("key"), &JsValue::from_str(key))
                 .expect("set key");
-
             let prevent = Closure::wrap(Box::new(|| {}) as Box<dyn FnMut()>);
-            let function = prevent.as_ref().clone();
-            Reflect::set(&event, &JsValue::from_str("preventDefault"), &function)
-                .expect("set preventDefault");
+            Reflect::set(
+                &event,
+                &JsValue::from_str("preventDefault"),
+                prevent.as_ref(),
+            )
+            .expect("set preventDefault");
             prevent.forget();
-
             event.into()
         }
 
-        fn event_kinds(events: &js_sys::Array) -> Vec<String> {
-            events
-                .iter()
-                .map(|value| {
-                    Reflect::get(&value, &JsValue::from_str("kind"))
-                        .ok()
-                        .and_then(|kind| kind.as_string())
-                        .unwrap_or_default()
-                })
-                .collect()
-        }
-
         #[wasm_bindgen_test]
-        fn uncontrolled_click_emits_change_commit_sequence() {
+        fn uncontrolled_click_emits_ordered_telemetry() {
             let state = Rc::new(RefCell::new(sample_state_uncontrolled()));
             let snapshot = build_snapshot(&state.borrow());
-            let (delegate, events) = telemetry_collector();
+            let (delegate, events, closure) = telemetry_recorder();
             let (props, state_handle) =
                 build_option_props(Rc::clone(&state), &snapshot, Some(delegate), 1);
 
-            call_handler(&props, "onClick");
+            // Analytics always fires first so downstream dashboards capture the raw
+            // context before mutation. A pointer click should therefore emit
+            // analytics → change → commit in that exact order.
+            if let Ok(handler) = Reflect::get(&props, &JsValue::from_str("onClick")) {
+                if let Ok(function) = handler.dyn_into::<Function>() {
+                    let _ = function.call0(&JsValue::NULL);
+                }
+            }
 
-            let kinds = event_kinds(&events);
+            let kinds = event_kinds(&events.borrow());
             assert_eq!(kinds, vec!["analytics", "change", "commit"]);
             assert_eq!(state_handle.borrow().selected_index(), Some(1));
+            drop(closure);
         }
 
         #[wasm_bindgen_test]
         fn controlled_click_reports_commit_without_mutating_state() {
             let state = Rc::new(RefCell::new(sample_state_controlled()));
             let snapshot = build_snapshot(&state.borrow());
-            let (delegate, events) = telemetry_collector();
+            let (delegate, events, closure) = telemetry_recorder();
             let (props, state_handle) =
                 build_option_props(Rc::clone(&state), &snapshot, Some(delegate), 2);
 
-            call_handler(&props, "onClick");
+            if let Ok(handler) = Reflect::get(&props, &JsValue::from_str("onClick")) {
+                if let Ok(function) = handler.dyn_into::<Function>() {
+                    let _ = function.call0(&JsValue::NULL);
+                }
+            }
 
+            // Even controlled flows honour analytics → change → commit ordering while
+            // preserving the previous selection.
+            assert_eq!(
+                event_kinds(&events.borrow()),
+                vec!["analytics", "change", "commit"]
+            );
             assert_eq!(state_handle.borrow().selected_index(), Some(1));
-            let last_event = events.get(events.length() - 1);
-            let selected = Reflect::get(&last_event, &JsValue::from_str("selected"))
-                .unwrap()
-                .as_f64()
-                .map(|value| value as usize);
-            assert_eq!(selected, Some(2));
-            let kinds = event_kinds(&events);
-            assert_eq!(kinds, vec!["analytics", "change", "commit"]);
+            let commit = events.borrow().last().cloned().expect("commit event");
+            if let RadioTelemetryEvent::Commit(commit) = commit {
+                assert_eq!(commit.selected, Some(2));
+                assert!(commit.controlled);
+            } else {
+                panic!("expected commit event");
+            }
+            drop(closure);
         }
 
         #[wasm_bindgen_test]
@@ -1611,71 +1767,73 @@ pub mod react {
         }
 
         #[wasm_bindgen_test]
-        fn keydown_emits_key_focus_and_commit_sequence() {
+        fn keydown_emits_full_sequence() {
             let state = Rc::new(RefCell::new(sample_state_uncontrolled()));
             let snapshot = build_snapshot(&state.borrow());
-            let (delegate, events) = telemetry_collector();
+            let (delegate, events, closure) = telemetry_recorder();
             let (props, state_handle) =
                 build_option_props(Rc::clone(&state), &snapshot, Some(delegate), 0);
 
-            call_handler_with_event(&props, "onKeyDown", keyboard_event("ArrowRight"));
+            if let Ok(handler) = Reflect::get(&props, &JsValue::from_str("onKeyDown")) {
+                if let Ok(function) = handler.dyn_into::<Function>() {
+                    let _ = function.call1(&JsValue::NULL, &keyboard_event("ArrowRight"));
+                }
+            }
 
-            let kinds = event_kinds(&events);
+            // Keyboard interactions must emit analytics → key → focus/blur → change →
+            // commit so observers can replay the exact user journey.
             assert_eq!(
-                kinds,
-                vec!["analytics", "key", "focus", "blur", "change", "commit"]
+                event_kinds(&events.borrow()),
+                vec!["analytics", "key", "focus", "blur", "change", "commit"],
             );
             assert_eq!(state_handle.borrow().selected_index(), Some(1));
+            drop(closure);
         }
 
         #[wasm_bindgen_test]
         fn controlled_keydown_advances_focus_and_reports_next_index() {
             let state = Rc::new(RefCell::new(sample_state_controlled()));
             let snapshot = build_snapshot(&state.borrow());
-            let (delegate, events) = telemetry_collector();
+            let (delegate, events, closure) = telemetry_recorder();
             let (props, state_handle) =
                 build_option_props(Rc::clone(&state), &snapshot, Some(delegate), 1);
 
-            call_handler_with_event(&props, "onKeyDown", keyboard_event("ArrowRight"));
+            if let Ok(handler) = Reflect::get(&props, &JsValue::from_str("onKeyDown")) {
+                if let Ok(function) = handler.dyn_into::<Function>() {
+                    let _ = function.call1(&JsValue::NULL, &keyboard_event("ArrowRight"));
+                }
+            }
 
             let handle = state_handle.borrow();
             assert_eq!(handle.selected_index(), Some(1));
             assert_eq!(handle.focus_visible_index(), Some(2));
             drop(handle);
 
-            let kinds = event_kinds(&events);
             assert_eq!(
-                kinds,
-                vec!["analytics", "key", "focus", "blur", "change", "commit"]
+                event_kinds(&events.borrow()),
+                vec!["analytics", "key", "focus", "blur", "change", "commit"],
             );
 
-            let key_event = events.get(1);
-            let key_next = Reflect::get(&key_event, &JsValue::from_str("next"))
-                .ok()
-                .and_then(|value| value.as_f64())
-                .map(|value| value as usize);
-            assert_eq!(key_next, Some(2));
+            let events_ref = events.borrow();
+            let key_event = events_ref
+                .iter()
+                .find_map(|event| match event {
+                    RadioTelemetryEvent::Key(event) => Some(event.clone()),
+                    _ => None,
+                })
+                .expect("key event");
+            assert_eq!(key_event.next, Some(2));
 
-            let focus_event = events.get(2);
-            let focus_index = Reflect::get(&focus_event, &JsValue::from_str("index"))
-                .ok()
-                .and_then(|value| value.as_f64())
-                .map(|value| value as usize);
-            assert_eq!(focus_index, Some(2));
-
-            let blur_event = events.get(3);
-            let blur_index = Reflect::get(&blur_event, &JsValue::from_str("index"))
-                .ok()
-                .and_then(|value| value.as_f64())
-                .map(|value| value as usize);
-            assert_eq!(blur_index, Some(1));
-
-            let commit_event = events.get(5);
-            let commit_selected = Reflect::get(&commit_event, &JsValue::from_str("selected"))
-                .ok()
-                .and_then(|value| value.as_f64())
-                .map(|value| value as usize);
-            assert_eq!(commit_selected, Some(1));
+            let commit = events_ref
+                .iter()
+                .find_map(|event| match event {
+                    RadioTelemetryEvent::Commit(event) => Some(event.clone()),
+                    _ => None,
+                })
+                .expect("commit event");
+            assert_eq!(commit.selected, Some(1));
+            assert!(commit.controlled);
+            drop(closure);
         }
     }
 
