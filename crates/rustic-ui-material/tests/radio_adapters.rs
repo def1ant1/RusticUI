@@ -482,11 +482,15 @@ where
     assert_eq!(key_event.next, Some(2));
     assert_eq!(harness.state.selected_index(), initial_selected);
 
-    if matches!(framework, "yew" | "leptos") {
+    let requires_focus_audit = matches!(framework, "yew" | "leptos" | "dioxus");
+    if requires_focus_audit {
         // Enterprise governance expects controlled adapters to advance the roving
         // focus index even though the caller owns the commit.  Auditors review
         // this assertion to confirm pointer intent → commit audit → keyboard intent
         // → focus audit remains intact across frameworks before production rollout.
+        // Dioxus recently joined the focus parity guarantee, hence the explicit
+        // guard instead of an `else` branch so compliance logs capture which
+        // renderer was under evaluation when the navigation handshake executed.
         assert_eq!(
             harness.state.focus_visible_index(),
             key_event.next,
@@ -497,7 +501,10 @@ where
         // Telemetry due diligence: validate the key payload forwarded to SOC
         // tooling points at the same option index recorded by the roving focus
         // machinery.  This keeps enterprise monitoring in lockstep with the core
-        // interaction contract regardless of rendering surface.
+        // interaction contract regardless of rendering surface.  The Dioxus
+        // adapter previously skipped the headless `on_key` path when controlled;
+        // these checks ensure the regression cannot reappear without immediately
+        // tripping our compliance dashboards.
         let key_telemetry = harness
             .telemetry_events
             .iter()
@@ -603,6 +610,10 @@ mod dioxus_tests {
 
     #[test]
     fn controlled_mode_emits_telemetry_without_mutating_state() {
+        // Compliance visibility: Dioxus' controlled execution path now mirrors
+        // the React/Yew focus choreography.  We re-use the shared harness so the
+        // newly enforced keyboard telemetry assertions execute during every CI
+        // cycle, keeping the enterprise audit story consistent across adapters.
         exercise_controlled_adapter("dioxus", radio::dioxus::render);
     }
 }
