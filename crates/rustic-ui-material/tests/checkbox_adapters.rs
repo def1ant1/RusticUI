@@ -121,6 +121,14 @@ mod yew_tests {
 
     impl YewHarness {
         fn new() -> Self {
+            Self::new_with_state(CheckboxState::uncontrolled(false, false))
+        }
+
+        fn new_controlled() -> Self {
+            Self::new_with_state(CheckboxState::controlled(false, false))
+        }
+
+        fn new_with_state(state: CheckboxState) -> Self {
             let contexts = Arc::new(Mutex::new(Vec::new()));
             let mut props = CheckboxProps::new("Marketing opt-in");
             props.telemetry = instrumented_hooks(
@@ -128,8 +136,6 @@ mod yew_tests {
                 "automation::checkbox::yew",
                 &contexts,
             );
-            let state = CheckboxState::uncontrolled(false, false);
-
             let telemetry_events = Rc::new(RefCell::new(Vec::new()));
             let telemetry_delegate = {
                 let events = Rc::clone(&telemetry_events);
@@ -209,7 +215,9 @@ mod yew_tests {
             self.telemetry_delegate
                 .emit(CheckboxTelemetryEvent::Change(payload.clone()));
             self.on_change.emit(payload.clone());
-            self.state.toggle(|_| {});
+            if !self.state.is_controlled() {
+                self.state.toggle(|_| {});
+            }
             payload
         }
 
@@ -240,7 +248,9 @@ mod yew_tests {
                 .emit(CheckboxTelemetryEvent::Change(change_payload.clone()));
             self.on_key.emit(key_payload.clone());
             self.on_change.emit(change_payload.clone());
-            self.state.on_key(key, |_| {});
+            if !self.state.is_controlled() {
+                self.state.on_key(key, |_| {});
+            }
             (key_payload, change_payload)
         }
     }
@@ -318,6 +328,41 @@ mod yew_tests {
         assert_eq!(key_events.len(), 1);
         assert_eq!(key_events[0], expected_key);
     }
+
+    #[test]
+    fn controlled_state_still_emits_events_without_mutating_local_snapshot() {
+        let mut harness = YewHarness::new_controlled();
+        let initial_value = harness.state.checked();
+
+        let expected_change = expected_change(&harness.props, &harness.state);
+        let change = harness.simulate_change();
+        assert_eq!(change, expected_change);
+        assert_eq!(harness.state.checked(), initial_value);
+
+        let (expected_key, expected_key_change) = harness.simulate_key(ControlKey::Space);
+        assert_eq!(harness.state.checked(), initial_value);
+
+        let telemetry = harness.telemetry_events.borrow();
+        assert_eq!(telemetry.len(), 3);
+        assert_eq!(
+            telemetry[0],
+            CheckboxTelemetryEvent::Change(expected_change.clone())
+        );
+        assert_eq!(
+            telemetry[1],
+            CheckboxTelemetryEvent::Key(expected_key.clone())
+        );
+        assert_eq!(
+            telemetry[2],
+            CheckboxTelemetryEvent::Change(expected_key_change.clone())
+        );
+        drop(telemetry);
+
+        let changes = harness.change_events.borrow();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0], expected_change);
+        assert_eq!(changes[1], expected_key_change);
+    }
 }
 
 #[cfg(feature = "leptos")]
@@ -343,6 +388,14 @@ mod leptos_tests {
 
     impl LeptosHarness {
         fn new() -> Self {
+            Self::new_with_state(CheckboxState::uncontrolled(false, false))
+        }
+
+        fn new_controlled() -> Self {
+            Self::new_with_state(CheckboxState::controlled(false, false))
+        }
+
+        fn new_with_state(state: CheckboxState) -> Self {
             let contexts = Arc::new(Mutex::new(Vec::new()));
             let mut props = CheckboxProps::new("Release automation");
             props.telemetry = instrumented_hooks(
@@ -350,8 +403,6 @@ mod leptos_tests {
                 "automation::checkbox::leptos",
                 &contexts,
             );
-            let state = CheckboxState::uncontrolled(false, false);
-
             let telemetry_events = Rc::new(RefCell::new(Vec::new()));
             let telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = {
                 let events = Rc::clone(&telemetry_events);
@@ -433,7 +484,9 @@ mod leptos_tests {
             let payload = expected_change(&self.props, &self.state);
             (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(payload.clone()));
             (self.on_change)(payload.clone());
-            self.state.toggle(|_| {});
+            if !self.state.is_controlled() {
+                self.state.toggle(|_| {});
+            }
             payload
         }
 
@@ -460,7 +513,9 @@ mod leptos_tests {
             (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(change_payload.clone()));
             (self.on_key)(key_payload.clone());
             (self.on_change)(change_payload.clone());
-            self.state.on_key(key, |_| {});
+            if !self.state.is_controlled() {
+                self.state.on_key(key, |_| {});
+            }
             (key_payload, change_payload)
         }
     }
@@ -538,6 +593,41 @@ mod leptos_tests {
         assert_eq!(key_events.len(), 1);
         assert_eq!(key_events[0], expected_key);
     }
+
+    #[test]
+    fn controlled_state_still_emits_events_without_mutating_local_snapshot() {
+        let mut harness = LeptosHarness::new_controlled();
+        let initial_value = harness.state.checked();
+
+        let expected_change = expected_change(&harness.props, &harness.state);
+        let change = harness.simulate_change();
+        assert_eq!(change, expected_change);
+        assert_eq!(harness.state.checked(), initial_value);
+
+        let (expected_key, expected_key_change) = harness.simulate_key(ControlKey::Space);
+        assert_eq!(harness.state.checked(), initial_value);
+
+        let telemetry = harness.telemetry_events.borrow();
+        assert_eq!(telemetry.len(), 3);
+        assert_eq!(
+            telemetry[0],
+            CheckboxTelemetryEvent::Change(expected_change.clone())
+        );
+        assert_eq!(
+            telemetry[1],
+            CheckboxTelemetryEvent::Key(expected_key.clone())
+        );
+        assert_eq!(
+            telemetry[2],
+            CheckboxTelemetryEvent::Change(expected_key_change.clone())
+        );
+        drop(telemetry);
+
+        let changes = harness.change_events.borrow();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0], expected_change);
+        assert_eq!(changes[1], expected_key_change);
+    }
 }
 
 #[cfg(feature = "dioxus")]
@@ -564,6 +654,14 @@ mod dioxus_tests {
 
     impl DioxusHarness {
         fn new() -> Self {
+            Self::new_with_state(CheckboxState::uncontrolled(false, false))
+        }
+
+        fn new_controlled() -> Self {
+            Self::new_with_state(CheckboxState::controlled(false, false))
+        }
+
+        fn new_with_state(state: CheckboxState) -> Self {
             let contexts = Arc::new(Mutex::new(Vec::new()));
             let mut props = CheckboxProps::new("Nightly deployments");
             props.telemetry = instrumented_hooks(
@@ -571,7 +669,6 @@ mod dioxus_tests {
                 "automation::checkbox::dioxus",
                 &contexts,
             );
-            let state = CheckboxState::uncontrolled(false, false);
 
             let telemetry_events = Rc::new(RefCell::new(Vec::new()));
             let telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = {
@@ -648,7 +745,9 @@ mod dioxus_tests {
             let payload = expected_change(&self.props, &self.state);
             (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(payload.clone()));
             (self.on_change)(payload.clone());
-            self.state.toggle(|_| {});
+            if !self.state.is_controlled() {
+                self.state.toggle(|_| {});
+            }
             payload
         }
 
@@ -675,7 +774,9 @@ mod dioxus_tests {
             (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(change_payload.clone()));
             (self.on_key)(key_payload.clone());
             (self.on_change)(change_payload.clone());
-            self.state.on_key(key, |_| {});
+            if !self.state.is_controlled() {
+                self.state.on_key(key, |_| {});
+            }
             (key_payload, change_payload)
         }
     }
@@ -753,6 +854,41 @@ mod dioxus_tests {
         assert_eq!(key_events.len(), 1);
         assert_eq!(key_events[0], expected_key);
     }
+
+    #[test]
+    fn controlled_state_still_emits_events_without_mutating_local_snapshot() {
+        let mut harness = DioxusHarness::new_controlled();
+        let initial_value = harness.state.checked();
+
+        let expected_change = expected_change(&harness.props, &harness.state);
+        let change = harness.simulate_change();
+        assert_eq!(change, expected_change);
+        assert_eq!(harness.state.checked(), initial_value);
+
+        let (expected_key, expected_key_change) = harness.simulate_key(ControlKey::Space);
+        assert_eq!(harness.state.checked(), initial_value);
+
+        let telemetry = harness.telemetry_events.borrow();
+        assert_eq!(telemetry.len(), 3);
+        assert_eq!(
+            telemetry[0],
+            CheckboxTelemetryEvent::Change(expected_change.clone())
+        );
+        assert_eq!(
+            telemetry[1],
+            CheckboxTelemetryEvent::Key(expected_key.clone())
+        );
+        assert_eq!(
+            telemetry[2],
+            CheckboxTelemetryEvent::Change(expected_key_change.clone())
+        );
+        drop(telemetry);
+
+        let changes = harness.change_events.borrow();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0], expected_change);
+        assert_eq!(changes[1], expected_key_change);
+    }
 }
 
 #[cfg(feature = "sycamore")]
@@ -779,6 +915,14 @@ mod sycamore_tests {
 
     impl SycamoreHarness {
         fn new() -> Self {
+            Self::new_with_state(CheckboxState::uncontrolled(false, false))
+        }
+
+        fn new_controlled() -> Self {
+            Self::new_with_state(CheckboxState::controlled(false, false))
+        }
+
+        fn new_with_state(state: CheckboxState) -> Self {
             let contexts = Arc::new(Mutex::new(Vec::new()));
             let mut props = CheckboxProps::new("Finance approvals");
             props.telemetry = instrumented_hooks(
@@ -786,7 +930,6 @@ mod sycamore_tests {
                 "automation::checkbox::sycamore",
                 &contexts,
             );
-            let state = CheckboxState::uncontrolled(false, false);
 
             let telemetry_events = Rc::new(RefCell::new(Vec::new()));
             let telemetry_delegate: Rc<dyn Fn(CheckboxTelemetryEvent)> = {
@@ -867,7 +1010,9 @@ mod sycamore_tests {
             let payload = expected_change(&self.props, &self.state);
             (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(payload.clone()));
             (self.on_change)(payload.clone());
-            self.state.toggle(|_| {});
+            if !self.state.is_controlled() {
+                self.state.toggle(|_| {});
+            }
             payload
         }
 
@@ -894,7 +1039,9 @@ mod sycamore_tests {
             (self.telemetry_delegate)(CheckboxTelemetryEvent::Change(change_payload.clone()));
             (self.on_key)(key_payload.clone());
             (self.on_change)(change_payload.clone());
-            self.state.on_key(key, |_| {});
+            if !self.state.is_controlled() {
+                self.state.on_key(key, |_| {});
+            }
             (key_payload, change_payload)
         }
     }
@@ -971,5 +1118,40 @@ mod sycamore_tests {
         let key_events = harness.key_events.borrow();
         assert_eq!(key_events.len(), 1);
         assert_eq!(key_events[0], expected_key);
+    }
+
+    #[test]
+    fn controlled_state_still_emits_events_without_mutating_local_snapshot() {
+        let mut harness = SycamoreHarness::new_controlled();
+        let initial_value = harness.state.checked();
+
+        let expected_change = expected_change(&harness.props, &harness.state);
+        let change = harness.simulate_change();
+        assert_eq!(change, expected_change);
+        assert_eq!(harness.state.checked(), initial_value);
+
+        let (expected_key, expected_key_change) = harness.simulate_key(ControlKey::Space);
+        assert_eq!(harness.state.checked(), initial_value);
+
+        let telemetry = harness.telemetry_events.borrow();
+        assert_eq!(telemetry.len(), 3);
+        assert_eq!(
+            telemetry[0],
+            CheckboxTelemetryEvent::Change(expected_change.clone())
+        );
+        assert_eq!(
+            telemetry[1],
+            CheckboxTelemetryEvent::Key(expected_key.clone())
+        );
+        assert_eq!(
+            telemetry[2],
+            CheckboxTelemetryEvent::Change(expected_key_change.clone())
+        );
+        drop(telemetry);
+
+        let changes = harness.change_events.borrow();
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0], expected_change);
+        assert_eq!(changes[1], expected_key_change);
     }
 }
