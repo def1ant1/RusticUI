@@ -5314,12 +5314,17 @@ pub mod sycamore {
         })
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, feature = "sycamore"))]
     mod tests {
         use super::*;
 
+        /// Telemetry harness shared by every test so we only wire the Rc/RefCell
+        /// plumbing once.  Each buffer mirrors the analytics-first lifecycle the
+        /// documentation promises, letting the assertions focus on sequencing
+        /// guarantees instead of bespoke fixtures.
         struct Harness {
             state: Rc<RefCell<RadioGroupState>>,
+            #[allow(dead_code)]
             options: Rc<Vec<RadioOptionSnapshot>>,
             order: Rc<RefCell<Vec<String>>>,
             telemetry_events: Rc<RefCell<Vec<RadioTelemetryEvent>>>,
@@ -5331,6 +5336,9 @@ pub mod sycamore {
         }
 
         impl Harness {
+            /// Instantiate a controlled or uncontrolled state machine, cloning the
+            /// descriptor snapshot once so every zero-argument runner shares the
+            /// same telemetry delegates and callback ordering.
             fn new(controlled: bool) -> Self {
                 let state = if controlled {
                     RadioGroupState::controlled(
@@ -5444,6 +5452,7 @@ pub mod sycamore {
 
             let telemetry = harness.telemetry_events.borrow();
             assert_eq!(telemetry.len(), 3);
+            // Analytics → Change → Commit mirrors the documented lifecycle.
             assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
             assert!(matches!(
                 telemetry[1],
@@ -5474,10 +5483,12 @@ pub mod sycamore {
             let handlers = harness.builder.build(2);
             handlers.select();
 
+            // Controlled adapters must not mutate the headless state machine.
             assert_eq!(harness.state.borrow().selected_index(), Some(0));
 
             let telemetry = harness.telemetry_events.borrow();
             assert_eq!(telemetry.len(), 3);
+            // Commit still reports the persisted controlled value for auditing.
             assert!(matches!(
                 telemetry[1],
                 RadioTelemetryEvent::Change(ref evt) if evt.next == 2
@@ -5500,6 +5511,7 @@ pub mod sycamore {
             handlers.focus();
             assert_eq!(harness.state.borrow().focus_visible_index(), Some(1));
             handlers.blur();
+
             assert_eq!(harness.state.borrow().focus_visible_index(), None);
 
             let focus_events = harness.focus_events.borrow();
@@ -5513,6 +5525,7 @@ pub mod sycamore {
             drop(blur_events);
 
             let telemetry = harness.telemetry_events.borrow();
+            // Both focus and blur lifecycles start with analytics payloads.
             assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
             assert!(matches!(telemetry[1], RadioTelemetryEvent::Focus(_)));
             assert!(matches!(telemetry[2], RadioTelemetryEvent::Analytics(_)));
@@ -5539,6 +5552,7 @@ pub mod sycamore {
 
             let telemetry = harness.telemetry_events.borrow();
             assert_eq!(telemetry.len(), 6);
+            // Analytics leads the sequence, followed by key/focus/blur/change/commit.
             assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
             assert!(matches!(telemetry[1], RadioTelemetryEvent::Key(_)));
             assert!(matches!(telemetry[2], RadioTelemetryEvent::Focus(_)));
@@ -5561,6 +5575,47 @@ pub mod sycamore {
             assert!(order[5].starts_with("telemetry::Commit"));
             assert_eq!(order[6], "callback::key");
             assert_eq!(order[7], "callback::change");
+        }
+
+        #[test]
+        fn controlled_keyboard_navigation_preserves_selected_index() {
+            let harness = Harness::new(true);
+            let handlers = harness.builder.build(0);
+            handlers.key(ControlKey::ArrowRight);
+
+            // Controlled mode leaves the selection untouched while still emitting telemetry.
+            assert_eq!(harness.state.borrow().selected_index(), Some(0));
+
+            let telemetry = harness.telemetry_events.borrow();
+            assert_eq!(telemetry.len(), 6);
+            assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
+            assert!(matches!(telemetry[1], RadioTelemetryEvent::Key(_)));
+            assert!(matches!(telemetry[2], RadioTelemetryEvent::Focus(_)));
+            assert!(matches!(telemetry[3], RadioTelemetryEvent::Blur(_)));
+            assert!(matches!(
+                telemetry[4],
+                RadioTelemetryEvent::Change(ref evt) if evt.next == 1
+            ));
+            assert!(matches!(
+                telemetry[5],
+                RadioTelemetryEvent::Commit(ref evt) if evt.selected == Some(0)
+            ));
+            drop(telemetry);
+
+            let order = harness.order.borrow();
+            assert_eq!(order.len(), 8);
+            assert!(order[0].starts_with("telemetry::Analytics"));
+            assert!(order[1].starts_with("telemetry::Key"));
+            assert!(order[2].starts_with("telemetry::Focus"));
+            assert!(order[3].starts_with("telemetry::Blur"));
+            assert!(order[4].starts_with("telemetry::Change"));
+            assert!(order[5].starts_with("telemetry::Commit"));
+            assert_eq!(order[6], "callback::key");
+            assert_eq!(order[7], "callback::change");
+
+            let changes = harness.change_events.borrow();
+            assert_eq!(changes.len(), 1);
+            assert_eq!(changes[0].next, 1);
         }
 
         #[test]

@@ -81,9 +81,14 @@ cargo test -p rustic-ui-material --test joy_dioxus --features dioxus
 # Sycamore parity
 cargo test -p rustic-ui-material --test joy_sycamore --features sycamore
 cargo test -p rustic-ui-material sycamore:: --features sycamore
+# Sycamore telemetry harnesses (wasm32)
+rustup target add wasm32-unknown-unknown
+cargo test --features sycamore -p rustic-ui-material sycamore::telemetry --target wasm32-unknown-unknown -- --nocapture
 ```
 
 Each suite consumes the shared fixtures in `crates/rustic-ui-material/tests/common/fixtures.rs` so updating the canonical props or Joy analytics hooks automatically propagates across frameworks.
+
+Install the `wasm32-unknown-unknown` target before running the suites; the Sycamore feature relies on the web backend exposed under `sycamore::web`, and the telemetry harnesses expect that backend even though they stub out runtime scheduling. Enable the `sycamore` feature flag so the zero-allocation handlers that power the Sycamore `view!` macros and their analytics-first tests are compiled.
 
 ### Yew adapter telemetry harnesses
 The Material telemetry harnesses for Yew live alongside the adapters so governance teams can assert analytics ordering without spinning up React parity checks. Because the tests emit synthetic `web_sys` events, they must execute against the `wasm32-unknown-unknown` target with the `wasm-bindgen-test` runner enabled:
