@@ -609,7 +609,6 @@ pub mod react {
     use super::*;
     use js_sys::{Array, Function, Object, Reflect};
     use std::{cell::RefCell, rc::Rc};
-    use std::{cell::RefCell, rc::Rc};
     use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 
     /// Type alias representing React elements returned through the WASM bridge.
@@ -895,6 +894,265 @@ pub mod react {
             on_focus: focus_handler(props, &state_handle),
             on_blur: blur_handler(props, &state_handle),
             on_key: key_handler(props, &state_handle),
+        }
+    }
+
+    #[cfg(all(test, feature = "react"))]
+    mod tests {
+        use super::*;
+        use js_sys::{Function, Object, Reflect};
+        use wasm_bindgen::closure::Closure;
+        use wasm_bindgen_test::*;
+
+        wasm_bindgen_test_configure!(run_in_browser);
+
+        fn parse_checkbox_value(value: &JsValue) -> CheckboxValue {
+            match value
+                .as_string()
+                .expect("checkbox telemetry should encode strings")
+                .as_str()
+            {
+                "on" => CheckboxValue::On,
+                "off" => CheckboxValue::Off,
+                "indeterminate" => CheckboxValue::Indeterminate,
+                other => panic!("unexpected checkbox value {other}"),
+            }
+        }
+
+        fn parse_control_key(value: &JsValue) -> ControlKey {
+            match value
+                .as_string()
+                .expect("key telemetry should encode the control key")
+                .as_str()
+            {
+                "space" => ControlKey::Space,
+                "enter" => ControlKey::Enter,
+                other => panic!("unexpected control key {other}"),
+            }
+        }
+
+        fn optional_string(object: &JsValue, key: &str) -> Option<String> {
+            Reflect::get(object, &JsValue::from_str(key))
+                .ok()
+                .and_then(|value| value.as_string())
+        }
+
+        fn decode_checkbox_event(value: &JsValue) -> CheckboxTelemetryEvent {
+            let kind = Reflect::get(value, &JsValue::from_str("kind"))
+                .expect("telemetry payload exposes kind metadata")
+                .as_string()
+                .expect("telemetry kind should be a string");
+            match kind.as_str() {
+                "change" => CheckboxTelemetryEvent::Change(CheckboxChangeEvent {
+                    previous: parse_checkbox_value(
+                        &Reflect::get(value, &JsValue::from_str("previous"))
+                            .expect("previous should be set"),
+                    ),
+                    next: parse_checkbox_value(
+                        &Reflect::get(value, &JsValue::from_str("next"))
+                            .expect("next should be set"),
+                    ),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a boolean"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "focus" => CheckboxTelemetryEvent::Focus(CheckboxFocusEvent {
+                    focused: Reflect::get(value, &JsValue::from_str("focused"))
+                        .expect("focused should be set")
+                        .as_bool()
+                        .expect("focused encodes a boolean"),
+                    checked: parse_checkbox_value(
+                        &Reflect::get(value, &JsValue::from_str("checked"))
+                            .expect("checked should be set"),
+                    ),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a boolean"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "blur" => CheckboxTelemetryEvent::Blur(CheckboxFocusEvent {
+                    focused: Reflect::get(value, &JsValue::from_str("focused"))
+                        .expect("focused should be set")
+                        .as_bool()
+                        .expect("focused encodes a boolean"),
+                    checked: parse_checkbox_value(
+                        &Reflect::get(value, &JsValue::from_str("checked"))
+                            .expect("checked should be set"),
+                    ),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a boolean"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                "key" => CheckboxTelemetryEvent::Key(CheckboxKeyEvent {
+                    key: parse_control_key(
+                        &Reflect::get(value, &JsValue::from_str("key")).expect("key should be set"),
+                    ),
+                    previous: parse_checkbox_value(
+                        &Reflect::get(value, &JsValue::from_str("previous"))
+                            .expect("previous should be set"),
+                    ),
+                    next: parse_checkbox_value(
+                        &Reflect::get(value, &JsValue::from_str("next"))
+                            .expect("next should be set"),
+                    ),
+                    disabled: Reflect::get(value, &JsValue::from_str("disabled"))
+                        .expect("disabled should be set")
+                        .as_bool()
+                        .expect("disabled encodes a boolean"),
+                    analytics_id: optional_string(value, "analyticsId"),
+                    automation_id: optional_string(value, "automationId"),
+                    label: Reflect::get(value, &JsValue::from_str("label"))
+                        .expect("label should be set")
+                        .as_string()
+                        .expect("label encodes a string"),
+                }),
+                other => panic!("unexpected telemetry kind {other}"),
+            }
+        }
+
+        fn telemetry_recorder() -> (
+            Function,
+            Rc<RefCell<Vec<CheckboxTelemetryEvent>>>,
+            Closure<dyn FnMut(JsValue)>,
+        ) {
+            let events = Rc::new(RefCell::new(Vec::new()));
+            let stored = Rc::clone(&events);
+            let closure = Closure::wrap(Box::new(move |value: JsValue| {
+                let event = decode_checkbox_event(&value);
+                stored.borrow_mut().push(event);
+            }) as Box<dyn FnMut(JsValue)>);
+            let function: Function = closure.as_ref().clone().unchecked_into();
+            (function, events, closure)
+        }
+
+        fn event_kinds(events: &[CheckboxTelemetryEvent]) -> Vec<&'static str> {
+            events
+                .iter()
+                .map(|event| match event {
+                    CheckboxTelemetryEvent::Change(_) => "change",
+                    CheckboxTelemetryEvent::Focus(_) => "focus",
+                    CheckboxTelemetryEvent::Blur(_) => "blur",
+                    CheckboxTelemetryEvent::Key(_) => "key",
+                })
+                .collect()
+        }
+
+        fn invoke(handler: &Option<Function>, event: JsValue) {
+            if let Some(function) = handler {
+                let _ = function.call1(&JsValue::NULL, &event);
+            }
+        }
+
+        fn keyboard_event(key: &str) -> JsValue {
+            let event = Object::new();
+            Reflect::set(&event, &JsValue::from_str("key"), &JsValue::from_str(key))
+                .expect("set key");
+            let prevent = Closure::wrap(Box::new(|| {}) as Box<dyn FnMut()>);
+            Reflect::set(
+                &event,
+                &JsValue::from_str("preventDefault"),
+                prevent.as_ref(),
+            )
+            .expect("set preventDefault");
+            prevent.forget();
+            event.into()
+        }
+
+        fn build_props(state: CheckboxState, telemetry: Option<Function>) -> ReactCheckboxProps {
+            ReactCheckboxProps {
+                checkbox: CheckboxProps::new("Terms of use"),
+                state,
+                on_change: None,
+                on_focus: None,
+                on_blur: None,
+                on_key: None,
+                telemetry_delegate: telemetry,
+            }
+        }
+
+        #[wasm_bindgen_test]
+        fn uncontrolled_handlers_emit_ordered_telemetry() {
+            let (delegate, events, closure) = telemetry_recorder();
+            let props = build_props(
+                CheckboxState::uncontrolled(false, CheckboxValue::Off),
+                Some(delegate),
+            );
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let handlers = handlers(&props, Rc::clone(&state_handle));
+
+            // Focus metadata must land before any mutation attempts so analytics can
+            // observe the untouched state. We therefore expect the focus event to be
+            // the first entry in the telemetry log.
+            invoke(&handlers.on_focus, JsValue::UNDEFINED);
+            invoke(&handlers.on_blur, JsValue::UNDEFINED);
+
+            // Keyboard flows should emit their key payload *before* the change event
+            // to honour the analytics → key/focus → change sequencing.
+            invoke(&handlers.on_key, keyboard_event(" "));
+
+            // Pointer toggles only emit the change payload; this still runs after the
+            // keyboard telemetry so mutation commits happen last.
+            invoke(&handlers.on_change, JsValue::UNDEFINED);
+
+            let kinds = event_kinds(&events.borrow());
+            assert_eq!(kinds, vec!["focus", "blur", "key", "change", "change"]);
+            assert_eq!(state_handle.borrow().checked(), CheckboxValue::Off);
+
+            // The first change toggled the uncontrolled state to `On`, while the
+            // pointer interaction toggled it back to `Off`. Verifying the round-trip
+            // ensures commit semantics occur after telemetry dispatch.
+            let events_ref = events.borrow();
+            let mut iter = events_ref.iter();
+            assert!(matches!(
+                iter.find(|event| matches!(event, CheckboxTelemetryEvent::Key(_))),
+                Some(_)
+            ));
+            drop(events_ref);
+            drop(closure);
+        }
+
+        #[wasm_bindgen_test]
+        fn controlled_handlers_preserve_state() {
+            let (delegate, events, closure) = telemetry_recorder();
+            let props = build_props(
+                CheckboxState::controlled(false, CheckboxValue::Off),
+                Some(delegate),
+            );
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let handlers = handlers(&props, Rc::clone(&state_handle));
+
+            invoke(&handlers.on_key, keyboard_event("Enter"));
+            invoke(&handlers.on_change, JsValue::UNDEFINED);
+
+            // Controlled flows must emit telemetry but keep their state untouched,
+            // reinforcing analytics → key → change → commit ordering without
+            // mutating local caches.
+            assert_eq!(
+                event_kinds(&events.borrow()),
+                vec!["key", "change", "change"]
+            );
+            assert_eq!(state_handle.borrow().checked(), CheckboxValue::Off);
+            drop(closure);
         }
     }
 

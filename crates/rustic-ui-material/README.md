@@ -49,6 +49,27 @@ disabled by default so applications opt in explicitly:
 See the [Cargo feature guide](../../docs/cargo-features.md) for examples of
 disabling defaults and enabling only the framework your application requires.
 
+## WebAssembly test harness
+
+Enterprise teams frequently validate React bindings inside the WebAssembly
+target to guarantee the `wasm_bindgen` bridges and telemetry delegates behave as
+expected. The crate ships a convenience alias so there is no bespoke scripting
+required to exercise the suite:
+
+```bash
+# one-time toolchain setup
+rustup target add wasm32-unknown-unknown
+
+# execute every React adapter test (including the new telemetry assertions)
+cargo wasm-react-test
+```
+
+The alias expands to `cargo test --target wasm32-unknown-unknown --features
+react`, keeping CI and local workflows aligned without copy/pasting the verbose
+command. The tests depend on [`wasm-bindgen-test`], so running them in a browser
+enabled environment (headless or via `wasm_bindgen_test_configure!(run_in_browser)`) is
+fully supported.
+
 ## Feedback primitives (Tooltip & Chip)
 
 Enterprise telemetry, accessibility, and automation pipelines lean heavily on
