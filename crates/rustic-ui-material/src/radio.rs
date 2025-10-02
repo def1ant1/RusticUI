@@ -2339,6 +2339,410 @@ pub mod yew {
             node
         })
     }
+
+    #[cfg(all(test, feature = "yew"))]
+    mod tests {
+        use super::*;
+        use ::yew::{virtual_dom::Listener, Callback};
+        use wasm_bindgen_test::*;
+        use web_sys::{
+            Event as WebEvent, FocusEvent as WebFocusEvent, KeyboardEvent as WebKeyboardEvent,
+            KeyboardEventInit, MouseEvent as WebMouseEvent,
+        };
+
+        wasm_bindgen_test_configure!(run_in_browser);
+
+        struct RadioHarness {
+            telemetry: Rc<RefCell<Vec<RadioTelemetryEvent>>>,
+            changes: Rc<RefCell<Vec<RadioChangeEvent>>>,
+            focuses: Rc<RefCell<Vec<RadioFocusEvent>>>,
+            blurs: Rc<RefCell<Vec<RadioFocusEvent>>>,
+            keys: Rc<RefCell<Vec<RadioKeyEvent>>>,
+        }
+
+        impl RadioHarness {
+            fn new() -> Self {
+                Self {
+                    telemetry: Rc::new(RefCell::new(Vec::new())),
+                    changes: Rc::new(RefCell::new(Vec::new())),
+                    focuses: Rc::new(RefCell::new(Vec::new())),
+                    blurs: Rc::new(RefCell::new(Vec::new())),
+                    keys: Rc::new(RefCell::new(Vec::new())),
+                }
+            }
+        }
+
+        fn build_props(controlled: bool) -> (YewRadioGroupProps, RadioHarness) {
+            let labels = vec!["Alpha".to_string(), "Beta".to_string()];
+            let mut group = RadioGroupProps::new(labels.clone());
+            group.telemetry.analytics_id = Some(format!("radio.group.analytics.{controlled}"));
+            group.telemetry.automation_id = Some(format!("radio.group.automation.{controlled}"));
+
+            let telemetry = TelemetryHooks {
+                analytics_id: Some(format!("radio.props.analytics.{controlled}")),
+                automation_id: Some(format!("radio.props.automation.{controlled}")),
+                ..TelemetryHooks::default()
+            };
+
+            let state = if controlled {
+                RadioGroupState::controlled(
+                    labels.clone(),
+                    false,
+                    RadioOrientation::Horizontal,
+                    Some(0),
+                )
+            } else {
+                RadioGroupState::uncontrolled(
+                    labels.clone(),
+                    false,
+                    RadioOrientation::Horizontal,
+                    None,
+                )
+            };
+
+            let harness = RadioHarness::new();
+
+            let props = YewRadioGroupProps {
+                group,
+                state,
+                telemetry,
+                on_change: Some({
+                    let sink = Rc::clone(&harness.changes);
+                    Callback::from(move |event: RadioChangeEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+                on_focus: Some({
+                    let sink = Rc::clone(&harness.focuses);
+                    Callback::from(move |event: RadioFocusEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+                on_blur: Some({
+                    let sink = Rc::clone(&harness.blurs);
+                    Callback::from(move |event: RadioFocusEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+                on_key: Some({
+                    let sink = Rc::clone(&harness.keys);
+                    Callback::from(move |event: RadioKeyEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+                telemetry_delegate: Some({
+                    let sink = Rc::clone(&harness.telemetry);
+                    Callback::from(move |event: RadioTelemetryEvent| {
+                        sink.borrow_mut().push(event);
+                    })
+                }),
+            };
+
+            (props, harness)
+        }
+
+        fn arrow_down_event() -> WebEvent {
+            let mut init = KeyboardEventInit::new();
+            init.key("ArrowDown");
+            init.bubbles(true);
+            init.cancelable(true);
+            WebKeyboardEvent::new_with_keyboard_event_init_dict("keydown", &init)
+                .expect("keyboard event should construct")
+                .into()
+        }
+
+        fn focus_event(kind: &str) -> WebEvent {
+            WebFocusEvent::new(kind)
+                .expect("focus event should construct")
+                .into()
+        }
+
+        fn click_event() -> WebEvent {
+            WebMouseEvent::new("click")
+                .expect("mouse event should construct")
+                .into()
+        }
+
+        /// Validates that uncontrolled handlers emit analytics → change → commit
+        /// before invoking consumers and that keyboard flows include the
+        /// documented analytics → key → focus → blur → change → commit cadence.
+        #[wasm_bindgen_test]
+        fn uncontrolled_option_handlers_emit_ordered_sequences() {
+            let (props, harness) = build_props(false);
+            let telemetry = super::merged_telemetry(&props.telemetry, &props.group.telemetry);
+            let (_context, _descriptor, snapshot) = super::descriptor_with_context(
+                "rustic_ui_material::radio::yew::tests::uncontrolled",
+                &props.group,
+                &telemetry,
+                &props.state,
+            );
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let options = Rc::new(snapshot.options.clone());
+            let builder = YewOptionHandlerBuilder::new(
+                Rc::clone(&state_handle),
+                Rc::clone(&options),
+                props.on_change.clone(),
+                props.on_focus.clone(),
+                props.on_blur.clone(),
+                props.on_key.clone(),
+                props.telemetry_delegate.clone(),
+            );
+            let handlers = builder.build(0);
+
+            handlers.onclick.handle(click_event());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    3,
+                    "pointer interaction emits analytics/change/commit"
+                );
+                assert!(matches!(telemetry[0], RadioTelemetryEvent::Analytics(_)));
+                match &telemetry[1] {
+                    RadioTelemetryEvent::Change(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.changes.borrow()[0],
+                            "change telemetry matches consumer payload",
+                        );
+                    }
+                    other => panic!("expected change telemetry, received {other:?}"),
+                }
+                match &telemetry[2] {
+                    RadioTelemetryEvent::Commit(event) => {
+                        assert_eq!(event.selected, Some(0));
+                        assert!(!event.controlled);
+                    }
+                    other => panic!("expected commit telemetry, received {other:?}"),
+                }
+            }
+            assert_eq!(
+                state_handle.borrow().selected_index(),
+                Some(0),
+                "uncontrolled pointer commits the requested selection",
+            );
+
+            handlers.onfocus.handle(focus_event("focus"));
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    5,
+                    "focus emits analytics + focus telemetry"
+                );
+                assert!(matches!(telemetry[3], RadioTelemetryEvent::Analytics(_)));
+                match &telemetry[4] {
+                    RadioTelemetryEvent::Focus(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.focuses.borrow()[0],
+                            "focus telemetry mirrors consumer payload",
+                        );
+                    }
+                    other => panic!("expected focus telemetry, received {other:?}"),
+                }
+            }
+            assert_eq!(
+                state_handle.borrow().focus_visible_index(),
+                Some(0),
+                "focus handler activates roving focus",
+            );
+
+            handlers.onblur.handle(focus_event("blur"));
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(telemetry.len(), 7, "blur emits analytics + blur telemetry");
+                assert!(matches!(telemetry[5], RadioTelemetryEvent::Analytics(_)));
+                match &telemetry[6] {
+                    RadioTelemetryEvent::Blur(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.blurs.borrow()[0],
+                            "blur telemetry mirrors consumer payload",
+                        );
+                    }
+                    other => panic!("expected blur telemetry, received {other:?}"),
+                }
+            }
+            assert_eq!(
+                state_handle.borrow().focus_visible_index(),
+                None,
+                "blur handler clears roving focus",
+            );
+
+            handlers.onkeydown.handle(arrow_down_event());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    13,
+                    "keyboard path emits analytics → key → focus → blur → change → commit",
+                );
+                assert!(matches!(telemetry[7], RadioTelemetryEvent::Analytics(_)));
+                match &telemetry[8] {
+                    RadioTelemetryEvent::Key(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.keys.borrow()[0],
+                            "key telemetry mirrors consumer payload",
+                        );
+                        assert_eq!(event.next, Some(1));
+                    }
+                    other => panic!("expected key telemetry, received {other:?}"),
+                }
+                match &telemetry[9] {
+                    RadioTelemetryEvent::Focus(event) => {
+                        assert_eq!(event.index, 1);
+                        assert!(event.focused);
+                    }
+                    other => panic!("expected focus telemetry for new option, received {other:?}"),
+                }
+                match &telemetry[10] {
+                    RadioTelemetryEvent::Blur(event) => {
+                        assert_eq!(event.index, 0);
+                        assert!(!event.focused);
+                    }
+                    other => {
+                        panic!("expected blur telemetry for origin option, received {other:?}")
+                    }
+                }
+                match &telemetry[11] {
+                    RadioTelemetryEvent::Change(event) => {
+                        assert_eq!(
+                            *event,
+                            harness.changes.borrow()[1],
+                            "keyboard change telemetry matches consumer payload",
+                        );
+                        assert_eq!(event.next, 1);
+                    }
+                    other => panic!(
+                        "expected change telemetry for keyboard selection, received {other:?}"
+                    ),
+                }
+                match &telemetry[12] {
+                    RadioTelemetryEvent::Commit(event) => {
+                        assert_eq!(event.selected, Some(1));
+                        assert!(!event.controlled);
+                    }
+                    other => panic!(
+                        "expected commit telemetry for keyboard selection, received {other:?}"
+                    ),
+                }
+            }
+            let state = state_handle.borrow();
+            assert_eq!(state.selected_index(), Some(1));
+            assert_eq!(state.focus_visible_index(), Some(1));
+        }
+
+        /// Demonstrates that controlled adapters emit telemetry without mutating
+        /// their cached [`RadioGroupState`] while still advancing roving focus.
+        #[wasm_bindgen_test]
+        fn controlled_option_handlers_preserve_selection() {
+            let (props, harness) = build_props(true);
+            let telemetry = super::merged_telemetry(&props.telemetry, &props.group.telemetry);
+            let (_context, _descriptor, snapshot) = super::descriptor_with_context(
+                "rustic_ui_material::radio::yew::tests::controlled",
+                &props.group,
+                &telemetry,
+                &props.state,
+            );
+            let state_handle = Rc::new(RefCell::new(props.state.clone()));
+            let options = Rc::new(snapshot.options.clone());
+            let builder = YewOptionHandlerBuilder::new(
+                Rc::clone(&state_handle),
+                Rc::clone(&options),
+                props.on_change.clone(),
+                props.on_focus.clone(),
+                props.on_blur.clone(),
+                props.on_key.clone(),
+                props.telemetry_delegate.clone(),
+            );
+            let handlers = builder.build(0);
+
+            handlers.onclick.handle(click_event());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    3,
+                    "controlled pointer emits analytics/change/commit"
+                );
+                match &telemetry[2] {
+                    RadioTelemetryEvent::Commit(event) => {
+                        assert_eq!(event.selected, Some(0));
+                        assert!(event.controlled);
+                    }
+                    other => panic!("expected commit telemetry, received {other:?}"),
+                }
+            }
+            assert_eq!(
+                state_handle.borrow().selected_index(),
+                Some(0),
+                "controlled pointer keeps the cached snapshot immutable",
+            );
+
+            handlers.onfocus.handle(focus_event("focus"));
+            handlers.onblur.handle(focus_event("blur"));
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert!(matches!(telemetry[3], RadioTelemetryEvent::Analytics(_)));
+                assert!(matches!(telemetry[4], RadioTelemetryEvent::Focus(_)));
+                assert!(matches!(telemetry[5], RadioTelemetryEvent::Analytics(_)));
+                assert!(matches!(telemetry[6], RadioTelemetryEvent::Blur(_)));
+            }
+            assert_eq!(
+                state_handle.borrow().focus_visible_index(),
+                None,
+                "blur clears focus visibility even when controlled",
+            );
+
+            handlers.onkeydown.handle(arrow_down_event());
+            {
+                let telemetry = harness.telemetry.borrow();
+                assert_eq!(
+                    telemetry.len(),
+                    13,
+                    "controlled keyboard emits full telemetry sequence"
+                );
+                match &telemetry[8] {
+                    RadioTelemetryEvent::Key(event) => {
+                        assert_eq!(event.next, Some(1));
+                        assert_eq!(
+                            *event,
+                            harness.keys.borrow()[0],
+                            "controlled key telemetry mirrors consumer payload",
+                        );
+                    }
+                    other => panic!("expected key telemetry, received {other:?}"),
+                }
+                match &telemetry[11] {
+                    RadioTelemetryEvent::Change(event) => {
+                        assert_eq!(event.next, 1);
+                        assert_eq!(
+                            *event,
+                            harness.changes.borrow()[1],
+                            "controlled change telemetry mirrors consumer payload",
+                        );
+                    }
+                    other => panic!("expected change telemetry, received {other:?}"),
+                }
+                match &telemetry[12] {
+                    RadioTelemetryEvent::Commit(event) => {
+                        assert_eq!(event.selected, Some(0));
+                        assert!(event.controlled);
+                    }
+                    other => panic!("expected commit telemetry, received {other:?}"),
+                }
+            }
+            let state = state_handle.borrow();
+            assert_eq!(state.selected_index(), Some(0));
+            assert_eq!(
+                state.focus_visible_index(),
+                Some(1),
+                "controlled key flow advances roving focus while selection remains caller-owned",
+            );
+        }
+    }
 }
 
 #[cfg(feature = "leptos")]
