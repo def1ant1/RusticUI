@@ -445,6 +445,15 @@ React consumers receive a JavaScript object describing each telemetry payload.
 structs. Register a single delegate to forward those events into your analytics
 provider for checkboxes, switches, and radios.【F:crates/rustic-ui-material/src/checkbox.rs†L600-L831】【F:crates/rustic-ui-material/src/switch.rs†L697-L882】【F:crates/rustic-ui-material/src/radio.rs†L480-L703】
 
+> **Enterprise focus management tip:** Even when a radio group is fully
+> controlled from React state, the adapter still calls
+> `RadioGroupState::on_key` internally so the roving `focus_visible_index()`
+> advances in lockstep with user intent. Telemetry emitted from controlled
+> keyboard flows therefore reports the upcoming option (via the `key.next` and
+> `change.next` fields) while the final `commit.selected` remains anchored to
+> your externally managed selection. This keeps analytics and automation logs
+> consistent without forcing additional glue code in product surfaces.
+
 ```tsx
 import {
   ReactCheckbox,
