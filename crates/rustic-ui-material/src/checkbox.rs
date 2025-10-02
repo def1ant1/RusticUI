@@ -738,7 +738,9 @@ pub mod react {
             }
             {
                 let mut state = state.borrow_mut();
-                state.toggle(|_| {});
+                if !state.is_controlled() {
+                    state.toggle(|_| {});
+                }
             }
         }) as Box<dyn FnMut(JsValue)>);
 
@@ -872,7 +874,9 @@ pub mod react {
 
                 {
                     let mut state = state.borrow_mut();
-                    state.on_key(key, |_| {});
+                    if !state.is_controlled() {
+                        state.on_key(key, |_| {});
+                    }
                 }
             }
         }) as Box<dyn FnMut(JsValue)>);
@@ -916,10 +920,12 @@ pub mod react {
     ///   precedes side effects, aligning with audit requirements in regulated
     ///   environments.
     /// * After telemetry delegates and consumer callbacks run, the captured
-    ///   [`CheckboxState`] is mutated via [`CheckboxState::toggle`],
+    ///   [`CheckboxState`] mutates via [`CheckboxState::toggle`],
     ///   [`CheckboxState::focus`], [`CheckboxState::blur`], and
-    ///   [`CheckboxState::on_key`] so UI transitions always flow through the
-    ///   shared headless state machine.
+    ///   [`CheckboxState::on_key`] whenever it owns its value. Controlled
+    ///   integrations trigger the same telemetry/change notifications but the
+    ///   bridge guards the mutation with [`CheckboxState::is_controlled`] so
+    ///   local snapshots stay in sync with external sources of truth.
     pub fn ReactCheckbox(props: &ReactCheckboxProps) -> Jsx {
         let (context, _descriptor, snapshot) = descriptor_with_context(
             "rustic_ui_material::checkbox::react::ReactCheckbox",
@@ -991,8 +997,10 @@ pub mod yew {
     ///   analytics capture consistently precedes consumer side effects.
     /// * After telemetry flows, the shared [`CheckboxState`] transitions via
     ///   [`CheckboxState::toggle`], [`CheckboxState::focus`],
-    ///   [`CheckboxState::blur`], and [`CheckboxState::on_key`] ensuring the UI
-    ///   always reflects the canonical headless state.
+    ///   [`CheckboxState::blur`], and [`CheckboxState::on_key`] whenever it owns
+    ///   its value. Controlled parents still receive telemetry/change
+    ///   callbacks, yet the bridge checks [`CheckboxState::is_controlled`] so
+    ///   the local snapshot stays untouched until the external owner syncs it.
     #[function_component(YewCheckbox)]
     pub fn yew_checkbox(props: &YewCheckboxProps) -> Html {
         let (context, _descriptor, snapshot) = descriptor_with_context(
@@ -1022,7 +1030,9 @@ pub mod yew {
                     }
                     {
                         let mut state = state.borrow_mut();
-                        state.toggle(|_| {});
+                        if !state.is_controlled() {
+                            state.toggle(|_| {});
+                        }
                     }
                 })
             };
@@ -1098,7 +1108,9 @@ pub mod yew {
                         }
                         {
                             let mut state = state.borrow_mut();
-                            state.on_key(control, |_| {});
+                            if !state.is_controlled() {
+                                state.on_key(control, |_| {});
+                            }
                         }
                     }
                 })
@@ -1160,8 +1172,11 @@ pub mod leptos {
     ///   telemetry delegate **before** executing user callbacks, keeping
     ///   analytics capture deterministic.
     /// * [`CheckboxState`] transitions (`toggle`/`focus`/`blur`/`on_key`) execute
-    ///   after telemetry delegates fire so the UI mutates through the shared
-    ///   headless state machine while preserving analytics ordering.
+    ///   after telemetry delegates fire whenever the checkbox owns its value, so
+    ///   the UI mutates through the shared headless state machine while
+    ///   preserving analytics ordering. Controlled flows emit the same telemetry
+    ///   yet skip the mutation because the bridge checks
+    ///   [`CheckboxState::is_controlled`], keeping host-owned truth authoritative.
     pub fn LeptosCheckbox(props: LeptosCheckboxProps) -> impl IntoView {
         let (context, _descriptor, snapshot) = descriptor_with_context(
             "rustic_ui_material::checkbox::leptos::LeptosCheckbox",
@@ -1197,7 +1212,9 @@ pub mod leptos {
                     }
                     {
                         let mut state = state.borrow_mut();
-                        state.toggle(|_| {});
+                        if !state.is_controlled() {
+                            state.toggle(|_| {});
+                        }
                     }
                 }
             };
@@ -1273,7 +1290,9 @@ pub mod leptos {
                         }
                         {
                             let mut state = state.borrow_mut();
-                            state.on_key(control, |_| {});
+                            if !state.is_controlled() {
+                                state.on_key(control, |_| {});
+                            }
                         }
                     }
                 }
@@ -1371,8 +1390,11 @@ pub mod dioxus {
     ///   analytics capture precedes business logic.
     /// * After telemetry dispatch, the shared [`CheckboxState`] transitions via
     ///   [`CheckboxState::toggle`], [`CheckboxState::focus`],
-    ///   [`CheckboxState::blur`], and [`CheckboxState::on_key`], guaranteeing all
-    ///   UI updates flow through the headless state machine.
+    ///   [`CheckboxState::blur`], and [`CheckboxState::on_key`] whenever it owns
+    ///   its value, guaranteeing UI updates flow through the headless state
+    ///   machine. Controlled consumers still receive telemetry/change payloads
+    ///   while the guard around [`CheckboxState::is_controlled`] prevents local
+    ///   mutation until hosts sync external truth.
     pub fn DioxusCheckbox(cx: Scope<DioxusCheckboxProps>) -> Element {
         let props = cx.props();
         let (context, _descriptor, snapshot) = descriptor_with_context(
@@ -1409,7 +1431,9 @@ pub mod dioxus {
                     }
                     {
                         let mut state = state.borrow_mut();
-                        state.toggle(|_| {});
+                        if !state.is_controlled() {
+                            state.toggle(|_| {});
+                        }
                     }
                 }
             };
@@ -1490,7 +1514,9 @@ pub mod dioxus {
                             }
                             {
                                 let mut state = state.borrow_mut();
-                                state.on_key(control, |_| {});
+                                if !state.is_controlled() {
+                                    state.on_key(control, |_| {});
+                                }
                             }
                         }
                     }
@@ -1555,8 +1581,11 @@ pub mod sycamore {
     /// with attribute metadata scopes the render span, telemetry delegates fire
     /// before consumer callbacks, and [`CheckboxState`] transitions occur via
     /// [`CheckboxState::toggle`], [`CheckboxState::focus`],
-    /// [`CheckboxState::blur`], and [`CheckboxState::on_key`] after analytics
-    /// capture so UI updates funnel through the shared headless state machine.
+    /// [`CheckboxState::blur`], and [`CheckboxState::on_key`] once analytics
+    /// capture completes **and** the state machine owns its value. Controlled
+    /// flows still emit telemetry/change callbacks, yet the guard around
+    /// [`CheckboxState::is_controlled`] keeps the local snapshot pristine until
+    /// hosts reconcile external truth.
     #[component]
     pub fn SycamoreCheckbox<G: Html>(cx: Scope, props: SycamoreCheckboxProps) -> Template<G> {
         let (context, _descriptor, snapshot) = descriptor_with_context(
@@ -1593,7 +1622,9 @@ pub mod sycamore {
                     }
                     {
                         let mut state = state.borrow_mut();
-                        state.toggle(|_| {});
+                        if !state.is_controlled() {
+                            state.toggle(|_| {});
+                        }
                     }
                 }
             };
@@ -1669,7 +1700,9 @@ pub mod sycamore {
                         }
                         {
                             let mut state = state.borrow_mut();
-                            state.on_key(control, |_| {});
+                            if !state.is_controlled() {
+                                state.on_key(control, |_| {});
+                            }
                         }
                     }
                 }
