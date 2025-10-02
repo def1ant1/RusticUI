@@ -2002,14 +2002,15 @@ pub mod yew {
 
                     let selected_after = Rc::new(RefCell::new(None));
                     {
-                        // Focus guard: borrow the state mutably only long enough to
-                        // delegate to the headless state machine.  Enterprise
-                        // governance teams audit this hand-off to confirm roving
-                        // focus is always updated by the canonical logic, even when
-                        // React/Yew consumers operate the component in controlled
-                        // mode.  By funnelling the key into `on_key` we capture the
-                        // callback-selected index for telemetry without taking over
-                        // ownership of the eventual commit.
+                        // Focus guard: we only hold the mutable borrow long enough
+                        // to stream the keystroke through the headless
+                        // [`RadioGroupState::on_key`].  Enterprise reviewers lean on
+                        // this choreography to prove that every renderer – Sycamore
+                        // included – sources its roving focus progression from the
+                        // canonical state machine.  The callback supplied to
+                        // `on_key` records the index requested by the headless
+                        // logic, ensuring telemetry mirrors the same navigation
+                        // contract auditors inspect during readiness reviews.
                         let mut state_mut = state.borrow_mut();
                         let recorder = Rc::clone(&selected_after);
                         state_mut.on_key(control, move |selected| {
@@ -2018,6 +2019,21 @@ pub mod yew {
                     }
 
                     let next_index = selected_after.borrow().copied();
+
+                    if controlled {
+                        if let Some(next_index) = next_index {
+                            // Controlled safeguard: the external owner remains in
+                            // charge of committing selection state, yet governance
+                            // requires the roving focus index to advance so SOC
+                            // dashboards can trace intent across renders.  We
+                            // re-enter the state machine momentarily to align the
+                            // visible focus with the callback supplied by
+                            // `on_key`, without mutating the caller owned
+                            // selection snapshot.
+                            let mut state_mut = state.borrow_mut();
+                            state_mut.focus(next_index);
+                        }
+                    }
 
                     let mut telemetry_events = Vec::with_capacity(6);
                     telemetry_events.push(analytics_event);

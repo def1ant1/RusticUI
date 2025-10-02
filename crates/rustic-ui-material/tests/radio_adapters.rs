@@ -482,7 +482,7 @@ where
     assert_eq!(key_event.next, Some(2));
     assert_eq!(harness.state.selected_index(), initial_selected);
 
-    let requires_focus_audit = matches!(framework, "yew" | "leptos" | "dioxus");
+    let requires_focus_audit = matches!(framework, "yew" | "leptos" | "dioxus" | "sycamore");
     if requires_focus_audit {
         // Enterprise governance expects controlled adapters to advance the roving
         // focus index even though the caller owns the commit.  Auditors review
@@ -629,6 +629,13 @@ mod sycamore_tests {
 
     #[test]
     fn controlled_mode_emits_telemetry_without_mutating_state() {
+        // Lifecycle contract: the harness first stages a pointer interaction to
+        // capture the read-only commit snapshot.  Arrow navigation follows so we
+        // can assert Sycamore relays the callback supplied by
+        // `RadioGroupState::on_key` into both the roving focus index and the
+        // emitted telemetry payloads.  Enterprise operations uses these checks to
+        // validate focus advancement, `focus_visible_index()` parity and SOC
+        // analytics wiring prior to production rollout.
         exercise_controlled_adapter("sycamore", radio::sycamore::render);
     }
 }
