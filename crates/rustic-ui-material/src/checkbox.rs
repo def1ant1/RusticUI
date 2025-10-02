@@ -29,6 +29,14 @@
 //! telemetry payloads without bolting on per-platform patches, keeping
 //! enterprise monitoring pipelines aligned across runtimes.
 //!
+//! The same `TelemetryHooks` handle higher-order enterprise observability.
+//! Teams pipe analytics beacons, focus transitions, state mutations, commit
+//! acknowledgements, and panic reports into centralized data planes by wiring
+//! closures into the new hook accessors on [`CheckboxProps`]. The props expose
+//! trait-object accessors so automated pipelines can subscribe once and receive
+//! uniform payloads across React, Yew, Leptos, Sycamore, and Dioxus surfaces
+//! without hand-coding framework-specific glue.
+//!
 //! Every adapter now exposes optional change/focus/blur/key callbacks alongside
 //! a telemetry delegate so large applications can bubble structured
 //! [`CheckboxTelemetryEvent`] payloads into centralized analytics collectors.
@@ -39,7 +47,11 @@
 
 use crate::{
     selection_control::{self, ToggleControlDescriptor},
-    telemetry::{instrument_render, TelemetryContext, TelemetryHooks},
+    telemetry::{
+        instrument_render, TelemetryAnalyticsCallback, TelemetryCommitCallback, TelemetryContext,
+        TelemetryErrorCallback, TelemetryFocusCallback, TelemetryHooks,
+        TelemetryStateChangeCallback,
+    },
 };
 use rustic_ui_headless::{
     checkbox::{CheckboxState, CheckboxValue},
@@ -212,11 +224,38 @@ pub struct CheckboxProps {
 
 impl CheckboxProps {
     /// Convenience constructor for tests and examples.
-    pub fn new(label: impl Into<String>) -> Self {
+    pub fn new(label: impl Into<String>, telemetry: TelemetryHooks) -> Self {
         Self {
             label: label.into(),
-            telemetry: TelemetryHooks::default(),
+            telemetry,
         }
+    }
+
+    /// Optional analytics hook configured on the shared [`TelemetryHooks`].
+    pub fn analytics_hook(&self) -> Option<&std::sync::Arc<TelemetryAnalyticsCallback>> {
+        self.telemetry.on_analytics.as_ref()
+    }
+
+    /// Optional focus transition hook configured on the shared
+    /// [`TelemetryHooks`].
+    pub fn focus_transition_hook(&self) -> Option<&std::sync::Arc<TelemetryFocusCallback>> {
+        self.telemetry.on_focus_transition.as_ref()
+    }
+
+    /// Optional state change hook configured on the shared [`TelemetryHooks`].
+    pub fn state_change_hook(&self) -> Option<&std::sync::Arc<TelemetryStateChangeCallback>> {
+        self.telemetry.on_state_change.as_ref()
+    }
+
+    /// Optional commit acknowledgement hook configured on the shared
+    /// [`TelemetryHooks`].
+    pub fn commit_ack_hook(&self) -> Option<&std::sync::Arc<TelemetryCommitCallback>> {
+        self.telemetry.on_commit_ack.as_ref()
+    }
+
+    /// Optional error hook configured on the shared [`TelemetryHooks`].
+    pub fn error_hook(&self) -> Option<&std::sync::Arc<TelemetryErrorCallback>> {
+        self.telemetry.on_error.as_ref()
     }
 }
 
@@ -1080,7 +1119,7 @@ pub mod react {
 
         fn build_props(state: CheckboxState, telemetry: Option<Function>) -> ReactCheckboxProps {
             ReactCheckboxProps {
-                checkbox: CheckboxProps::new("Terms of use"),
+                checkbox: CheckboxProps::new("Terms of use", TelemetryHooks::default()),
                 state,
                 on_change: None,
                 on_focus: None,
@@ -1898,7 +1937,8 @@ pub mod dioxus {
 
         impl Harness {
             fn new(controlled: bool) -> Self {
-                let checkbox = CheckboxProps::new("Dioxus checkbox telemetry");
+                let checkbox =
+                    CheckboxProps::new("Dioxus checkbox telemetry", TelemetryHooks::default());
                 let state = if controlled {
                     CheckboxState::controlled(false, CheckboxValue::Off)
                 } else {
@@ -2316,7 +2356,10 @@ mod tests {
     #[test]
     fn themed_attributes_include_role() {
         let state = CheckboxState::uncontrolled(false, true);
-        let attrs = build_descriptor(&CheckboxProps::new("Accept"), &state);
+        let attrs = build_descriptor(
+            &CheckboxProps::new("Accept", TelemetryHooks::default()),
+            &state,
+        );
         assert!(attrs
             .aria_attributes()
             .any(|(k, v)| k == "role" && v == "checkbox"));
@@ -2324,7 +2367,7 @@ mod tests {
 
     #[test]
     fn render_html_includes_label() {
-        let props = CheckboxProps::new("Accept");
+        let props = CheckboxProps::new("Accept", TelemetryHooks::default());
         let state = CheckboxState::uncontrolled(false, false);
         let html = render_html(&props, &state);
         assert!(html.contains(">Accept<"));
@@ -2334,7 +2377,7 @@ mod tests {
     #[test]
     fn telemetry_attributes_are_applied_when_provided() {
         let state = CheckboxState::uncontrolled(false, false);
-        let mut props = CheckboxProps::new("Instrumented");
+        let mut props = CheckboxProps::new("Instrumented", TelemetryHooks::default());
         props.telemetry.analytics_id = Some("analytics-42".into());
         props.telemetry.automation_id = Some("automation-42".into());
 

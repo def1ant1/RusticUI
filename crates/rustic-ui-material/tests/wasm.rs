@@ -291,7 +291,7 @@ async fn checkbox_accessibility_audit() {
 
     #[function_component(App)]
     fn app() -> Html {
-        let props = CheckboxProps::new("Email updates");
+        let props = CheckboxProps::new("Email updates", TelemetryHooks::default());
         let state = CheckboxState::uncontrolled(false, false);
         let markup =
             Html::from_html_unchecked(AttrValue::from(checkbox::yew::render(&props, &state)));
@@ -328,7 +328,7 @@ async fn radio_accessibility_audit() {
             RadioOrientation::Horizontal,
             Some(0),
         );
-        let props = RadioGroupProps::from_state(&state);
+        let props = RadioGroupProps::from_state(&state, TelemetryHooks::default());
         let markup = Html::from_html_unchecked(AttrValue::from(radio::yew::render(&props, &state)));
         html! {
             <ThemeProvider theme={Theme::default()}>
@@ -397,7 +397,7 @@ async fn radio_group_interactions_emit_telemetry() {
         RadioOrientation::Horizontal,
         Some(0),
     );
-    let mut group = RadioGroupProps::from_state(&state);
+    let mut group = RadioGroupProps::from_state(&state, TelemetryHooks::default());
     group.telemetry.analytics_id = Some("yew-radio-group".into());
     group.telemetry.automation_id = Some("yew-radio-automation".into());
 
@@ -533,7 +533,7 @@ async fn switch_accessibility_audit() {
     fn app() -> Html {
         let mut state = SwitchState::uncontrolled(false, false);
         state.focus();
-        let props = SwitchProps::new("Notifications");
+        let props = SwitchProps::new("Notifications", TelemetryHooks::default());
         let markup =
             Html::from_html_unchecked(AttrValue::from(switch::yew::render(&props, &state)));
         html! {

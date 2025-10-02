@@ -9,6 +9,15 @@
 //! each framework integration while giving enterprise applications a single
 //! struct they can configure to bolt analytics, tracing, and error
 //! collection into RusticUI widgets.
+//!
+//! In addition to the render lifecycle, the hooks surfaced here coordinate
+//! enterprise observability pipelines. Central platforms wire
+//! [`TelemetryHooks`] into selection controls and form inputs so analytics
+//! beacons, focus transitions, state mutations, backend commit
+//! acknowledgements, and panic handling all flow through a single
+//! thread-safe delegate. Doing so keeps CI/CD and SecOps dashboards aligned
+//! without forcing individual adapters to duplicate boilerplate each time a
+//! new sink (for example, a data lake or compliance archive) comes online.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -127,6 +136,61 @@ fn callback_eq<T: ?Sized>(lhs: &Option<Arc<T>>, rhs: &Option<Arc<T>>) -> bool {
     }
 }
 
+/// Normalised analytics payload broadcast to hooks so enterprise platforms can
+/// emit a consistent schema regardless of which widget originated the event.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TelemetryAnalyticsPayload {
+    /// Logical channel or stream name for the analytics beacon.
+    pub channel: String,
+    /// Arbitrary key/value metadata captured alongside the emission.
+    pub properties: BTreeMap<String, String>,
+}
+
+/// Focus transition payload shared between adapters and observability sinks.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TelemetryFocusPayload {
+    /// Whether focus is currently active for the instrumented widget.
+    pub focused: bool,
+    /// Arbitrary key/value metadata mirroring component state when focus
+    /// changed. This keeps downstream automation resilient to schema growth.
+    pub properties: BTreeMap<String, String>,
+}
+
+/// State mutation payload surfaced whenever selection controls change value.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TelemetryStateChangePayload {
+    /// Identifier describing the previous logical state.
+    pub previous: String,
+    /// Identifier describing the next logical state requested by the user.
+    pub next: String,
+    /// Arbitrary key/value metadata emitted with the transition.
+    pub properties: BTreeMap<String, String>,
+}
+
+/// Commit acknowledgement payload invoked when a backend confirms persistence.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TelemetryCommitPayload {
+    /// Optional correlation identifier for distributed tracing.
+    pub correlation_id: Option<String>,
+    /// Arbitrary key/value metadata captured with the acknowledgement.
+    pub properties: BTreeMap<String, String>,
+}
+
+/// Alias for analytics callbacks so adapters can downcast and share behaviour.
+pub type TelemetryAnalyticsCallback =
+    dyn Fn(TelemetryContext, TelemetryAnalyticsPayload) + Send + Sync + 'static;
+/// Alias for focus transition callbacks.
+pub type TelemetryFocusCallback =
+    dyn Fn(TelemetryContext, TelemetryFocusPayload) + Send + Sync + 'static;
+/// Alias for state change callbacks.
+pub type TelemetryStateChangeCallback =
+    dyn Fn(TelemetryContext, TelemetryStateChangePayload) + Send + Sync + 'static;
+/// Alias for commit acknowledgement callbacks.
+pub type TelemetryCommitCallback =
+    dyn Fn(TelemetryContext, TelemetryCommitPayload) + Send + Sync + 'static;
+/// Alias for error callbacks.
+pub type TelemetryErrorCallback = dyn Fn(TelemetryContext, TelemetryError) + Send + Sync + 'static;
+
 /// Configurable hooks invoked around adapter renders.
 #[derive(Clone, Default)]
 pub struct TelemetryHooks {
@@ -140,8 +204,17 @@ pub struct TelemetryHooks {
     pub span: Option<Span>,
     /// Callback executed when rendering succeeds.
     pub on_render: Option<Arc<dyn Fn(TelemetryContext) + Send + Sync + 'static>>,
+    /// Callback executed whenever an analytics payload is emitted by the
+    /// widget. Useful for batching events before forwarding to external sinks.
+    pub on_analytics: Option<Arc<TelemetryAnalyticsCallback>>,
+    /// Callback executed when focus transitions occur on the widget.
+    pub on_focus_transition: Option<Arc<TelemetryFocusCallback>>,
+    /// Callback executed when the widget transitions between logical states.
+    pub on_state_change: Option<Arc<TelemetryStateChangeCallback>>,
+    /// Callback executed when a backend acknowledges the requested mutation.
+    pub on_commit_ack: Option<Arc<TelemetryCommitCallback>>,
     /// Callback executed when rendering panics.
-    pub on_error: Option<Arc<dyn Fn(TelemetryContext, TelemetryError) + Send + Sync + 'static>>,
+    pub on_error: Option<Arc<TelemetryErrorCallback>>,
 }
 
 impl PartialEq for TelemetryHooks {
@@ -150,6 +223,10 @@ impl PartialEq for TelemetryHooks {
             && self.automation_id == other.automation_id
             && span_option_eq(&self.span, &other.span)
             && callback_eq(&self.on_render, &other.on_render)
+            && callback_eq(&self.on_analytics, &other.on_analytics)
+            && callback_eq(&self.on_focus_transition, &other.on_focus_transition)
+            && callback_eq(&self.on_state_change, &other.on_state_change)
+            && callback_eq(&self.on_commit_ack, &other.on_commit_ack)
             && callback_eq(&self.on_error, &other.on_error)
     }
 }
@@ -161,6 +238,22 @@ impl fmt::Debug for TelemetryHooks {
             .field("automation_id", &self.automation_id)
             .field("span", &self.span.as_ref().map(|_| "configured"))
             .field("on_render", &self.on_render.as_ref().map(|_| "callback"))
+            .field(
+                "on_analytics",
+                &self.on_analytics.as_ref().map(|_| "callback"),
+            )
+            .field(
+                "on_focus_transition",
+                &self.on_focus_transition.as_ref().map(|_| "callback"),
+            )
+            .field(
+                "on_state_change",
+                &self.on_state_change.as_ref().map(|_| "callback"),
+            )
+            .field(
+                "on_commit_ack",
+                &self.on_commit_ack.as_ref().map(|_| "callback"),
+            )
             .field("on_error", &self.on_error.as_ref().map(|_| "callback"))
             .finish()
     }

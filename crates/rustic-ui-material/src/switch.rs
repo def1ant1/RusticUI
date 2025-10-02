@@ -23,10 +23,20 @@
 //! precedes local side effects. Controlled integrations remain authoritative
 //! because every adapter checks [`SwitchState::is_controlled`] before mutating
 //! the cached state while still emitting telemetry and change callbacks.
+//!
+//! Enterprise teams can now wire analytics batching, focus visibility, state
+//! mutation, commit acknowledgement, and panic handling delegates through the
+//! hook accessors on [`SwitchProps`]. Doing so keeps compliance logging, SRE
+//! alerting, and growth dashboards synchronized without sprinkling repetitive
+//! wiring logic into every adapter.
 
 use crate::{
     selection_control::{self, ToggleControlDescriptor},
-    telemetry::{instrument_render, TelemetryContext, TelemetryHooks},
+    telemetry::{
+        instrument_render, TelemetryAnalyticsCallback, TelemetryCommitCallback, TelemetryContext,
+        TelemetryErrorCallback, TelemetryFocusCallback, TelemetryHooks,
+        TelemetryStateChangeCallback,
+    },
 };
 use rustic_ui_headless::{interaction::ControlKey, switch::SwitchState};
 use rustic_ui_styled_engine::{css_with_theme, Style};
@@ -46,11 +56,38 @@ pub struct SwitchProps {
 
 impl SwitchProps {
     /// Convenience constructor for tests and examples.
-    pub fn new(label: impl Into<String>) -> Self {
+    pub fn new(label: impl Into<String>, telemetry: TelemetryHooks) -> Self {
         Self {
             label: label.into(),
-            telemetry: TelemetryHooks::default(),
+            telemetry,
         }
+    }
+
+    /// Optional analytics hook configured on the shared [`TelemetryHooks`].
+    pub fn analytics_hook(&self) -> Option<&std::sync::Arc<TelemetryAnalyticsCallback>> {
+        self.telemetry.on_analytics.as_ref()
+    }
+
+    /// Optional focus transition hook configured on the shared
+    /// [`TelemetryHooks`].
+    pub fn focus_transition_hook(&self) -> Option<&std::sync::Arc<TelemetryFocusCallback>> {
+        self.telemetry.on_focus_transition.as_ref()
+    }
+
+    /// Optional state change hook configured on the shared [`TelemetryHooks`].
+    pub fn state_change_hook(&self) -> Option<&std::sync::Arc<TelemetryStateChangeCallback>> {
+        self.telemetry.on_state_change.as_ref()
+    }
+
+    /// Optional commit acknowledgement hook configured on the shared
+    /// [`TelemetryHooks`].
+    pub fn commit_ack_hook(&self) -> Option<&std::sync::Arc<TelemetryCommitCallback>> {
+        self.telemetry.on_commit_ack.as_ref()
+    }
+
+    /// Optional error hook configured on the shared [`TelemetryHooks`].
+    pub fn error_hook(&self) -> Option<&std::sync::Arc<TelemetryErrorCallback>> {
+        self.telemetry.on_error.as_ref()
     }
 }
 
@@ -1098,7 +1135,7 @@ pub mod react {
 
         fn build_props(state: SwitchState, telemetry: Option<Function>) -> ReactSwitchProps {
             ReactSwitchProps {
-                switch: SwitchProps::new("Notifications"),
+                switch: SwitchProps::new("Notifications", TelemetryHooks::default()),
                 state,
                 on_change: None,
                 on_focus: None,
@@ -1441,7 +1478,7 @@ pub mod yew {
         }
 
         fn build_props(controlled: bool) -> (YewSwitchProps, SwitchHarness) {
-            let mut switch = SwitchProps::new("Telemetry switch");
+            let mut switch = SwitchProps::new("Telemetry switch", TelemetryHooks::default());
             switch.telemetry.analytics_id =
                 Some(format!("switch.telemetry.analytics.{controlled}"));
             switch.telemetry.automation_id =
@@ -2173,7 +2210,8 @@ pub mod dioxus {
 
         impl Harness {
             fn new(controlled: bool) -> Self {
-                let mut switch = SwitchProps::new("Automation ready switch");
+                let mut switch =
+                    SwitchProps::new("Automation ready switch", TelemetryHooks::default());
                 switch.telemetry.analytics_id = Some("switch.analytics".into());
                 let state = if controlled {
                     SwitchState::controlled(false, false)
@@ -2568,7 +2606,7 @@ mod tests {
 
     #[test]
     fn dispatch_change_updates_state_and_telemetry() {
-        let mut props = SwitchProps::new("Notifications");
+        let mut props = SwitchProps::new("Notifications", TelemetryHooks::default());
         props.telemetry.analytics_id = Some("switch.analytics".into());
         let mut state = SwitchState::uncontrolled(false, false);
         let mut telemetry_events = Vec::new();
@@ -2594,7 +2632,7 @@ mod tests {
 
     #[test]
     fn dispatch_focus_tracks_focus_visibility_and_telemetry() {
-        let props = SwitchProps::new("Notifications");
+        let props = SwitchProps::new("Notifications", TelemetryHooks::default());
         let mut state = SwitchState::uncontrolled(false, false);
         let mut telemetry_events = Vec::new();
         let mut focus_events = Vec::new();
@@ -2618,7 +2656,7 @@ mod tests {
 
     #[test]
     fn dispatch_key_emits_key_and_change_telemetry() {
-        let mut props = SwitchProps::new("Notifications");
+        let mut props = SwitchProps::new("Notifications", TelemetryHooks::default());
         let mut state = SwitchState::uncontrolled(false, false);
         let mut telemetry_events = Vec::new();
         let mut key_events = Vec::new();
@@ -2649,7 +2687,7 @@ mod tests {
 
     #[test]
     fn render_html_contains_label_and_data_state() {
-        let props = SwitchProps::new("Notifications");
+        let props = SwitchProps::new("Notifications", TelemetryHooks::default());
         let state = SwitchState::uncontrolled(false, false);
         let html = render_html(&props, &state);
         assert!(html.contains(">Notifications<"));

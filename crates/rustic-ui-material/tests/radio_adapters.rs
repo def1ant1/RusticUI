@@ -74,7 +74,7 @@ struct RadioHarness {
 impl RadioHarness {
     fn new(analytics_id: String, automation_id: String) -> Self {
         let contexts = Arc::new(Mutex::new(Vec::new()));
-        let mut props = RadioGroupProps::from_state(&sample_state());
+        let mut props = RadioGroupProps::from_state(&sample_state(), TelemetryHooks::default());
         props.telemetry = instrumented_hooks(&analytics_id, &automation_id, &contexts);
         props
             .additional_group_attributes
