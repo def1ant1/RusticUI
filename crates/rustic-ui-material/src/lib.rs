@@ -66,7 +66,7 @@ pub mod paper;
 pub mod radio;
 mod render_helpers;
 pub mod select;
-mod selection_control;
+pub mod selection_control;
 #[cfg(feature = "progress")]
 pub mod skeleton;
 #[cfg(feature = "forms")]
