@@ -1,9 +1,207 @@
-//! Strongly typed builders for Material selection control rendering.
+//! # Selection control attribute builders
 //!
-//! These builders replace ad-hoc HTML helpers with enterprise-friendly
-//! descriptors that separate visual classes, ARIA metadata, automation signals
-//! and analytics hints.  Builders can be converted into attribute maps for
-//! hydration or serialized into deterministic HTML for SSR.
+//! Enterprise-grade Material selection controls in RusticUI centralise all of
+//! their SSR, hydration, analytics, and automation state inside the strongly
+//! typed builders defined in this module. The builders back
+//! [`crate::checkbox`], [`crate::radio`], and [`crate::switch`], ensuring that
+//! every adapter (React, Yew, Leptos, Dioxus, Sycamore, or pure SSR) consumes a
+//! single descriptor snapshot derived from the headless state machines and the
+//! shared telemetry contract.
+//!
+//! ## Keyboard navigation & focus-visible semantics
+//!
+//! Keyboard orchestration flows through the headless state machines exposed in
+//! `rustic-ui-headless`. For example,
+//! [`CheckboxState::on_key`](rustic_ui_headless::checkbox::CheckboxState::on_key),
+//! [`RadioGroupState::on_key`](rustic_ui_headless::radio::RadioGroupState::on_key),
+//! and [`SwitchState::on_key`](rustic_ui_headless::switch::SwitchState::on_key)
+//! consume [`ControlKey`](rustic_ui_headless::interaction::ControlKey) inputs to
+//! mirror the Material keyboard specification. The resulting focus-visible flag
+//! is surfaced via
+//! [`CheckboxState::focus_visible`](rustic_ui_headless::checkbox::CheckboxState::focus_visible),
+//! [`RadioGroupState::focus_visible_index`](rustic_ui_headless::radio::RadioGroupState::focus_visible_index),
+//! and [`SwitchState::focus_visible`](rustic_ui_headless::switch::SwitchState::focus_visible).
+//! Builders lift those signals into `data-focus-visible` attributes so CSS
+//! recipes in [`crate::checkbox`], [`crate::radio`], and [`crate::switch`] can
+//! render WCAG-compliant focus rings only when the `:focus-visible` pseudo
+//! class would have applied. This keeps keyboard navigation predictable across
+//! SSR and hydration without forcing each adapter to reinvent the focus
+//! semantics.
+//!
+//! ## Automation and telemetry hooks
+//!
+//! Global configuration hooks—[`register_selection_control_hook`],
+//! [`register_radio_option_hook`], and [`register_radio_group_hook`]—allow
+//! platform teams to inject analytics identifiers, automation selectors, or
+//! custom ARIA attributes once per process. Hooks execute before the descriptor
+//! finalises, so any metadata added by the hook participates in SSR and
+//! hydration identically. They complement [`TelemetryHooks`](crate::telemetry::TelemetryHooks),
+//! which downstream adapters use to emit spans, analytics payloads, focus
+//! transitions, and state-change beacons through a centralised observability
+//! pipeline. Because the hooks are stored in [`OnceLock`], registration is
+//! deterministic even when multiple frameworks initialise concurrently.
+//!
+//! ## SSR and hydration guarantees
+//!
+//! Every builder records classes, ARIA metadata, and automation identifiers in
+//! [`BTreeMap`]s to guarantee deterministic key ordering. The resulting
+//! [`SelectionControlAttributes::themed_attributes`] output matches the themed
+//! spreads consumed by client adapters and the
+//! [`SelectionControlAttributes::to_ssr_html`] HTML serialiser. That symmetry
+//! prevents checksum drift during hydration and ensures analytics selectors (for
+//! example `data-automation-*`) match exactly between the SSR fragment and the
+//! hydrated widget. Radio groups reuse [`RadioOptionAttributes`] for each option
+//! so the option metadata flows through the same contract.
+//!
+//! ## Failure modes and operational safeguards
+//!
+//! * Hook registration functions return `Err` when invoked more than once. This
+//!   guards against data races in shared bootstrap code and avoids overwriting
+//!   production instrumentation unexpectedly.
+//! * [`Style::new`](rustic_ui_styled_engine::Style::new) returns a `Result`; the
+//!   builders assume the caller propagated errors emitted by the CSS compiler.
+//! * Builders deduplicate CSS classes on build to prevent runaway SSR payloads
+//!   when multiple adapters compose styles.
+//! * State-machine guarded methods such as
+//!   [`RadioGroupState::select`](rustic_ui_headless::radio::RadioGroupState::select)
+//!   are no-ops when provided out-of-range indices or when the group is disabled,
+//!   so hydration replays cannot inadvertently select a disallowed option.
+//!
+//! ## Examples
+//!
+//! ### Enterprise bootstrap across SSR and hydration
+//!
+//! ```rust,ignore
+//! use std::sync::{Arc, OnceLock};
+//!
+//! use rustic_ui_material::selection_control::{
+//!     register_selection_control_hook, SelectionControlAttributes,
+//! };
+//! use rustic_ui_material::telemetry::TelemetryHooks;
+//! use rustic_ui_styled_engine::{css, Style};
+//!
+//! static TELEMETRY: OnceLock<Arc<TelemetryHooks>> = OnceLock::new();
+//!
+//! fn telemetry() -> &'static Arc<TelemetryHooks> {
+//!     TELEMETRY.get_or_init(|| {
+//!         let mut hooks = TelemetryHooks::default();
+//!         hooks.analytics_id = Some("controls.enterprise".into());
+//!         hooks.automation_id = Some("global-selection-control".into());
+//!         Arc::new(hooks)
+//!     })
+//! }
+//!
+//! fn server_fragment() -> String {
+//!     register_selection_control_hook(|builder| {
+//!         builder
+//!             .data("tenant", "platform-a")
+//!             .automation_id("suite", "selection-controls");
+//!     })
+//!     .expect("hook installs only once");
+//!
+//!     SelectionControlAttributes::builder(
+//!         "Receive product updates",
+//!         Style::new(css!("display: inline-flex; align-items: center;")).unwrap(),
+//!     )
+//!     .attribute("role", "switch")
+//!     .build()
+//!     .to_ssr_html()
+//! }
+//!
+//! fn hydrate_focus_state() {
+//!     let hooks = telemetry();
+//!     // Downstream adapters (e.g. `crate::switch::react`) call into
+//!     // `instrument_render` with these hooks so analytics, focus transitions,
+//!     // and automation metadata are replayed consistently on the client.
+//!     assert!(hooks.analytics_id.as_deref() == Some("controls.enterprise"));
+//! }
+//! ```
+//!
+//! ### Coordinating radio telemetry with shared state machines
+//!
+//! ```rust,ignore
+//! use std::sync::{Arc, OnceLock};
+//!
+//! use rustic_ui_headless::interaction::ControlKey;
+//! use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
+//! use rustic_ui_material::selection_control::{
+//!     register_radio_group_hook, RadioGroupAttributes, RadioOptionAttributes,
+//! };
+//! use rustic_ui_material::telemetry::{
+//!     TelemetryContext, TelemetryHooks, TelemetryStateChangePayload,
+//! };
+//! use rustic_ui_styled_engine::{css, Style};
+//!
+//! static TELEMETRY: OnceLock<Arc<TelemetryHooks>> = OnceLock::new();
+//!
+//! fn telemetry() -> &'static Arc<TelemetryHooks> {
+//!     TELEMETRY.get_or_init(|| {
+//!         let mut hooks = TelemetryHooks::default();
+//!         hooks.analytics_id = Some("controls.payment-method".into());
+//!         hooks.automation_id = Some("payment-method".into());
+//!         Arc::new(hooks)
+//!     })
+//! }
+//!
+//! fn server_radio_fragment() -> String {
+//!     register_radio_group_hook(|builder| {
+//!         builder.data("deployment", "checkout-edge");
+//!     })
+//!     .expect("hook installs only once");
+//!
+//!     RadioGroupAttributes::builder(
+//!         Style::new(css!("display: flex; gap: var(--size-2); align-items: center;")).unwrap(),
+//!     )
+//!     .option(
+//!         RadioOptionAttributes::builder("Visa", Style::new(css!("padding: 0.5rem;")).unwrap())
+//!             .aria("role", "radio")
+//!             .build(),
+//!     )
+//!     .option(
+//!         RadioOptionAttributes::builder("Direct debit", Style::new(css!("padding: 0.5rem;")).unwrap())
+//!             .aria("role", "radio")
+//!             .build(),
+//!     )
+//!     .build()
+//!     .to_ssr_html()
+//! }
+//!
+//! fn client_radio_interaction() {
+//!     let hooks = telemetry().clone();
+//!     let mut state = RadioGroupState::uncontrolled(
+//!         ["Visa".into(), "Direct debit".into(), "Wire transfer".into()],
+//!         false,
+//!         RadioOrientation::Horizontal,
+//!         Some(0),
+//!     );
+//!     state.on_key(ControlKey::ArrowRight, move |index| {
+//!         if let Some(callback) = &hooks.on_state_change {
+//!             let payload = TelemetryStateChangePayload {
+//!                 previous: "visa".into(),
+//!                 next: format!("option-{index}"),
+//!                 ..TelemetryStateChangePayload::default()
+//!             };
+//!             callback(
+//!                 TelemetryContext::new("radio.payment-method")
+//!                     .with_analytics(hooks.analytics_id.clone())
+//!                     .with_automation(hooks.automation_id.clone()),
+//!                 payload,
+//!             );
+//!         }
+//!     });
+//! }
+//! ```
+//!
+//! ## See also
+//!
+//! * [`crate::checkbox`], [`crate::radio`], and [`crate::switch`] for concrete
+//!   adapters that consume these builders.
+//! * [`rustic_ui_headless::checkbox::CheckboxState`],
+//!   [`rustic_ui_headless::radio::RadioGroupState`], and
+//!   [`rustic_ui_headless::switch::SwitchState`] for the interaction state
+//!   machines driving keyboard navigation and focus.
+//! * See the `telemetry` module for the full instrumentation surface used
+//!   throughout RusticUI selection controls.
 
 use std::collections::BTreeMap;
 use std::fmt;
