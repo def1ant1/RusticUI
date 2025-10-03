@@ -7,6 +7,10 @@ archived Material UI change history now lives in [`docs/archives/material-ui-cha
 
 ### Highlights
 
+- Expanded the selection control builder documentation to cover keyboard
+  navigation, focus-visible semantics, telemetry hooks, SSR/hydration
+  guarantees, and enterprise bootstrap patterns shared across checkbox, radio,
+  and switch adapters.
 - Extended the Leptos radio adapter to automatically spread any extra themed
   attributes (such as inline `style` overrides) captured from the descriptor so
   automation suites no longer need manual updates when design tokens evolve.
