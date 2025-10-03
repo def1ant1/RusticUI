@@ -84,6 +84,21 @@ store.
    field-level behavior and extension points.  The doc comments include
    rationale for defaults so future migrations remain low-risk.
 
+### Helper-driven render plans
+
+Material checkboxes and switches now expose helper-driven render plans (for
+example `CheckboxRenderPlan`) that pre-compute the descriptor, merge telemetry
+defaults, and emit a `TelemetryContext`. Adapter implementations invoke the plan
+once per render and then project its `themed_attributes` into React, Yew,
+Leptos, Dioxus, or Sycamore without recomputing attribute maps. The same plan
+also feeds SSR by calling `SelectionControlAttributes::to_ssr_html`, ensuring
+hydration receives an identical snapshot.
+
+Enterprise teams extending adapters should prefer tapping into these helpers
+instead of cloning descriptor assembly logic. Doing so keeps analytics spans,
+automation hooks, and SSR output consistent even as new telemetry sinks or
+attributes are introduced centrally.
+
 ## Testing Expectations
 
 Unit tests now live under `crates/rustic-ui-material/tests/selection_control.rs`

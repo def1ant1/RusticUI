@@ -131,6 +131,7 @@ use rustic_ui_headless::{
     interaction::ControlKey,
 };
 use rustic_ui_styled_engine::{css_with_theme, Style};
+use std::borrow::ToOwned;
 
 #[cfg(feature = "react")]
 use wasm_bindgen::JsValue;
@@ -346,93 +347,134 @@ fn build_descriptor(props: &CheckboxProps, state: &CheckboxState) -> SelectionCo
     .expect("checkbox descriptor must merge headless metadata")
 }
 
-#[allow(dead_code)]
-fn render_html(props: &CheckboxProps, state: &CheckboxState) -> String {
-    let (context, descriptor, _snapshot) =
-        descriptor_with_context("rustic_ui_material::checkbox::render_html", props, state);
-    instrument_render(&props.telemetry, context, || descriptor.to_ssr_html())
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-struct CheckboxDescriptorSnapshot {
-    label: String,
+/// Shared render plan wiring telemetry context + themed attributes for every
+/// checkbox adapter.
+///
+/// Centralising the descriptor/telemetry merge keeps SSR, React, Yew, Leptos,
+/// Dioxus, and Sycamore adapters aligned while drastically reducing
+/// automation-specific glue sprinkled through each module. The plan owns the
+/// fully materialised [`SelectionControlAttributes`] so SSR flows call the
+/// canonical [`SelectionControlAttributes::to_ssr_html`] serializer and client
+/// adapters can project the same attribute pairs without re-deriving them.
+#[derive(Clone, Debug)]
+struct CheckboxRenderPlan {
+    context: TelemetryContext,
+    attributes: SelectionControlAttributes,
+    #[allow(dead_code)]
     themed_attributes: Vec<(String, String)>,
-    class: String,
-    role: String,
-    aria_checked: String,
-    aria_disabled: Option<String>,
-    tabindex: String,
-    data_checked: String,
-    data_focus_visible: String,
-    data_indeterminate: String,
 }
 
-impl CheckboxDescriptorSnapshot {
-    fn from_descriptor(descriptor: &SelectionControlAttributes) -> Self {
-        let themed_attributes = descriptor.themed_attributes();
-        let mut class = String::new();
-        let mut role = String::from("checkbox");
-        let mut aria_checked = String::from("false");
-        let mut aria_disabled = None;
-        let mut tabindex = String::from("0");
-        let mut data_checked = String::from("false");
-        let mut data_focus_visible = String::from("false");
-        let mut data_indeterminate = String::from("false");
-
-        for (key, value) in &themed_attributes {
-            match key.as_str() {
-                "class" => class = value.clone(),
-                "role" => role = value.clone(),
-                "aria-checked" => aria_checked = value.clone(),
-                "aria-disabled" => aria_disabled = Some(value.clone()),
-                "tabindex" => tabindex = value.clone(),
-                "data-checked" => data_checked = value.clone(),
-                "data-focus-visible" => data_focus_visible = value.clone(),
-                "data-indeterminate" => data_indeterminate = value.clone(),
-                _ => {}
-            }
-        }
-
+#[allow(dead_code)]
+impl CheckboxRenderPlan {
+    fn prepare(component: &'static str, props: &CheckboxProps, state: &CheckboxState) -> Self {
+        // Centralised merge of the themed descriptor, telemetry defaults, and the
+        // headless state machine snapshot. All adapters consume this struct so the
+        // attribute cache and telemetry context stay perfectly aligned across SSR
+        // and client renders without each adapter reconstructing the same data.
+        let descriptor = build_descriptor(props, state);
+        let telemetry = descriptor.telemetry().clone();
+        let attributes = descriptor.into_attributes();
+        let themed_attributes = attributes.themed_attributes();
+        let context = TelemetryContext::new(component)
+            .with_analytics(
+                telemetry
+                    .effective_analytics_id()
+                    .map(|value| value.to_owned()),
+            )
+            .with_automation(
+                telemetry
+                    .effective_automation_id()
+                    .map(|value| value.to_owned()),
+            )
+            .with_descriptor_metadata(attributes.label().to_string(), themed_attributes.clone());
         Self {
-            label: descriptor.label().to_string(),
+            context,
+            attributes,
             themed_attributes,
-            class,
-            role,
-            aria_checked,
-            aria_disabled,
-            tabindex,
-            data_checked,
-            data_focus_visible,
-            data_indeterminate,
         }
+    }
+
+    #[allow(dead_code)]
+    fn label(&self) -> &str {
+        self.attributes.label()
+    }
+
+    fn context(&self) -> TelemetryContext {
+        self.context.clone()
+    }
+
+    #[allow(dead_code)]
+    fn themed_attributes_owned(&self) -> Vec<(String, String)> {
+        self.themed_attributes.clone()
+    }
+
+    #[allow(dead_code)]
+    fn themed_value(&self, key: &str) -> Option<&str> {
+        self.themed_attributes
+            .iter()
+            .find(|(name, _)| name == key)
+            .map(|(_, value)| value.as_str())
+    }
+
+    #[allow(dead_code)]
+    fn themed_value_owned(&self, key: &str) -> Option<String> {
+        self.themed_value(key).map(ToOwned::to_owned)
+    }
+
+    #[allow(dead_code)]
+    fn aria(&self, key: &str) -> Option<&str> {
+        self.attributes.aria_map().get(key).map(String::as_str)
+    }
+
+    #[allow(dead_code)]
+    fn aria_owned(&self, key: &str) -> Option<String> {
+        self.aria(key).map(ToOwned::to_owned)
+    }
+
+    #[allow(dead_code)]
+    fn data(&self, key: &str) -> Option<&str> {
+        self.attributes.data_map().get(key).map(String::as_str)
+    }
+
+    #[allow(dead_code)]
+    fn data_owned(&self, key: &str) -> Option<String> {
+        self.data(key).map(ToOwned::to_owned)
+    }
+
+    #[allow(dead_code)]
+    fn attribute(&self, key: &str) -> Option<&str> {
+        self.attributes
+            .extra_attributes()
+            .get(key)
+            .map(String::as_str)
+    }
+
+    #[allow(dead_code)]
+    fn attribute_owned(&self, key: &str) -> Option<String> {
+        self.attribute(key).map(ToOwned::to_owned)
+    }
+
+    #[allow(dead_code)]
+    fn automation(&self, key: &str) -> Option<&str> {
+        self.attributes
+            .automation_ids()
+            .get(key)
+            .map(String::as_str)
+    }
+
+    #[allow(dead_code)]
+    fn automation_owned(&self, key: &str) -> Option<String> {
+        self.automation(key).map(ToOwned::to_owned)
     }
 }
 
-fn descriptor_with_context(
-    component: &'static str,
-    props: &CheckboxProps,
-    state: &CheckboxState,
-) -> (
-    TelemetryContext,
-    SelectionControlAttributes,
-    CheckboxDescriptorSnapshot,
-) {
-    let descriptor = build_descriptor(props, state);
-    let snapshot = CheckboxDescriptorSnapshot::from_descriptor(descriptor.attributes());
-    let telemetry = descriptor.telemetry().clone();
-    let context = TelemetryContext::new(component)
-        .with_analytics(
-            telemetry
-                .effective_analytics_id()
-                .map(|value| value.to_owned()),
-        )
-        .with_automation(
-            telemetry
-                .effective_automation_id()
-                .map(|value| value.to_owned()),
-        )
-        .with_descriptor_metadata(snapshot.label.clone(), snapshot.themed_attributes.clone());
-    (context, descriptor.into_attributes(), snapshot)
+#[allow(dead_code)]
+fn render_html(props: &CheckboxProps, state: &CheckboxState) -> String {
+    let plan =
+        CheckboxRenderPlan::prepare("rustic_ui_material::checkbox::render_html", props, state);
+    let context = plan.context();
+    let attributes = plan.attributes.clone();
+    instrument_render(&props.telemetry, context, move || attributes.to_ssr_html())
 }
 
 #[cfg(feature = "react")]
@@ -1277,17 +1319,21 @@ pub mod react {
     ///   bridge guards the mutation with [`CheckboxState::is_controlled`] so
     ///   local snapshots stay in sync with external sources of truth.
     pub fn ReactCheckbox(props: &ReactCheckboxProps) -> Jsx {
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        // Resolve the helper-driven render plan once so SSR, hydration, and
+        // analytics instrumentation reuse the exact same attribute snapshot.
+        let plan = CheckboxRenderPlan::prepare(
             "rustic_ui_material::checkbox::react::ReactCheckbox",
             &props.checkbox,
             &props.state,
         );
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
-        instrument_render(&props.checkbox.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let attributes = snapshot.themed_attributes.clone();
-            let handlers = handlers(props, Rc::clone(&state_handle));
-            let props_object = build_props_object(attributes, &handlers);
+        let context = plan.context();
+        let attributes = plan.themed_attributes_owned();
+        let label = plan.label().to_string();
+        let props_clone = props.clone();
+        instrument_render(&props.checkbox.telemetry, context, move || {
+            let handlers = handlers(&props_clone, Rc::clone(&state_handle));
+            let props_object = build_props_object(attributes.clone(), &handlers);
             create_element("span", props_object, &[JsValue::from_str(&label)])
         })
     }
@@ -1353,15 +1399,18 @@ pub mod yew {
     ///   the local snapshot stays untouched until the external owner syncs it.
     #[function_component(YewCheckbox)]
     pub fn yew_checkbox(props: &YewCheckboxProps) -> Html {
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        // The render plan feeds the templating, telemetry, and automation hooks
+        // so Yew never re-derives descriptor metadata in isolation.
+        let plan = CheckboxRenderPlan::prepare(
             "rustic_ui_material::checkbox::yew::YewCheckbox",
             &props.checkbox,
             &props.state,
         );
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
+        let context = plan.context();
+        let label = plan.label().to_string();
+        let attrs = plan.themed_attributes_owned();
         instrument_render(&props.checkbox.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let attrs = snapshot.themed_attributes.clone();
             let change_handler = {
                 let on_change = props.on_change.clone();
                 let telemetry = props.telemetry_delegate.clone();
@@ -1469,8 +1518,8 @@ pub mod yew {
                 <span onclick={change_handler} onfocus={focus_handler} onblur={blur_handler} onkeydown={key_handler}>{label}</span>
             };
             if let VNode::VTag(ref mut tag) = node {
-                for (key, value) in attrs {
-                    tag.add_attribute(key, value);
+                for (key, value) in attrs.iter() {
+                    tag.add_attribute(key.clone(), value.clone());
                 }
             }
             node
@@ -1528,22 +1577,38 @@ pub mod leptos {
     ///   yet skip the mutation because the bridge checks
     ///   [`CheckboxState::is_controlled`], keeping host-owned truth authoritative.
     pub fn LeptosCheckbox(props: LeptosCheckboxProps) -> impl IntoView {
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        // Prepare the shared descriptor snapshot before registering any Leptos
+        // signals so the reactive tree consumes the same attributes captured
+        // during SSR and telemetry orchestration.
+        let plan = CheckboxRenderPlan::prepare(
             "rustic_ui_material::checkbox::leptos::LeptosCheckbox",
             &props.checkbox,
             &props.state,
         );
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
-        instrument_render(&props.checkbox.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let class = snapshot.class.clone();
-            let role = snapshot.role.clone();
-            let aria_checked = snapshot.aria_checked.clone();
-            let aria_disabled = snapshot.aria_disabled.clone();
-            let tabindex = snapshot.tabindex.clone();
-            let data_checked = snapshot.data_checked.clone();
-            let data_focus_visible = snapshot.data_focus_visible.clone();
-            let data_indeterminate = snapshot.data_indeterminate.clone();
+        let context = plan.context();
+        let label = plan.label().to_string();
+        let class = plan.themed_value_owned("class").unwrap_or_default();
+        let role = plan
+            .attribute_owned("role")
+            .unwrap_or_else(|| "checkbox".to_string());
+        let aria_checked = plan
+            .aria_owned("aria-checked")
+            .unwrap_or_else(|| "false".to_string());
+        let aria_disabled = plan.aria_owned("aria-disabled");
+        let tabindex = plan
+            .attribute_owned("tabindex")
+            .unwrap_or_else(|| "0".to_string());
+        let data_checked = plan
+            .data_owned("data-checked")
+            .unwrap_or_else(|| "false".to_string());
+        let data_focus_visible = plan
+            .data_owned("data-focus-visible")
+            .unwrap_or_else(|| "false".to_string());
+        let data_indeterminate = plan
+            .data_owned("data-indeterminate")
+            .unwrap_or_else(|| "false".to_string());
+        instrument_render(&props.checkbox.telemetry, context, move || {
             let on_click = {
                 let on_change = props.on_change.clone();
                 let telemetry = props.telemetry_delegate.clone();
@@ -1747,23 +1812,38 @@ pub mod dioxus {
     ///   mutation until hosts sync external truth.
     pub fn DioxusCheckbox(cx: Scope<DioxusCheckboxProps>) -> Element {
         let props = cx.props();
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        // Building the render plan once avoids sprinkling descriptor parsing
+        // across every interaction handler while keeping telemetry aligned.
+        let plan = CheckboxRenderPlan::prepare(
             "rustic_ui_material::checkbox::dioxus::DioxusCheckbox",
             &props.checkbox,
             &props.state,
         );
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
         let interactions = CheckboxInteractionFactory::new(props, Rc::clone(&state_handle));
-        instrument_render(&props.checkbox.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let class = snapshot.class.clone();
-            let role = snapshot.role.clone();
-            let aria_checked = snapshot.aria_checked.clone();
-            let aria_disabled = snapshot.aria_disabled.clone();
-            let tabindex = snapshot.tabindex.clone();
-            let data_checked = snapshot.data_checked.clone();
-            let data_focus_visible = snapshot.data_focus_visible.clone();
-            let data_indeterminate = snapshot.data_indeterminate.clone();
+        let context = plan.context();
+        let label = plan.label().to_string();
+        let class = plan.themed_value_owned("class").unwrap_or_default();
+        let role = plan
+            .attribute_owned("role")
+            .unwrap_or_else(|| "checkbox".to_string());
+        let aria_checked = plan
+            .aria_owned("aria-checked")
+            .unwrap_or_else(|| "false".to_string());
+        let aria_disabled = plan.aria_owned("aria-disabled");
+        let tabindex = plan
+            .attribute_owned("tabindex")
+            .unwrap_or_else(|| "0".to_string());
+        let data_checked = plan
+            .data_owned("data-checked")
+            .unwrap_or_else(|| "false".to_string());
+        let data_focus_visible = plan
+            .data_owned("data-focus-visible")
+            .unwrap_or_else(|| "false".to_string());
+        let data_indeterminate = plan
+            .data_owned("data-indeterminate")
+            .unwrap_or_else(|| "false".to_string());
+        instrument_render(&props.checkbox.telemetry, context, move || {
             let onclick = interactions.on_click_handler();
             let on_focus = interactions.on_focus_handler();
             let on_blur = interactions.on_blur_handler();
@@ -2262,22 +2342,37 @@ pub mod sycamore {
     /// hosts reconcile external truth.
     #[component]
     pub fn SycamoreCheckbox<G: Html>(cx: Scope, props: SycamoreCheckboxProps) -> Template<G> {
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        // Central plan ensures Sycamore hydrates with the same attribute cache
+        // surfaced during SSR while telemetry delegates observe identical data.
+        let plan = CheckboxRenderPlan::prepare(
             "rustic_ui_material::checkbox::sycamore::SycamoreCheckbox",
             &props.checkbox,
             &props.state,
         );
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
-        instrument_render(&props.checkbox.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let class = snapshot.class.clone();
-            let role = snapshot.role.clone();
-            let aria_checked = snapshot.aria_checked.clone();
-            let aria_disabled = snapshot.aria_disabled.clone();
-            let tabindex = snapshot.tabindex.clone();
-            let data_checked = snapshot.data_checked.clone();
-            let data_focus_visible = snapshot.data_focus_visible.clone();
-            let data_indeterminate = snapshot.data_indeterminate.clone();
+        let context = plan.context();
+        let label = plan.label().to_string();
+        let class = plan.themed_value_owned("class").unwrap_or_default();
+        let role = plan
+            .attribute_owned("role")
+            .unwrap_or_else(|| "checkbox".to_string());
+        let aria_checked = plan
+            .aria_owned("aria-checked")
+            .unwrap_or_else(|| "false".to_string());
+        let aria_disabled = plan.aria_owned("aria-disabled");
+        let tabindex = plan
+            .attribute_owned("tabindex")
+            .unwrap_or_else(|| "0".to_string());
+        let data_checked = plan
+            .data_owned("data-checked")
+            .unwrap_or_else(|| "false".to_string());
+        let data_focus_visible = plan
+            .data_owned("data-focus-visible")
+            .unwrap_or_else(|| "false".to_string());
+        let data_indeterminate = plan
+            .data_owned("data-indeterminate")
+            .unwrap_or_else(|| "false".to_string());
+        instrument_render(&props.checkbox.telemetry, context, move || {
             let on_click = {
                 let telemetry = props.telemetry_delegate.clone();
                 let on_change = props.on_change.clone();
@@ -2409,14 +2504,14 @@ mod tests {
     #[test]
     fn themed_attributes_include_role() {
         let state = CheckboxState::uncontrolled(false, true);
-        let descriptor = build_descriptor(
-            &CheckboxProps::new("Accept", TelemetryHooks::default()),
+        let props = CheckboxProps::new("Accept", TelemetryHooks::default());
+        let plan = CheckboxRenderPlan::prepare(
+            "rustic_ui_material::checkbox::tests::themed_attributes_include_role",
+            &props,
             &state,
         );
-        assert!(descriptor
-            .attributes()
-            .aria_attributes()
-            .any(|(k, v)| k == "role" && v == "checkbox"));
+        assert_eq!(plan.attribute("role"), Some("checkbox"));
+        assert_eq!(plan.aria("aria-checked"), Some("true"));
     }
 
     #[test]
@@ -2435,14 +2530,17 @@ mod tests {
         props.telemetry.analytics_id = Some("analytics-42".into());
         props.telemetry.automation_id = Some("automation-42".into());
 
-        let descriptor = build_descriptor(&props, &state);
-        let data_attrs = descriptor.attributes().data_state_attributes();
-
-        assert!(data_attrs
-            .iter()
-            .any(|(key, value)| key == "data-rustic-analytics-id" && value == "analytics-42"));
-        assert!(data_attrs
-            .iter()
-            .any(|(key, value)| key == "data-automation-id" && value == "automation-42"));
+        let plan = CheckboxRenderPlan::prepare(
+            "rustic_ui_material::checkbox::tests::telemetry_attributes_are_applied_when_provided",
+            &props,
+            &state,
+        );
+        assert_eq!(plan.data("data-rustic-analytics-id"), Some("analytics-42"));
+        assert_eq!(plan.automation("id"), Some("automation-42"));
+        let context = plan.context();
+        let descriptor = context
+            .descriptor
+            .expect("context descriptor metadata to be present");
+        assert_eq!(descriptor.label, "Instrumented");
     }
 }
