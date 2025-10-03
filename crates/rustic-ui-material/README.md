@@ -34,6 +34,31 @@ Current gaps most relevant to enterprise adopters include:
 Contributions that land these components should reference the report to keep
 the automation in sync; `cargo xtask material-parity` refreshes the metrics.
 
+## Selection control descriptor factories
+
+Enterprise teams integrating checkboxes, switches, and radio buttons across SSR
+and multiple front-end runtimes can now rely on the shared
+[`SelectionControlDescriptor`](src/selection_control.rs) factories. The helpers
+wrap headless state-machine snapshots and automatically merge themed defaults,
+managed telemetry identifiers, and ARIA/data attributes so adapters avoid
+duplicating boilerplate.
+
+- [`SelectionControlThemeTokens`](src/selection_control.rs) encapsulates the
+  automation selectors and classes emitted by centralized configuration
+  services, keeping SSR and hydration output aligned.
+- [`SelectionControlTelemetry`](src/selection_control.rs) carries the configured
+  [`TelemetryHooks`](src/telemetry.rs) plus analytics/automation identifiers and
+  enforces override policies when required by compliance platforms.
+- `SelectionControlDescriptor::from_headless` consumes the headless
+  [`CheckboxState`](../rustic-ui-headless/src/checkbox.rs) or
+  [`SwitchState`](../rustic-ui-headless/src/switch.rs) and returns both the
+  themed attributes and resolved telemetry metadata for adapters and SSR
+  renderers.
+
+The accompanying unit tests (`cargo test -p rustic-ui-material selection_control`)
+demonstrate telemetry defaults, attribute overrides, and strict error handling
+when managed analytics identifiers conflict with headless overrides.
+
 ## Feature Flags
 
 Select a single front-end framework to keep builds lean. All features are

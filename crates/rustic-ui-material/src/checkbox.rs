@@ -116,7 +116,10 @@
 //! and Sycamore surfaces.
 
 use crate::{
-    selection_control::SelectionControlAttributes,
+    selection_control::{
+        SelectionControlAttributes, SelectionControlDescriptor, SelectionControlTelemetry,
+        SelectionControlThemeTokens,
+    },
     telemetry::{
         instrument_render, TelemetryAnalyticsCallback, TelemetryCommitCallback, TelemetryContext,
         TelemetryErrorCallback, TelemetryFocusCallback, TelemetryHooks,
@@ -330,42 +333,17 @@ impl CheckboxProps {
 }
 
 #[allow(dead_code)]
-fn build_descriptor(props: &CheckboxProps, state: &CheckboxState) -> SelectionControlAttributes {
-    let mut builder =
-        SelectionControlAttributes::builder(props.label.clone(), themed_checkbox_style());
-
-    let mut has_analytics = false;
-    let mut has_automation = false;
-
-    for (key, value) in state.aria_attributes() {
-        if key.starts_with("aria-") {
-            builder = builder.aria(key, value);
-        } else if key.starts_with("data-") {
-            if key == "data-rustic-analytics-id" {
-                has_analytics = true;
-            }
-            if key == "data-automation-id" {
-                has_automation = true;
-            }
-            builder = builder.data(key, value);
-        } else {
-            builder = builder.attribute(key, value);
-        }
-    }
-
-    if !has_analytics {
-        if let Some(analytics) = &props.telemetry.analytics_id {
-            builder = builder.data("rustic-analytics-id", analytics.clone());
-        }
-    }
-
-    if !has_automation {
-        if let Some(automation) = &props.telemetry.automation_id {
-            builder = builder.automation_id("id", automation.clone());
-        }
-    }
-
-    builder.build()
+fn build_descriptor(props: &CheckboxProps, state: &CheckboxState) -> SelectionControlDescriptor {
+    let theme = SelectionControlThemeTokens::material_defaults().with_data("variant", "checkbox");
+    let telemetry = SelectionControlTelemetry::from(props.telemetry.clone());
+    SelectionControlDescriptor::from_headless(
+        props.label.clone(),
+        themed_checkbox_style(),
+        state,
+        &theme,
+        &telemetry,
+    )
+    .expect("checkbox descriptor must merge headless metadata")
 }
 
 #[allow(dead_code)]
@@ -440,12 +418,21 @@ fn descriptor_with_context(
     CheckboxDescriptorSnapshot,
 ) {
     let descriptor = build_descriptor(props, state);
-    let snapshot = CheckboxDescriptorSnapshot::from_descriptor(&descriptor);
+    let snapshot = CheckboxDescriptorSnapshot::from_descriptor(descriptor.attributes());
+    let telemetry = descriptor.telemetry().clone();
     let context = TelemetryContext::new(component)
-        .with_analytics(props.telemetry.analytics_id.clone())
-        .with_automation(props.telemetry.automation_id.clone())
+        .with_analytics(
+            telemetry
+                .effective_analytics_id()
+                .map(|value| value.to_owned()),
+        )
+        .with_automation(
+            telemetry
+                .effective_automation_id()
+                .map(|value| value.to_owned()),
+        )
         .with_descriptor_metadata(snapshot.label.clone(), snapshot.themed_attributes.clone());
-    (context, descriptor, snapshot)
+    (context, descriptor.into_attributes(), snapshot)
 }
 
 #[cfg(feature = "react")]
@@ -2422,11 +2409,12 @@ mod tests {
     #[test]
     fn themed_attributes_include_role() {
         let state = CheckboxState::uncontrolled(false, true);
-        let attrs = build_descriptor(
+        let descriptor = build_descriptor(
             &CheckboxProps::new("Accept", TelemetryHooks::default()),
             &state,
         );
-        assert!(attrs
+        assert!(descriptor
+            .attributes()
             .aria_attributes()
             .any(|(k, v)| k == "role" && v == "checkbox"));
     }
@@ -2448,7 +2436,7 @@ mod tests {
         props.telemetry.automation_id = Some("automation-42".into());
 
         let descriptor = build_descriptor(&props, &state);
-        let data_attrs = descriptor.data_state_attributes();
+        let data_attrs = descriptor.attributes().data_state_attributes();
 
         assert!(data_attrs
             .iter()
