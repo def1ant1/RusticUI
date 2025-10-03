@@ -316,11 +316,132 @@ fn build_descriptor(props: &SwitchProps, state: &SwitchState) -> SelectionContro
     .expect("switch descriptor must merge headless metadata")
 }
 
+/// Shared render plan that centralises descriptor hydration and telemetry
+/// plumbing for every Material switch adapter.
+///
+/// By mirroring [`CheckboxRenderPlan`], the switch pipeline now resolves the
+/// [`SelectionControlAttributes`] and [`TelemetryContext`] exactly once before
+/// SSR or client adapters run.  This guarantees:
+///
+/// * All frameworks reuse the same themed attribute pairs captured during SSR
+///   (preventing hydration drift and manual attribute stitching).
+/// * Telemetry spans, analytics identifiers, and automation IDs are derived a
+///   single time, ensuring consistent instrumentation across SSR, React, Yew,
+///   Leptos, Dioxus, and Sycamore renderers.
+/// * Future contributors can extend Material switches without duplicating the
+///   descriptor merge logic in every adapter—new runtimes simply consume the
+///   plan and project the cached attributes.
+#[derive(Clone, Debug)]
+struct SwitchRenderPlan {
+    context: TelemetryContext,
+    attributes: SelectionControlAttributes,
+    themed_attributes: Vec<(String, String)>,
+}
+
+impl SwitchRenderPlan {
+    fn prepare(component: &'static str, props: &SwitchProps, state: &SwitchState) -> Self {
+        // Compose the themed descriptor, telemetry defaults, and headless state
+        // snapshot once so every downstream adapter can trust the cached
+        // attributes and telemetry metadata without recomputing them.
+        let descriptor = build_descriptor(props, state);
+        let telemetry = descriptor.telemetry().clone();
+        let attributes = descriptor.into_attributes();
+        let themed_attributes = attributes.themed_attributes();
+        let context = TelemetryContext::new(component)
+            .with_analytics(
+                telemetry
+                    .effective_analytics_id()
+                    .map(|value| value.to_owned()),
+            )
+            .with_automation(
+                telemetry
+                    .effective_automation_id()
+                    .map(|value| value.to_owned()),
+            )
+            .with_descriptor_metadata(attributes.label().to_string(), themed_attributes.clone());
+        Self {
+            context,
+            attributes,
+            themed_attributes,
+        }
+    }
+
+    fn context(&self) -> TelemetryContext {
+        self.context.clone()
+    }
+
+    fn attributes(&self) -> &SelectionControlAttributes {
+        &self.attributes
+    }
+
+    #[allow(dead_code)]
+    fn attributes_owned(&self) -> SelectionControlAttributes {
+        self.attributes.clone()
+    }
+
+    #[allow(dead_code)]
+    fn label(&self) -> &str {
+        self.attributes.label()
+    }
+
+    #[allow(dead_code)]
+    fn themed_attributes_owned(&self) -> Vec<(String, String)> {
+        self.themed_attributes.clone()
+    }
+
+    #[allow(dead_code)]
+    fn themed_value(&self, key: &str) -> Option<&str> {
+        self.themed_attributes
+            .iter()
+            .find(|(name, _)| name == key)
+            .map(|(_, value)| value.as_str())
+    }
+
+    #[allow(dead_code)]
+    fn themed_value_owned(&self, key: &str) -> Option<String> {
+        self.themed_value(key).map(ToOwned::to_owned)
+    }
+
+    #[allow(dead_code)]
+    fn aria(&self, key: &str) -> Option<&str> {
+        self.attributes.aria_map().get(key).map(String::as_str)
+    }
+
+    #[allow(dead_code)]
+    fn aria_owned(&self, key: &str) -> Option<String> {
+        self.aria(key).map(ToOwned::to_owned)
+    }
+
+    #[allow(dead_code)]
+    fn data(&self, key: &str) -> Option<&str> {
+        self.attributes.data_map().get(key).map(String::as_str)
+    }
+
+    #[allow(dead_code)]
+    fn data_owned(&self, key: &str) -> Option<String> {
+        self.data(key).map(ToOwned::to_owned)
+    }
+
+    #[allow(dead_code)]
+    fn attribute(&self, key: &str) -> Option<&str> {
+        self.attributes
+            .extra_attributes()
+            .get(key)
+            .map(String::as_str)
+    }
+
+    #[allow(dead_code)]
+    fn attribute_owned(&self, key: &str) -> Option<String> {
+        self.attribute(key).map(ToOwned::to_owned)
+    }
+}
+
 #[allow(dead_code)]
 fn render_html(props: &SwitchProps, state: &SwitchState) -> String {
-    let (context, descriptor, _snapshot) =
-        descriptor_with_context("rustic_ui_material::switch::render_html", props, state);
-    instrument_render(&props.telemetry, context, || descriptor.to_ssr_html())
+    let plan = SwitchRenderPlan::prepare("rustic_ui_material::switch::render_html", props, state);
+    let context = plan.context();
+    let attributes = plan.attributes().clone();
+    instrument_render(&props.telemetry, context, move || attributes.to_ssr_html())
 }
 
 /// Builds the switch track and thumb styling from the active theme tokens. By
@@ -397,84 +518,6 @@ fn themed_switch_style() -> Style {
         focus_outline_width = format!("{}px", theme.joy.focus.thickness),
         focus_outline_color = theme.palette.primary.clone()
     )
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-struct SwitchDescriptorSnapshot {
-    label: String,
-    themed_attributes: Vec<(String, String)>,
-    class: String,
-    role: String,
-    aria_checked: String,
-    aria_disabled: Option<String>,
-    tabindex: String,
-    data_on: String,
-    data_focus_visible: String,
-}
-
-impl SwitchDescriptorSnapshot {
-    fn from_descriptor(descriptor: &SelectionControlAttributes) -> Self {
-        let themed_attributes = descriptor.themed_attributes();
-        let mut class = String::new();
-        let mut role = String::from("switch");
-        let mut aria_checked = String::from("false");
-        let mut aria_disabled = None;
-        let mut tabindex = String::from("0");
-        let mut data_on = String::from("false");
-        let mut data_focus_visible = String::from("false");
-
-        for (key, value) in &themed_attributes {
-            match key.as_str() {
-                "class" => class = value.clone(),
-                "role" => role = value.clone(),
-                "aria-checked" => aria_checked = value.clone(),
-                "aria-disabled" => aria_disabled = Some(value.clone()),
-                "tabindex" => tabindex = value.clone(),
-                "data-on" => data_on = value.clone(),
-                "data-focus-visible" => data_focus_visible = value.clone(),
-                _ => {}
-            }
-        }
-
-        Self {
-            label: descriptor.label().to_string(),
-            themed_attributes,
-            class,
-            role,
-            aria_checked,
-            aria_disabled,
-            tabindex,
-            data_on,
-            data_focus_visible,
-        }
-    }
-}
-
-fn descriptor_with_context(
-    component: &'static str,
-    props: &SwitchProps,
-    state: &SwitchState,
-) -> (
-    TelemetryContext,
-    SelectionControlAttributes,
-    SwitchDescriptorSnapshot,
-) {
-    let descriptor = build_descriptor(props, state);
-    let snapshot = SwitchDescriptorSnapshot::from_descriptor(descriptor.attributes());
-    let telemetry = descriptor.telemetry().clone();
-    let context = TelemetryContext::new(component)
-        .with_analytics(
-            telemetry
-                .effective_analytics_id()
-                .map(|value| value.to_owned()),
-        )
-        .with_automation(
-            telemetry
-                .effective_automation_id()
-                .map(|value| value.to_owned()),
-        )
-        .with_descriptor_metadata(snapshot.label.clone(), snapshot.themed_attributes.clone());
-    (context, descriptor.into_attributes(), snapshot)
 }
 
 fn dispatch_change_event(
@@ -1284,15 +1327,16 @@ pub mod react {
     ///   authoritative while still allowing analytics and change hooks to fire
     ///   in deterministic order.
     pub fn ReactSwitch(props: &ReactSwitchProps) -> Jsx {
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        let plan = SwitchRenderPlan::prepare(
             "rustic_ui_material::switch::react::ReactSwitch",
             &props.switch,
             &props.state,
         );
+        let context = plan.context();
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
         instrument_render(&props.switch.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let attributes = snapshot.themed_attributes.clone();
+            let label = plan.label().to_string();
+            let attributes = plan.themed_attributes_owned();
             let handlers = handlers(props, Rc::clone(&state_handle));
             let props_object = build_props_object(attributes, &handlers);
             create_element("span", props_object, &[JsValue::from_str(&label)])
@@ -1478,15 +1522,16 @@ pub mod yew {
     /// handlers.
     #[function_component(YewSwitch)]
     pub fn yew_switch(props: &YewSwitchProps) -> Html {
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        let plan = SwitchRenderPlan::prepare(
             "rustic_ui_material::switch::yew::YewSwitch",
             &props.switch,
             &props.state,
         );
+        let context = plan.context();
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
         instrument_render(&props.switch.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let attrs = snapshot.themed_attributes.clone();
+            let label = plan.label().to_string();
+            let attrs = plan.themed_attributes_owned();
             let (change_handler, focus_handler, blur_handler, key_handler) =
                 build_yew_switch_handlers(
                     props.switch.clone(),
@@ -1857,21 +1902,32 @@ pub mod leptos {
     /// for observability.
     #[component]
     pub fn LeptosSwitch(props: LeptosSwitchProps) -> impl IntoView {
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        let plan = SwitchRenderPlan::prepare(
             "rustic_ui_material::switch::leptos::LeptosSwitch",
             &props.switch,
             &props.state,
         );
+        let context = plan.context();
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
         instrument_render(&props.switch.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let class = snapshot.class.clone();
-            let role = snapshot.role.clone();
-            let aria_checked = snapshot.aria_checked.clone();
-            let aria_disabled = snapshot.aria_disabled.clone();
-            let tabindex = snapshot.tabindex.clone();
-            let data_on = snapshot.data_on.clone();
-            let data_focus_visible = snapshot.data_focus_visible.clone();
+            let label = plan.label().to_string();
+            let class = plan.themed_value_owned("class").unwrap_or_default();
+            let role = plan
+                .attribute_owned("role")
+                .unwrap_or_else(|| "switch".to_string());
+            let aria_checked = plan
+                .aria_owned("aria-checked")
+                .unwrap_or_else(|| "false".to_string());
+            let aria_disabled = plan.aria_owned("aria-disabled");
+            let tabindex = plan
+                .attribute_owned("tabindex")
+                .unwrap_or_else(|| "0".to_string());
+            let data_on = plan
+                .data_owned("data-on")
+                .unwrap_or_else(|| "false".to_string());
+            let data_focus_visible = plan
+                .data_owned("data-focus-visible")
+                .unwrap_or_else(|| "false".to_string());
             let on_click = {
                 let on_change = props.on_change.clone();
                 let telemetry = props.telemetry_delegate.clone();
@@ -2046,22 +2102,33 @@ pub mod dioxus {
     /// owns the truth, guaranteeing analytics still fire before user handlers.
     pub fn DioxusSwitch(cx: Scope<DioxusSwitchProps>) -> Element {
         let props = cx.props();
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        let plan = SwitchRenderPlan::prepare(
             "rustic_ui_material::switch::dioxus::DioxusSwitch",
             &props.switch,
             &props.state,
         );
+        let context = plan.context();
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
         let interactions = SwitchInteractionFactory::new(props, Rc::clone(&state_handle));
         instrument_render(&props.switch.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let class = snapshot.class.clone();
-            let role = snapshot.role.clone();
-            let aria_checked = snapshot.aria_checked.clone();
-            let aria_disabled = snapshot.aria_disabled.clone();
-            let tabindex = snapshot.tabindex.clone();
-            let data_on = snapshot.data_on.clone();
-            let data_focus_visible = snapshot.data_focus_visible.clone();
+            let label = plan.label().to_string();
+            let class = plan.themed_value_owned("class").unwrap_or_default();
+            let role = plan
+                .attribute_owned("role")
+                .unwrap_or_else(|| "switch".to_string());
+            let aria_checked = plan
+                .aria_owned("aria-checked")
+                .unwrap_or_else(|| "false".to_string());
+            let aria_disabled = plan.aria_owned("aria-disabled");
+            let tabindex = plan
+                .attribute_owned("tabindex")
+                .unwrap_or_else(|| "0".to_string());
+            let data_on = plan
+                .data_owned("data-on")
+                .unwrap_or_else(|| "false".to_string());
+            let data_focus_visible = plan
+                .data_owned("data-focus-visible")
+                .unwrap_or_else(|| "false".to_string());
             let onclick = interactions.on_click_handler();
             let on_focus = interactions.on_focus_handler();
             let on_blur = interactions.on_blur_handler();
@@ -2530,21 +2597,32 @@ pub mod sycamore {
     /// the documented order.
     #[component]
     pub fn SycamoreSwitch<G: Html>(cx: Scope, props: SycamoreSwitchProps) -> Template<G> {
-        let (context, _descriptor, snapshot) = descriptor_with_context(
+        let plan = SwitchRenderPlan::prepare(
             "rustic_ui_material::switch::sycamore::SycamoreSwitch",
             &props.switch,
             &props.state,
         );
+        let context = plan.context();
         let state_handle = Rc::new(RefCell::new(props.state.clone()));
         instrument_render(&props.switch.telemetry, context, || {
-            let label = snapshot.label.clone();
-            let class = snapshot.class.clone();
-            let role = snapshot.role.clone();
-            let aria_checked = snapshot.aria_checked.clone();
-            let aria_disabled = snapshot.aria_disabled.clone();
-            let tabindex = snapshot.tabindex.clone();
-            let data_on = snapshot.data_on.clone();
-            let data_focus_visible = snapshot.data_focus_visible.clone();
+            let label = plan.label().to_string();
+            let class = plan.themed_value_owned("class").unwrap_or_default();
+            let role = plan
+                .attribute_owned("role")
+                .unwrap_or_else(|| "switch".to_string());
+            let aria_checked = plan
+                .aria_owned("aria-checked")
+                .unwrap_or_else(|| "false".to_string());
+            let aria_disabled = plan.aria_owned("aria-disabled");
+            let tabindex = plan
+                .attribute_owned("tabindex")
+                .unwrap_or_else(|| "0".to_string());
+            let data_on = plan
+                .data_owned("data-on")
+                .unwrap_or_else(|| "false".to_string());
+            let data_focus_visible = plan
+                .data_owned("data-focus-visible")
+                .unwrap_or_else(|| "false".to_string());
             let on_click = {
                 let telemetry = props.telemetry_delegate.clone();
                 let on_change = props.on_change.clone();
