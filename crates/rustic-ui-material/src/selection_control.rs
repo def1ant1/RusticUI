@@ -1,464 +1,738 @@
-//! Shared rendering helpers for Material selection controls.
+//! Strongly typed builders for Material selection control rendering.
 //!
-//! The helpers now surface structured descriptors so adapters can decide whether
-//! to emit HTML strings (SSR) or hydrate individual frameworks with attribute
-//! maps.  Centralizing the metadata keeps the individual component modules
-//! focused on data flow rather than DOM string assembly while making it trivial
-//! to serialize the same descriptor in multiple environments.
+//! These builders replace ad-hoc HTML helpers with enterprise-friendly
+//! descriptors that separate visual classes, ARIA metadata, automation signals
+//! and analytics hints.  Builders can be converted into attribute maps for
+//! hydration or serialized into deterministic HTML for SSR.
+
+use std::collections::BTreeMap;
+use std::fmt;
+use std::sync::{Arc, OnceLock};
 
 use rustic_ui_styled_engine::Style;
 use rustic_ui_utils::attributes_to_html;
 
 use crate::style_helpers;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum AttributeKind {
-    Aria,
-    DataState,
-    Standard,
+/// Global hook signature used to customize selection control builders.
+pub type SelectionControlHook =
+    dyn Fn(&mut SelectionControlAttributesBuilder) + Send + Sync + 'static;
+
+/// Global hook signature used to customize radio option builders.
+pub type RadioOptionHook = dyn Fn(&mut RadioOptionAttributesBuilder) + Send + Sync + 'static;
+
+/// Global hook signature used to customize radio group builders.
+pub type RadioGroupHook = dyn Fn(&mut RadioGroupAttributesBuilder) + Send + Sync + 'static;
+
+static SELECTION_CONTROL_HOOK: OnceLock<Arc<SelectionControlHook>> = OnceLock::new();
+static RADIO_OPTION_HOOK: OnceLock<Arc<RadioOptionHook>> = OnceLock::new();
+static RADIO_GROUP_HOOK: OnceLock<Arc<RadioGroupHook>> = OnceLock::new();
+
+/// Registers a global selection control hook that runs before finalizing any
+/// [`SelectionControlAttributes`].
+///
+/// This enables centralized analytics/theming providers to inject classes or
+/// automation IDs without every adapter repeating that wiring.  The hook is
+/// stored in a [`OnceLock`], so the first registration wins and subsequent
+/// attempts will return an error to avoid unpredictable overrides in multi-tenant
+/// environments.
+#[allow(clippy::missing_panics_doc)]
+pub fn register_selection_control_hook<F>(hook: F) -> Result<(), &'static str>
+where
+    F: Fn(&mut SelectionControlAttributesBuilder) + Send + Sync + 'static,
+{
+    SELECTION_CONTROL_HOOK
+        .set(Arc::new(hook))
+        .map_err(|_| "selection control hook already registered")
 }
 
+/// Registers a global radio option hook.  See [`register_selection_control_hook`]
+/// for details on lifecycle guarantees.
+pub fn register_radio_option_hook<F>(hook: F) -> Result<(), &'static str>
+where
+    F: Fn(&mut RadioOptionAttributesBuilder) + Send + Sync + 'static,
+{
+    RADIO_OPTION_HOOK
+        .set(Arc::new(hook))
+        .map_err(|_| "radio option hook already registered")
+}
+
+/// Registers a global radio group hook.  See [`register_selection_control_hook`]
+/// for details on lifecycle guarantees.
+pub fn register_radio_group_hook<F>(hook: F) -> Result<(), &'static str>
+where
+    F: Fn(&mut RadioGroupAttributesBuilder) + Send + Sync + 'static,
+{
+    RADIO_GROUP_HOOK
+        .set(Arc::new(hook))
+        .map_err(|_| "radio group hook already registered")
+}
+
+/// Data object describing a Material selection control (checkbox/switch).
+///
+/// The struct is intentionally verbose to provide predictable extension points
+/// for enterprise telemetry teams.  Values are stored in deterministic
+/// [`BTreeMap`]s so that SSR output is stable across releases.
 #[derive(Debug, Clone)]
-struct AttributeEntry {
-    key: String,
-    value: String,
-    kind: AttributeKind,
+pub struct SelectionControlAttributes {
+    label: String,
+    style: Style,
+    classes: Vec<String>,
+    aria: BTreeMap<String, String>,
+    data: BTreeMap<String, String>,
+    automation_ids: BTreeMap<String, String>,
+    attributes: BTreeMap<String, String>,
 }
 
-impl AttributeEntry {
-    fn new(key: impl Into<String>, value: impl Into<String>) -> Self {
+impl SelectionControlAttributes {
+    /// Starts a new builder for a selection control descriptor.
+    pub fn builder(label: impl Into<String>, style: Style) -> SelectionControlAttributesBuilder {
+        SelectionControlAttributesBuilder::new(label, style)
+    }
+
+    /// Returns the label intended for end users and analytics payloads.
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    /// Returns a clone of the Material style handle so adapters can preload CSS.
+    pub fn style(&self) -> Style {
+        self.style.clone()
+    }
+
+    /// Returns all CSS classes that should be applied to the control root.
+    pub fn classes(&self) -> &[String] {
+        &self.classes
+    }
+
+    /// Returns ARIA attributes for accessibility testing and hydration as an
+    /// iterator compatible with the legacy descriptor API.
+    pub fn aria_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.aria
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+    }
+
+    /// Direct access to the internal ARIA map for adapters that require owned
+    /// metadata.
+    pub fn aria_map(&self) -> &BTreeMap<String, String> {
+        &self.aria
+    }
+
+    /// Returns `data-*` attributes used for analytics and focus management as an
+    /// iterator. Automation identifiers are surfaced as `data-automation-*`
+    /// entries so existing instrumentation keeps working.
+    pub fn data_state_attributes(&self) -> Vec<(String, String)> {
+        let mut attrs: Vec<(String, String)> = self
+            .data
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+        attrs.extend(
+            self.automation_ids
+                .iter()
+                .map(|(key, value)| (format!("data-automation-{key}"), value.clone())),
+        );
+        attrs
+    }
+
+    /// Direct access to the structured data attribute map.
+    pub fn data_map(&self) -> &BTreeMap<String, String> {
+        &self.data
+    }
+
+    /// Returns automation identifiers (exposed as `data-automation-*`).
+    pub fn automation_ids(&self) -> &BTreeMap<String, String> {
+        &self.automation_ids
+    }
+
+    /// Returns additional non-ARIA attributes (e.g. `role`, `tabindex`) as an
+    /// iterator for backwards compatibility.
+    pub fn standard_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.attributes
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+    }
+
+    /// Direct access to the passthrough attribute map.
+    pub fn extra_attributes(&self) -> &BTreeMap<String, String> {
+        &self.attributes
+    }
+
+    fn base_attribute_pairs(&self) -> Vec<(String, String)> {
+        let mut pairs: Vec<(String, String)> = Vec::new();
+        if !self.classes.is_empty() {
+            pairs.push(("class".into(), self.classes.join(" ")));
+        }
+        pairs.extend(self.attributes.iter().map(|(k, v)| (k.clone(), v.clone())));
+        pairs.extend(self.aria.iter().map(|(k, v)| (k.clone(), v.clone())));
+        pairs.extend(self.data.iter().map(|(k, v)| (k.clone(), v.clone())));
+        pairs.extend(
+            self.automation_ids
+                .iter()
+                .map(|(k, v)| (format!("data-automation-{k}"), v.clone())),
+        );
+        pairs
+    }
+
+    /// Returns the themed attribute pairs ready for framework hydration.
+    pub fn themed_attributes(&self) -> Vec<(String, String)> {
+        style_helpers::themed_attributes(self.style.clone(), self.base_attribute_pairs())
+    }
+
+    /// Serializes the control into a `<span>` suitable for SSR pipelines.
+    pub fn to_ssr_html(&self) -> String {
+        let attrs = self.themed_attributes();
+        format!(
+            "<span {attrs}>{label}</span>",
+            attrs = attributes_to_html(&attrs),
+            label = self.label()
+        )
+    }
+}
+
+/// Builder backing [`SelectionControlAttributes`].
+#[derive(Debug, Clone)]
+pub struct SelectionControlAttributesBuilder {
+    label: String,
+    style: Style,
+    classes: Vec<String>,
+    aria: BTreeMap<String, String>,
+    data: BTreeMap<String, String>,
+    automation_ids: BTreeMap<String, String>,
+    attributes: BTreeMap<String, String>,
+}
+
+impl SelectionControlAttributesBuilder {
+    fn new(label: impl Into<String>, style: Style) -> Self {
+        Self {
+            label: label.into(),
+            style,
+            classes: Vec::new(),
+            aria: BTreeMap::new(),
+            data: BTreeMap::new(),
+            automation_ids: BTreeMap::new(),
+            attributes: BTreeMap::new(),
+        }
+    }
+
+    /// Applies a CSS class to the control.  Classes are deduplicated during build.
+    pub fn class(mut self, class: impl Into<String>) -> Self {
+        self.classes.push(class.into());
+        self
+    }
+
+    /// Applies multiple classes at once.
+    pub fn classes<I, S>(mut self, classes: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.classes.extend(classes.into_iter().map(Into::into));
+        self
+    }
+
+    /// Records an ARIA attribute.
+    pub fn aria(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.aria.insert(key.into(), value.into());
+        self
+    }
+
+    /// Records a `data-*` attribute.  The caller may omit the `data-` prefix to
+    /// reduce boilerplate.
+    pub fn data(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         let key = key.into();
-        let kind = if key.starts_with("aria-") || key == "role" || key == "tabindex" {
-            AttributeKind::Aria
-        } else if key.starts_with("data-") {
-            AttributeKind::DataState
+        let normalized = if key.starts_with("data-") {
+            key
         } else {
-            AttributeKind::Standard
+            format!("data-{key}")
         };
-        Self {
-            key,
-            value: value.into(),
-            kind,
+        self.data.insert(normalized, value.into());
+        self
+    }
+
+    /// Records an automation identifier surfaced as `data-automation-{key}`.
+    pub fn automation_id(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.automation_ids.insert(key.into(), value.into());
+        self
+    }
+
+    /// Adds any additional attribute that does not fit the categories above.
+    pub fn attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.attributes.insert(key.into(), value.into());
+        self
+    }
+
+    fn apply_global_hook(&mut self) {
+        if let Some(hook) = SELECTION_CONTROL_HOOK.get() {
+            hook(self);
+        }
+    }
+
+    /// Finalizes the builder and returns an immutable descriptor.
+    pub fn build(mut self) -> SelectionControlAttributes {
+        self.apply_global_hook();
+        self.classes.sort();
+        self.classes.dedup();
+        SelectionControlAttributes {
+            label: self.label,
+            style: self.style,
+            classes: self.classes,
+            aria: self.aria,
+            data: self.data,
+            automation_ids: self.automation_ids,
+            attributes: self.attributes,
         }
     }
 }
 
-/// Describes a labelled toggle-style control such as a checkbox or switch.
-///
-/// The descriptor acts as a fluent builder that records ARIA attributes,
-/// automation-focused `data-*` flags, and additional DOM metadata without
-/// stringifying. Framework adapters can request the themed attribute pairs when
-/// hydrating a client render, while SSR pipelines can convert the same
-/// descriptor to HTML using [`render_toggle_html`].
-///
-/// # SSR and hydration flow
-///
-/// 1. Headless state machines expose attribute tuples describing ARIA metadata
-///    and stateful `data-*` flags.
-/// 2. Callers feed those tuples into [`ToggleControlDescriptor::with_attributes`]
-///    which records the metadata and allows inspection without conversion.
-/// 3. Framework adapters call [`ToggleControlDescriptor::themed_attributes`] to
-///    receive a merged `(String, String)` vector suitable for frameworks like
-///    Yew, Leptos, Sycamore or React (through the WASM bridge).
-/// 4. Server renderers invoke [`render_toggle_html`] which serializes the same
-///    descriptor via [`style_helpers::themed_attributes`] and
-///    [`attributes_to_html`].
-///
-/// # Examples
-///
-/// ```rust,ignore
-/// use rustic_ui_material::selection_control::{
-///     render_toggle_html, ToggleControlDescriptor,
-/// };
-/// use rustic_ui_styled_engine::Style;
-///
-/// let style = Style::new(rustic_ui_styled_engine::css!("color: red;"))
-///     .expect("valid style");
-/// let descriptor = ToggleControlDescriptor::new("Notifications", style.clone())
-///     .with_attributes([
-///         ("role", "switch"),
-///         ("aria-checked", "true"),
-///         ("data-on", "true"),
-///     ]);
-///
-/// // Framework adapter hydration:
-/// let themed_pairs = descriptor.themed_attributes();
-/// assert!(themed_pairs.iter().any(|(k, _)| k == "class"));
-///
-/// // SSR pipeline:
-/// let html = render_toggle_html(&descriptor);
-/// assert!(html.contains("aria-checked"));
-/// ```
+/// Data object describing a single radio option.
 #[derive(Debug, Clone)]
-pub struct ToggleControlDescriptor {
+pub struct RadioOptionAttributes {
     label: String,
     style: Style,
-    attributes: Vec<AttributeEntry>,
+    classes: Vec<String>,
+    aria: BTreeMap<String, String>,
+    data: BTreeMap<String, String>,
+    automation_ids: BTreeMap<String, String>,
+    attributes: BTreeMap<String, String>,
 }
 
-#[allow(dead_code)]
-impl ToggleControlDescriptor {
-    /// Create a new descriptor for a toggle-like control.
-    pub fn new(label: impl Into<String>, style: Style) -> Self {
-        Self {
-            label: label.into(),
-            style,
-            attributes: Vec::new(),
-        }
+impl RadioOptionAttributes {
+    /// Starts a new builder for a radio option descriptor.
+    pub fn builder(label: impl Into<String>, style: Style) -> RadioOptionAttributesBuilder {
+        RadioOptionAttributesBuilder::new(label, style)
     }
 
-    /// Returns the visible label associated with the control.
+    /// The label rendered next to the radio option.
     pub fn label(&self) -> &str {
         &self.label
     }
 
-    /// Returns a clone of the themed style handle so adapters can pre-register
-    /// CSS with their runtime.
+    /// Style handle used for preloading.
     pub fn style(&self) -> Style {
         self.style.clone()
     }
 
-    /// Iterate over ARIA attributes recorded on the descriptor.
+    /// List of classes applied to the option container.
+    pub fn classes(&self) -> &[String] {
+        &self.classes
+    }
+
+    /// Iterator over ARIA attributes retained for the option.
     pub fn aria_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
-        self.attributes
+        self.aria
             .iter()
-            .filter(|attr| attr.kind == AttributeKind::Aria)
-            .map(|attr| (attr.key.as_str(), attr.value.as_str()))
+            .map(|(key, value)| (key.as_str(), value.as_str()))
     }
 
-    /// Iterate over `data-*` attributes tracked by the descriptor.
-    pub fn data_state_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
-        self.attributes
+    /// Owned view of data attributes, including automation identifiers.
+    pub fn data_state_attributes(&self) -> Vec<(String, String)> {
+        let mut attrs: Vec<(String, String)> = self
+            .data
             .iter()
-            .filter(|attr| attr.kind == AttributeKind::DataState)
-            .map(|attr| (attr.key.as_str(), attr.value.as_str()))
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+        attrs.extend(
+            self.automation_ids
+                .iter()
+                .map(|(key, value)| (format!("data-automation-{key}"), value.clone())),
+        );
+        attrs
     }
 
-    /// Iterate over non-ARIA, non-`data-*` attributes.
+    /// Iterator over non-ARIA passthrough attributes.
     pub fn standard_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
         self.attributes
             .iter()
-            .filter(|attr| attr.kind == AttributeKind::Standard)
-            .map(|attr| (attr.key.as_str(), attr.value.as_str()))
+            .map(|(key, value)| (key.as_str(), value.as_str()))
     }
 
-    /// Append raw attributes emitted by the headless state machine.
-    pub fn with_attributes<I, K, V>(mut self, attributes: I) -> Self
-    where
-        I: IntoIterator<Item = (K, V)>,
-        K: Into<String>,
-        V: Into<String>,
-    {
-        for (key, value) in attributes {
-            self.attributes.push(AttributeEntry::new(key, value));
+    /// Automation identifiers as a map for enterprise QA harnesses.
+    pub fn automation_ids(&self) -> &BTreeMap<String, String> {
+        &self.automation_ids
+    }
+
+    fn base_attribute_pairs(&self) -> Vec<(String, String)> {
+        let mut pairs: Vec<(String, String)> = Vec::new();
+        if !self.classes.is_empty() {
+            pairs.push(("class".into(), self.classes.join(" ")));
         }
-        self
+        pairs.extend(self.attributes.iter().map(|(k, v)| (k.clone(), v.clone())));
+        pairs.extend(self.aria.iter().map(|(k, v)| (k.clone(), v.clone())));
+        pairs.extend(self.data.iter().map(|(k, v)| (k.clone(), v.clone())));
+        pairs.extend(
+            self.automation_ids
+                .iter()
+                .map(|(k, v)| (format!("data-automation-{k}"), v.clone())),
+        );
+        pairs
     }
 
-    /// Add a single attribute to the descriptor.
-    pub fn attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.attributes.push(AttributeEntry::new(key, value));
-        self
-    }
-
-    /// Return the merged themed attributes ready for framework hydration.
+    /// Returns the themed attribute pairs for the option container.
     pub fn themed_attributes(&self) -> Vec<(String, String)> {
-        style_helpers::themed_attributes(self.style.clone(), self.raw_attributes())
+        style_helpers::themed_attributes(self.style.clone(), self.base_attribute_pairs())
     }
 
-    fn raw_attributes(&self) -> Vec<(String, String)> {
-        let mut standard = Vec::new();
-        let mut aria = Vec::new();
-        let mut data = Vec::new();
-
-        for attr in &self.attributes {
-            let pair = (attr.key.clone(), attr.value.clone());
-            match attr.kind {
-                AttributeKind::Standard => standard.push(pair),
-                AttributeKind::Aria => aria.push(pair),
-                AttributeKind::DataState => data.push(pair),
-            }
-        }
-
-        standard.extend(aria);
-        standard.extend(data);
-        standard
+    /// Serializes the option to `<span>` markup for SSR.
+    pub fn to_ssr_html(&self) -> String {
+        let attrs = self.themed_attributes();
+        format!(
+            "<span {attrs}>{label}</span>",
+            attrs = attributes_to_html(&attrs),
+            label = self.label()
+        )
     }
 }
 
-/// Describes an individual option within a radio group.
-///
-/// The descriptor mirrors [`ToggleControlDescriptor`] but focuses on options
-/// that share a group container.  Each option tracks its own theme handle,
-/// attribute metadata and label so adapters can compose option-level DOM nodes
-/// independently of the surrounding group.
+/// Builder for [`RadioOptionAttributes`].
 #[derive(Debug, Clone)]
-pub struct RadioOptionDescriptor {
+pub struct RadioOptionAttributesBuilder {
     label: String,
     style: Style,
-    attributes: Vec<AttributeEntry>,
+    classes: Vec<String>,
+    aria: BTreeMap<String, String>,
+    data: BTreeMap<String, String>,
+    automation_ids: BTreeMap<String, String>,
+    attributes: BTreeMap<String, String>,
 }
 
-#[allow(dead_code)]
-impl RadioOptionDescriptor {
-    /// Create a new option descriptor.
-    pub fn new(label: impl Into<String>, style: Style) -> Self {
+impl RadioOptionAttributesBuilder {
+    fn new(label: impl Into<String>, style: Style) -> Self {
         Self {
             label: label.into(),
             style,
-            attributes: Vec::new(),
+            classes: Vec::new(),
+            aria: BTreeMap::new(),
+            data: BTreeMap::new(),
+            automation_ids: BTreeMap::new(),
+            attributes: BTreeMap::new(),
         }
     }
 
-    /// Returns the option label displayed to end users.
-    pub fn label(&self) -> &str {
-        &self.label
+    /// Applies a CSS class.
+    pub fn class(mut self, class: impl Into<String>) -> Self {
+        self.classes.push(class.into());
+        self
     }
 
-    /// Returns a clone of the themed style handle for the option container.
+    /// Applies multiple classes.
+    pub fn classes<I, S>(mut self, classes: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.classes.extend(classes.into_iter().map(Into::into));
+        self
+    }
+
+    /// Adds an ARIA attribute.
+    pub fn aria(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.aria.insert(key.into(), value.into());
+        self
+    }
+
+    /// Adds a `data-*` attribute, prefixing if necessary.
+    pub fn data(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        let key = key.into();
+        let normalized = if key.starts_with("data-") {
+            key
+        } else {
+            format!("data-{key}")
+        };
+        self.data.insert(normalized, value.into());
+        self
+    }
+
+    /// Adds an automation identifier.
+    pub fn automation_id(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.automation_ids.insert(key.into(), value.into());
+        self
+    }
+
+    /// Adds a passthrough attribute.
+    pub fn attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.attributes.insert(key.into(), value.into());
+        self
+    }
+
+    fn apply_global_hook(&mut self) {
+        if let Some(hook) = RADIO_OPTION_HOOK.get() {
+            hook(self);
+        }
+    }
+
+    /// Finalizes the descriptor.
+    pub fn build(mut self) -> RadioOptionAttributes {
+        self.apply_global_hook();
+        self.classes.sort();
+        self.classes.dedup();
+        RadioOptionAttributes {
+            label: self.label,
+            style: self.style,
+            classes: self.classes,
+            aria: self.aria,
+            data: self.data,
+            automation_ids: self.automation_ids,
+            attributes: self.attributes,
+        }
+    }
+}
+
+/// Data object describing a radio group container and its options.
+#[derive(Debug, Clone)]
+pub struct RadioGroupAttributes {
+    style: Style,
+    classes: Vec<String>,
+    aria: BTreeMap<String, String>,
+    data: BTreeMap<String, String>,
+    automation_ids: BTreeMap<String, String>,
+    attributes: BTreeMap<String, String>,
+    options: Vec<RadioOptionAttributes>,
+}
+
+impl RadioGroupAttributes {
+    /// Starts a new builder for a radio group descriptor.
+    pub fn builder(style: Style) -> RadioGroupAttributesBuilder {
+        RadioGroupAttributesBuilder::new(style)
+    }
+
+    /// Returns all option descriptors, preserving the insertion order.
+    pub fn options(&self) -> &[RadioOptionAttributes] {
+        &self.options
+    }
+
+    /// Returns the style handle for the group container.
     pub fn style(&self) -> Style {
         self.style.clone()
     }
 
-    /// Iterate over ARIA metadata for the option.
+    /// Iterator over ARIA attributes retained for the group container.
     pub fn aria_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
-        self.attributes
+        self.aria
             .iter()
-            .filter(|attr| attr.kind == AttributeKind::Aria)
-            .map(|attr| (attr.key.as_str(), attr.value.as_str()))
+            .map(|(key, value)| (key.as_str(), value.as_str()))
     }
 
-    /// Iterate over `data-*` flags exposed for analytics and focus management.
-    pub fn data_state_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
-        self.attributes
+    /// Owned data attributes, including automation identifiers.
+    pub fn data_state_attributes(&self) -> Vec<(String, String)> {
+        let mut attrs: Vec<(String, String)> = self
+            .data
             .iter()
-            .filter(|attr| attr.kind == AttributeKind::DataState)
-            .map(|attr| (attr.key.as_str(), attr.value.as_str()))
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+        attrs.extend(
+            self.automation_ids
+                .iter()
+                .map(|(key, value)| (format!("data-automation-{key}"), value.clone())),
+        );
+        attrs
     }
 
-    /// Iterate over non-ARIA attributes.
+    /// Iterator over passthrough attributes such as `role` or `tabindex`.
     pub fn standard_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
         self.attributes
             .iter()
-            .filter(|attr| attr.kind == AttributeKind::Standard)
-            .map(|attr| (attr.key.as_str(), attr.value.as_str()))
+            .map(|(key, value)| (key.as_str(), value.as_str()))
     }
 
-    /// Append attributes retrieved from the radio state machine.
-    pub fn with_attributes<I, K, V>(mut self, attributes: I) -> Self
-    where
-        I: IntoIterator<Item = (K, V)>,
-        K: Into<String>,
-        V: Into<String>,
-    {
-        for (key, value) in attributes {
-            self.attributes.push(AttributeEntry::new(key, value));
+    /// Automation identifiers stored for QA harnesses.
+    pub fn automation_ids(&self) -> &BTreeMap<String, String> {
+        &self.automation_ids
+    }
+
+    fn base_attribute_pairs(&self) -> Vec<(String, String)> {
+        let mut pairs: Vec<(String, String)> = Vec::new();
+        if !self.classes.is_empty() {
+            pairs.push(("class".into(), self.classes.join(" ")));
         }
-        self
+        pairs.extend(self.attributes.iter().map(|(k, v)| (k.clone(), v.clone())));
+        pairs.extend(self.aria.iter().map(|(k, v)| (k.clone(), v.clone())));
+        pairs.extend(self.data.iter().map(|(k, v)| (k.clone(), v.clone())));
+        pairs.extend(
+            self.automation_ids
+                .iter()
+                .map(|(k, v)| (format!("data-automation-{k}"), v.clone())),
+        );
+        pairs
     }
 
-    /// Add a single attribute to the descriptor.
-    pub fn attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.attributes.push(AttributeEntry::new(key, value));
-        self
-    }
-
-    /// Return the themed attribute pairs for hydration.
+    /// Returns themed attributes for the radio group container.
     pub fn themed_attributes(&self) -> Vec<(String, String)> {
-        style_helpers::themed_attributes(self.style.clone(), self.raw_attributes())
+        style_helpers::themed_attributes(self.style.clone(), self.base_attribute_pairs())
     }
 
-    fn raw_attributes(&self) -> Vec<(String, String)> {
-        let mut standard = Vec::new();
-        let mut aria = Vec::new();
-        let mut data = Vec::new();
-
-        for attr in &self.attributes {
-            let pair = (attr.key.clone(), attr.value.clone());
-            match attr.kind {
-                AttributeKind::Standard => standard.push(pair),
-                AttributeKind::Aria => aria.push(pair),
-                AttributeKind::DataState => data.push(pair),
-            }
+    /// Serializes the entire group to `<div>` markup for SSR.
+    pub fn to_ssr_html(&self) -> String {
+        let group_attrs = self.themed_attributes();
+        let mut options_html = String::new();
+        for option in &self.options {
+            options_html.push_str(&option.to_ssr_html());
         }
-
-        standard.extend(aria);
-        standard.extend(data);
-        standard
+        format!(
+            "<div {attrs}>{options}</div>",
+            attrs = attributes_to_html(&group_attrs),
+            options = options_html
+        )
     }
 }
 
-/// Describes the container and options for a radio group.
-///
-/// The descriptor is intentionally exhaustive, allowing SSR callers to generate
-/// HTML via [`render_radio_group_html`] while giving client renderers direct
-/// access to the themed attribute sets.  Options are stored as
-/// [`RadioOptionDescriptor`] instances so adapters can lazily render only the
-/// portions of the group that changed during hydration.
-///
-/// # Examples
-///
-/// ```rust,ignore
-/// use rustic_ui_material::selection_control::{
-///     render_radio_group_html, RadioGroupDescriptor, RadioOptionDescriptor,
-/// };
-/// use rustic_ui_styled_engine::Style;
-///
-/// let group_style = Style::new(rustic_ui_styled_engine::css!("display: flex;"))
-///     .expect("valid style");
-/// let option_style = group_style.clone();
-/// let descriptor = RadioGroupDescriptor::new(group_style)
-///     .with_group_attributes([("role", "radiogroup")])
-///     .option(
-///         RadioOptionDescriptor::new("A", option_style.clone()).with_attributes([
-///             ("role", "radio"),
-///             ("aria-checked", "true"),
-///         ]),
-///     )
-///     .option(
-///         RadioOptionDescriptor::new("B", option_style).with_attributes([
-///             ("role", "radio"),
-///             ("aria-checked", "false"),
-///         ]),
-///     );
-///
-/// // Hydration fetches the attribute pairs lazily.
-/// let group_pairs = descriptor.group_thematic_attributes();
-/// assert!(group_pairs.iter().any(|(k, _)| k == "class"));
-///
-/// // SSR renders deterministic markup.
-/// let html = render_radio_group_html(&descriptor);
-/// assert!(html.contains("role=\"radiogroup\""));
-/// ```
+/// Builder for [`RadioGroupAttributes`].
 #[derive(Debug, Clone)]
-pub struct RadioGroupDescriptor {
+pub struct RadioGroupAttributesBuilder {
     style: Style,
-    attributes: Vec<AttributeEntry>,
-    options: Vec<RadioOptionDescriptor>,
+    classes: Vec<String>,
+    aria: BTreeMap<String, String>,
+    data: BTreeMap<String, String>,
+    automation_ids: BTreeMap<String, String>,
+    attributes: BTreeMap<String, String>,
+    options: Vec<RadioOptionAttributes>,
 }
 
-#[allow(dead_code)]
-impl RadioGroupDescriptor {
-    /// Create a new descriptor for a radio group container.
-    pub fn new(style: Style) -> Self {
+impl RadioGroupAttributesBuilder {
+    fn new(style: Style) -> Self {
         Self {
             style,
-            attributes: Vec::new(),
+            classes: Vec::new(),
+            aria: BTreeMap::new(),
+            data: BTreeMap::new(),
+            automation_ids: BTreeMap::new(),
+            attributes: BTreeMap::new(),
             options: Vec::new(),
         }
     }
 
-    /// Append attributes emitted by the headless radio group state.
-    pub fn with_group_attributes<I, K, V>(mut self, attributes: I) -> Self
+    /// Applies a CSS class to the group container.
+    pub fn class(mut self, class: impl Into<String>) -> Self {
+        self.classes.push(class.into());
+        self
+    }
+
+    /// Applies multiple CSS classes to the group container.
+    pub fn classes<I, S>(mut self, classes: I) -> Self
     where
-        I: IntoIterator<Item = (K, V)>,
-        K: Into<String>,
-        V: Into<String>,
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
     {
-        for (key, value) in attributes {
-            self.attributes.push(AttributeEntry::new(key, value));
-        }
+        self.classes.extend(classes.into_iter().map(Into::into));
         self
     }
 
-    /// Add an individual attribute to the group container.
-    pub fn group_attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.attributes.push(AttributeEntry::new(key, value));
+    /// Adds an ARIA attribute to the group container.
+    pub fn aria(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.aria.insert(key.into(), value.into());
         self
     }
 
-    /// Push a radio option descriptor into the group.
-    pub fn option(mut self, option: RadioOptionDescriptor) -> Self {
+    /// Adds a `data-*` attribute to the group container.
+    pub fn data(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        let key = key.into();
+        let normalized = if key.starts_with("data-") {
+            key
+        } else {
+            format!("data-{key}")
+        };
+        self.data.insert(normalized, value.into());
+        self
+    }
+
+    /// Adds an automation identifier that will be surfaced as `data-automation-*`.
+    pub fn automation_id(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.automation_ids.insert(key.into(), value.into());
+        self
+    }
+
+    /// Adds a passthrough attribute such as `role` or `tabindex`.
+    pub fn attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.attributes.insert(key.into(), value.into());
+        self
+    }
+
+    /// Appends an option descriptor that was previously built.
+    pub fn option(mut self, option: RadioOptionAttributes) -> Self {
         self.options.push(option);
         self
     }
 
-    /// Returns all option descriptors for further inspection.
-    pub fn options(&self) -> &[RadioOptionDescriptor] {
-        &self.options
-    }
-
-    /// Returns a clone of the group style for preloading CSS rules.
-    pub fn style(&self) -> Style {
-        self.style.clone()
-    }
-
-    /// Iterate over ARIA attributes attached to the group container.
-    pub fn aria_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
-        self.attributes
-            .iter()
-            .filter(|attr| attr.kind == AttributeKind::Aria)
-            .map(|attr| (attr.key.as_str(), attr.value.as_str()))
-    }
-
-    /// Iterate over container-level `data-*` flags.
-    pub fn data_state_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
-        self.attributes
-            .iter()
-            .filter(|attr| attr.kind == AttributeKind::DataState)
-            .map(|attr| (attr.key.as_str(), attr.value.as_str()))
-    }
-
-    /// Iterate over standard container attributes.
-    pub fn standard_attributes(&self) -> impl Iterator<Item = (&str, &str)> {
-        self.attributes
-            .iter()
-            .filter(|attr| attr.kind == AttributeKind::Standard)
-            .map(|attr| (attr.key.as_str(), attr.value.as_str()))
-    }
-
-    /// Returns the themed attribute pairs for the group container.
-    pub fn group_thematic_attributes(&self) -> Vec<(String, String)> {
-        style_helpers::themed_attributes(self.style.clone(), self.raw_attributes())
-    }
-
-    fn raw_attributes(&self) -> Vec<(String, String)> {
-        let mut standard = Vec::new();
-        let mut aria = Vec::new();
-        let mut data = Vec::new();
-
-        for attr in &self.attributes {
-            let pair = (attr.key.clone(), attr.value.clone());
-            match attr.kind {
-                AttributeKind::Standard => standard.push(pair),
-                AttributeKind::Aria => aria.push(pair),
-                AttributeKind::DataState => data.push(pair),
-            }
+    fn apply_global_hook(&mut self) {
+        if let Some(hook) = RADIO_GROUP_HOOK.get() {
+            hook(self);
         }
+    }
 
-        standard.extend(aria);
-        standard.extend(data);
-        standard
+    /// Finalizes the descriptor.
+    pub fn build(mut self) -> RadioGroupAttributes {
+        self.apply_global_hook();
+        self.classes.sort();
+        self.classes.dedup();
+        RadioGroupAttributes {
+            style: self.style,
+            classes: self.classes,
+            aria: self.aria,
+            data: self.data,
+            automation_ids: self.automation_ids,
+            attributes: self.attributes,
+            options: self.options,
+        }
     }
 }
 
-/// Serialize a toggle descriptor into HTML for SSR environments.
-#[must_use]
-pub(crate) fn render_toggle_html(descriptor: &ToggleControlDescriptor) -> String {
-    let attrs = descriptor.themed_attributes();
-    format!(
-        "<span {attrs}>{label}</span>",
-        attrs = attributes_to_html(&attrs),
-        label = descriptor.label()
-    )
+impl fmt::Display for SelectionControlAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.to_ssr_html())
+    }
 }
 
-/// Serialize a radio group descriptor into HTML for SSR environments.
-#[must_use]
-pub(crate) fn render_radio_group_html(descriptor: &RadioGroupDescriptor) -> String {
-    let group_attrs = descriptor.group_thematic_attributes();
-    let mut options_html = String::new();
-    for option in descriptor.options() {
-        let attrs = option.themed_attributes();
-        options_html.push_str(&format!(
-            "<span {attrs}>{label}</span>",
-            attrs = attributes_to_html(&attrs),
-            label = option.label()
-        ));
+impl fmt::Display for RadioOptionAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.to_ssr_html())
     }
-    format!(
-        "<div {attrs}>{options}</div>",
-        attrs = attributes_to_html(&group_attrs),
-        options = options_html
-    )
+}
+
+impl fmt::Display for RadioGroupAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.to_ssr_html())
+    }
+}
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+
+    fn style() -> Style {
+        Style::new(rustic_ui_styled_engine::css!("color: inherit;")).expect("valid style")
+    }
+
+    #[test]
+    fn selection_control_ssr_contains_expected_attributes() {
+        let descriptor = SelectionControlAttributes::builder("Toggle", style())
+            .class("root")
+            .aria("role", "switch")
+            .data("state", "on")
+            .automation_id("qa", "toggle-1")
+            .build();
+
+        let html = descriptor.to_ssr_html();
+        assert!(html.contains("role=\"switch\""));
+        assert!(html.contains("data-state=\"on\""));
+        assert!(html.contains("data-automation-qa=\"toggle-1\""));
+        assert!(html.contains("Toggle"));
+    }
+
+    #[test]
+    fn radio_group_ssr_contains_option_markup() {
+        let option_style = style();
+        let option = RadioOptionAttributes::builder("A", option_style.clone())
+            .aria("role", "radio")
+            .automation_id("qa", "radio-a")
+            .build();
+        let group = RadioGroupAttributes::builder(style())
+            .aria("role", "radiogroup")
+            .option(option)
+            .build();
+
+        let html = group.to_ssr_html();
+        assert!(html.contains("role=\"radiogroup\""));
+        assert!(html.contains("radio-a"));
+    }
 }

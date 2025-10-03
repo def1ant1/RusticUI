@@ -1,13 +1,13 @@
 //! Material radio group built atop the headless [`RadioGroupState`] and the
 //! descriptor system that unifies SSR and hydration across frameworks.
 //!
-//! [`RadioGroupDescriptor`](crate::selection_control::RadioGroupDescriptor) and
-//! [`RadioOptionDescriptor`](crate::selection_control::RadioOptionDescriptor)
+//! [`RadioGroupAttributes`](crate::selection_control::RadioGroupAttributes) and
+//! [`RadioOptionAttributes`](crate::selection_control::RadioOptionAttributes)
 //! capture ARIA, automation, and theming metadata once so both server renderers
 //! and client adapters consume the same snapshot:
 //!
-//! * [`render_radio_group_html`](crate::selection_control::render_radio_group_html)
-//!   serializes HTML for SSR, static hosting, or streaming pipelines while reusing
+//! * [`RadioGroupAttributes::to_ssr_html`] serializes HTML for SSR, static
+//!   hosting, or streaming pipelines while reusing
 //!   the descriptor’s hydration-safe attributes.
 //! * Framework adapters for React, Yew, Leptos, Dioxus, and Sycamore hydrate by
 //!   reading the descriptor’s themed attribute vectors, ensuring automation
@@ -51,7 +51,7 @@
 //! use rustic_ui_headless::radio::{RadioGroupState, RadioOrientation};
 //! use rustic_ui_material::radio::RadioGroupProps;
 //! use rustic_ui_material::selection_control::{
-//!     render_radio_group_html, RadioGroupDescriptor, RadioOptionDescriptor,
+//!     RadioGroupAttributes, RadioOptionAttributes,
 //! };
 //! use rustic_ui_material::telemetry::TelemetryHooks;
 //! use rustic_ui_styled_engine::{css, Style};
@@ -72,19 +72,22 @@
 //!         .expect("style to compile");
 //!     let option_style = Style::new(css!("padding: 0.25rem 0.5rem;"))
 //!         .expect("style to compile");
-//!     let descriptor = RadioGroupDescriptor::new(group_style.clone())
-//!         .with_group_attributes(state.group_aria_attributes())
+//!     let descriptor = RadioGroupAttributes::builder(group_style.clone())
+//!         .aria("role", "radiogroup")
 //!         .option(
-//!             RadioOptionDescriptor::new("Email", option_style.clone())
-//!                 .with_attributes(state.option_aria_attributes(0)),
+//!             RadioOptionAttributes::builder("Email", option_style.clone())
+//!                 .aria("role", "radio")
+//!                 .build(),
 //!         )
 //!         .option(
-//!             RadioOptionDescriptor::new("SMS", option_style.clone())
-//!                 .with_attributes(state.option_aria_attributes(1)),
-//!         );
+//!             RadioOptionAttributes::builder("SMS", option_style.clone())
+//!                 .aria("role", "radio")
+//!                 .build(),
+//!         )
+//!         .build();
 //!
 //!     // SSR produces deterministic markup using the descriptor metadata.
-//!     let ssr_html = render_radio_group_html(&descriptor);
+//!     let ssr_html = descriptor.to_ssr_html();
 //!     assert!(ssr_html.contains("role=\"radiogroup\""));
 //!
 //!     // Hydration merges telemetry hooks so analytics fire before user
@@ -127,7 +130,7 @@ use rustic_ui_headless::{
 use rustic_ui_styled_engine::{css_with_theme, Style};
 
 use crate::{
-    selection_control::{self, RadioGroupDescriptor, RadioOptionDescriptor},
+    selection_control::{RadioGroupAttributes, RadioOptionAttributes},
     telemetry::{
         instrument_render, TelemetryAnalyticsCallback, TelemetryCommitCallback, TelemetryContext,
         TelemetryErrorCallback, TelemetryFocusCallback, TelemetryHooks,
@@ -443,7 +446,7 @@ fn build_descriptor(
     props: &RadioGroupProps,
     telemetry: &TelemetryHooks,
     state: &RadioGroupState,
-) -> RadioGroupDescriptor {
+) -> RadioGroupAttributes {
     let orientation_value = match state.orientation() {
         RadioOrientation::Horizontal => "horizontal",
         RadioOrientation::Vertical => "vertical",
@@ -455,86 +458,116 @@ fn build_descriptor(
         props.option_labels.clone()
     };
 
-    let mut descriptor = RadioGroupDescriptor::new(themed_radio_group_style())
-        .with_group_attributes(state.group_aria_attributes())
-        .group_attribute("data-orientation", orientation_value);
+    let mut builder = RadioGroupAttributes::builder(themed_radio_group_style());
+    let mut has_group_analytics = false;
+    let mut has_group_automation = false;
 
-    for (key, value) in &props.additional_group_attributes {
-        descriptor = descriptor.group_attribute(key.clone(), value.clone());
+    for (key, value) in state.group_aria_attributes() {
+        if key.starts_with("aria-") {
+            builder = builder.aria(key, value);
+        } else if key.starts_with("data-") {
+            if key == "data-rustic-analytics-id" {
+                has_group_analytics = true;
+            }
+            if key == "data-automation-id" {
+                has_group_automation = true;
+            }
+            builder = builder.data(key, value);
+        } else {
+            builder = builder.attribute(key, value);
+        }
     }
 
-    descriptor = apply_group_telemetry(descriptor, telemetry);
+    builder = builder.data("orientation", orientation_value);
+
+    for (key, value) in &props.additional_group_attributes {
+        if key.starts_with("aria-") {
+            builder = builder.aria(key.as_str(), value.clone());
+        } else if key.starts_with("data-") {
+            if key == "data-rustic-analytics-id" {
+                has_group_analytics = true;
+            }
+            if key == "data-automation-id" {
+                has_group_automation = true;
+            }
+            builder = builder.data(key.as_str(), value.clone());
+        } else {
+            builder = builder.attribute(key.clone(), value.clone());
+        }
+    }
+
+    if !has_group_analytics {
+        if let Some(analytics) = &telemetry.analytics_id {
+            builder = builder.data("rustic-analytics-id", analytics.clone());
+        }
+    }
+
+    if !has_group_automation {
+        if let Some(automation) = &telemetry.automation_id {
+            builder = builder.automation_id("id", automation.clone());
+        }
+    }
+
+    let mut builder = builder;
 
     for (index, option) in state.options().iter().enumerate() {
         let label = labels.get(index).cloned().unwrap_or_else(|| option.clone());
-        let option_descriptor = RadioOptionDescriptor::new(label, themed_radio_option_style())
-            .with_attributes(state.option_aria_attributes(index))
-            .attribute("data-index", index.to_string());
-        let option_descriptor = apply_option_telemetry(option_descriptor, telemetry);
-        let option_descriptor =
-            if let Some(additional) = props.additional_option_attributes.get(index) {
-                additional
-                    .iter()
-                    .fold(option_descriptor, |descriptor, (key, value)| {
-                        descriptor.attribute(key.clone(), value.clone())
-                    })
+        let mut option_builder = RadioOptionAttributes::builder(label, themed_radio_option_style());
+        let mut option_has_analytics = false;
+        let mut option_has_automation = false;
+
+        for (key, value) in state.option_aria_attributes(index) {
+            if key.starts_with("aria-") {
+                option_builder = option_builder.aria(key, value);
+            } else if key.starts_with("data-") {
+                if key == "data-rustic-analytics-id" {
+                    option_has_analytics = true;
+                }
+                if key == "data-automation-id" {
+                    option_has_automation = true;
+                }
+                option_builder = option_builder.data(key, value);
             } else {
-                option_descriptor
-            };
-        descriptor = descriptor.option(option_descriptor);
-    }
-
-    descriptor
-}
-
-fn apply_group_telemetry(
-    mut descriptor: RadioGroupDescriptor,
-    telemetry: &TelemetryHooks,
-) -> RadioGroupDescriptor {
-    let has_analytics = descriptor
-        .data_state_attributes()
-        .any(|(key, _)| key == "data-rustic-analytics-id");
-    if !has_analytics {
-        if let Some(analytics) = &telemetry.analytics_id {
-            descriptor = descriptor.group_attribute("data-rustic-analytics-id", analytics.clone());
+                option_builder = option_builder.attribute(key, value);
+            }
         }
-    }
 
-    let has_automation = descriptor
-        .data_state_attributes()
-        .any(|(key, _)| key == "data-automation-id");
-    if !has_automation {
-        if let Some(automation) = &telemetry.automation_id {
-            descriptor = descriptor.group_attribute("data-automation-id", automation.clone());
+        option_builder = option_builder.data("index", index.to_string());
+
+        if let Some(additional) = props.additional_option_attributes.get(index) {
+            for (key, value) in additional {
+                if key.starts_with("aria-") {
+                    option_builder = option_builder.aria(key.as_str(), value.clone());
+                } else if key.starts_with("data-") {
+                    if key == "data-rustic-analytics-id" {
+                        option_has_analytics = true;
+                    }
+                    if key == "data-automation-id" {
+                        option_has_automation = true;
+                    }
+                    option_builder = option_builder.data(key.as_str(), value.clone());
+                } else {
+                    option_builder = option_builder.attribute(key.clone(), value.clone());
+                }
+            }
         }
-    }
 
-    descriptor
-}
-
-fn apply_option_telemetry(
-    mut option: RadioOptionDescriptor,
-    telemetry: &TelemetryHooks,
-) -> RadioOptionDescriptor {
-    let has_analytics = option
-        .data_state_attributes()
-        .any(|(key, _)| key == "data-rustic-analytics-id");
-    if !has_analytics {
-        if let Some(analytics) = &telemetry.analytics_id {
-            option = option.attribute("data-rustic-analytics-id", analytics.clone());
+        if !option_has_analytics {
+            if let Some(analytics) = &telemetry.analytics_id {
+                option_builder = option_builder.data("rustic-analytics-id", analytics.clone());
+            }
         }
-    }
 
-    let has_automation = option
-        .data_state_attributes()
-        .any(|(key, _)| key == "data-automation-id");
-    if !has_automation {
-        if let Some(automation) = &telemetry.automation_id {
-            option = option.attribute("data-automation-id", automation.clone());
+        if !option_has_automation {
+            if let Some(automation) = &telemetry.automation_id {
+                option_builder = option_builder.automation_id("id", automation.clone());
+            }
         }
+
+        builder = builder.option(option_builder.build());
     }
 
-    option
+    builder.build()
 }
 
 #[allow(dead_code)]
@@ -546,9 +579,7 @@ fn render_html(props: &RadioGroupProps, state: &RadioGroupState) -> String {
         &telemetry,
         state,
     );
-    instrument_render(&telemetry, context, || {
-        selection_control::render_radio_group_html(&descriptor)
-    })
+    instrument_render(&telemetry, context, || descriptor.to_ssr_html())
 }
 
 fn merged_telemetry(primary: &TelemetryHooks, fallback: &TelemetryHooks) -> TelemetryHooks {
@@ -593,7 +624,7 @@ fn merged_telemetry(primary: &TelemetryHooks, fallback: &TelemetryHooks) -> Tele
 struct RadioOptionSnapshot {
     label: String,
     themed_attributes: Vec<(String, String)>,
-    /// Attribute pairs produced by [`RadioOptionDescriptor::themed_attributes`]
+    /// Attribute pairs produced by [`RadioOptionAttributes::themed_attributes`]
     /// that the snapshot does not recognise yet.
     ///
     /// We store these eagerly so framework adapters can forward future theme
@@ -616,7 +647,7 @@ struct RadioOptionSnapshot {
 }
 
 impl RadioOptionSnapshot {
-    fn from_descriptor(descriptor: &RadioOptionDescriptor) -> Self {
+    fn from_descriptor(descriptor: &RadioOptionAttributes) -> Self {
         let themed_attributes = descriptor.themed_attributes();
         let mut class = String::new();
         let mut role = String::from("radio");
@@ -668,7 +699,7 @@ impl RadioOptionSnapshot {
 struct RadioGroupDescriptorSnapshot {
     label: String,
     group_thematic_attributes: Vec<(String, String)>,
-    /// Attribute pairs emitted by [`RadioGroupDescriptor::group_thematic_attributes`]
+    /// Attribute pairs emitted by [`RadioGroupAttributes::themed_attributes`]
     /// that do not have a dedicated field in the snapshot yet.
     ///
     /// Preserving these values allows framework adapters to forward newly
@@ -689,8 +720,8 @@ struct RadioGroupDescriptorSnapshot {
 }
 
 impl RadioGroupDescriptorSnapshot {
-    fn from_descriptor(descriptor: &RadioGroupDescriptor) -> Self {
-        let group_thematic_attributes = descriptor.group_thematic_attributes();
+    fn from_descriptor(descriptor: &RadioGroupAttributes) -> Self {
+        let group_thematic_attributes = descriptor.themed_attributes();
         let mut class = String::new();
         let mut role = String::from("radiogroup");
         let mut aria_orientation = String::from("horizontal");
@@ -744,7 +775,7 @@ fn descriptor_with_context(
     state: &RadioGroupState,
 ) -> (
     TelemetryContext,
-    RadioGroupDescriptor,
+    RadioGroupAttributes,
     RadioGroupDescriptorSnapshot,
 ) {
     let descriptor = build_descriptor(props, telemetry, state);
@@ -5426,7 +5457,7 @@ pub mod sycamore {
                         // Convert the descriptor snapshot into a Sycamore spread so any
                         // new keys added by the theming pipeline flow directly into the
                         // rendered span without editing this adapter again.  Future
-                        // contributors should extend `RadioOptionDescriptor` rather than
+                        // contributors should extend `RadioOptionAttributes` rather than
                         // binding individual attributes here.
                         let option_attributes = sycamore_attributes_from_pairs(&themed_attributes);
 

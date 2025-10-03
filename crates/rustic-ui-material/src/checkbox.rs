@@ -2,11 +2,11 @@
 //! descriptor pipeline shared across RusticUI selection controls.
 //!
 //! The module routes every render path through
-//! [`ToggleControlDescriptor`](crate::selection_control::ToggleControlDescriptor)
+//! [`SelectionControlAttributes`](crate::selection_control::SelectionControlAttributes)
 //! so the same attribute snapshot powers:
 //!
-//! * Server-side serialization via
-//!   [`render_toggle_html`](crate::selection_control::render_toggle_html) for
+//! * Server-side serialization via [`SelectionControlAttributes::to_ssr_html`]
+//!   for
 //!   HTML-first frameworks and static-site generators.
 //! * Client adapters for React, Yew, Leptos, Dioxus, and Sycamore which reuse
 //!   those attributes during hydration to avoid checksum drift while the
@@ -51,13 +51,13 @@
 //! # Descriptor-driven SSR & hydration
 //!
 //! The descriptor API keeps SSR and CSR perfectly aligned. Server renderers call
-//! [`render_toggle_html`](crate::selection_control::render_toggle_html) to
-//! serialize HTML while client adapters hydrate from the same attribute cache.
+//! [`SelectionControlAttributes::to_ssr_html`] to serialize HTML while client
+//! adapters hydrate from the same attribute cache.
 //!
 //! ```rust,no_run
 //! use rustic_ui_headless::checkbox::{CheckboxState, CheckboxValue};
 //! use rustic_ui_material::checkbox::CheckboxProps;
-//! use rustic_ui_material::selection_control::{render_toggle_html, ToggleControlDescriptor};
+//! use rustic_ui_material::selection_control::SelectionControlAttributes;
 //! use rustic_ui_material::telemetry::TelemetryHooks;
 //! use rustic_ui_styled_engine::{css, Style};
 //! use std::sync::Arc;
@@ -68,16 +68,17 @@
 //!
 //! # fn orchestrate_descriptor_round_trip() {
 //!     let state = CheckboxState::uncontrolled(false, CheckboxValue::Off);
-//!     let descriptor = ToggleControlDescriptor::new(
+//!     let descriptor = SelectionControlAttributes::builder(
 //!         "Accept terms",
 //!         Style::new(css!("display: inline-flex; align-items: center;"))
 //!             .expect("style to compile"),
 //!     )
-//!     .with_attributes(state.aria_attributes());
+//!     .attribute("role", "checkbox")
+//!     .build();
 //!
 //!     // SSR builds a stable HTML fragment that already includes hydration-safe
 //!     // data attributes and scoped class names.
-//!     let ssr_html = render_toggle_html(&descriptor);
+//!     let ssr_html = descriptor.to_ssr_html();
 //!     assert!(ssr_html.contains("aria-checked=\"false\""));
 //!
 //!     // Hydration reuses the descriptor metadata so analytics and automation
@@ -115,7 +116,7 @@
 //! and Sycamore surfaces.
 
 use crate::{
-    selection_control::{self, ToggleControlDescriptor},
+    selection_control::SelectionControlAttributes,
     telemetry::{
         instrument_render, TelemetryAnalyticsCallback, TelemetryCommitCallback, TelemetryContext,
         TelemetryErrorCallback, TelemetryFocusCallback, TelemetryHooks,
@@ -329,53 +330,49 @@ impl CheckboxProps {
 }
 
 #[allow(dead_code)]
-fn build_descriptor(props: &CheckboxProps, state: &CheckboxState) -> ToggleControlDescriptor {
-    let descriptor = ToggleControlDescriptor::new(props.label.clone(), themed_checkbox_style())
-        .with_attributes(state.aria_attributes());
-    let descriptor = if let Some(analytics) = &props.telemetry.analytics_id {
-        descriptor.attribute("data-rustic-analytics-id", analytics.clone())
-    } else {
-        descriptor
-    };
-    if let Some(automation) = &props.telemetry.automation_id {
-        descriptor.attribute("data-automation-id", automation.clone())
-    } else {
-        descriptor
+fn build_descriptor(props: &CheckboxProps, state: &CheckboxState) -> SelectionControlAttributes {
+    let mut builder =
+        SelectionControlAttributes::builder(props.label.clone(), themed_checkbox_style());
+
+    let mut has_analytics = false;
+    let mut has_automation = false;
+
+    for (key, value) in state.aria_attributes() {
+        if key.starts_with("aria-") {
+            builder = builder.aria(key, value);
+        } else if key.starts_with("data-") {
+            if key == "data-rustic-analytics-id" {
+                has_analytics = true;
+            }
+            if key == "data-automation-id" {
+                has_automation = true;
+            }
+            builder = builder.data(key, value);
+        } else {
+            builder = builder.attribute(key, value);
+        }
     }
+
+    if !has_analytics {
+        if let Some(analytics) = &props.telemetry.analytics_id {
+            builder = builder.data("rustic-analytics-id", analytics.clone());
+        }
+    }
+
+    if !has_automation {
+        if let Some(automation) = &props.telemetry.automation_id {
+            builder = builder.automation_id("id", automation.clone());
+        }
+    }
+
+    builder.build()
 }
 
 #[allow(dead_code)]
 fn render_html(props: &CheckboxProps, state: &CheckboxState) -> String {
     let (context, descriptor, _snapshot) =
         descriptor_with_context("rustic_ui_material::checkbox::render_html", props, state);
-    instrument_render(&props.telemetry, context, || {
-        selection_control::render_toggle_html(&descriptor)
-    })
-}
-
-fn merge_descriptor_telemetry(
-    mut descriptor: ToggleControlDescriptor,
-    telemetry: &TelemetryHooks,
-) -> ToggleControlDescriptor {
-    let has_analytics = descriptor
-        .data_state_attributes()
-        .any(|(key, _)| key == "data-rustic-analytics-id");
-    if !has_analytics {
-        if let Some(analytics) = &telemetry.analytics_id {
-            descriptor = descriptor.attribute("data-rustic-analytics-id", analytics.clone());
-        }
-    }
-
-    let has_automation = descriptor
-        .data_state_attributes()
-        .any(|(key, _)| key == "data-automation-id");
-    if !has_automation {
-        if let Some(automation) = &telemetry.automation_id {
-            descriptor = descriptor.attribute("data-automation-id", automation.clone());
-        }
-    }
-
-    descriptor
+    instrument_render(&props.telemetry, context, || descriptor.to_ssr_html())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -393,7 +390,7 @@ struct CheckboxDescriptorSnapshot {
 }
 
 impl CheckboxDescriptorSnapshot {
-    fn from_descriptor(descriptor: &ToggleControlDescriptor) -> Self {
+    fn from_descriptor(descriptor: &SelectionControlAttributes) -> Self {
         let themed_attributes = descriptor.themed_attributes();
         let mut class = String::new();
         let mut role = String::from("checkbox");
@@ -439,10 +436,10 @@ fn descriptor_with_context(
     state: &CheckboxState,
 ) -> (
     TelemetryContext,
-    ToggleControlDescriptor,
+    SelectionControlAttributes,
     CheckboxDescriptorSnapshot,
 ) {
-    let descriptor = merge_descriptor_telemetry(build_descriptor(props, state), &props.telemetry);
+    let descriptor = build_descriptor(props, state);
     let snapshot = CheckboxDescriptorSnapshot::from_descriptor(&descriptor);
     let context = TelemetryContext::new(component)
         .with_analytics(props.telemetry.analytics_id.clone())
@@ -1356,7 +1353,7 @@ pub mod yew {
     ///   ensuring render panics propagate structured
     ///   [`crate::telemetry::TelemetryError`] events.
     /// * Descriptor telemetry defaults are merged prior to calling
-    ///   [`ToggleControlDescriptor::themed_attributes`], keeping SSR/CSR output
+    ///   [`SelectionControlAttributes::themed_attributes`], keeping SSR/CSR output
     ///   aligned even when consumers omit explicit identifiers.
     /// * Event handlers route structured [`CheckboxTelemetryEvent`] payloads to
     ///   the optional telemetry delegate **before** invoking user callbacks so
@@ -1990,8 +1987,8 @@ pub mod dioxus {
     #[cfg(all(test, feature = "dioxus"))]
     mod tests {
         use super::*;
-        use crate::selection_control::CheckboxValue;
         use keyboard_types::{ControlKey, Key};
+        use rustic_ui_headless::checkbox::CheckboxValue;
 
         struct Harness {
             state: Rc<RefCell<CheckboxState>>,
@@ -2451,10 +2448,7 @@ mod tests {
         props.telemetry.automation_id = Some("automation-42".into());
 
         let descriptor = build_descriptor(&props, &state);
-        let data_attrs: Vec<_> = descriptor
-            .data_state_attributes()
-            .map(|(key, value)| (key.to_string(), value.to_string()))
-            .collect();
+        let data_attrs = descriptor.data_state_attributes();
 
         assert!(data_attrs
             .iter()
