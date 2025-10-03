@@ -207,6 +207,11 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::{Arc, OnceLock};
 
+use crate::telemetry::TelemetryHooks;
+
+#[cfg(feature = "forms")]
+use rustic_ui_headless::{checkbox::CheckboxState, switch::SwitchState};
+
 use rustic_ui_styled_engine::Style;
 use rustic_ui_utils::attributes_to_html;
 
@@ -264,6 +269,403 @@ where
     RADIO_GROUP_HOOK
         .set(Arc::new(hook))
         .map_err(|_| "radio group hook already registered")
+}
+
+/// Error emitted when descriptor construction detects invalid overrides.
+///
+/// The helper is intentionally conservative: enterprise control planes often
+/// wire managed analytics and automation identifiers globally. Surfacing
+/// conflicts early avoids silently drifting from the centralized configuration
+/// and keeps compliance dashboards consistent across SSR and hydration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SelectionControlError {
+    /// Telemetry defaults forbade overriding the supplied attribute.
+    TelemetryConflict {
+        /// Attribute that produced the conflict (for example
+        /// `data-rustic-analytics-id`).
+        key: String,
+        /// Managed default expected to land on the descriptor.
+        expected: String,
+        /// Value surfaced by the headless state machine.
+        actual: String,
+    },
+}
+
+impl fmt::Display for SelectionControlError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TelemetryConflict {
+                key,
+                expected,
+                actual,
+            } => {
+                write!(
+                    f,
+                    "telemetry attribute `{key}` expected `{expected}` but received `{actual}`"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for SelectionControlError {}
+
+/// Centralised theme tokens applied to every selection control descriptor.
+///
+/// Platform teams frequently maintain managed configuration services that emit
+/// mandatory CSS classes or `data-*` hooks for downstream analytics
+/// pipelines.  Feeding those defaults through a dedicated struct keeps adapter
+/// factories terse while still exposing an ergonomic API for per-component
+/// overrides.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SelectionControlThemeTokens {
+    classes: Vec<String>,
+    aria: BTreeMap<String, String>,
+    data: BTreeMap<String, String>,
+    attributes: BTreeMap<String, String>,
+}
+
+impl SelectionControlThemeTokens {
+    fn normalize_data_key(key: String) -> String {
+        if key.starts_with("data-") {
+            key
+        } else {
+            format!("data-{key}")
+        }
+    }
+
+    /// Material defaults applied to every descriptor when no overrides are
+    /// supplied.  The defaults intentionally install an enterprise friendly
+    /// `data-component` hook so QA and analytics suites can target controls
+    /// without bespoke wiring in each adapter.
+    #[must_use]
+    pub fn material_defaults() -> Self {
+        let mut tokens = Self::default();
+        tokens.classes.push("rustic-selection-control".into());
+        tokens
+            .data
+            .insert("data-component".into(), "selection-control".into());
+        tokens
+    }
+
+    /// Append a CSS class that should always decorate the control root.
+    #[must_use]
+    pub fn with_class(mut self, class: impl Into<String>) -> Self {
+        self.classes.push(class.into());
+        self
+    }
+
+    /// Append multiple CSS classes in one call.
+    #[must_use]
+    pub fn with_classes<I, S>(mut self, classes: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.classes.extend(classes.into_iter().map(Into::into));
+        self
+    }
+
+    /// Inject a managed ARIA attribute (for example `aria-describedby`).
+    #[must_use]
+    pub fn with_aria(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.aria.insert(key.into(), value.into());
+        self
+    }
+
+    /// Inject a managed `data-*` attribute.
+    #[must_use]
+    pub fn with_data(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        let key = Self::normalize_data_key(key.into());
+        self.data.insert(key, value.into());
+        self
+    }
+
+    /// Inject an additional attribute (for example `role` or `tabindex`).
+    #[must_use]
+    pub fn with_attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.attributes.insert(key.into(), value.into());
+        self
+    }
+
+    /// Apply the configured tokens to the supplied builder.
+    pub fn apply(
+        &self,
+        mut builder: SelectionControlAttributesBuilder,
+    ) -> SelectionControlAttributesBuilder {
+        if !self.classes.is_empty() {
+            builder = builder.classes(self.classes.clone());
+        }
+        for (key, value) in &self.aria {
+            builder = builder.aria(key.clone(), value.clone());
+        }
+        for (key, value) in &self.data {
+            builder = builder.data(key.clone(), value.clone());
+        }
+        for (key, value) in &self.attributes {
+            builder = builder.attribute(key.clone(), value.clone());
+        }
+        builder
+    }
+
+    /// Inspect the managed CSS classes. Primarily useful for tests.
+    pub fn classes(&self) -> &[String] {
+        &self.classes
+    }
+
+    /// Inspect managed data attributes. Primarily useful for tests.
+    pub fn data_attributes(&self) -> &BTreeMap<String, String> {
+        &self.data
+    }
+}
+
+/// Telemetry defaults merged into descriptors produced from headless states.
+///
+/// The struct carries the managed [`TelemetryHooks`] configuration alongside
+/// optional analytics and automation identifiers.  Factories feed it into
+/// [`SelectionControlDescriptor::from_headless`] so theme tokens, ARIA state, and
+/// telemetry IDs merge automatically without every adapter rewriting the same
+/// boilerplate.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SelectionControlTelemetry {
+    hooks: TelemetryHooks,
+    analytics_id: Option<String>,
+    automation_id: Option<String>,
+    analytics_key: String,
+    automation_key: String,
+    allow_overrides: bool,
+}
+
+impl SelectionControlTelemetry {
+    /// Construct telemetry defaults from a configured [`TelemetryHooks`]
+    /// instance.  The helper reuses any analytics or automation identifiers
+    /// already stored on the hooks so enterprise instrumentation propagates to
+    /// the descriptor automatically.
+    #[must_use]
+    pub fn new(hooks: TelemetryHooks) -> Self {
+        let analytics_id = hooks.analytics_id.clone();
+        let automation_id = hooks.automation_id.clone();
+        Self {
+            hooks,
+            analytics_id,
+            automation_id,
+            analytics_key: "data-rustic-analytics-id".into(),
+            automation_key: "data-automation-id".into(),
+            allow_overrides: true,
+        }
+    }
+
+    /// Override the analytics identifier that should land on the descriptor.
+    #[must_use]
+    pub fn with_analytics_id(mut self, analytics_id: Option<String>) -> Self {
+        self.analytics_id = analytics_id;
+        self
+    }
+
+    /// Override the automation identifier that should land on the descriptor.
+    #[must_use]
+    pub fn with_automation_id(mut self, automation_id: Option<String>) -> Self {
+        self.automation_id = automation_id;
+        self
+    }
+
+    /// Override the `data-*` keys used to store telemetry identifiers.
+    #[must_use]
+    pub fn with_data_keys(
+        mut self,
+        analytics_key: impl Into<String>,
+        automation_key: impl Into<String>,
+    ) -> Self {
+        self.analytics_key = SelectionControlThemeTokens::normalize_data_key(analytics_key.into());
+        self.automation_key =
+            SelectionControlThemeTokens::normalize_data_key(automation_key.into());
+        self
+    }
+
+    /// Prevent headless state machines from overriding managed telemetry IDs.
+    #[must_use]
+    pub fn enforce_defaults(mut self) -> Self {
+        self.allow_overrides = false;
+        self
+    }
+
+    /// Underlying telemetry hooks used by adapters to instrument renders.
+    pub fn hooks(&self) -> &TelemetryHooks {
+        &self.hooks
+    }
+
+    /// Effective analytics identifier resolved after descriptor construction.
+    pub fn effective_analytics_id(&self) -> Option<&str> {
+        self.analytics_id.as_deref()
+    }
+
+    /// Effective automation identifier resolved after descriptor construction.
+    pub fn effective_automation_id(&self) -> Option<&str> {
+        self.automation_id.as_deref()
+    }
+
+    fn merge_into_builder<'a, I>(
+        &self,
+        mut builder: SelectionControlAttributesBuilder,
+        attributes: I,
+    ) -> Result<
+        (
+            SelectionControlAttributesBuilder,
+            Option<String>,
+            Option<String>,
+        ),
+        SelectionControlError,
+    >
+    where
+        I: IntoIterator<Item = (&'a str, String)>,
+    {
+        let mut analytics = None;
+        let mut automation = None;
+
+        for (key, value) in attributes {
+            if key.starts_with("aria-") {
+                builder = builder.aria(key, value);
+                continue;
+            }
+
+            if key.starts_with("data-") {
+                let cloned = value.clone();
+                if key == self.analytics_key {
+                    if let Some(default) = &self.analytics_id {
+                        if !self.allow_overrides && *default != cloned {
+                            return Err(SelectionControlError::TelemetryConflict {
+                                key: key.to_string(),
+                                expected: default.clone(),
+                                actual: cloned,
+                            });
+                        }
+                    }
+                    analytics = Some(cloned.clone());
+                } else if key == self.automation_key {
+                    if let Some(default) = &self.automation_id {
+                        if !self.allow_overrides && *default != cloned {
+                            return Err(SelectionControlError::TelemetryConflict {
+                                key: key.to_string(),
+                                expected: default.clone(),
+                                actual: cloned,
+                            });
+                        }
+                    }
+                    automation = Some(cloned.clone());
+                }
+                builder = builder.data(key, value);
+                continue;
+            }
+
+            builder = builder.attribute(key, value);
+        }
+
+        if analytics.is_none() {
+            if let Some(default) = &self.analytics_id {
+                builder = builder.data(self.analytics_key.clone(), default.clone());
+                analytics = Some(default.clone());
+            }
+        }
+
+        if automation.is_none() {
+            if let Some(default) = &self.automation_id {
+                builder = builder.automation_id("id", default.clone());
+                automation = Some(default.clone());
+            }
+        }
+
+        Ok((builder, analytics, automation))
+    }
+
+    fn with_effective_ids(&self, analytics: Option<String>, automation: Option<String>) -> Self {
+        let mut resolved = self.clone();
+        if let Some(value) = analytics {
+            resolved.analytics_id = Some(value);
+        }
+        if let Some(value) = automation {
+            resolved.automation_id = Some(value);
+        }
+        resolved
+    }
+}
+
+impl From<TelemetryHooks> for SelectionControlTelemetry {
+    fn from(value: TelemetryHooks) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Trait implemented by headless state machines that can be converted into
+/// descriptor attributes.
+pub trait SelectionControlStateAdapter {
+    /// Snapshot ARIA and `data-*` attributes describing the current state.
+    fn snapshot_attributes(&self) -> Vec<(&'static str, String)>;
+}
+
+#[cfg(feature = "forms")]
+impl SelectionControlStateAdapter for CheckboxState {
+    fn snapshot_attributes(&self) -> Vec<(&'static str, String)> {
+        self.aria_attributes()
+    }
+}
+
+#[cfg(feature = "forms")]
+impl SelectionControlStateAdapter for SwitchState {
+    fn snapshot_attributes(&self) -> Vec<(&'static str, String)> {
+        self.aria_attributes()
+    }
+}
+
+/// Combined descriptor containing themed attributes and resolved telemetry.
+#[derive(Debug, Clone)]
+pub struct SelectionControlDescriptor {
+    attributes: SelectionControlAttributes,
+    telemetry: SelectionControlTelemetry,
+}
+
+impl SelectionControlDescriptor {
+    /// Build a descriptor directly from a headless state machine snapshot.
+    pub fn from_headless<S>(
+        label: impl Into<String>,
+        style: Style,
+        state: &S,
+        theme: &SelectionControlThemeTokens,
+        telemetry: &SelectionControlTelemetry,
+    ) -> Result<Self, SelectionControlError>
+    where
+        S: SelectionControlStateAdapter,
+    {
+        let builder = SelectionControlAttributes::builder(label, style);
+        let builder = theme.apply(builder);
+        let (builder, analytics, automation) =
+            telemetry.merge_into_builder(builder, state.snapshot_attributes())?;
+        let attributes = builder.build();
+        let telemetry = telemetry.with_effective_ids(analytics, automation);
+        Ok(Self {
+            attributes,
+            telemetry,
+        })
+    }
+
+    /// Borrow the resolved attributes.
+    pub fn attributes(&self) -> &SelectionControlAttributes {
+        &self.attributes
+    }
+
+    /// Borrow the resolved telemetry defaults.
+    pub fn telemetry(&self) -> &SelectionControlTelemetry {
+        &self.telemetry
+    }
+
+    /// Consume the descriptor, returning both parts.
+    pub fn into_parts(self) -> (SelectionControlAttributes, SelectionControlTelemetry) {
+        (self.attributes, self.telemetry)
+    }
+
+    /// Consume the descriptor, returning only the attributes.
+    pub fn into_attributes(self) -> SelectionControlAttributes {
+        self.attributes
+    }
 }
 
 /// Data object describing a Material selection control (checkbox/switch).
@@ -896,9 +1298,21 @@ impl fmt::Display for RadioGroupAttributes {
 #[cfg(test)]
 mod internal_tests {
     use super::*;
+    use crate::telemetry::TelemetryHooks;
 
     fn style() -> Style {
         Style::new(rustic_ui_styled_engine::css!("color: inherit;")).expect("valid style")
+    }
+
+    #[derive(Clone, Default)]
+    struct FakeState {
+        attributes: Vec<(&'static str, String)>,
+    }
+
+    impl SelectionControlStateAdapter for FakeState {
+        fn snapshot_attributes(&self) -> Vec<(&'static str, String)> {
+            self.attributes.clone()
+        }
     }
 
     #[test]
@@ -932,5 +1346,128 @@ mod internal_tests {
         let html = group.to_ssr_html();
         assert!(html.contains("role=\"radiogroup\""));
         assert!(html.contains("radio-a"));
+    }
+
+    #[test]
+    fn telemetry_defaults_apply_when_missing() {
+        let state = FakeState {
+            attributes: vec![("aria-checked", "true".into())],
+        };
+        let theme = SelectionControlThemeTokens::material_defaults();
+        let telemetry = SelectionControlTelemetry::new(TelemetryHooks::default())
+            .with_analytics_id(Some("defaults.analytics".into()))
+            .with_automation_id(Some("defaults.automation".into()));
+
+        let descriptor = SelectionControlDescriptor::from_headless(
+            "Defaults",
+            style(),
+            &state,
+            &theme,
+            &telemetry,
+        )
+        .expect("descriptor to build");
+
+        let data_attrs = descriptor.attributes().data_state_attributes();
+        assert!(
+            data_attrs
+                .iter()
+                .any(|(key, value)| key == "data-rustic-analytics-id"
+                    && value == "defaults.analytics")
+        );
+        assert!(descriptor
+            .telemetry()
+            .effective_automation_id()
+            .is_some_and(|value| value == "defaults.automation"));
+    }
+
+    #[test]
+    fn headless_overrides_are_respected_when_allowed() {
+        let state = FakeState {
+            attributes: vec![
+                ("aria-checked", "false".into()),
+                ("data-rustic-analytics-id", "headless.analytics".into()),
+            ],
+        };
+        let theme = SelectionControlThemeTokens::material_defaults();
+        let telemetry = SelectionControlTelemetry::new(TelemetryHooks::default())
+            .with_analytics_id(Some("defaults.analytics".into()));
+
+        let descriptor = SelectionControlDescriptor::from_headless(
+            "Overrides",
+            style(),
+            &state,
+            &theme,
+            &telemetry,
+        )
+        .expect("descriptor to build");
+
+        assert!(
+            descriptor
+                .attributes()
+                .data_state_attributes()
+                .iter()
+                .any(|(key, value)| key == "data-rustic-analytics-id"
+                    && value == "headless.analytics")
+        );
+        assert_eq!(
+            descriptor.telemetry().effective_analytics_id(),
+            Some("headless.analytics")
+        );
+    }
+
+    #[test]
+    fn telemetry_conflicts_error_when_enforced() {
+        let state = FakeState {
+            attributes: vec![("data-rustic-analytics-id", "headless.analytics".into())],
+        };
+        let theme = SelectionControlThemeTokens::material_defaults();
+        let telemetry = SelectionControlTelemetry::new(TelemetryHooks::default())
+            .with_analytics_id(Some("defaults.analytics".into()))
+            .enforce_defaults();
+
+        let result = SelectionControlDescriptor::from_headless(
+            "Conflicts",
+            style(),
+            &state,
+            &theme,
+            &telemetry,
+        );
+
+        match result {
+            Err(SelectionControlError::TelemetryConflict {
+                key,
+                expected,
+                actual,
+            }) => {
+                assert_eq!(key, "data-rustic-analytics-id");
+                assert_eq!(expected, "defaults.analytics");
+                assert_eq!(actual, "headless.analytics");
+            }
+            other => panic!("expected telemetry conflict, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn theme_tokens_can_be_overridden() {
+        let state = FakeState {
+            attributes: vec![("data-component", "overridden".into())],
+        };
+        let theme = SelectionControlThemeTokens::material_defaults();
+        let telemetry = SelectionControlTelemetry::new(TelemetryHooks::default());
+
+        let descriptor = SelectionControlDescriptor::from_headless(
+            "Overrides",
+            style(),
+            &state,
+            &theme,
+            &telemetry,
+        )
+        .expect("descriptor to build");
+
+        assert!(descriptor
+            .attributes()
+            .data_state_attributes()
+            .iter()
+            .any(|(key, value)| key == "data-component" && value == "overridden"));
     }
 }

@@ -106,7 +106,10 @@
 //! all reuse the same descriptor-driven attributes across runtimes.
 
 use crate::{
-    selection_control::SelectionControlAttributes,
+    selection_control::{
+        SelectionControlAttributes, SelectionControlDescriptor, SelectionControlTelemetry,
+        SelectionControlThemeTokens,
+    },
     telemetry::{
         instrument_render, TelemetryAnalyticsCallback, TelemetryCommitCallback, TelemetryContext,
         TelemetryErrorCallback, TelemetryFocusCallback, TelemetryHooks,
@@ -300,42 +303,17 @@ fn control_key_from_str(key: &str) -> Option<ControlKey> {
 }
 
 #[allow(dead_code)]
-fn build_descriptor(props: &SwitchProps, state: &SwitchState) -> SelectionControlAttributes {
-    let mut builder =
-        SelectionControlAttributes::builder(props.label.clone(), themed_switch_style());
-
-    let mut has_analytics = false;
-    let mut has_automation = false;
-
-    for (key, value) in state.aria_attributes() {
-        if key.starts_with("aria-") {
-            builder = builder.aria(key, value);
-        } else if key.starts_with("data-") {
-            if key == "data-rustic-analytics-id" {
-                has_analytics = true;
-            }
-            if key == "data-automation-id" {
-                has_automation = true;
-            }
-            builder = builder.data(key, value);
-        } else {
-            builder = builder.attribute(key, value);
-        }
-    }
-
-    if !has_analytics {
-        if let Some(analytics) = &props.telemetry.analytics_id {
-            builder = builder.data("rustic-analytics-id", analytics.clone());
-        }
-    }
-
-    if !has_automation {
-        if let Some(automation) = &props.telemetry.automation_id {
-            builder = builder.automation_id("id", automation.clone());
-        }
-    }
-
-    builder.build()
+fn build_descriptor(props: &SwitchProps, state: &SwitchState) -> SelectionControlDescriptor {
+    let theme = SelectionControlThemeTokens::material_defaults().with_data("variant", "switch");
+    let telemetry = SelectionControlTelemetry::from(props.telemetry.clone());
+    SelectionControlDescriptor::from_headless(
+        props.label.clone(),
+        themed_switch_style(),
+        state,
+        &theme,
+        &telemetry,
+    )
+    .expect("switch descriptor must merge headless metadata")
 }
 
 #[allow(dead_code)]
@@ -482,12 +460,21 @@ fn descriptor_with_context(
     SwitchDescriptorSnapshot,
 ) {
     let descriptor = build_descriptor(props, state);
-    let snapshot = SwitchDescriptorSnapshot::from_descriptor(&descriptor);
+    let snapshot = SwitchDescriptorSnapshot::from_descriptor(descriptor.attributes());
+    let telemetry = descriptor.telemetry().clone();
     let context = TelemetryContext::new(component)
-        .with_analytics(props.telemetry.analytics_id.clone())
-        .with_automation(props.telemetry.automation_id.clone())
+        .with_analytics(
+            telemetry
+                .effective_analytics_id()
+                .map(|value| value.to_owned()),
+        )
+        .with_automation(
+            telemetry
+                .effective_automation_id()
+                .map(|value| value.to_owned()),
+        )
         .with_descriptor_metadata(snapshot.label.clone(), snapshot.themed_attributes.clone());
-    (context, descriptor, snapshot)
+    (context, descriptor.into_attributes(), snapshot)
 }
 
 fn dispatch_change_event(
