@@ -3739,6 +3739,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "selection-controls-leptos"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "gloo-console 0.2.3",
+ "leptos",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "rustic-ui-system",
+ "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+]
+
+[[package]]
+name = "selection-controls-yew"
+version = "0.1.0"
+dependencies = [
+ "gloo-console 0.2.3",
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "yew",
+]
+
+[[package]]
 name = "self_cell"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

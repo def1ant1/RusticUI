@@ -1,0 +1,26 @@
+# Enterprise automation harness for the Leptos selection controls example.
+# All tasks are intentionally idempotent and avoid manual configuration so
+# contributors can build and test the demo in a single command even on clean
+# CI agents.
+
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+# Build both the SSR binary and the WASM package ready for hydration.
+just build-all:
+    cargo leptos build --release --features ssr
+
+# Serve the example with SSR + CSR handoff using cargo-leptos' dev server.
+just serve:
+    cargo leptos serve --features ssr
+
+# Run the full test matrix covering host and wasm32 smoke tests.
+just test-all:
+    cargo test --features ssr
+    cargo test --target wasm32-unknown-unknown --features hydrate
+
+# Format and lint the Rust sources (delegates to cargo fmt/clippy for now but
+# keeps the hook in one place for future automation upgrades).
+just lint:
+    cargo fmt
+    cargo clippy --features ssr -- -D warnings
+
