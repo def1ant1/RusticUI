@@ -1,0 +1,48 @@
+[package]
+name = "selection-controls-leptos"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Enterprise-grade Leptos demo wiring RusticUI selection controls with deterministic telemetry"
+
+[lib]
+name = "selection_controls_leptos"
+path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "selection-controls-leptos"
+path = "src/main.rs"
+
+[features]
+default = ["csr"]
+csr = ["leptos/csr"]
+hydrate = ["leptos/hydrate"]
+ssr = ["tokio", "leptos/ssr"]
+
+[dependencies]
+leptos = { workspace = true, default-features = false }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", default-features = false, features = ["forms"] }
+rustic-ui-material = { path = "../../crates/rustic-ui-material", default-features = false, features = ["forms", "leptos"] }
+rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine" }
+rustic-ui-system = { path = "../../crates/rustic-ui-system" }
+tokio = { workspace = true, optional = true }
+gloo-console = "0.2"
+wasm-bindgen = { workspace = true, optional = true }
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+leptos = { workspace = true, default-features = false, features = ["csr", "hydrate", "ssr"] }
+console_error_panic_hook = "0.1"
+
+[package.metadata.leptos]
+output-name = "selection-controls-leptos"
+site-root = "target/leptos-site"
+site-pkg-dir = "pkg"
+assets-dir = "static"
+lib-package = "selection-controls-leptos"
+
+[package.metadata.leptos.watch]
+ignore = ["target", "static"]
+
