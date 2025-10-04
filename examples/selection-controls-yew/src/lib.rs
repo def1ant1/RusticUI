@@ -369,21 +369,34 @@ fn radio_state_summary(state: &RadioGroupState) -> String {
 #[function_component(SelectionControlsDemo)]
 pub fn selection_controls_demo() -> Html {
     let recorder = use_memo(|_| TelemetryRecorder::new(), ());
-    let recorder = (*recorder).clone();
 
-    // Dedicated telemetry channels per control + ownership mode.
-    let checkbox_controlled_channel =
-        use_memo(|rec| rec.channel("checkbox.controlled"), recorder.clone());
-    let checkbox_uncontrolled_channel =
-        use_memo(|rec| rec.channel("checkbox.uncontrolled"), recorder.clone());
-    let switch_controlled_channel =
-        use_memo(|rec| rec.channel("switch.controlled"), recorder.clone());
-    let switch_uncontrolled_channel =
-        use_memo(|rec| rec.channel("switch.uncontrolled"), recorder.clone());
-    let radio_controlled_channel =
-        use_memo(|rec| rec.channel("radio.controlled"), recorder.clone());
-    let radio_uncontrolled_channel =
-        use_memo(|rec| rec.channel("radio.uncontrolled"), recorder.clone());
+    // Dedicated telemetry channels per control + ownership mode. We only care about the
+    // recorder identity, not its interior value, so memoise against a unit dependency to
+    // avoid requiring the recorder itself to implement `PartialEq`.
+    let checkbox_controlled_channel = {
+        let recorder = recorder.clone();
+        use_memo(move |_| recorder.channel("checkbox.controlled"), ())
+    };
+    let checkbox_uncontrolled_channel = {
+        let recorder = recorder.clone();
+        use_memo(move |_| recorder.channel("checkbox.uncontrolled"), ())
+    };
+    let switch_controlled_channel = {
+        let recorder = recorder.clone();
+        use_memo(move |_| recorder.channel("switch.controlled"), ())
+    };
+    let switch_uncontrolled_channel = {
+        let recorder = recorder.clone();
+        use_memo(move |_| recorder.channel("switch.uncontrolled"), ())
+    };
+    let radio_controlled_channel = {
+        let recorder = recorder.clone();
+        use_memo(move |_| recorder.channel("radio.controlled"), ())
+    };
+    let radio_uncontrolled_channel = {
+        let recorder = recorder.clone();
+        use_memo(move |_| recorder.channel("radio.uncontrolled"), ())
+    };
 
     let checkbox_controlled = use_state(|| CheckboxState::controlled(false, CheckboxValue::Off));
     let checkbox_uncontrolled = use_state(|| CheckboxState::uncontrolled(false, CheckboxValue::On));
