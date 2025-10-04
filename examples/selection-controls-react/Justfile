@@ -1,0 +1,27 @@
+set shell := ["bash", "-cu"]
+
+# Helper to execute npm commands within this example directory.
+_export_npm := "cd {{justfile_directory()}} && npm"
+
+alias npm := "{{_export_npm}}"
+
+bootstrap:
+    rustup target add wasm32-unknown-unknown
+    cd {{justfile_directory()}} && npm install
+
+build:
+    cd {{justfile_directory()}} && cargo build -p selection-controls-react
+    cd {{justfile_directory()}} && cargo build -p selection-controls-react --target wasm32-unknown-unknown
+    cd {{justfile_directory()}} && npm run build:web
+
+test:
+    cd {{justfile_directory()}} && npm run test
+
+dev:
+    cd {{justfile_directory()}} && npm run dev
+
+fmt:
+    cd {{justfile_directory()}} && npm run fmt
+
+lint:
+    cd {{justfile_directory()}} && npm run lint
