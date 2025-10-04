@@ -1,0 +1,25 @@
+[package]
+name = "selection-controls-yew"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "selection_controls_yew"
+path = "src/lib.rs"
+
+[[bin]]
+name = "selection-controls-yew"
+path = "src/main.rs"
+
+[dependencies]
+rustic-ui-material = { path = "../../crates/rustic-ui-material", default-features = false, features = ["forms", "yew"] }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", default-features = false, features = ["forms"] }
+rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine" }
+yew.workspace = true
+wasm-bindgen.workspace = true
+gloo-console = "0.2"
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
