@@ -44,14 +44,21 @@ export const useSelectionControl = (
     let mounted = true;
     const connect = async () => {
       const existingDelegate = delegate ?? (await createDelegate());
-      const wasmHook =
-        checked !== undefined
-          ? await useCheckboxControlled(controlId, checked, existingDelegate)
-          : await useCheckboxUncontrolled(controlId, defaultChecked, existingDelegate);
+      const backlog = existingDelegate.drain();
+      if (mounted) {
+        setTelemetry(backlog);
+      }
       existingDelegate.bind((event) => {
         if (!mounted) return;
         setTelemetry((previous) => [...previous, event]);
       });
+      const wasmHook =
+        checked !== undefined
+          ? await useCheckboxControlled(controlId, checked, existingDelegate)
+          : await useCheckboxUncontrolled(controlId, defaultChecked, existingDelegate);
+      if (!mounted) {
+        return;
+      }
       if (!delegate) {
         setDelegate(existingDelegate);
       }

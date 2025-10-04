@@ -72,7 +72,9 @@ pub struct TelemetryEvent {
 #[derive(Clone)]
 struct TelemetryDelegateHandle {
     events: Rc<RefCell<Vec<TelemetryEvent>>>,
-    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    #[cfg(target_arch = "wasm32")]
+    // The JavaScript callback only exists for wasm builds; `js-sys` intentionally omits
+    // `Function` definitions for native targets so we hide the field behind a cfg gate.
     callback: Rc<RefCell<Option<js_sys::Function>>>,
     sequence: Rc<Cell<u64>>,
 }
@@ -81,6 +83,9 @@ impl TelemetryDelegateHandle {
     fn new() -> Self {
         Self {
             events: Rc::new(RefCell::new(Vec::with_capacity(32))),
+            #[cfg(target_arch = "wasm32")]
+            // For wasm we eagerly seed the callback holder so hooks can bind immediately after
+            // construction while native unit tests keep the leaner host-only handle.
             callback: Rc::new(RefCell::new(None)),
             sequence: Rc::new(Cell::new(0)),
         }
