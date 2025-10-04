@@ -1,0 +1,10 @@
+[build]
+release = true
+public_url = "/selection-controls-sycamore/"
+
+[serve]
+port = 8085
+open = false
+
+[[hooks.pre-build]]
+command = ["just", "prepare"]

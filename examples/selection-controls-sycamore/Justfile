@@ -1,0 +1,31 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+_toolchain := "../scripts/ensure-example-toolchain.sh sycamore --wasm --ssr"
+
+# Default recipe executes the combined smoke test pipeline.
+default: smoke
+
+prepare:
+    {{_toolchain}}
+
+build-host: prepare
+    cargo build --all-targets
+
+build-wasm: prepare
+    cargo build --target wasm32-unknown-unknown
+
+build-all: build-host build-wasm
+
+serve: prepare
+    trunk serve --config Trunk.toml
+
+check: prepare
+    cargo fmt
+    cargo clippy --all-targets
+
+smoke: prepare
+    cargo test --all-targets
+    cargo test --target wasm32-unknown-unknown
+
+ci-smoke:
+    ./scripts/ci-smoke.sh

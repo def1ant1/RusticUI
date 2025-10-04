@@ -5034,6 +5034,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "selection-controls-sycamore"
+version = "0.1.0"
+dependencies = [
+ "rustic-ui-headless",
+ "rustic-ui-material",
+ "rustic-ui-styled-engine",
+ "sycamore",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "web-sys",
+]
+
+[[package]]
 name = "selection-controls-yew"
 version = "0.1.0"
 dependencies = [
