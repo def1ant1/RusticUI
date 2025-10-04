@@ -170,6 +170,7 @@ Use the automation shipped with each example to avoid manual setup:
 - Update the component's story/demo to reflect new props or behaviors.
 - Document breaking changes in `CHANGELOG.md` under a new dated section.
 - Verify accessibility via `cargo xtask accessibility-audit`.
+- Exercise the full selection-control matrix with `pnpm selection:verify` whenever you touch telemetry, SSR rendering, or Joy Select adapters. The command mirrors CI by running Rust + web tests, linting, and docs builds in one pass.【F:package.json†L8-L14】【F:crates/xtask/src/main.rs†L41-L70】
 
 ## Release cadence and backlog
 

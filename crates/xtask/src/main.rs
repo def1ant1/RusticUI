@@ -160,6 +160,8 @@ enum Commands {
     /// Recompute the RusticUI Joy inventory to highlight missing Rust bindings.
     #[command(name = "joy-inventory", alias = "joy-parity")]
     JoyParity,
+    /// Run the Rust and TypeScript selection control regression suites.
+    SelectionControls(SelectionControlsArgs),
 }
 
 fn main() -> Result<()> {
@@ -194,7 +196,19 @@ fn main() -> Result<()> {
         } => themes_bundle(overrides, format, joy, compat, out_dir),
         Commands::MaterialParity => material_parity(),
         Commands::JoyParity => joy_parity(),
+        Commands::SelectionControls(args) => selection_controls(args),
     }
+}
+
+/// Arguments for the selection control regression matrix.
+#[derive(Args, Debug, Default)]
+struct SelectionControlsArgs {
+    /// Skip Rust-based suites (useful when only running web smoke tests).
+    #[arg(long)]
+    skip_rust: bool,
+    /// Skip web/TypeScript suites (useful when Node is unavailable).
+    #[arg(long)]
+    skip_web: bool,
 }
 
 /// Output encodings supported by the theme generator.
@@ -2273,5 +2287,46 @@ fn bench() -> Result<()> {
         // Report but don't fail.
         eprintln!("cargo bench exited with {:?}", status);
     }
+    Ok(())
+}
+
+fn selection_controls(args: SelectionControlsArgs) -> Result<()> {
+    let workspace = workspace_root();
+    if args.skip_rust {
+        println!("[xtask][selection-controls] skipping Rust suites by request");
+    } else {
+        println!("[xtask][selection-controls] running Rust selection control suites");
+        let mut cargo = Command::new("cargo");
+        cargo
+            .current_dir(&workspace)
+            .arg("test")
+            .arg("-p")
+            .arg("rustic-ui-material")
+            .arg("--test")
+            .arg("selection_control");
+        run(cargo)?;
+    }
+
+    if args.skip_web {
+        println!("[xtask][selection-controls] skipping web smoke tests by request");
+    } else {
+        let joy_dir = workspace.join("packages/mui-joy");
+        if joy_dir.join("node_modules").exists() {
+            println!("[xtask][selection-controls] running Joy selection control smoke tests");
+            let mut pnpm = Command::new("pnpm");
+            pnpm.current_dir(&joy_dir)
+                .arg("test")
+                .arg("--")
+                .arg("--grep")
+                .arg("enterprise selection controls instrumentation");
+            run(pnpm)?;
+        } else {
+            println!(
+                "[xtask][selection-controls] skipped Joy web smoke tests (packages/mui-joy/node_modules missing). \
+                 Run `pnpm --dir packages/mui-joy install` before invoking this command to enable the TypeScript suite."
+            );
+        }
+    }
+
     Ok(())
 }
