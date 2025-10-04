@@ -20,6 +20,37 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
+struct ManifestBackup {
+    original: PathBuf,
+    backup: PathBuf,
+}
+
+impl ManifestBackup {
+    fn new(original: &Path) -> std::io::Result<Self> {
+        let backup = original.with_extension("toml.bak");
+        fs::rename(original, &backup)?;
+        Ok(Self {
+            original: original.to_path_buf(),
+            backup,
+        })
+    }
+}
+
+impl Drop for ManifestBackup {
+    fn drop(&mut self) {
+        if self.backup.exists() {
+            if let Err(error) = fs::rename(&self.backup, &self.original) {
+                eprintln!(
+                    "failed to restore manifest from {} to {}: {}",
+                    self.backup.display(),
+                    self.original.display(),
+                    error
+                );
+            }
+        }
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn layout_examples_invoke_cargo_for_native_and_wasm() -> Result<()> {
@@ -79,6 +110,37 @@ fn examples_conflict_release_and_profile() -> Result<()> {
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("cannot be used with"));
+
+    Ok(())
+}
+
+#[test]
+fn selection_controls_manifest_gaps_fail_loudly() -> Result<()> {
+    let workspace = workspace_root();
+    let leptos_manifest = workspace.join("examples/selection-controls-leptos/Cargo.toml");
+
+    let mut cmd = Command::cargo_bin("xtask")?;
+    cmd.current_dir(&workspace)
+        .arg("examples")
+        .arg("selection-controls");
+
+    if leptos_manifest.exists() {
+        let yew_manifest = workspace.join("examples/selection-controls-yew/Cargo.toml");
+        assert!(
+            yew_manifest.exists(),
+            "selection controls yew manifest should exist before temporary relocation"
+        );
+
+        let _backup = ManifestBackup::new(&yew_manifest)?;
+
+        cmd.assert().failure().stderr(predicate::str::contains(
+            "selection control example `selection-controls-yew` manifest missing",
+        ));
+    } else {
+        cmd.assert().failure().stderr(predicate::str::contains(
+            "selection control example `selection-controls-leptos` manifest missing",
+        ));
+    }
 
     Ok(())
 }

@@ -135,7 +135,8 @@ fn examples_help_highlights_layout_group() -> Result<()> {
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("curated Rust example collections"))
-        .stdout(predicate::str::contains("layout-box-leptos"));
+        .stdout(predicate::str::contains("layout-box-leptos"))
+        .stdout(predicate::str::contains("selection-controls-leptos"));
 
     Ok(())
 }
