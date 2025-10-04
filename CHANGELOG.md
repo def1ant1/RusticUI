@@ -7,6 +7,13 @@ archived Material UI change history now lives in [`docs/archives/material-ui-cha
 
 ### Highlights
 
+- Documented the new `SelectionControlTelemetry` and `TelemetryHooks` helpers so
+  adapter authors can integrate the builder workflow, centralise enterprise
+  telemetry, and enforce managed analytics/automation identifiers across
+  renderers. 【F:README.md†L170-L209】【F:docs/architecture/selection-controls.md†L73-L127】
+- Expanded inline rustdoc on the telemetry helpers to guide future maintainers
+  when evolving builder invariants or adding lifecycle hooks for adapters.
+  【F:crates/rustic-ui-material/src/selection_control.rs†L334-L368】【F:crates/rustic-ui-material/src/telemetry.rs†L198-L205】
 - Expanded the selection control builder documentation to cover keyboard
   navigation, focus-visible semantics, telemetry hooks, SSR/hydration
   guarantees, and enterprise bootstrap patterns shared across checkbox, radio,
@@ -25,6 +32,7 @@ archived Material UI change history now lives in [`docs/archives/material-ui-cha
 
 ### Verification
 
+- `cargo xtask accessibility-audit`
 - `cargo fmt`
 - `cargo test -p rustic-ui-material --lib --features leptos`
 - `cargo test -p rustic-ui-material --lib --features sycamore`

@@ -192,6 +192,12 @@ pub type TelemetryCommitCallback =
 pub type TelemetryErrorCallback = dyn Fn(TelemetryContext, TelemetryError) + Send + Sync + 'static;
 
 /// Configurable hooks invoked around adapter renders.
+///
+/// Maintain exhaustive field-level guidance here whenever new callbacks land;
+/// selection control builders and adapter plans clone this struct verbatim, and
+/// downstream maintainers rely on the documentation to map hooks back to
+/// enterprise observability requirements. Prefer additive changes with safe
+/// defaults so existing integrations inherit capabilities without churn.
 #[derive(Clone, Default)]
 pub struct TelemetryHooks {
     /// Optional analytics identifier automatically applied when the adapter

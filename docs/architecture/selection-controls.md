@@ -99,6 +99,56 @@ instead of cloning descriptor assembly logic. Doing so keeps analytics spans,
 automation hooks, and SSR output consistent even as new telemetry sinks or
 attributes are introduced centrally.
 
+## Telemetry orchestration helpers
+
+Selection controls now lean on two telemetry-centric helpers that eliminate
+adapter-specific glue code:
+
+- `SelectionControlTelemetry` wraps a configured `TelemetryHooks` instance and
+  exposes builder-like methods (`with_analytics_id`, `with_automation_id`,
+  `with_data_keys`, `enforce_defaults`) for centrally managed identifiers.
+- `TelemetryHooks` acts as the enterprise integration surface, carrying
+  analytics/focus/change/commit/error callbacks plus panic handling. Hooks are
+  thread-safe so adapters can clone them into concurrent renderers without
+  additional locking.
+
+### Integration steps for adapters
+
+1. Construct a `TelemetryHooks` value during application/bootstrap and register
+   its delegates with your observability systems (tracing, logging, data lake,
+   compliance archive). The hooks expose optional analytics and automation IDs
+   that downstream descriptors inherit automatically.
+2. Wrap the hooks with `SelectionControlTelemetry::new(hooks.clone())`. Override
+   managed data keys or identifiers if your renderer needs bespoke attribute
+   names (for example, to integrate with legacy DOM listeners).
+3. Pass the helper into `SelectionControlDescriptor::from_headless`, the
+   dedicated render plans, or the fluent attribute builders. The descriptor will
+   merge ARIA/data/automation metadata, Material defaults, and telemetry context
+   without requiring adapter-level mutation.
+4. When rendering, call the descriptor’s `to_ssr_html` or feed
+   `themed_attributes()` into your framework. After the render finishes, the
+   telemetry helper ensures analytics, focus, state change, commit, and error
+   callbacks fire in a deterministic order before consumer callbacks, keeping
+   enterprise dashboards trustworthy.
+
+### Enterprise telemetry considerations
+
+- **Consistent context** – Telemetry callbacks receive a `TelemetryContext`
+  containing the fully qualified component path, merged analytics/automation
+  identifiers, and snapshot metadata describing the descriptor label and final
+  attributes. Incident response teams can diff SSR/CSR output using this
+  context without scraping HTML.
+- **Deterministic ordering** – Checkbox/switch/radio adapters emit telemetry
+  before invoking consumer handlers. Maintain this sequencing when authoring
+  additional adapters so automation harnesses observe identical lifecycles.
+- **Central overrides** – Use `SelectionControlTelemetry::enforce_defaults()`
+  when platform governance mandates canonical identifiers. Builders will refuse
+  to overwrite analytics/automation IDs, protecting compliance-critical hooks
+  from local overrides.
+- **Testing** – Extend the existing wasm-bindgen tests and integration suites to
+  cover new telemetry delegates. Tests should assert ordering and attribute
+  propagation to prevent regressions during framework upgrades.
+
 ## Testing Expectations
 
 Unit tests now live under `crates/rustic-ui-material/tests/selection_control.rs`

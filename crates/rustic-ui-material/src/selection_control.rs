@@ -333,7 +333,9 @@ pub struct SelectionControlThemeTokens {
 /// [`SelectionControlTelemetry`] helper drives these builders through a common
 /// trait so centralised telemetry defaults (analytics IDs, automation IDs, and
 /// future managed metadata) flow through a single code path regardless of which
-/// descriptor is being constructed.
+/// descriptor is being constructed. Maintain the helper invariants whenever the
+/// descriptors grow new fields; adapter authors rely on this struct to keep
+/// enterprise telemetry stable across renderers without duplicating merge logic.
 pub trait TelemetryAttributesBuilder: Sized {
     /// Record an ARIA attribute surfaced by the headless state machine or
     /// caller-supplied overrides.
@@ -461,7 +463,9 @@ impl SelectionControlTelemetry {
     /// Construct telemetry defaults from a configured [`TelemetryHooks`]
     /// instance.  The helper reuses any analytics or automation identifiers
     /// already stored on the hooks so enterprise instrumentation propagates to
-    /// the descriptor automatically.
+    /// the descriptor automatically.  When adding new lifecycle hooks, extend
+    /// [`TelemetryHooks`] first, then thread the data through this constructor so
+    /// downstream adapters inherit the behaviour without additional patching.
     #[must_use]
     pub fn new(hooks: TelemetryHooks) -> Self {
         let analytics_id = hooks.analytics_id.clone();
