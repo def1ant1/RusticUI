@@ -679,6 +679,10 @@ pub fn selection_controls_demo() -> Html {
                     />
                 </article>
             </section>
+            <section data-automation-id="automation.selection-controls.telemetry-log" class="telemetry-log">
+                <h2>{"Telemetry feed"}</h2>
+                <p class="summary">{"Structured telemetry events stream to stdout and the shared recorder so automation harnesses observe the same analytics payloads the design system emits in production."}</p>
+            </section>
         </main>
     }
 }

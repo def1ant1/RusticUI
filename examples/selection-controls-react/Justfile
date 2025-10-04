@@ -25,3 +25,9 @@ fmt:
 
 lint:
     cd {{justfile_directory()}} && npm run lint
+
+automation-smoke:
+    cd {{justfile_directory()}} && ./scripts/automation-smoke.sh
+
+automation-serve:
+    cd {{justfile_directory()}} && ../scripts/selection-controls-smoke.sh react --mode serve --port {{env_var("SELECTION_CONTROLS_REACT_PORT", "4704")}}

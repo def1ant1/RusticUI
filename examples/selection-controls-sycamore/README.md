@@ -37,6 +37,8 @@ just build-wasm    # Compile the wasm artifact (`cargo build --target wasm32-unk
 just smoke         # Run host + wasm smoke tests in one command
 just serve         # Serve the wasm bundle via Trunk with hydration enabled
 just ci-smoke      # Helper consumed by CI runners (wraps host + wasm tests)
+just automation-smoke # Shared selection-controls-smoke.sh entry point
+just automation-serve # Launch the central serve harness (SELECTION_CONTROLS_SYCAMORE_PORT overrides the port)
 ```
 
 > **Tip:** `Trunk.toml` wires a `pre-build` hook to `just prepare` so local dev
@@ -102,9 +104,11 @@ comparisons for determinism.
 
 ## Automation hooks
 
-* `scripts/ci-smoke.sh` is a no-surprises entrypoint for CI runners. It prepares
-  the toolchain and executes host + wasm tests using the same steps documented
-  above.
+* `scripts/ci-smoke.sh` is a no-surprises entrypoint for CI runners. It shells
+  into the shared
+  [`examples/scripts/selection-controls-smoke.sh`](../scripts/selection-controls-smoke.sh)
+  helper so every framework uses identical provisioning, logging, and teardown
+  semantics.
 * `workspace/Cargo.toml` registers the crate as part of the top-level workspace
   so `cargo test --workspace` exercises the new suite automatically.
 

@@ -322,7 +322,10 @@ fn checkbox_markup<'a>(
     let tabindex = if disabled { "-1" } else { "0" };
 
     rsx! {
-        label { class: "control checkbox", style: "display:flex;align-items:center;gap:12px;",
+        label {
+            class: "control checkbox",
+            style: "display:flex;align-items:center;gap:12px;",
+            data_automation_id: automation.clone(),
             input {
                 r#type: "checkbox",
                 checked: checked,
@@ -386,7 +389,10 @@ fn switch_markup<'a>(
     };
 
     rsx! {
-        label { class: "control switch", style: "display:flex;align-items:center;gap:12px;",
+        label {
+            class: "control switch",
+            style: "display:flex;align-items:center;gap:12px;",
+            data_automation_id: automation.clone(),
             input {
                 r#type: "checkbox",
                 role: "switch",
@@ -441,7 +447,10 @@ fn radio_markup<'a>(
     let recorder = harness.recorder.clone();
 
     rsx! {
-        fieldset { class: "control radio-group", style: "display:flex;gap:16px;align-items:center;",
+        fieldset {
+            class: "control radio-group",
+            style: "display:flex;gap:16px;align-items:center;",
+            data_automation_id: automation.clone(),
             legend { "Payment method" }
             {options.iter().enumerate().map(|(index, option)| {
                 let state_handle = state_handle.clone();
@@ -454,7 +463,9 @@ fn radio_markup<'a>(
                     (state.selected_index() == Some(index), state.disabled())
                 };
                 rsx! {
-                    label { style: "display:flex;align-items:center;gap:8px;",
+                    label {
+                        style: "display:flex;align-items:center;gap:8px;",
+                        data_automation_id: automation.clone(),
                         input {
                             r#type: "radio",
                             name: "checkout-method",
@@ -520,6 +531,16 @@ pub fn selection_controls_app(cx: Scope<SelectionControlsProps>) -> Element {
             {checkbox}
             {switch}
             {radio}
+            section {
+                class: "telemetry-log",
+                style: "border-top:1px solid rgba(148,163,184,0.3);padding-top:16px;color:#cbd5f5;",
+                data_automation_id: "automation.selection-controls.telemetry-log",
+                h2 { style: "font-size:18px;margin:0 0 8px;", "Telemetry feed" }
+                p {
+                    style: "margin:0;max-width:68ch;",
+                    "Structured telemetry entries stream to stdout and the shared recorder so automation can replay the same analytics contract used in production."
+                }
+            }
         }
     })
 }

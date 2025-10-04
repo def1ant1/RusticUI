@@ -15,6 +15,7 @@ utilities that downstream teams can embed when auditing hydration order.
 | Run host + wasm checks | `just check` |
 | Execute smoke tests | `just smoke` |
 | CI automation bundle | `just ci-smoke` or `./scripts/ci-smoke.sh` |
+| Shared smoke harness | `just automation-smoke` |
 
 The `Cargo.toml` defines aliases so manual invocations remain terse:
 
@@ -78,9 +79,12 @@ refactors cannot regress instrumentation.
 
 ## CI + automation
 
-`./scripts/ci-smoke.sh` orchestrates the dual-target checks and tests so
-pipelines can reuse a single entry point.  The script is idempotent and safe to
-run locally before opening a pull request.
+`./scripts/ci-smoke.sh` delegates to the shared
+[`examples/scripts/selection-controls-smoke.sh`](../scripts/selection-controls-smoke.sh)
+helper so every automation pathway—`just automation-smoke`, `cargo xtask
+selection-controls`, and the Playwright harness—shares the exact same
+command graph. The script is idempotent and safe to run locally before
+opening a pull request.
 
 ## Next steps
 

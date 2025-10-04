@@ -31,11 +31,14 @@ just build-desktop   # compile without launching (handy for CI cache priming)
 just build-web       # emit the wasm bundle for static hosting
 just test-host       # run the native telemetry smoke tests
 just test-wasm       # execute wasm-bindgen tests in headless Chrome
+just automation-smoke # delegate to the shared selection-controls-smoke.sh harness
+just automation-serve # launch the shared serve harness (override port via SELECTION_CONTROLS_DIOXUS_PORT)
 ```
 
-> **Tip:** the `scripts/bootstrap.sh` helper powers CI smoke tests. It
-> checks both the host and wasm pipelines, mirroring what the
-> documentation recommends for local validation.
+> **Tip:** `scripts/bootstrap.sh` now shells into
+> [`examples/scripts/selection-controls-smoke.sh`](../scripts/selection-controls-smoke.sh)
+> so CI and local smoke tests reuse the same orchestration code as
+> `cargo xtask selection-controls` and the Playwright harness.
 
 ## Telemetry wiring
 

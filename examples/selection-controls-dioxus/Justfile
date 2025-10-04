@@ -37,3 +37,9 @@ cargo test --manifest-path {{manifest}}
 test-wasm:
 {{toolchain}} "Selection Controls (Dioxus)" --wasm
 cd {{example_dir}} && wasm-pack test --headless --chrome -- --features web
+
+automation-smoke:
+    {{repo_root}}/examples/scripts/selection-controls-smoke.sh dioxus --mode smoke
+
+automation-serve:
+    {{repo_root}}/examples/scripts/selection-controls-smoke.sh dioxus --mode serve --port {{env_var("SELECTION_CONTROLS_DIOXUS_PORT", "4701")}}

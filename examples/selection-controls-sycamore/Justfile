@@ -29,3 +29,9 @@ smoke: prepare
 
 ci-smoke:
     ./scripts/ci-smoke.sh
+
+automation-smoke:
+    {{repo_root}}/examples/scripts/selection-controls-smoke.sh sycamore --mode smoke
+
+automation-serve:
+    {{repo_root}}/examples/scripts/selection-controls-smoke.sh sycamore --mode serve --port {{env_var("SELECTION_CONTROLS_SYCAMORE_PORT", "4702")}}
