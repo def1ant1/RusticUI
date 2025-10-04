@@ -1,0 +1,22 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+# Default target builds both host and wasm binaries to verify instrumentation.
+default: build-all
+
+build-all:
+    cargo build --all-targets
+    cargo build --target wasm32-unknown-unknown
+
+serve:
+    trunk serve --config Trunk.toml
+
+check:
+    cargo host-check
+    cargo wasm-check
+
+smoke:
+    cargo host-test
+    cargo wasm-test
+
+ci-smoke:
+    ./scripts/ci-smoke.sh

@@ -1,0 +1,21 @@
+[build]
+target = "wasm32-unknown-unknown"
+release = true
+public_url = "/"
+
+[serve]
+address = "0.0.0.0"
+port = 8080
+open = false
+
+[[hooks.build]]
+command = "cargo"
+args = ["fmt"]
+
+[[hooks.build]]
+command = "cargo"
+args = ["wasm-check"]
+
+[[hooks.build]]
+command = "cargo"
+args = ["wasm-test"]

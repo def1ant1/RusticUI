@@ -1,0 +1,5 @@
+[alias]
+host-check = "check --all-targets"
+wasm-check = "check --target wasm32-unknown-unknown"
+host-test = "test --all-targets"
+wasm-test = "test --target wasm32-unknown-unknown -- --nocapture"
