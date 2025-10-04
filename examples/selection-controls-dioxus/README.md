@@ -1,127 +1,86 @@
 # Selection Controls with Dioxus
 
-Use the typed Dioxus components so hydration stays deterministic, telemetry is
-attached up-front, and automation suites can reuse the same patterns that power
-the full design system.
+This example turns the README snippet into a fully instrumented Dioxus
+crate. The showcase renders the checkbox, switch, and radio group in the
+same order as the documentation while bolting Rustic UI telemetry hooks
+into both the render lifecycle and the structured delegates exposed by
+`rustic-ui-material`.
 
-```rust
-use dioxus::prelude::*;
-use rustic_ui_headless::{
-    checkbox::CheckboxState,
-    radio::{RadioGroupState, RadioOrientation},
-    switch::SwitchState,
-};
-use rustic_ui_material::{TelemetryContext, TelemetryHooks};
-use rustic_ui_material::checkbox::{
-    CheckboxChangeEvent, CheckboxProps, CheckboxTelemetryEvent,
-    dioxus::{DioxusCheckbox, DioxusCheckboxProps},
-};
-use rustic_ui_material::radio::{
-    RadioChangeEvent, RadioGroupProps, RadioTelemetryEvent,
-    dioxus::{DioxusRadioGroup, DioxusRadioGroupProps},
-};
-use rustic_ui_material::switch::{
-    SwitchChangeEvent, SwitchProps, SwitchTelemetryEvent,
-    dioxus::{DioxusSwitch, DioxusSwitchProps},
-};
-use std::{rc::Rc, sync::Arc};
+The library exports helper functions that:
 
-fn telemetry(channel: &'static str) -> TelemetryHooks {
-    let mut hooks = TelemetryHooks::default();
-    hooks.analytics_id = Some(format!("selection-controls.dioxus.{channel}"));
-    hooks.automation_id = Some(format!("automation.selection-controls.{channel}"));
-    let channel_label = format!("selection_controls::{channel}");
-    hooks.on_render = Some(Arc::new(move |context: TelemetryContext| {
-        println!(
-            "telemetry::render channel={} component={} analytics={:?} automation={:?}",
-            channel_label,
-            context.component,
-            context.analytics_id,
-            context.automation_id,
-        );
-    }));
-    hooks
-}
+* construct a `VirtualDom` with deterministic telemetry recording so host
+  and WebAssembly tests can validate hydration ordering.
+* expose smoke-test helpers that emit a canonical telemetry cycle without
+  duplicating event wiring logic.
+* launch desktop and web runners so automation suites execute the same
+  instrumentation pipeline the design system expects in production.
+* render the checkbox, switch, and radio controls directly via `rsx!`
+  using the headless state machines, keeping the example compatible while
+  the upstream Dioxus adapters continue to evolve.
 
-pub fn selection_controls(cx: Scope) -> Element {
-    let checkbox_state = CheckboxState::uncontrolled(false, false);
-    let switch_state = SwitchState::uncontrolled(false, true);
-    let radio_state = RadioGroupState::uncontrolled(
-        vec!["Cash".into(), "Card".into(), "Invoice".into()],
-        false,
-        RadioOrientation::Horizontal,
-        Some(2),
-    );
+## Developer workflows
 
-    let checkbox_props = CheckboxProps {
-        label: "Accept terms".into(),
-        telemetry: telemetry("checkbox"),
-    };
-    let switch_props = SwitchProps {
-        label: "Enable quick checkout".into(),
-        telemetry: telemetry("switch"),
-    };
-    let radio_props = RadioGroupProps::from_state(&radio_state)
-        .with_telemetry(telemetry("radio"));
+The `Justfile` centralises the commands developers and CI runners need.
+All recipes call `examples/scripts/ensure-example-toolchain.sh` so the
+Rust targets and supporting tools are present before any build starts.
 
-    let checkbox_telemetry: Rc<dyn Fn(CheckboxTelemetryEvent)> = Rc::new(|event| {
-        println!("checkbox telemetry::{event:?}");
-    });
-    let switch_telemetry: Rc<dyn Fn(SwitchTelemetryEvent)> = Rc::new(|event| {
-        println!("switch telemetry::{event:?}");
-    });
-    let radio_telemetry: Rc<dyn Fn(RadioTelemetryEvent)> = Rc::new(|event| {
-        println!("radio telemetry::{event:?}");
-    });
-
-    let checkbox_component = DioxusCheckboxProps {
-        checkbox: checkbox_props.clone(),
-        state: checkbox_state.clone(),
-        on_change: Some(Rc::new(|event: CheckboxChangeEvent| {
-            println!("checkbox::change next={} disabled={}", event.next, event.disabled);
-        })),
-        on_focus: None,
-        on_blur: None,
-        on_key: None,
-        telemetry_delegate: Some(checkbox_telemetry.clone()),
-    };
-    let switch_component = DioxusSwitchProps {
-        switch: switch_props.clone(),
-        state: switch_state.clone(),
-        on_change: Some(Rc::new(|event: SwitchChangeEvent| {
-            println!("switch::change next={} disabled={}", event.next, event.disabled);
-        })),
-        on_focus: None,
-        on_blur: None,
-        on_key: None,
-        telemetry_delegate: Some(switch_telemetry.clone()),
-    };
-    let radio_component = DioxusRadioGroupProps {
-        group: radio_props.clone(),
-        state: radio_state.clone(),
-        on_change: Some(Rc::new(|event: RadioChangeEvent| {
-            println!(
-                "radio::change previous={:?} next={} label={}",
-                event.previous,
-                event.next,
-                event.label,
-            );
-        })),
-        on_focus: None,
-        on_blur: None,
-        on_key: None,
-        telemetry_delegate: Some(radio_telemetry.clone()),
-        telemetry: Some(telemetry("radio.component")),
-    };
-
-    cx.render(rsx! {
-        DioxusCheckbox { ..checkbox_component }
-        DioxusSwitch { ..switch_component }
-        DioxusRadioGroup { ..radio_component }
-    })
-}
+```shell
+just run-desktop     # build + launch the native window with telemetry logging
+just run-web         # serve the wasm build via the Dioxus CLI
+just build-desktop   # compile without launching (handy for CI cache priming)
+just build-web       # emit the wasm bundle for static hosting
+just test-host       # run the native telemetry smoke tests
+just test-wasm       # execute wasm-bindgen tests in headless Chrome
 ```
 
-> **Compile-time note:** Enable the `dioxus` feature when pulling `rustic-ui-material`
-> into an example crate: `cargo add rustic-ui-material --features dioxus` and
-> `cargo add rustic-ui-headless --features forms` before running `cargo check`.
+> **Tip:** the `scripts/bootstrap.sh` helper powers CI smoke tests. It
+> checks both the host and wasm pipelines, mirroring what the
+> documentation recommends for local validation.
+
+## Telemetry wiring
+
+The Rust module in `src/lib.rs` encapsulates the telemetry wiring inside
+a reusable harness:
+
+* `TelemetryHooks` emit render events with analytics and automation IDs
+  per control (`checkbox`, `switch`, `radio`, and the nested
+  `radio.component`).
+* Console logging mirrors the structured delegates so operators can tail
+  stdout while the recorder stores the same payloads for assertions.
+* `simulate_telemetry_cycle` replays a representative change cycle,
+  making it trivial for tests—or other examples—to verify that the
+  logging contract remains intact.
+
+Host tests assert the render order via `VirtualDom::rebuild` while wasm
+smoke tests validate that hydration triggers the nested radio telemetry.
+Both suites reuse the same `TelemetryRecorder`, guaranteeing parity
+across execution environments.
+
+## Building for WebAssembly
+
+The Dioxus CLI reads `dx.json` to discover how to compile the wasm
+artifacts. Running `dx build --config dx.json` produces bundles in
+`dist/`; `dx serve --config dx.json` spins up a local dev server using
+hydration. The `web` Cargo feature ensures the crate pulls in
+`dioxus-web`, `wasm-bindgen`, and the associated tests.
+
+## Desktop execution
+
+Desktop builds enable the `desktop` feature which activates the
+`dioxus-desktop` renderer. `run_desktop` boots the virtual DOM through
+`dioxus_desktop::launch::launch_virtual_dom`, applying the same telemetry
+hooks used elsewhere. Developers can run the binary directly via
+`cargo run --manifest-path Cargo.toml --features desktop` or lean on the
+`just run-desktop` recipe.
+
+## Testing strategy
+
+* `tests/desktop.rs` covers hydration ordering and verifies that all
+  telemetry delegates fire with change payloads.
+* `tests/web.rs` (gated behind `wasm_bindgen_test`) exercises the wasm
+  path to assert that hydration captures the nested radio component
+  telemetry. Execute it via `just test-wasm`.
+
+The README’s original snippet now lives as executable code with exhaustive
+inline commentary in `src/lib.rs`, ensuring engineers can read, run, and
+extend the instrumentation without searching through multiple files.

@@ -1,0 +1,32 @@
+{
+  "application": {
+    "name": "selection-controls-dioxus",
+    "default_platform": "x86_64-unknown-linux-gnu"
+  },
+  "web": {
+    "renderer": {
+      "target": "wasm32-unknown-unknown",
+      "features": ["web"],
+      "output_dir": "dist"
+    },
+    "serve": {
+      "proxy": null,
+      "asset_dir": "public",
+      "open": false
+    }
+  },
+  "desktop": {
+    "runner": {
+      "features": ["desktop"],
+      "command": "cargo run --manifest-path Cargo.toml --features desktop"
+    }
+  },
+  "testing": {
+    "host": {
+      "command": "cargo test --manifest-path Cargo.toml"
+    },
+    "wasm": {
+      "command": "wasm-pack test --headless --chrome -- --features web"
+    }
+  }
+}

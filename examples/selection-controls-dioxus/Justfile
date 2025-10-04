@@ -1,0 +1,39 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+example_dir := invocation_directory()
+repo_root := example_dir + "/../.."
+manifest := example_dir + "/Cargo.toml"
+toolchain := repo_root + "/examples/scripts/ensure-example-toolchain.sh"
+
+default := run-desktop
+
+alias run := run-desktop
+alias serve := run-web
+
+run-desktop:
+{{toolchain}} "Selection Controls (Dioxus)" --ssr
+cargo run --manifest-path {{manifest}} --features desktop
+
+run-web:
+{{toolchain}} "Selection Controls (Dioxus)" --wasm
+dx serve --config {{example_dir}}/dx.json
+
+build-web:
+{{toolchain}} "Selection Controls (Dioxus)" --wasm
+dx build --config {{example_dir}}/dx.json
+
+build-desktop:
+cargo build --manifest-path {{manifest}} --features desktop
+
+check:
+cargo check --manifest-path {{manifest}} --all-targets
+
+fmt:
+cargo fmt --manifest-path {{manifest}} --all
+
+test-host:
+cargo test --manifest-path {{manifest}}
+
+test-wasm:
+{{toolchain}} "Selection Controls (Dioxus)" --wasm
+cd {{example_dir}} && wasm-pack test --headless --chrome -- --features web

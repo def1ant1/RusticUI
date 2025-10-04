@@ -1,0 +1,34 @@
+[package]
+name = "selection-controls-dioxus"
+version = "0.1.0"
+edition = "2021"
+description = "Enterprise-grade selection controls instrumented with Rustic UI and Dioxus"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "selection_controls_dioxus"
+path = "src/lib.rs"
+
+[[bin]]
+name = "selection-controls"
+path = "src/main.rs"
+
+[features]
+default = []
+desktop = ["dioxus-desktop"]
+web = ["wasm-bindgen-test", "dioxus-web"]
+ssr = ["dioxus-ssr"]
+
+[dependencies]
+dioxus = { workspace = true, features = ["macro", "hooks", "html"] }
+dioxus-web = { workspace = true, optional = true, features = ["hydrate"] }
+dioxus-ssr = { workspace = true, optional = true }
+dioxus-desktop = { version = "0.4", optional = true }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", features = ["forms"] }
+rustic-ui-material = { path = "../../crates/rustic-ui-material", default-features = false, features = ["forms"] }
+wasm-bindgen-test = { workspace = true, optional = true }
+
+[dev-dependencies]
+dioxus-ssr = { workspace = true }
+wasm-bindgen-test = { workspace = true }
