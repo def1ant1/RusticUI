@@ -325,6 +325,27 @@ pub struct SelectionControlThemeTokens {
     attributes: BTreeMap<String, String>,
 }
 
+/// Trait implemented by attribute builders that participate in telemetry
+/// merging.
+///
+/// Radio groups, radio options, and single selection controls all expose
+/// builders that can record ARIA, `data-*`, and passthrough attributes.  The
+/// [`SelectionControlTelemetry`] helper drives these builders through a common
+/// trait so centralised telemetry defaults (analytics IDs, automation IDs, and
+/// future managed metadata) flow through a single code path regardless of which
+/// descriptor is being constructed.
+pub trait TelemetryAttributesBuilder: Sized {
+    /// Record an ARIA attribute surfaced by the headless state machine or
+    /// caller-supplied overrides.
+    fn telemetry_push_aria(self, key: &str, value: String) -> Self;
+
+    /// Record a `data-*` attribute, including analytics and automation IDs.
+    fn telemetry_push_data(self, key: &str, value: String) -> Self;
+
+    /// Record a passthrough attribute (for example `role` or `tabindex`).
+    fn telemetry_push_attribute(self, key: &str, value: String) -> Self;
+}
+
 impl SelectionControlThemeTokens {
     fn normalize_data_key(key: String) -> String {
         if key.starts_with("data-") {
@@ -504,27 +525,21 @@ impl SelectionControlTelemetry {
         self.automation_id.as_deref()
     }
 
-    fn merge_into_builder<'a, I>(
+    pub fn merge_into_builder<'a, I, B>(
         &self,
-        mut builder: SelectionControlAttributesBuilder,
+        mut builder: B,
         attributes: I,
-    ) -> Result<
-        (
-            SelectionControlAttributesBuilder,
-            Option<String>,
-            Option<String>,
-        ),
-        SelectionControlError,
-    >
+    ) -> Result<(B, Option<String>, Option<String>), SelectionControlError>
     where
-        I: IntoIterator<Item = (&'a str, String)>,
+        I: IntoIterator<Item = (String, String)>,
+        B: TelemetryAttributesBuilder,
     {
         let mut analytics = None;
         let mut automation = None;
 
         for (key, value) in attributes {
             if key.starts_with("aria-") {
-                builder = builder.aria(key, value);
+                builder = builder.telemetry_push_aria(&key, value);
                 continue;
             }
 
@@ -553,23 +568,23 @@ impl SelectionControlTelemetry {
                     }
                     automation = Some(cloned.clone());
                 }
-                builder = builder.data(key, value);
+                builder = builder.telemetry_push_data(&key, value);
                 continue;
             }
 
-            builder = builder.attribute(key, value);
+            builder = builder.telemetry_push_attribute(&key, value);
         }
 
         if analytics.is_none() {
             if let Some(default) = &self.analytics_id {
-                builder = builder.data(self.analytics_key.clone(), default.clone());
+                builder = builder.telemetry_push_data(&self.analytics_key, default.clone());
                 analytics = Some(default.clone());
             }
         }
 
         if automation.is_none() {
             if let Some(default) = &self.automation_id {
-                builder = builder.automation_id("id", default.clone());
+                builder = builder.telemetry_push_data(&self.automation_key, default.clone());
                 automation = Some(default.clone());
             }
         }
@@ -637,8 +652,12 @@ impl SelectionControlDescriptor {
     {
         let builder = SelectionControlAttributes::builder(label, style);
         let builder = theme.apply(builder);
-        let (builder, analytics, automation) =
-            telemetry.merge_into_builder(builder, state.snapshot_attributes())?;
+        let attributes = state
+            .snapshot_attributes()
+            .into_iter()
+            .map(|(key, value)| (key.to_string(), value))
+            .collect::<Vec<_>>();
+        let (builder, analytics, automation) = telemetry.merge_into_builder(builder, attributes)?;
         let attributes = builder.build();
         let telemetry = telemetry.with_effective_ids(analytics, automation);
         Ok(Self {
@@ -886,6 +905,20 @@ impl SelectionControlAttributesBuilder {
     }
 }
 
+impl TelemetryAttributesBuilder for SelectionControlAttributesBuilder {
+    fn telemetry_push_aria(self, key: &str, value: String) -> Self {
+        self.aria(key.to_string(), value)
+    }
+
+    fn telemetry_push_data(self, key: &str, value: String) -> Self {
+        self.data(key.to_string(), value)
+    }
+
+    fn telemetry_push_attribute(self, key: &str, value: String) -> Self {
+        self.attribute(key.to_string(), value)
+    }
+}
+
 /// Data object describing a single radio option.
 #[derive(Debug, Clone)]
 pub struct RadioOptionAttributes {
@@ -1076,6 +1109,20 @@ impl RadioOptionAttributesBuilder {
             automation_ids: self.automation_ids,
             attributes: self.attributes,
         }
+    }
+}
+
+impl TelemetryAttributesBuilder for RadioOptionAttributesBuilder {
+    fn telemetry_push_aria(self, key: &str, value: String) -> Self {
+        self.aria(key, value)
+    }
+
+    fn telemetry_push_data(self, key: &str, value: String) -> Self {
+        self.data(key, value)
+    }
+
+    fn telemetry_push_attribute(self, key: &str, value: String) -> Self {
+        self.attribute(key, value)
     }
 }
 
@@ -1274,6 +1321,20 @@ impl RadioGroupAttributesBuilder {
             attributes: self.attributes,
             options: self.options,
         }
+    }
+}
+
+impl TelemetryAttributesBuilder for RadioGroupAttributesBuilder {
+    fn telemetry_push_aria(self, key: &str, value: String) -> Self {
+        self.aria(key, value)
+    }
+
+    fn telemetry_push_data(self, key: &str, value: String) -> Self {
+        self.data(key, value)
+    }
+
+    fn telemetry_push_attribute(self, key: &str, value: String) -> Self {
+        self.attribute(key, value)
     }
 }
 
