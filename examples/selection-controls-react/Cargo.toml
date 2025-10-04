@@ -1,0 +1,33 @@
+[package]
+name = "selection-controls-react"
+version = "0.1.0"
+edition = "2021"
+description = "Rust-powered selection control state machines and telemetry adapters exposed to React via wasm-bindgen."
+authors = ["RusticUI Contributors <opensource@mui.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/mui/material-ui"
+keywords = ["wasm", "react", "telemetry", "selection", "controls"]
+categories = ["wasm", "development-tools", "web-programming"]
+readme = "README.md"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+web-sys = { workspace = true, features = ["Window", "Performance"] }
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+once_cell.workspace = true
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+proptest.workspace = true
+
+[features]
+default = []
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = true

@@ -5034,6 +5034,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "selection-controls-react"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "js-sys",
+ "once_cell",
+ "proptest",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "web-sys",
+]
+
+[[package]]
 name = "selection-controls-sycamore"
 version = "0.1.0"
 dependencies = [
