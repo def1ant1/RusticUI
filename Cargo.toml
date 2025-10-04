@@ -67,6 +67,7 @@ members = [
     "examples/feedback-progress-leptos",
     "examples/selection-controls-dioxus",
     "examples/selection-controls-yew",
+    "examples/selection-controls-sycamore",
     "examples/forms-input-base-shared",
     "examples/forms-input-base-yew",
     "examples/forms-input-base-leptos",

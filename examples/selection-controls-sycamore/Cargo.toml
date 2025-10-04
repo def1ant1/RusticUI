@@ -1,0 +1,32 @@
+[package]
+name = "selection-controls-sycamore"
+version = "0.1.0"
+edition = "2021"
+description = "Sycamore selection control showcase instrumented with Rustic UI telemetry"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "selection_controls_sycamore"
+path = "src/lib.rs"
+
+[[bin]]
+name = "selection-controls"
+path = "src/main.rs"
+
+[features]
+default = ["csr", "ssr"]
+csr = ["dep:wasm-bindgen", "dep:web-sys"]
+ssr = []
+
+[dependencies]
+sycamore = { workspace = true, features = ["hydrate"] }
+wasm-bindgen = { workspace = true, optional = true }
+web-sys = { workspace = true, optional = true, features = ["Window", "Document", "Element"] }
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", features = ["forms"] }
+rustic-ui-material = { path = "../../crates/rustic-ui-material", default-features = false, features = ["sycamore", "forms"] }
+rustic-ui-styled-engine = { path = "../../crates/rustic-ui-styled-engine", features = ["sycamore"] }
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+sycamore = { workspace = true, features = ["hydrate"] }
