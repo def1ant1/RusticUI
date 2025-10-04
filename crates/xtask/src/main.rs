@@ -71,7 +71,7 @@ enum Commands {
     /// Compile curated Rust example collections for native and WebAssembly targets.
     #[command(
         about = "Compile curated Rust example collections for native and WebAssembly targets.",
-        long_about = "Compile curated Rust example collections for native and WebAssembly targets without relying on ad-hoc shell scripts. Each group is centrally defined so new demos can be enrolled in CI by appending a manifest entry instead of wiring fresh workflows.\n\nLayout demos currently validated: examples/layout-box-leptos, examples/layout-grid-yew. Update the `layout_examples` helper when shipping new layouts so CI picks them up automatically.\n\nForm control demos validated: examples/forms-input-base-yew, examples/forms-input-base-leptos, examples/forms-input-base-dioxus, examples/forms-input-base-sycamore. Update `forms_examples` when adding new frameworks so SSR snapshots stay wired into CI."
+        long_about = "Compile curated Rust example collections for native and WebAssembly targets without relying on ad-hoc shell scripts. Each group is centrally defined so new demos can be enrolled in CI by appending a manifest entry instead of wiring fresh workflows.\n\nLayout demos currently validated: examples/layout-box-leptos, examples/layout-grid-yew. Update the `layout_examples` helper when shipping new layouts so CI picks them up automatically.\n\nForm control demos validated: examples/forms-input-base-yew, examples/forms-input-base-leptos, examples/forms-input-base-dioxus, examples/forms-input-base-sycamore. Update `forms_examples` when adding new frameworks so SSR snapshots stay wired into CI.\n\nSelection control demos validated: examples/selection-controls-dioxus, examples/selection-controls-leptos, examples/selection-controls-react, examples/selection-controls-sycamore, examples/selection-controls-yew. Update `selection_controls_examples` whenever new renderers or telemetry adapters land so CI exercises every manifest."
     )]
     Examples(ExamplesArgs),
     /// Run WebAssembly tests via `wasm-pack` for selected crates.
@@ -414,6 +414,8 @@ enum ExampleGroup {
     Navigation,
     /// Form control blueprints exercising InputBase across frameworks.
     Forms,
+    /// Selection control demos that synchronize checkbox and radio telemetry.
+    SelectionControls,
 }
 
 impl ExampleGroup {
@@ -423,6 +425,7 @@ impl ExampleGroup {
             ExampleGroup::Utilities => "utilities",
             ExampleGroup::Navigation => "navigation",
             ExampleGroup::Forms => "forms",
+            ExampleGroup::SelectionControls => "selection-controls",
         }
     }
 }
@@ -508,6 +511,7 @@ fn examples(args: ExamplesArgs) -> Result<()> {
         ExampleGroup::Utilities => utilities_examples(&workspace)?,
         ExampleGroup::Navigation => navigation_examples(&workspace)?,
         ExampleGroup::Forms => forms_examples(&workspace)?,
+        ExampleGroup::SelectionControls => selection_controls_examples(&workspace)?,
     };
 
     if crates.is_empty() {
@@ -700,6 +704,53 @@ fn forms_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
         if !manifest_path.exists() {
             return Err(anyhow!(
                 "forms example `{}` manifest missing at {}",
+                name,
+                manifest_path.display()
+            ));
+        }
+
+        crates.push(ExampleCrate {
+            name: (*name).to_string(),
+            manifest: manifest_path,
+        });
+    }
+
+    Ok(crates)
+}
+
+fn selection_controls_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
+    // Keep the selection control telemetry demos synchronized across renderers.
+    // Centralizing the manifests ensures CI and local contributors compile every
+    // framework-specific harness after adding a new checkbox or radio surface.
+    const SELECTION_MANIFESTS: &[(&str, &str)] = &[
+        (
+            "selection-controls-dioxus",
+            "examples/selection-controls-dioxus/Cargo.toml",
+        ),
+        (
+            "selection-controls-leptos",
+            "examples/selection-controls-leptos/Cargo.toml",
+        ),
+        (
+            "selection-controls-react",
+            "examples/selection-controls-react/Cargo.toml",
+        ),
+        (
+            "selection-controls-sycamore",
+            "examples/selection-controls-sycamore/Cargo.toml",
+        ),
+        (
+            "selection-controls-yew",
+            "examples/selection-controls-yew/Cargo.toml",
+        ),
+    ];
+
+    let mut crates = Vec::with_capacity(SELECTION_MANIFESTS.len());
+    for (name, manifest) in SELECTION_MANIFESTS {
+        let manifest_path = workspace.join(manifest);
+        if !manifest_path.exists() {
+            return Err(anyhow!(
+                "selection control example `{}` manifest missing at {}",
                 name,
                 manifest_path.display()
             ));
