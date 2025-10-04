@@ -4,5 +4,6 @@
     "silent": true
   },
   "public": true,
-  "trailingSlash": true
+  "trailingSlash": true,
+  "buildCommand": "pnpm selection:verify"
 }

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { expect } from 'chai';
 import { spy, stub } from 'sinon';
+import { renderToString } from 'react-dom/server';
 import { act, createRenderer, fireEvent, screen } from '@mui/internal-test-utils';
 import { ThemeProvider } from '@mui/joy/styles';
 import Select, { selectClasses as classes, SelectOption } from '@mui/joy/Select';
@@ -604,6 +605,75 @@ describe('Joy <Select />', () => {
       });
 
       expect(isEventHandled).to.equal(true);
+    });
+  });
+
+  describe('enterprise selection controls instrumentation', () => {
+    it('renders deterministic SSR markup with telemetry data attributes', () => {
+      const renderSelect = () =>
+        renderToString(
+          <Select
+            value="alpha"
+            slotProps={{
+              button: {
+                'data-analytics-id': 'joy-select-alpha',
+                'data-automation-id': 'joy-select-control',
+              },
+            }}
+          >
+            <Option value="alpha">Alpha</Option>
+            <Option value="beta">Beta</Option>
+          </Select>,
+        );
+
+      const first = renderSelect();
+      const second = renderSelect();
+
+      expect(first).to.equal(second);
+      expect(first).to.contain('data-analytics-id="joy-select-alpha"');
+      expect(first).to.contain('data-automation-id="joy-select-control"');
+    });
+
+    it('propagates telemetry dataset metadata through change events', () => {
+      const handleChange = spy();
+
+      function Harness() {
+        const [value, setValue] = React.useState('alpha');
+        return (
+          <Select
+            value={value}
+            onChange={(event, newValue) => {
+              handleChange(event, newValue);
+              setValue(newValue as string);
+            }}
+            slotProps={{
+              button: {
+                'data-analytics-id': 'joy-select-alpha',
+                'data-automation-id': 'joy-select-control',
+              },
+            }}
+          >
+            <Option value="alpha">Alpha</Option>
+            <Option value="beta">Beta</Option>
+          </Select>
+        );
+      }
+
+      render(<Harness />);
+
+      fireEvent.click(screen.getByRole('combobox'));
+      act(() => {
+        screen.getAllByRole('option')[1].click();
+      });
+
+      expect(handleChange.callCount).to.equal(1);
+      const [event, value] = handleChange.firstCall.args;
+      expect(value).to.equal('beta');
+      expect(event).not.to.equal(null);
+
+      const dataset = (event!.currentTarget as HTMLButtonElement).dataset;
+      expect(dataset.analyticsId).to.equal('joy-select-alpha');
+      expect(dataset.automationId).to.equal('joy-select-control');
     });
   });
 

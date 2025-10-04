@@ -3,7 +3,10 @@ use std::sync::Once;
 use rustic_ui_material::selection_control::{
     register_radio_group_hook, register_radio_option_hook, register_selection_control_hook,
     RadioGroupAttributes, RadioOptionAttributes, SelectionControlAttributes,
+    SelectionControlDescriptor, SelectionControlStateAdapter, SelectionControlTelemetry,
+    SelectionControlThemeTokens,
 };
+use rustic_ui_material::TelemetryHooks;
 use rustic_ui_styled_engine::Style;
 
 fn style() -> Style {
@@ -106,4 +109,89 @@ fn display_trait_round_trips_to_ssr_html() {
     ensure_hooks_registered();
     let descriptor = SelectionControlAttributes::builder("Wi-Fi", style()).build();
     assert_eq!(descriptor.to_ssr_html(), descriptor.to_string());
+}
+
+struct DeterministicState;
+
+impl SelectionControlStateAdapter for DeterministicState {
+    fn snapshot_attributes(&self) -> Vec<(&'static str, String)> {
+        vec![
+            ("aria-checked", "false".into()),
+            ("data-rustic-analytics-id", "analytics-toggle".into()),
+            ("data-rustic-extra", "telemetry".into()),
+            ("role", "switch".into()),
+        ]
+    }
+}
+
+#[test]
+fn descriptor_merges_telemetry_and_remains_deterministic() {
+    ensure_hooks_registered();
+    let mut hooks = TelemetryHooks::default();
+    hooks.analytics_id = Some("analytics-toggle".into());
+    hooks.automation_id = Some("automation-toggle".into());
+
+    let telemetry = SelectionControlTelemetry::new(hooks)
+        .with_data_keys("data-rustic-analytics-id", "data-rustic-automation-id")
+        .enforce_defaults();
+
+    let theme = SelectionControlThemeTokens::material_defaults()
+        .with_class("ssr-token")
+        .with_data("priority", "p1")
+        .with_attribute("tabindex", "0");
+
+    let descriptor = SelectionControlDescriptor::from_headless(
+        "Deterministic toggle",
+        style(),
+        &DeterministicState,
+        &theme,
+        &telemetry,
+    )
+    .expect("descriptor construction succeeds");
+
+    let (attributes, resolved) = descriptor.into_parts();
+    assert_eq!(resolved.effective_analytics_id(), Some("analytics-toggle"));
+    assert_eq!(
+        resolved.effective_automation_id(),
+        Some("automation-toggle")
+    );
+
+    assert_eq!(
+        attributes
+            .data_map()
+            .get("data-rustic-analytics-id")
+            .map(String::as_str),
+        Some("analytics-toggle"),
+    );
+    assert_eq!(
+        attributes
+            .data_map()
+            .get("data-rustic-extra")
+            .map(String::as_str),
+        Some("telemetry"),
+    );
+    assert_eq!(
+        attributes
+            .extra_attributes()
+            .get("role")
+            .map(String::as_str),
+        Some("switch"),
+    );
+
+    let first = attributes.to_ssr_html();
+    let second = attributes.to_ssr_html();
+    assert_eq!(first, second);
+    assert!(first.contains("data-rustic-analytics-id=\"analytics-toggle\""));
+    assert!(first.contains("data-rustic-automation-id=\"automation-toggle\""));
+    assert!(first.contains("data-rustic-extra=\"telemetry\""));
+
+    let classes = attributes.classes();
+    assert!(classes.contains(&"ssr-token".to_string()));
+    assert!(classes.contains(&"rustic-selection-control".to_string()));
+    assert!(classes.contains(&"enterprise-toggle".to_string()));
+    assert_eq!(resolved.effective_analytics_id(), Some("analytics-toggle"));
+    assert_eq!(
+        resolved.effective_automation_id(),
+        Some("automation-toggle")
+    );
 }
