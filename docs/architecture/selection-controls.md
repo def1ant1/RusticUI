@@ -129,7 +129,9 @@ adapter-specific glue code:
    `themed_attributes()` into your framework. After the render finishes, the
    telemetry helper ensures analytics, focus, state change, commit, and error
    callbacks fire in a deterministic order before consumer callbacks, keeping
-   enterprise dashboards trustworthy.
+   enterprise dashboards trustworthy. The runnable examples mirror this flow and
+   surface identical inline notes reminding teams to update the shared smoke
+   script whenever analytics identifiers change.【F:examples/selection-controls-yew/README.md†L1-L60】【F:examples/scripts/selection-controls-smoke.sh†L1-L63】
 
 ### Enterprise telemetry considerations
 
@@ -148,6 +150,19 @@ adapter-specific glue code:
 - **Testing** – Extend the existing wasm-bindgen tests and integration suites to
   cover new telemetry delegates. Tests should assert ordering and attribute
   propagation to prevent regressions during framework upgrades.
+
+## Automation + CI guardrails
+
+- **`cargo xtask selection-controls`** – Executes the Rust integration tests,
+  invokes the central smoke script across every framework, and triggers the
+  Playwright runner so both Rust and JavaScript adapters stay in lockstep.【F:crates/xtask/src/main.rs†L163-L2381】
+- **`examples/scripts/selection-controls-smoke.sh`** – Annotated harness that
+  provisions toolchains, prints the canonical automation IDs, and forwards to
+  framework-specific commands. Keep its notes aligned with adapter comments so
+  auditors can trace why each step exists.【F:examples/scripts/selection-controls-smoke.sh†L1-L120】
+- **Framework task runners** – Each package exposes `just automation-smoke` or
+  comparable npm scripts that delegate back to the shared harness, reinforcing
+  the “document once, run everywhere” workflow.【F:examples/selection-controls-react/README.md†L33-L75】【F:examples/selection-controls-yew/README.md†L19-L60】
 
 ## Testing Expectations
 

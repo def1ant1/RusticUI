@@ -1,11 +1,12 @@
 # Selection control telemetry walkthrough
 
 Enterprise dashboards can now treat RusticUI selection controls as rich telemetry
-producers. Every checkbox **and switch** adapter shares the same render
+producers. Every checkbox, switch, **and radio** adapter shares the same render
 instrumentation: the adapter enters `instrument_render`, emits a
 `TelemetryContext` describing the component, analytics, automation identifiers,
-and descriptor snapshot, and only then renders the DOM
-node.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1012】【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/switch.rs†L1031-L1150】【F:crates/rustic-ui-material/src/switch.rs†L1325-L1420】【F:crates/rustic-ui-material/src/telemetry.rs†L22-L78】【F:crates/rustic-ui-material/src/telemetry.rs†L132-L189】
+and descriptor snapshot, and only then renders the DOM node. The walkthrough
+mirrors the inline comments that live in each runnable crate and central smoke
+script so developers can cross-reference docs with the source of truth.【F:crates/rustic-ui-material/src/checkbox.rs†L928-L1012】【F:crates/rustic-ui-material/src/checkbox.rs†L1126-L1228】【F:crates/rustic-ui-material/src/switch.rs†L1031-L1150】【F:crates/rustic-ui-material/src/switch.rs†L1325-L1420】【F:crates/rustic-ui-material/src/radio.rs†L1885-L1930】【F:crates/rustic-ui-material/src/telemetry.rs†L22-L78】【F:examples/scripts/selection-controls-smoke.sh†L1-L63】
 
 The sections below demonstrate how to seed shared hooks, attach adapter-specific
 telemetry delegates, and decode the resulting payloads across frameworks.
@@ -14,7 +15,10 @@ telemetry delegates, and decode the resulting payloads across frameworks.
 
 Start by constructing a reusable analytics helper that stamps the automation and
 analytics identifiers, subscribes to render success/error callbacks, and pushes
-those contexts into an observability sink.
+those contexts into an observability sink. This mirrors the inline reminder in
+`selection-controls-smoke.sh` that the automation identifiers are centrally
+managed—when the helper changes, update the smoke script so the `--list-automation`
+output remains authoritative for QA tooling.【F:examples/scripts/selection-controls-smoke.sh†L32-L63】
 
 ```rust
 use rustic_ui_material::{TelemetryContext, TelemetryHooks};
@@ -93,6 +97,18 @@ Focus/Blur → Change → Commit → callback`, with pointer interactions simply
 skipping the keyboard payload. Tests across every framework validate that
 telemetry fires before user callbacks and that commits capture the final
 selection snapshot—even in controlled radio groups.【F:crates/rustic-ui-material/src/radio.rs†L118-L213】【F:crates/rustic-ui-material/src/radio.rs†L2620-L2798】【F:crates/rustic-ui-material/src/radio.rs†L3190-L3286】【F:crates/rustic-ui-material/tests/radio_adapters.rs†L188-L272】
+
+## Automation harness alignment
+
+- Run `cargo xtask selection-controls` before publishing updates. The xtask
+  compiles host + wasm targets, executes the Playwright harness, and streams the
+  canonical automation IDs so CI and local workflows remain identical.【F:crates/xtask/src/main.rs†L163-L2381】
+- Call `examples/scripts/selection-controls-smoke.sh --list-automation --format json`
+  when onboarding QA teams; the helper prints the exact identifiers emitted by
+  every framework and is heavily annotated to explain why the list exists.【F:examples/scripts/selection-controls-smoke.sh†L1-L63】
+- Inside React and Yew packages, `just automation-smoke` shells out to the same
+  helper so JavaScript and Rust pipelines reuse the documented orchestration
+  graph.【F:examples/selection-controls-react/README.md†L33-L75】【F:examples/selection-controls-yew/README.md†L19-L60】
 
 ## Yew example: register a telemetry delegate
 

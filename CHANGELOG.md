@@ -3,6 +3,24 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## Unreleased – Selection control automation harness
+
+### Highlights
+
+- Published full documentation for the runnable selection control crates,
+  pointing contributors at the central smoke script, framework task runners, and
+  xtask entry point so automation stays consistent across languages.【F:docs/src/pages/examples/index.md†L111-L148】【F:docs/src/pages/examples/selection-controls-telemetry.md†L1-L40】【F:docs/architecture/selection-controls.md†L118-L164】
+- Refreshed the example catalog to link to the new bootstrap commands, telemetry
+  logging expectations, and automation ID governance instead of embedding ad-hoc
+  snippets.【F:examples/README.md†L118-L123】
+- Added changelog guidance for adopters summarising the selection control
+  adapters, smoke harness, and xtask integration so migration steps surface in a
+  single location.【F:CHANGELOG.md†L8-L24】
+
+### Verification
+
+- Documentation only change (no runtime impact).
+
 ## Unreleased – Leptos radio attribute forwarding
 
 ### Highlights

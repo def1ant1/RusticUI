@@ -108,13 +108,36 @@ shared automation attributes centralised in `select-menu-shared`.【F:examples/s
 
 ## Selection controls (`examples/selection-controls-*`)
 
-The selection control samples wire checkbox, switch, and radio state machines
-into framework adapters via shared render helpers, keeping automation and ARIA
-contracts identical across runtimes.【F:examples/selection-controls-yew/README.md†L1-L44】
+The selection control suites now ship as runnable crates and JavaScript
+workspaces (React) with centralised automation scripts, so you can bootstrap
+checkbox, switch, and radio demos without copying inline snippets. Each README
+documents the hosted + wasm checks, Trunk/Dioxus servers, telemetry delegates,
+and CI entry points in the same order surfaced by the inline comments inside the
+examples and scripts.【F:examples/selection-controls-yew/README.md†L1-L60】【F:examples/selection-controls-react/README.md†L21-L75】
+
+> **Note:** The shared `selection-controls-smoke.sh` helper intentionally echoes
+> the inline script comments—toolchain provisioning, analytics logging, and the
+> canonical automation ID list all live in one place so CI, `just` recipes, and
+> Playwright harnesses stay aligned.【F:examples/scripts/selection-controls-smoke.sh†L1-L63】
+
+- **Bootstrap + smoke:** Run `cargo xtask selection-controls` to compile every
+  Rust crate (host + `wasm32`), execute the wasm and Playwright smoke tests, and
+  print the automation IDs before forwarding the suite to React. The command
+  shells out to `examples/scripts/selection-controls-smoke.sh`, so local runs and
+  CI reuse the same automation and telemetry orchestration.【F:crates/xtask/src/main.rs†L163-L2378】【F:examples/scripts/selection-controls-smoke.sh†L1-L120】
+- **Automation IDs:** Query `examples/scripts/selection-controls-smoke.sh --list-automation --format json`
+  (or invoke `just automation-smoke` inside any framework package) to print the
+  `automation.selection-controls.*` identifiers stamped into every demo. The
+  helper mirrors the inline script comment that keeps QA selectors in sync with
+  the emitted DOM contract.【F:examples/scripts/selection-controls-smoke.sh†L32-L63】【F:examples/selection-controls-yew/README.md†L19-L60】
+- **Framework servers:** Use the documented `just serve`, `dx serve`, or
+  `npm run dev` flows to launch hydration demos with telemetry consoles enabled.
+  Each command emits the same newline-delimited analytics payloads captured by
+  the smoke harness so you can diff SSR vs CSR logs without bespoke wiring.【F:examples/selection-controls-yew/README.md†L9-L60】【F:examples/selection-controls-react/README.md†L33-L85】
 
 Recent telemetry updates mean every checkbox, switch, **and radio** adapter
-(React, Yew, Leptos, Dioxus, and Sycamore) now emits a deterministic event
-stream **before** user callbacks fire. Each render enters the shared
+(React, Yew, Leptos, Dioxus, and Sycamore) emits a deterministic event stream
+**before** user callbacks fire. Each render enters the shared
 `instrument_render` span with a `TelemetryContext` that captures the component
 path, analytics/automation IDs, and a descriptor snapshot of the rendered
 attributes so observability pipelines see exactly which DOM attributes were
@@ -135,8 +158,9 @@ a framework-specific telemetry delegate that forwards the normalized payloads to
 your analytics sink before executing local business logic.【F:crates/rustic-ui-material/src/checkbox.rs†L1-L78】【F:crates/rustic-ui-material/src/telemetry.rs†L132-L189】
 
 The standalone [selection control telemetry walkthrough](./selection-controls-telemetry.md)
-contains copy-and-paste snippets for registering handlers in each supported
-adapter and interpreting the emitted contexts.
+now includes copy-and-paste snippets for registering handlers in each supported
+adapter, plus references back to the smoke harness comments so the inline docs
+and walkthrough stay synchronized.
 
 ## Feedback surfaces (`examples/feedback-*`)
 
