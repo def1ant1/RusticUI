@@ -13,6 +13,10 @@
 //!   reading the descriptor’s themed attribute vectors, ensuring automation
 //!   selectors, analytics hooks, and ARIA metadata remain identical to the SSR
 //!   output.
+//! * [`SelectionControlTelemetry`](crate::selection_control::SelectionControlTelemetry)
+//!   injects analytics and automation identifiers into both the group container
+//!   and each option so QA harnesses and observability pipelines observe the
+//!   same `data-*` surface regardless of which renderer drives the experience.
 //!
 //! Feature gates let teams activate only the clients they deploy without giving
 //! up descriptor parity:
@@ -122,6 +126,10 @@
 //! SSR markup, hydration adapters, and enterprise observability pipelines all
 //! reuse the same descriptor-provided metadata regardless of whether React,
 //! Yew, Leptos, Dioxus, or Sycamore drives the client surface.
+//! Internally `build_descriptor` channels those hooks through
+//! [`SelectionControlTelemetry`](crate::selection_control::SelectionControlTelemetry)
+//! so every automation selector or analytics identifier flows directly into the
+//! group and option descriptors consumed by SSR or client adapters.
 
 use rustic_ui_headless::{
     interaction::ControlKey,
@@ -130,7 +138,7 @@ use rustic_ui_headless::{
 use rustic_ui_styled_engine::{css_with_theme, Style};
 
 use crate::{
-    selection_control::{RadioGroupAttributes, RadioOptionAttributes},
+    selection_control::{RadioGroupAttributes, RadioOptionAttributes, SelectionControlTelemetry},
     telemetry::{
         instrument_render, TelemetryAnalyticsCallback, TelemetryCommitCallback, TelemetryContext,
         TelemetryErrorCallback, TelemetryFocusCallback, TelemetryHooks,
@@ -340,12 +348,15 @@ fn preview_keyboard_target(state: &RadioGroupState, key: ControlKey) -> Option<u
     }
 
     let len = state.len();
-    let mut focus_index = state
+    let focus_index = state
         .focus_visible_index()
         .or(state.selected_index())
         .unwrap_or(0)
         .min(len - 1);
 
+    // The headless state exposes the focus-visible index according to the
+    // contract documented in `selection_control.rs`, so keyboard previews reuse
+    // that signal instead of recomputing focus state in adapters.
     match key {
         ControlKey::Space | ControlKey::Enter => Some(focus_index),
         ControlKey::Home => Some(0),
@@ -458,112 +469,53 @@ fn build_descriptor(
         props.option_labels.clone()
     };
 
-    let mut builder = RadioGroupAttributes::builder(themed_radio_group_style());
-    let mut has_group_analytics = false;
-    let mut has_group_automation = false;
+    let telemetry_defaults = SelectionControlTelemetry::from(telemetry.clone());
+    let mut group_attributes = state
+        .group_aria_attributes()
+        .into_iter()
+        .map(|(key, value)| (key.to_string(), value))
+        .collect::<Vec<_>>();
+    group_attributes.push(("data-orientation".into(), orientation_value.to_string()));
+    group_attributes.extend(
+        props
+            .additional_group_attributes
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone())),
+    );
 
-    for (key, value) in state.group_aria_attributes() {
-        if key.starts_with("aria-") {
-            builder = builder.aria(key, value);
-        } else if key.starts_with("data-") {
-            if key == "data-rustic-analytics-id" {
-                has_group_analytics = true;
-            }
-            if key == "data-automation-id" {
-                has_group_automation = true;
-            }
-            builder = builder.data(key, value);
-        } else {
-            builder = builder.attribute(key, value);
-        }
-    }
-
-    builder = builder.data("orientation", orientation_value);
-
-    for (key, value) in &props.additional_group_attributes {
-        if key.starts_with("aria-") {
-            builder = builder.aria(key.as_str(), value.clone());
-        } else if key.starts_with("data-") {
-            if key == "data-rustic-analytics-id" {
-                has_group_analytics = true;
-            }
-            if key == "data-automation-id" {
-                has_group_automation = true;
-            }
-            builder = builder.data(key.as_str(), value.clone());
-        } else {
-            builder = builder.attribute(key.clone(), value.clone());
-        }
-    }
-
-    if !has_group_analytics {
-        if let Some(analytics) = &telemetry.analytics_id {
-            builder = builder.data("rustic-analytics-id", analytics.clone());
-        }
-    }
-
-    if !has_group_automation {
-        if let Some(automation) = &telemetry.automation_id {
-            builder = builder.automation_id("id", automation.clone());
-        }
-    }
-
-    let mut builder = builder;
+    // Merge headless ARIA state, caller overrides, and telemetry-managed IDs.
+    // Routing everything through [`SelectionControlTelemetry`] guarantees the
+    // automation identifiers and analytics selectors land on the descriptor
+    // before any SSR serializer or client adapter consumes it.
+    let (mut builder, _, _) = telemetry_defaults
+        .merge_into_builder(
+            RadioGroupAttributes::builder(themed_radio_group_style()),
+            group_attributes,
+        )
+        .expect("radio group descriptor must merge telemetry");
 
     for (index, option) in state.options().iter().enumerate() {
         let label = labels.get(index).cloned().unwrap_or_else(|| option.clone());
-        let mut option_builder = RadioOptionAttributes::builder(label, themed_radio_option_style());
-        let mut option_has_analytics = false;
-        let mut option_has_automation = false;
-
-        for (key, value) in state.option_aria_attributes(index) {
-            if key.starts_with("aria-") {
-                option_builder = option_builder.aria(key, value);
-            } else if key.starts_with("data-") {
-                if key == "data-rustic-analytics-id" {
-                    option_has_analytics = true;
-                }
-                if key == "data-automation-id" {
-                    option_has_automation = true;
-                }
-                option_builder = option_builder.data(key, value);
-            } else {
-                option_builder = option_builder.attribute(key, value);
-            }
-        }
-
-        option_builder = option_builder.data("index", index.to_string());
-
+        let mut option_attributes = state
+            .option_aria_attributes(index)
+            .into_iter()
+            .map(|(key, value)| (key.to_string(), value))
+            .collect::<Vec<_>>();
+        option_attributes.push(("data-index".into(), index.to_string()));
         if let Some(additional) = props.additional_option_attributes.get(index) {
-            for (key, value) in additional {
-                if key.starts_with("aria-") {
-                    option_builder = option_builder.aria(key.as_str(), value.clone());
-                } else if key.starts_with("data-") {
-                    if key == "data-rustic-analytics-id" {
-                        option_has_analytics = true;
-                    }
-                    if key == "data-automation-id" {
-                        option_has_automation = true;
-                    }
-                    option_builder = option_builder.data(key.as_str(), value.clone());
-                } else {
-                    option_builder = option_builder.attribute(key.clone(), value.clone());
-                }
-            }
+            option_attributes.extend(additional.iter().cloned());
         }
 
-        if !option_has_analytics {
-            if let Some(analytics) = &telemetry.analytics_id {
-                option_builder = option_builder.data("rustic-analytics-id", analytics.clone());
-            }
-        }
-
-        if !option_has_automation {
-            if let Some(automation) = &telemetry.automation_id {
-                option_builder = option_builder.automation_id("id", automation.clone());
-            }
-        }
-
+        // Focus-visible and keyboard metadata bubble straight from the headless
+        // state machine. `data-focus-visible` mirrors the documented contract in
+        // `selection_control.rs`, keeping automation suites and WCAG styles in
+        // lock-step regardless of whether SSR or hydration renders first.
+        let (option_builder, _, _) = telemetry_defaults
+            .merge_into_builder(
+                RadioOptionAttributes::builder(label, themed_radio_option_style()),
+                option_attributes,
+            )
+            .expect("radio option descriptor must merge telemetry");
         builder = builder.option(option_builder.build());
     }
 
@@ -5900,9 +5852,99 @@ mod tests {
             Some(0),
         );
         let descriptor = build_descriptor(&props, &props.telemetry, &state);
-        assert!(descriptor.aria_attributes().any(|(k, _)| k == "role"));
+        let has_role = descriptor.aria_attributes().any(|(k, _)| k == "role")
+            || descriptor.standard_attributes().any(|(k, _)| k == "role");
+        assert!(has_role);
         assert!(descriptor.options().iter().any(|option| option
             .aria_attributes()
             .any(|(k, v)| k == "aria-checked" && v == "true")));
+    }
+
+    #[test]
+    fn telemetry_defaults_flow_to_group_and_options() {
+        let mut hooks = TelemetryHooks::default();
+        hooks.analytics_id = Some("radio.analytics.defaults".into());
+        hooks.automation_id = Some("radio.automation.defaults".into());
+
+        let props = RadioGroupProps::new(vec!["A".into(), "B".into()], hooks.clone());
+        let state = RadioGroupState::uncontrolled(
+            vec!["A".into(), "B".into()],
+            false,
+            RadioOrientation::Horizontal,
+            Some(0),
+        );
+        let descriptor = build_descriptor(&props, &props.telemetry, &state);
+        let themed = descriptor.themed_attributes();
+        assert!(themed
+            .iter()
+            .any(|(k, v)| { k == "data-rustic-analytics-id" && v == "radio.analytics.defaults" }));
+        assert!(themed
+            .iter()
+            .any(|(k, v)| { k == "data-automation-id" && v == "radio.automation.defaults" }));
+        for option in descriptor.options() {
+            let option_attrs = option.themed_attributes();
+            assert!(option_attrs.iter().any(|(k, v)| {
+                k == "data-rustic-analytics-id" && v == "radio.analytics.defaults"
+            }));
+            assert!(option_attrs
+                .iter()
+                .any(|(k, v)| { k == "data-automation-id" && v == "radio.automation.defaults" }));
+        }
+    }
+
+    #[test]
+    fn additional_attributes_override_telemetry_defaults() {
+        let mut hooks = TelemetryHooks::default();
+        hooks.analytics_id = Some("radio.analytics.defaults".into());
+        hooks.automation_id = Some("radio.automation.defaults".into());
+
+        let mut props = RadioGroupProps::new(vec!["A".into(), "B".into()], hooks.clone());
+        props
+            .additional_group_attributes
+            .push(("data-rustic-analytics-id".into(), "group.override".into()));
+        props.additional_option_attributes.push(vec![(
+            "data-rustic-analytics-id".into(),
+            "option.override".into(),
+        )]);
+        props.additional_option_attributes.push(Vec::new());
+
+        let state = RadioGroupState::uncontrolled(
+            vec!["A".into(), "B".into()],
+            false,
+            RadioOrientation::Horizontal,
+            Some(0),
+        );
+        let descriptor = build_descriptor(&props, &props.telemetry, &state);
+        let group_attrs = descriptor.themed_attributes();
+        assert!(group_attrs
+            .iter()
+            .any(|(k, v)| { k == "data-rustic-analytics-id" && v == "group.override" }));
+        let option_attrs = descriptor.options()[0].themed_attributes();
+        assert!(option_attrs
+            .iter()
+            .any(|(k, v)| { k == "data-rustic-analytics-id" && v == "option.override" }));
+        let fallback_option_attrs = descriptor.options()[1].themed_attributes();
+        assert!(fallback_option_attrs
+            .iter()
+            .any(|(k, v)| { k == "data-rustic-analytics-id" && v == "radio.analytics.defaults" }));
+    }
+
+    #[test]
+    fn ssr_output_contains_orientation_and_automation() {
+        let mut hooks = TelemetryHooks::default();
+        hooks.analytics_id = Some("ssr.analytics".into());
+        hooks.automation_id = Some("ssr.automation".into());
+        let props = RadioGroupProps::new(vec!["A".into(), "B".into()], hooks.clone());
+        let state = RadioGroupState::uncontrolled(
+            vec!["A".into(), "B".into()],
+            false,
+            RadioOrientation::Vertical,
+            Some(0),
+        );
+        let descriptor = build_descriptor(&props, &props.telemetry, &state);
+        let html = descriptor.to_ssr_html();
+        assert!(html.contains("data-orientation=\"vertical\""));
+        assert!(html.contains("data-automation-id=\"ssr.automation\""));
+        assert!(html.contains("data-rustic-analytics-id=\"ssr.analytics\""));
     }
 }
