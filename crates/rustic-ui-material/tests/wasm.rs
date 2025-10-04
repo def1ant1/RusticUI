@@ -26,13 +26,14 @@ use rustic_ui_material::menu::{self, MenuItem, MenuProps};
 use rustic_ui_material::radio::{
     self, RadioChangeEvent, RadioFocusEvent, RadioGroupProps, RadioKeyEvent, RadioTelemetryEvent,
 };
+use rustic_ui_material::switch::yew::YewSwitch;
 use rustic_ui_material::switch::{self, SwitchProps};
 use rustic_ui_material::tab_panel;
 use rustic_ui_material::table::{self, TableColumn, TableProps, TableRow};
 use rustic_ui_material::tabs::{self, TabListLayoutOptions, TabListProps};
 use rustic_ui_material::text_field::TextFieldStateHandle;
 use rustic_ui_material::tooltip::{self, TooltipProps};
-use rustic_ui_material::{AppBar, Button, Snackbar, TextField};
+use rustic_ui_material::{AppBar, Button, Snackbar, TelemetryHooks, TextField};
 use rustic_ui_styled_engine::{Theme, ThemeProvider};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -531,14 +532,14 @@ async fn switch_accessibility_audit() {
 
     #[function_component(App)]
     fn app() -> Html {
-        let mut state = SwitchState::uncontrolled(false, false);
-        state.focus();
-        let props = SwitchProps::new("Notifications", TelemetryHooks::default());
-        let markup =
-            Html::from_html_unchecked(AttrValue::from(switch::yew::render(&props, &state)));
+        let mut hooks = TelemetryHooks::default();
+        hooks.analytics_id = Some("telemetry.switch.wasm".into());
+        hooks.automation_id = Some("automation.switch.wasm".into());
+        let props = SwitchProps::new("Notifications", hooks);
+        let state = SwitchState::uncontrolled(false, false);
         html! {
             <ThemeProvider theme={Theme::default()}>
-                {markup}
+                <YewSwitch switch={props} state={state} />
             </ThemeProvider>
         }
     }
@@ -550,6 +551,40 @@ async fn switch_accessibility_audit() {
         .unwrap()
         .expect("switch rendered");
     assert_eq!(switch_el.get_attribute("aria-checked").unwrap(), "false");
+
+    let target: web_sys::EventTarget = switch_el.clone().unchecked_into();
+
+    let click = web_sys::MouseEvent::new("click").unwrap();
+    target.dispatch_event(&click).unwrap();
+    TimeoutFuture::new(0).await;
+    assert_eq!(switch_el.get_attribute("aria-checked").unwrap(), "true");
+
+    let focus_event = web_sys::FocusEvent::new("focus").unwrap();
+    target.dispatch_event(&focus_event).unwrap();
+    TimeoutFuture::new(0).await;
+    assert_eq!(
+        switch_el.get_attribute("data-focus-visible").unwrap(),
+        "true"
+    );
+
+    let mut init = web_sys::KeyboardEventInit::new();
+    init.key(" ");
+    init.bubbles(true);
+    init.cancelable(true);
+    let key_event =
+        web_sys::KeyboardEvent::new_with_keyboard_event_init_dict("keydown", &init).unwrap();
+    target.dispatch_event(&key_event).unwrap();
+    TimeoutFuture::new(0).await;
+    assert_eq!(switch_el.get_attribute("aria-checked").unwrap(), "false");
+
+    let blur_event = web_sys::FocusEvent::new("blur").unwrap();
+    target.dispatch_event(&blur_event).unwrap();
+    TimeoutFuture::new(0).await;
+    assert_eq!(
+        switch_el.get_attribute("data-focus-visible").unwrap(),
+        "false"
+    );
+
     axe_check(&mount).await;
 }
 
