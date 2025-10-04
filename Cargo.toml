@@ -65,6 +65,7 @@ members = [
     "examples/navigation-speed-dial-dioxus",
     "examples/inputs-slider-yew",
     "examples/feedback-progress-leptos",
+    "examples/selection-controls-dioxus",
     "examples/selection-controls-yew",
     "examples/forms-input-base-shared",
     "examples/forms-input-base-yew",
