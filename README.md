@@ -159,6 +159,45 @@ copious documentation and attribute builders so adapters remain declarative:
 Pair these primitives with the existing dialog/popover state machines to build modals that are concurrency-safe, WCAG-compliant, and instrumented
 for large-scale QA suites.
 
+## Adapter builders and telemetry orchestration
+
+New helper builders ship with the selection control adapters so frameworks can wire telemetry, analytics, and automation markers
+without bespoke glue. Enterprise maintainers now interact with three layered primitives:
+
+- **Descriptor builders** – `SelectionControlAttributes::builder`, `RadioOptionAttributes::builder`, and
+  `RadioGroupAttributes::builder` expose fluent APIs for merging headless ARIA state, Material defaults, and caller overrides.
+  Adapters pass the finalized descriptors directly into their renderers, eliminating ad-hoc attribute mutation and keeping SSR
+  parity deterministic.
+- **`SelectionControlTelemetry` helper** – The helper wraps shared `TelemetryHooks` and stamps analytics/automation identifiers
+  onto every descriptor generated through the builders. Central platforms override identifiers or enforce managed defaults once
+  so downstream adapters stay aligned across React, Yew, Leptos, and Sycamore.
+- **`TelemetryHooks` builder** – Enterprise observability stacks configure analytics channels, focus/state/commit callbacks, and
+  panic reporting handlers in one place. The hooks feed into the descriptor builders which automatically merge context metadata
+  (component name, label, evaluated attributes) before invoking delegates.
+
+To integrate the builders inside a custom adapter:
+
+1. Instantiate `TelemetryHooks` with your automation identifiers, analytics channel, and observability delegates.
+2. Construct a `SelectionControlTelemetry` with the hooks, optionally overriding managed `data-*` keys or marking the defaults as
+   authoritative.
+3. Feed the helper into `SelectionControlDescriptor::from_headless` or the fluent builders for the specific control you are
+   rendering. The builders return immutable descriptors carrying merged attributes, telemetry context, and framework-agnostic
+   automation markers.
+4. Forward `descriptor.to_ssr_html()` or the framework-specific renderer output to your view layer. Because the descriptor is
+   immutable, adapters stay free of manual mutations and enterprise telemetry receives identical payloads across SSR and CSR
+   environments.
+
+Enterprise telemetry pipelines receive richer context through the merged descriptor metadata. Each telemetry callback receives a
+`TelemetryContext` containing:
+
+- the fully qualified component path,
+- stable analytics and automation identifiers suitable for correlating distributed traces, and
+- a frozen snapshot of the rendered attributes for debugging SSR/CSR diffs.
+
+Adapters never need to parse HTML or mutate DOM nodes; instead they forward the context into logging/tracing sinks so automation
+and SecOps dashboards observe the same lifecycle events (analytics beacons, focus transitions, state mutations, commit
+acknowledgements, and panic reporting) regardless of renderer.
+
 ## Workspace automation
 
 Automation is consolidated in the root `Makefile` and `cargo xtask` binary so teams can wire CI once and scale confidently.
