@@ -12,7 +12,7 @@
     "test:rust": "cargo test -p selection-controls-react",
     "test:wasm": "wasm-pack test --headless --chrome",
     "test:jest": "jest --config web/jest.config.ts",
-    "test:e2e": "playwright test --config=web/playwright.config.ts",
+    "test:e2e": "node ../scripts/selection-controls-playwright.mjs --framework react",
     "test:web": "npm run build:wasm && npm run test:jest && npm run test:e2e",
     "test": "npm run test:rust && npm run test:wasm && npm run test:web",
     "fmt": "cargo fmt --all && prettier --config web/.prettierrc.json --write \"web/src/**/*.{ts,tsx}\"",

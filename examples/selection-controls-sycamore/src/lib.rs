@@ -645,9 +645,19 @@ pub fn SelectionControls<G: Html>(cx: Scope, props: SelectionControlsProps) -> V
     view! { cx,
         div(class="selection-controls-stack") {
             h2 { "Selection controls" }
-            SycamoreCheckbox(checkbox_component)
-            SycamoreSwitch(switch_component)
-            SycamoreRadioGroup(radio_component)
+            div(data-automation-id="automation.selection-controls.checkbox") {
+                SycamoreCheckbox(checkbox_component)
+            }
+            div(data-automation-id="automation.selection-controls.switch") {
+                SycamoreSwitch(switch_component)
+            }
+            div(data-automation-id="automation.selection-controls.radio") {
+                SycamoreRadioGroup(radio_component)
+            }
+            section(class="telemetry-log", data-automation-id="automation.selection-controls.telemetry-log") {
+                h3 { "Telemetry feed" }
+                p { "Structured telemetry events mirror the shared recorder so automation suites can assert render → delegate → handler ordering." }
+            }
         }
     }
 }

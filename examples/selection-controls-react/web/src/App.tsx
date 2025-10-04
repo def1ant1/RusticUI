@@ -39,13 +39,22 @@ export const App = () => {
                   checkbox.setChecked(next);
                 }}
                 onClick={() => checkbox.toggle()}
+                inputProps={{ 'data-automation-id': 'automation.selection-controls.checkbox' }}
               />
             }
             label="Receive Alerts"
+            componentsProps={{ root: { 'data-automation-id': 'automation.selection-controls.checkbox' } }}
           />
           <FormControlLabel
-            control={<Switch defaultChecked onClick={() => radio.toggle()} />}
+            control={
+              <Switch
+                defaultChecked
+                onClick={() => radio.toggle()}
+                inputProps={{ 'data-automation-id': 'automation.selection-controls.switch' }}
+              />
+            }
             label="Enable Automation"
+            componentsProps={{ root: { 'data-automation-id': 'automation.selection-controls.switch' } }}
           />
         </Stack>
         <Typography variant="h6" component="h2" sx={{ mt: 6 }}>
@@ -55,7 +64,10 @@ export const App = () => {
           The timeline renders the raw events emitted by the wasm layer so observers can validate
           that lifecycle, programmatic, and user-driven transitions occur in a deterministic order.
         </Typography>
-        <ul data-testid="telemetry-log">
+        <ul
+          data-testid="telemetry-log"
+          data-automation-id="automation.selection-controls.telemetry-log"
+        >
           {checkbox.events.map((event) => (
             <li key={`${event.sequence}-${event.action}`}>
               #{event.sequence} [{event.control_kind}] {event.action} → {String(event.checked)} ({' '}

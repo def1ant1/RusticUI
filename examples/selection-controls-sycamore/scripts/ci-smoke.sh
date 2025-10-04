@@ -2,11 +2,6 @@
 # One-stop entrypoint for CI runners to validate the Sycamore selection controls.
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-EXAMPLE_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-pushd "${EXAMPLE_ROOT}" >/dev/null
-../scripts/ensure-example-toolchain.sh sycamore --wasm --ssr
-cargo test --all-targets
-cargo test --target wasm32-unknown-unknown
-popd >/dev/null
+"${REPO_ROOT}/examples/scripts/selection-controls-smoke.sh" sycamore --mode smoke

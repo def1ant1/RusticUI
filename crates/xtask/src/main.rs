@@ -2305,27 +2305,26 @@ fn selection_controls(args: SelectionControlsArgs) -> Result<()> {
             .arg("--test")
             .arg("selection_control");
         run(cargo)?;
+
+        let smoke_script = workspace.join("examples/scripts/selection-controls-smoke.sh");
+        let mut smoke = Command::new(&smoke_script);
+        smoke
+            .current_dir(&workspace)
+            .arg("all")
+            .arg("--mode")
+            .arg("smoke");
+        run(smoke)?;
     }
 
     if args.skip_web {
         println!("[xtask][selection-controls] skipping web smoke tests by request");
     } else {
-        let joy_dir = workspace.join("packages/mui-joy");
-        if joy_dir.join("node_modules").exists() {
-            println!("[xtask][selection-controls] running Joy selection control smoke tests");
-            let mut pnpm = Command::new("pnpm");
-            pnpm.current_dir(&joy_dir)
-                .arg("test")
-                .arg("--")
-                .arg("--grep")
-                .arg("enterprise selection controls instrumentation");
-            run(pnpm)?;
-        } else {
-            println!(
-                "[xtask][selection-controls] skipped Joy web smoke tests (packages/mui-joy/node_modules missing). \
-                 Run `pnpm --dir packages/mui-joy install` before invoking this command to enable the TypeScript suite."
-            );
-        }
+        let mut node = Command::new("node");
+        node.current_dir(&workspace)
+            .arg(workspace.join("examples/scripts/selection-controls-playwright.mjs"))
+            .arg("--framework")
+            .arg("all");
+        run(node)?;
     }
 
     Ok(())

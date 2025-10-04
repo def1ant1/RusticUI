@@ -20,3 +20,9 @@ smoke:
 
 ci-smoke:
     ./scripts/ci-smoke.sh
+
+automation-smoke:
+    {{justfile_directory()}}/../scripts/selection-controls-smoke.sh yew --mode smoke
+
+automation-serve:
+    {{justfile_directory()}}/../scripts/selection-controls-smoke.sh yew --mode serve --port {{env_var("SELECTION_CONTROLS_YEW_PORT", "4703")}}
