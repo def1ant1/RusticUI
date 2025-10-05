@@ -33,7 +33,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::runtime::Builder;
 use walkdir::WalkDir;
-use xtask_docs::{docs_build, docs_package, docs_test};
+use xtask_docs::{docs_build, docs_package, docs_test, DocsPackageOutcome};
 
 mod docs_assets;
 mod selection_controls_web;
@@ -128,13 +128,6 @@ enum Commands {
         long_about = "Execute wasm-pack smoke tests for the Rustic docs bundle. Ensure Playwright's Chromium runtime is installed (e.g. via `npx playwright install --with-deps chromium`) before invoking this command locally or in CI. Logs are captured in target/logs/docs-test.log to streamline debugging when headless Chrome fails to start."
     )]
     DocsTest,
-    /// Produce a deployable docs payload with SSR + wasm artifacts.
-    #[command(
-        name = "docs-package",
-        about = "Assemble deploy-ready Rustic docs assets.",
-        long_about = "Assemble deploy-ready Rustic docs assets by exporting the SSR snapshot, wasm-bindgen output, and server binary into target/deploy/docs (override via RUSTIC_DOCS_EXPORT_DIR). A JSON manifest describing file hashes is generated so CD pipelines can validate integrity before publishing."
-    )]
-    DocsPackage,
     /// Generate an `lcov.info` report using grcov.
     Coverage,
     /// Execute Criterion benchmarks. Succeeds even if none exist.
@@ -158,8 +151,17 @@ enum Commands {
         long_about = "Execute the extended nightly accessibility coverage suite across every docs section. This variant mirrors the standard audit but widens the default target list so enterprise CI jobs can run a comprehensive scan without custom Playwright harnesses."
     )]
     AccessibilityNightly,
-    /// Build the Rust-first documentation site and supporting API docs.
+    #[command(
+        about = "Build the Rust-first documentation site and supporting API docs.",
+        long_about = "Build the Rust-first documentation site and supporting API docs. The wrapper first executes the async docs::build helper so SSR + wasm assets are hydrated using the workspace's shared CARGO_TARGET_DIR cache before delegating to mdBook when docs/rust-book exists. The orchestration surfaces explicit log markers for CI triage and bubbles helper errors unchanged so flaky wasm builds remain debuggable."
+    )]
     BuildDocs,
+    #[command(
+        name = "docs-package",
+        about = "Assemble deploy-ready Rustic docs assets.",
+        long_about = "Assemble deploy-ready Rustic docs assets by exporting the SSR snapshot, wasm-bindgen output, and server binary into target/deploy/docs (override via RUSTIC_DOCS_EXPORT_DIR). The async helper reuses CARGO_TARGET_DIR caches and builds host+wasm targets concurrently before writing a hashed manifest, so reruns remain incremental while CI operators still get deterministic fingerprints. Provide --dry-run to preview the staging manifest without mutating the canonical export directory."
+    )]
+    DocsPackage(DocsPackageArgs),
     /// Assemble the deploy-ready documentation payload.
     #[command(
         name = "deploy-docs",
@@ -222,9 +224,15 @@ fn main() -> Result<()> {
         Commands::RefreshIcons => refresh_icons(),
         Commands::IconsBundle { compat, out_dir } => icons_bundle(out_dir, compat),
         Commands::DocsAssets(args) => docs_assets(args),
-        Commands::DocsBuild => run_async_task("docs::build", docs_build()),
-        Commands::DocsTest => run_async_task("docs::test", docs_test()),
-        Commands::DocsPackage => run_async_task("docs::package", docs_package()),
+        Commands::DocsBuild => {
+            run_async_task("docs::build", docs_build())?;
+            Ok(())
+        }
+        Commands::DocsTest => {
+            run_async_task("docs::test", docs_test())?;
+            Ok(())
+        }
+        Commands::DocsPackage(args) => docs_package_wrapper(args),
         Commands::Coverage => coverage(),
         Commands::Bench => bench(),
         Commands::UpdateComponents => update_components(),
@@ -250,9 +258,9 @@ fn main() -> Result<()> {
     }
 }
 
-fn run_async_task<F>(label: &str, fut: F) -> Result<()>
+fn run_async_task<F, T>(label: &str, fut: F) -> Result<T>
 where
-    F: Future<Output = Result<()>>,
+    F: Future<Output = Result<T>>,
 {
     eprintln!("[{label}] starting");
     let runtime = Builder::new_multi_thread()
@@ -261,9 +269,9 @@ where
         .context("failed to initialize Tokio runtime for docs automation")?;
     let result = runtime.block_on(fut);
     match result {
-        Ok(()) => {
+        Ok(value) => {
             eprintln!("[{label}] completed");
-            Ok(())
+            Ok(value)
         }
         Err(err) => {
             eprintln!("[{label}] failed: {err:?}");
@@ -291,6 +299,14 @@ struct SelectionControlsArgs {
 struct DeployDocsArgs {
     /// Validate the deploy pipeline without mutating the staging directory.
     #[arg(long)]
+    dry_run: bool,
+}
+
+/// Flags for the docs packaging helper wrapper.
+#[derive(Args, Debug, Clone, Default)]
+struct DocsPackageArgs {
+    /// Preview the exported manifest without writing to the canonical staging directory.
+    #[arg(long = "dry-run")]
     dry_run: bool,
 }
 
@@ -1213,26 +1229,98 @@ fn run_accessibility(mode: accessibility::AuditMode) -> Result<()> {
 }
 
 fn build_docs() -> Result<()> {
-    // Compose the Rust documentation experience by first generating API docs
-    // (consumed through mdBook `include_str!` snippets) and then building the
-    // rendered book. Splitting the steps keeps CI logs actionable and makes it
-    // obvious which phase fails when new chapters land.
-    println!("[xtask] generating workspace API docs so the mdBook embeds stay in sync");
-    doc()?;
+    // The async docs helper already compiles the SSR + WASM targets in parallel
+    // while respecting the caller's CARGO_TARGET_DIR. We keep this wrapper
+    // intentionally thin: it simply blocks on the helper so the shared target
+    // cache is warmed before mdBook runs and lets the helper surface any build
+    // failures verbatim for CI triage. No extra retry logic lives here so flaky
+    // wasm builds point straight back to the helper crate.
+    println!(
+        "[xtask][build-docs] hydrating SSR + wasm assets via docs::build (respects CARGO_TARGET_DIR caches)"
+    );
+    run_async_task("docs::build", docs_build())?;
 
     let workspace = workspace_root();
-    let book_dir = workspace.join("docs/rust-book");
+    match build_rust_book(&workspace)? {
+        Some(book_output) => {
+            println!(
+                "[xtask][build-docs] mdBook rendered to {}",
+                relative_display(&workspace, &book_output)
+            );
+        }
+        None => {
+            println!("[xtask][build-docs] docs/rust-book not present; skipping mdBook build");
+        }
+    }
+
+    Ok(())
+}
+
+fn docs_package_wrapper(args: DocsPackageArgs) -> Result<()> {
+    // The docs helper already performs concurrent host+wasm builds using the
+    // shared CARGO_TARGET_DIR, so this wrapper focuses on wiring environment
+    // overrides and logging. We surface where artifacts land (defaulting to
+    // target/deploy/docs) so CI logs document cache usage, and we preserve the
+    // helper's exact error value for straightforward triage when wasm-bindgen
+    // or cargo fails.
+    let workspace = workspace_root();
+    let default_export = workspace.join("target").join("deploy").join("docs");
+    let export_dir = if args.dry_run {
+        workspace
+            .join("target")
+            .join("deploy")
+            .join("docs-package-preview")
+    } else {
+        default_export.clone()
+    };
+    let export_label = relative_display(&workspace, &export_dir);
+
+    if args.dry_run {
+        println!(
+            "[xtask][docs-package] dry-run enabled; staging preview lives at {}",
+            export_label
+        );
+    } else {
+        println!(
+            "[xtask][docs-package] exporting assets into {} (reuse via RUSTIC_DOCS_EXPORT_DIR)",
+            export_label
+        );
+    }
+
+    let previous_export = env::var("RUSTIC_DOCS_EXPORT_DIR").ok();
+    env::set_var("RUSTIC_DOCS_EXPORT_DIR", &export_dir);
+    let package_result = run_async_task("docs::package", docs_package());
+    if let Some(prev) = previous_export {
+        env::set_var("RUSTIC_DOCS_EXPORT_DIR", prev);
+    } else {
+        env::remove_var("RUSTIC_DOCS_EXPORT_DIR");
+    }
+    let outcome: DocsPackageOutcome = package_result?;
+
+    let manifest_path = outcome.manifest_path.as_std_path().to_path_buf();
+    let export_path = outcome.export_dir.as_std_path().to_path_buf();
+    let mdbook_output = build_rust_book(&workspace)?;
+    let mdbook_label = mdbook_output
+        .as_ref()
+        .map(|path| relative_display(&workspace, path))
+        .unwrap_or_else(|| "skipped".to_string());
+
     println!(
-        "[xtask] building the Rust-first documentation book via mdBook at {}",
-        book_dir.display()
+        "[xtask][docs-package] summary: export_dir={} manifest={} mdbook={}",
+        relative_display(&workspace, &export_path),
+        relative_display(&workspace, &manifest_path),
+        mdbook_label
     );
 
-    let mut cmd = Command::new("mdbook");
-    cmd.arg("build").arg(&book_dir);
-    run(cmd)
+    Ok(())
 }
 
 fn deploy_docs(args: DeployDocsArgs) -> Result<()> {
+    // Deploy wraps the async docs package helper so we reuse the shared
+    // CARGO_TARGET_DIR cache and Tokio concurrency while still layering in
+    // legacy artifacts (mdBook, API docs, curated wasm examples). The helper's
+    // errors bubble straight through so CI jobs get precise failure modes when
+    // the lower-level crate encounters cargo or wasm-bindgen issues.
     let workspace = workspace_root();
     let output_override = env::var_os("RUSTIC_UI_DEPLOY_OUTPUT").map(PathBuf::from);
     let deploy_root = output_override
@@ -1258,42 +1346,63 @@ fn deploy_docs(args: DeployDocsArgs) -> Result<()> {
 
     let groups = resolve_deploy_groups()?;
     let deploy_label = relative_display(&workspace, &deploy_root);
+    let package_export_dir = if args.dry_run {
+        workspace
+            .join("target")
+            .join("deploy")
+            .join("docs-deploy-preview")
+    } else {
+        deploy_root.clone()
+    };
+    let package_label = relative_display(&workspace, &package_export_dir);
+
     if args.dry_run {
         println!(
-            "[xtask][deploy-docs] dry-run enabled; staging directory ({}) will remain untouched",
+            "[xtask][deploy-docs] dry-run enabled; canonical staging ({}) will remain untouched (preview: {})",
+            deploy_label,
+            package_label
+        );
+    } else if deploy_root.exists() {
+        println!(
+            "[xtask][deploy-docs] clearing existing deploy directory at {}",
             deploy_label
         );
-    } else {
-        if deploy_root.exists() {
-            println!(
-                "[xtask][deploy-docs] clearing existing deploy directory at {}",
-                deploy_label
-            );
-            fs::remove_dir_all(&deploy_root).with_context(|| {
-                format!(
-                    "failed to remove prior deploy directory at {}",
-                    deploy_root.display()
-                )
-            })?;
-        }
-        fs::create_dir_all(&deploy_root).with_context(|| {
+        fs::remove_dir_all(&deploy_root).with_context(|| {
             format!(
-                "failed to create deploy directory at {}",
+                "failed to remove prior deploy directory at {}",
                 deploy_root.display()
             )
         })?;
     }
 
-    println!("[xtask][deploy-docs] building API docs and mdBook payload");
-    build_docs()?;
-
-    let book_output = workspace.join("docs/rust-book/book");
-    if !book_output.exists() {
-        return Err(anyhow!(
-            "mdBook output missing at {} after build_docs()",
-            book_output.display()
-        ));
+    let previous_export = env::var("RUSTIC_DOCS_EXPORT_DIR").ok();
+    env::set_var("RUSTIC_DOCS_EXPORT_DIR", &package_export_dir);
+    println!(
+        "[xtask][deploy-docs] invoking docs::package helper to stage SSR + wasm assets at {}",
+        package_label
+    );
+    let package_result = run_async_task("docs::package", docs_package());
+    if let Some(prev) = previous_export {
+        env::set_var("RUSTIC_DOCS_EXPORT_DIR", prev);
+    } else {
+        env::remove_var("RUSTIC_DOCS_EXPORT_DIR");
     }
+    let package_outcome: DocsPackageOutcome = package_result?;
+    let manifest_path = package_outcome.manifest_path.as_std_path().to_path_buf();
+    println!(
+        "[xtask][deploy-docs] docs helper emitted manifest at {}",
+        relative_display(&workspace, &manifest_path)
+    );
+
+    let book_output = match build_rust_book(&workspace)? {
+        Some(path) => path,
+        None => {
+            return Err(anyhow!(
+                "mdBook output missing at {} after docs::package run",
+                workspace.join("docs/rust-book").display()
+            ));
+        }
+    };
 
     if args.dry_run {
         println!(
@@ -1365,39 +1474,7 @@ fn deploy_docs(args: DeployDocsArgs) -> Result<()> {
         let crates = example_group_crates(&workspace, *group)?;
         for example in crates {
             let artifacts = locate_wasm_artifacts(&wasm_profile_dir, &example)?;
-            let mut recorded = Vec::new();
-            for artifact in artifacts {
-                if args.dry_run {
-                    println!(
-                        "[xtask][deploy-docs] dry-run: would copy wasm artifact {}",
-                        relative_display(&workspace, &artifact)
-                    );
-                } else {
-                    let destination = wasm_dest.join(artifact.file_name().ok_or_else(|| {
-                        anyhow!("wasm artifact {} is missing a filename", artifact.display())
-                    })?);
-                    if let Some(parent) = destination.parent() {
-                        fs::create_dir_all(parent).with_context(|| {
-                            format!(
-                                "failed to create wasm parent directory at {}",
-                                parent.display()
-                            )
-                        })?;
-                    }
-                    fs::copy(&artifact, &destination).with_context(|| {
-                        format!(
-                            "failed to copy wasm artifact {} to {}",
-                            artifact.display(),
-                            destination.display()
-                        )
-                    })?;
-                    println!(
-                        "[xtask][deploy-docs] staged wasm artifact {}",
-                        relative_display(&workspace, &destination)
-                    );
-                }
-                recorded.push(relative_display(&workspace, &artifact));
-            }
+            let recorded = stage_wasm_artifacts(&workspace, &artifacts, &wasm_dest, args.dry_run)?;
             wasm_entries.push(DeployWasmEntry {
                 example: example.name,
                 files: recorded,
@@ -1407,6 +1484,9 @@ fn deploy_docs(args: DeployDocsArgs) -> Result<()> {
 
     let summary = DeploySummary {
         output_dir: deploy_label,
+        package_export_dir: relative_display(&workspace, &package_export_dir),
+        docs_manifest: relative_display(&workspace, &manifest_path),
+        mdbook_output: relative_display(&workspace, &book_output),
         profile: deploy_profile_dir(&build_opts),
         dry_run: args.dry_run,
         wasm_examples: wasm_entries,
@@ -1437,6 +1517,23 @@ fn deploy_docs(args: DeployDocsArgs) -> Result<()> {
     );
 
     Ok(())
+}
+
+fn build_rust_book(workspace: &Path) -> Result<Option<PathBuf>> {
+    let book_dir = workspace.join("docs/rust-book");
+    if !book_dir.exists() {
+        return Ok(None);
+    }
+
+    println!(
+        "[xtask][mdbook] compiling Rust primer from {}",
+        relative_display(workspace, &book_dir)
+    );
+    let mut cmd = Command::new("mdbook");
+    cmd.arg("build").arg(&book_dir);
+    run(cmd)?;
+
+    Ok(Some(book_dir.join("book")))
 }
 
 fn deploy_profile_dir(options: &BuildOptions) -> String {
@@ -1524,6 +1621,51 @@ fn copy_dir_contents(source: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
+fn stage_wasm_artifacts(
+    workspace: &Path,
+    artifacts: &[PathBuf],
+    wasm_dest: &Path,
+    dry_run: bool,
+) -> Result<Vec<String>> {
+    let mut recorded = Vec::new();
+    for artifact in artifacts {
+        let label = relative_display(workspace, artifact);
+        if dry_run {
+            println!(
+                "[xtask][deploy-docs] dry-run: would copy wasm artifact {}",
+                label
+            );
+        } else {
+            let filename = artifact.file_name().ok_or_else(|| {
+                anyhow!("wasm artifact {} is missing a filename", artifact.display())
+            })?;
+            let destination = wasm_dest.join(filename);
+            if let Some(parent) = destination.parent() {
+                fs::create_dir_all(parent).with_context(|| {
+                    format!(
+                        "failed to create wasm parent directory at {}",
+                        parent.display()
+                    )
+                })?;
+            }
+            fs::copy(artifact, &destination).with_context(|| {
+                format!(
+                    "failed to copy wasm artifact {} to {}",
+                    artifact.display(),
+                    destination.display()
+                )
+            })?;
+            println!(
+                "[xtask][deploy-docs] staged wasm artifact {}",
+                relative_display(workspace, &destination)
+            );
+        }
+        recorded.push(label);
+    }
+
+    Ok(recorded)
+}
+
 fn locate_wasm_artifacts(target_root: &Path, example: &ExampleCrate) -> Result<Vec<PathBuf>> {
     if !target_root.exists() {
         return Err(anyhow!(
@@ -1570,6 +1712,9 @@ fn locate_wasm_artifacts(target_root: &Path, example: &ExampleCrate) -> Result<V
 #[derive(Serialize)]
 struct DeploySummary {
     output_dir: String,
+    package_export_dir: String,
+    docs_manifest: String,
+    mdbook_output: String,
     profile: String,
     dry_run: bool,
     wasm_examples: Vec<DeployWasmEntry>,

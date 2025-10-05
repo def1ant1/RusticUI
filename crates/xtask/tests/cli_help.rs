@@ -198,7 +198,30 @@ fn docs_package_help_mentions_export_dir() -> Result<()> {
         .success()
         .stdout(predicate::str::contains("deploy-ready Rustic docs"))
         .stdout(predicate::str::contains("RUSTIC_DOCS_EXPORT_DIR"))
-        .stdout(predicate::str::contains("hashes"));
+        .stdout(predicate::str::contains("CARGO_TARGET_DIR"))
+        .stdout(predicate::str::contains("hashed manifest"))
+        .stdout(predicate::str::contains("--dry-run"));
+
+    Ok(())
+}
+
+#[test]
+fn build_docs_help_mentions_concurrency() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("build-docs")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("docs::build helper"))
+        .stdout(predicate::str::contains("CARGO_TARGET_DIR"))
+        .stdout(predicate::str::contains("errors unchanged"));
 
     Ok(())
 }
