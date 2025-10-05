@@ -23,7 +23,7 @@ shipping changes.
    checks.【F:crates/xtask/src/main.rs†L59-L70】【F:crates/xtask/src/main.rs†L439-L576】
 4. **Document the flow.** Extend this gallery and the example README with any
    bespoke analytics requirements or parity notes before running
-   `cargo xtask build-docs` to refresh the docs site for review.【F:crates/xtask/src/main.rs†L118-L119】
+   `cargo xtask docs-package` to refresh the docs site for review.【F:crates/xtask/src/main.rs†L150-L200】
 
 ## Marketing microsite suite (`examples/mui-*`)
 

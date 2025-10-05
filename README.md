@@ -85,7 +85,7 @@ read-only artifacts. CI and local workflows enforce a Rust-first toolchain by ro
 cargo xtask verify-toolchain        # fails fast if someone resurrects a Node workspace at the repository root
 cargo xtask fmt --check             # format guardrails
 cargo xtask clippy                  # lint guardrails
-cargo xtask deploy-docs --dry-run   # Rust-first deploy pipeline validation (no disk mutations)
+cargo xtask docs-package --dry-run  # Rust-first docs packaging validation (no disk mutations)
 ```
 
 Run `cargo xtask verify-toolchain` before committing to ensure no new Node manifests escaped the archive scope. The
@@ -96,7 +96,7 @@ prevents accidental reintroduction of pnpm-based automation.【F:archives/toolin
 Editors and language servers lean on the root `tsconfig.json` paths to follow those archives. If completion stops
 working for `@mui/*` imports, reload your IDE so it re-parses the updated configuration or run
 `pnpm exec tsc --showConfig` to confirm the archived aliases resolve. The canonical implementation lives in the
-Rust crates (`crates/rustic-ui-*`) and exposes automated TypeScript shims via `cargo xtask deploy-docs`; the archived
+Rust crates (`crates/rustic-ui-*`) and exposes automated TypeScript shims via `cargo xtask docs-package`; the archived
 files remain as read-only references for parity investigations.
 
 ## Responsive layout primitives
@@ -222,9 +222,12 @@ acknowledgements, and panic reporting) regardless of renderer.
 Automation is consolidated in the root `Makefile` and `cargo xtask` binary so teams can wire CI once and scale confidently.
 
 ```bash
-make build    # compile every crate
-make test     # run workspace tests
-make doc      # generate API docs
+make build        # compile every crate
+make test         # run workspace tests
+make doc          # generate API docs
+make docs-build   # build the docs host binary + wasm bundle
+make docs-test    # exercise the wasm smoke tests backing the docs site
+make docs-package # stage deploy-ready docs artifacts under target/deploy/docs
 ```
 
 For fine-grained routines the repository exposes a companion CLI via `cargo xtask`, codifying repeatable maintenance in a single
@@ -234,7 +237,9 @@ binary:
 cargo xtask icon-update           # pull the latest Rustic icon sets
 cargo xtask update-components     # emit the Rust-native component metadata manifest
 cargo xtask accessibility-audit   # lint Markdown docs for accessibility regressions
-cargo xtask deploy-docs           # build the documentation site + wasm bundles
+cargo xtask docs-build            # build the docs host binary + wasm bundle
+cargo xtask docs-test             # run the wasm smoke tests powering the docs site
+cargo xtask docs-package          # assemble deploy-ready SSR + wasm assets
 ```
 
 Each task emits verbose logs and returns a non-zero exit code on failure so it can be safely wired into CI pipelines.
@@ -253,8 +258,8 @@ dry runs without editing the repository.
 The documentation site ships through a single Rust entrypoint:
 
 ```bash
-cargo xtask deploy-docs           # stage mdBook, API docs, and wasm bundles into target/deploy/docs
-cargo xtask deploy-docs --dry-run # execute the same pipeline without touching the deploy directory
+cargo xtask docs-package          # stage mdBook, API docs, and wasm bundles into target/deploy/docs
+cargo xtask docs-package --dry-run # execute the same pipeline without touching the deploy directory
 ```
 
 The command performs the following steps:
@@ -267,12 +272,12 @@ The command performs the following steps:
 
 Tune the behaviour via environment variables when integrating with bespoke CI/CD stacks:
 
-- `RUSTIC_UI_DEPLOY_OUTPUT` – Override the default staging directory (`target/deploy/docs`).
+- `RUSTIC_DOCS_EXPORT_DIR` – Override the default staging directory (`target/deploy/docs`).
 - `RUSTIC_UI_DEPLOY_PROFILE` – Select a Cargo profile for the wasm builds (defaults to `--release`).
 - `RUSTIC_UI_DEPLOY_GROUPS` – Comma-separated list of `ExampleGroup` values (`layout`, `utilities`, `navigation`, `forms`,
-  `selection-controls`) to restrict which demos publish wasm bundles.
+  `selection-controls`) to restrict which demos publish wasm bundles when invoking the legacy `deploy-docs` wrapper.
 
-The root `Makefile` exposes the same workflow via `make deploy-docs` for teams that standardise on make-based entrypoints.
+The root `Makefile` exposes the same workflow via `make docs-package` (or the backward-compatible `make deploy-docs`) for teams that standardise on make-based entrypoints.
 
 The Material icon updater persists ETag/Last-Modified metadata in
 `target/.icon-cache` so repeated runs skip unnecessary downloads. To bypass the
@@ -295,7 +300,7 @@ cargo test -p mui-material --test joy_yew --features yew
 cargo test -p mui-material --test joy_leptos --features leptos
 cargo test -p mui-material --test joy_dioxus --features dioxus
 cargo test -p mui-material --test joy_sycamore --features sycamore
-cargo xtask deploy-docs --dry-run
+cargo xtask docs-package --dry-run
 ```
 
 Use the parity suites above to chase snapshot mismatches: rerun the failing test with `-- --nocapture --exact` to inspect the React versus adapter markup before refreshing fixtures or renderers. The [Rust CI guide](docs/rust-ci.md) documents deeper troubleshooting steps, snapshot refresh flows, and coverage tooling so teams can keep automation green without guesswork.

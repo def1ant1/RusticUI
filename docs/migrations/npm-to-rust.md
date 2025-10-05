@@ -225,7 +225,7 @@ jobs:
       - name: Accessibility smoke test
         run: cargo xtask accessibility-audit
       - name: Build docs
-        run: cargo xtask build-docs
+        run: cargo xtask docs-package
 ```
 
 ## 7. Audit the Rust supply chain

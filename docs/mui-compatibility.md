@@ -61,7 +61,7 @@ directly from application code when bespoke automation hooks are required.
 ### Automation tips
 
 - `scripts/migrate-crate-prefix.sh` is idempotent and safe to rerun as you migrate individual crates within a monorepo.
-- Pair the script with `cargo xtask build-docs` or `make doc` to update API documentation immediately after imports change.
+- Pair the script with `cargo xtask docs-package` or `make docs-package` to update API documentation immediately after imports change.
 - Use the command under CI so reviewers can trust that every pull request preserves the `rustic_ui_*` identifiers and keeps
   the compatibility shim disabled once migrations complete.
 

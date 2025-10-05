@@ -262,7 +262,7 @@ archived Material UI change history now lives in [`docs/archives/material-ui-cha
 - Documented the migration workflow in the README and Rust book, including
   guidance on the new `EMPTY_SEGMENTS` helper, accessibility data attributes, and
   CI guardrails (`cargo fmt`, `cargo clippy --workspace --all-features`,
-  `INSTA_UPDATE=always cargo test …`, and `cargo xtask build-docs`).
+  `INSTA_UPDATE=always cargo test …`, and `cargo xtask docs-package`).
 
 ### Backlog
 
@@ -278,7 +278,7 @@ archived Material UI change history now lives in [`docs/archives/material-ui-cha
 - `INSTA_UPDATE=always cargo test -p rustic-ui-material --test layout_renderers`
 - `cargo xtask examples --group layout --release`
 - `cargo xtask wasm-test`
-- `cargo xtask build-docs`
+- `cargo xtask docs-package`
 
 ## 2025-05-06 – Supply-chain automation and archive governance
 

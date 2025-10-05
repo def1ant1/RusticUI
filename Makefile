@@ -3,7 +3,8 @@
 # underlying commands so contributors and CI use the same logic.
 
 .RECIPEPREFIX := >
-.PHONY: build fmt clippy deny test wasm-test doc icon-update coverage bench deploy-docs
+.PHONY: build fmt clippy deny test wasm-test doc icon-update coverage bench deploy-docs \
+        docs-build docs-test docs-package
 
 # Format the entire workspace. Use `cargo xtask fmt --check` in CI.
 fmt:
@@ -32,6 +33,18 @@ doc:
 # Stage documentation + wasm bundles for deployment.
 deploy-docs:
 > @cargo xtask deploy-docs
+
+# Build the documentation host binary and wasm bundle together.
+docs-build:
+> @cargo xtask docs-build
+
+# Execute the wasm smoke tests backing the documentation bundle.
+docs-test:
+> @cargo xtask docs-test
+
+# Assemble deploy-ready documentation artifacts (respects RUSTIC_DOCS_EXPORT_DIR).
+docs-package:
+> @cargo xtask docs-package
 
 # Refresh Material Design icon bindings used by component crates.
 icon-update:
