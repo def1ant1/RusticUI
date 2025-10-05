@@ -4788,6 +4788,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "once_cell",
+ "proptest",
  "serde",
  "serde_json",
  "time",
