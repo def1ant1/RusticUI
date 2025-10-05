@@ -6,10 +6,7 @@
 //! architecture used by `dialog` and `drawer` to simplify migrations: consumers
 //! can swap to [`ModalState`] and reuse the same notification hooks.
 
-use crate::{
-    selection::ControlStrategy,
-    transition::{TransitionPhase, TransitionState},
-};
+use crate::{selection::ControlStrategy, transition::TransitionState};
 
 /// Strategy used by modal overlays to determine how focus loops behave.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -43,7 +40,11 @@ pub struct ModalState {
 
 impl ModalState {
     /// Creates a new uncontrolled modal.
-    pub fn uncontrolled(default_open: bool, focus: FocusTrapStrategy, automation_id: Option<String>) -> Self {
+    pub fn uncontrolled(
+        default_open: bool,
+        focus: FocusTrapStrategy,
+        automation_id: Option<String>,
+    ) -> Self {
         let mut state = Self {
             control: ControlStrategy::Uncontrolled,
             focus,
@@ -152,6 +153,7 @@ impl ModalState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transition::TransitionPhase;
 
     #[test]
     fn modal_uncontrolled_flow() {

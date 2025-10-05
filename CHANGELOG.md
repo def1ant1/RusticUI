@@ -7,6 +7,9 @@ archived Material UI change history now lives in [`docs/archives/material-ui-cha
 
 ### Highlights
 
+- Introduced Material overlay helpers (`portal`, `modal`, `popover`, `popper`,
+  `transition`) that surface automation ids, SSR ready markup, and theming
+  hooks for every framework adapter so teams stop hand-coding portal markup.
 - Published full documentation for the runnable selection control crates,
   pointing contributors at the central smoke script, framework task runners, and
   xtask entry point so automation stays consistent across languages.【F:docs/src/pages/examples/index.md†L111-L148】【F:docs/src/pages/examples/selection-controls-telemetry.md†L1-L40】【F:docs/architecture/selection-controls.md†L118-L164】
