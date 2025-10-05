@@ -54,7 +54,13 @@ pub async fn docs_test() -> Result<()> {
 /// The export directory defaults to `target/deploy/docs` but can be overridden
 /// through `RUSTIC_DOCS_EXPORT_DIR` for environments that persist artifacts
 /// elsewhere (e.g., Bazel or containerized CI runners).
-pub async fn docs_package() -> Result<()> {
+#[derive(Clone, Debug)]
+pub struct DocsPackageOutcome {
+    pub export_dir: Utf8PathBuf,
+    pub manifest_path: Utf8PathBuf,
+}
+
+pub async fn docs_package() -> Result<DocsPackageOutcome> {
     let ctx = WorkspaceContext::detect()?;
     let artifacts = build_artifacts(&ctx, BuildProfile::Release).await?;
     package_release(&ctx, &artifacts).await
@@ -325,7 +331,10 @@ async fn run_wasm_tests(ctx: &WorkspaceContext) -> Result<()> {
     ))
 }
 
-async fn package_release(ctx: &WorkspaceContext, artifacts: &DocsBuildArtifacts) -> Result<()> {
+async fn package_release(
+    ctx: &WorkspaceContext,
+    artifacts: &DocsBuildArtifacts,
+) -> Result<DocsPackageOutcome> {
     let export_dir = env::var("RUSTIC_DOCS_EXPORT_DIR")
         .map(Utf8PathBuf::from)
         .unwrap_or_else(|_| ctx.target_dir.join("deploy").join("docs"));
@@ -398,7 +407,10 @@ async fn package_release(ctx: &WorkspaceContext, artifacts: &DocsBuildArtifacts)
         .await
         .context("failed to write docs bundle manifest")?;
 
-    Ok(())
+    Ok(DocsPackageOutcome {
+        export_dir,
+        manifest_path,
+    })
 }
 
 #[derive(Serialize)]
