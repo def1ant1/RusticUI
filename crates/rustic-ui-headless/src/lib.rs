@@ -69,6 +69,7 @@ pub mod linear_progress;
 pub mod link;
 pub mod list;
 pub mod menu;
+pub mod modal;
 pub mod pagination;
 pub mod paper;
 pub mod popover;
