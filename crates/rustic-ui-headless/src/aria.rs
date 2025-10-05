@@ -106,6 +106,12 @@ pub const fn role_radio() -> &'static str {
     "radio"
 }
 
+/// Returns the ARIA role used by radio groups such as ratings.
+#[inline]
+pub const fn role_radiogroup() -> &'static str {
+    "radiogroup"
+}
+
 /// Returns the ARIA role used by switch controls.  `switch` was added in
 /// ARIA 1.1 and maps closely to Material's design language.
 #[inline]

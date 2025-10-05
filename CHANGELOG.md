@@ -3,6 +3,30 @@
 RusticUI documents every step of the transition from Material UI for Rust to the Apotheon.ai–stewarded RusticUI platform. The
 archived Material UI change history now lives in [`docs/archives/material-ui-changelog.md`](docs/archives/material-ui-changelog.md).
 
+## Unreleased – Feedback rating primitives
+
+### Highlights
+
+- Introduced a dedicated `rating` state machine in `rustic-ui-headless` that
+  centralises controlled/uncontrolled flows, hover previews, half-step
+  precision, and analytics payloads so framework adapters operate on a single
+  deterministic snapshot.【F:crates/rustic-ui-headless/src/rating.rs†L1-L375】
+- Shipped Material renderers and multi-framework adapters (`react`, `yew`,
+  `leptos`, `dioxus`, `sycamore`) that convert the headless descriptors into
+  themed star markup with automation identifiers and SSR friendly output for
+  controlled and uncontrolled scenarios.【F:crates/rustic-ui-material/src/rating.rs†L1-L270】
+- Added unit tests covering keyboard flows, analytics beacons, and SSR
+  rendering to ensure the new primitives integrate with existing automation
+  harnesses.【F:crates/rustic-ui-headless/src/rating.rs†L308-L355】【F:crates/rustic-ui-material/src/rating.rs†L212-L242】
+
+### Verification
+
+- `cargo test -p rustic-ui-headless --lib --features feedback`
+- `cargo test -p rustic-ui-material --lib --features feedback` *(fails in the
+  current workspace because the checkbox telemetry assertions require the full
+  telemetry stack; see prior runs for expected output and enable the remaining
+  feature gates locally).*【d97d36†L1-L118】
+
 ## Unreleased – Selection control automation harness
 
 ### Highlights

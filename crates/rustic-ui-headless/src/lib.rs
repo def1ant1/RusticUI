@@ -76,6 +76,8 @@ pub mod popover;
 pub mod popper;
 pub mod portal;
 pub mod radio;
+#[cfg(feature = "feedback")]
+pub mod rating;
 pub mod select;
 #[cfg(feature = "progress")]
 pub mod skeleton;
