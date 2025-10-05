@@ -32,7 +32,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use walkdir::WalkDir;
 
+mod docs_assets;
 mod selection_controls_web;
+use docs_assets::{docs_assets, DocsAssetsArgs};
 use selection_controls_web::SelectionControlsHarness;
 
 /// Entry point for the `cargo xtask` command.
@@ -107,6 +109,8 @@ enum Commands {
         #[arg(long = "out-dir")]
         out_dir: Option<PathBuf>,
     },
+    /// Replace the legacy Node docs scripts with Rust-first automation.
+    DocsAssets(DocsAssetsArgs),
     /// Generate an `lcov.info` report using grcov.
     Coverage,
     /// Execute Criterion benchmarks. Succeeds even if none exist.
@@ -193,6 +197,7 @@ fn main() -> Result<()> {
         Commands::Doc => doc(),
         Commands::RefreshIcons => refresh_icons(),
         Commands::IconsBundle { compat, out_dir } => icons_bundle(out_dir, compat),
+        Commands::DocsAssets(args) => docs_assets(args),
         Commands::Coverage => coverage(),
         Commands::Bench => bench(),
         Commands::UpdateComponents => update_components(),

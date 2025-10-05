@@ -31,6 +31,7 @@ ssr = [
   "dep:tracing-subscriber",
 ]
 static = ["ssr"]
+yew-docs = ["dep:yew"]
 
 [dependencies]
 leptos.workspace = true
@@ -47,10 +48,28 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"], option
 serde.workspace = true
 serde_json.workspace = true
 thiserror = "1.0"
+pulldown-cmark = "0.10"
+yew = { workspace = true, optional = true }
+once_cell.workspace = true
+heck.workspace = true
 
 [dev-dependencies]
 leptos = { workspace = true, features = ["ssr"] }
 leptos_router = { workspace = true, features = ["ssr"] }
+
+[build-dependencies]
+walkdir.workspace = true
+heck.workspace = true
+
+[[example]]
+name = "leptos_inventory"
+path = "examples/leptos_inventory.rs"
+required-features = ["ssr"]
+
+[[example]]
+name = "yew_inventory_manifest"
+path = "examples/yew_inventory_manifest.rs"
+required-features = ["yew-docs"]
 
 [package.metadata.docs]
 readme = "README.md"

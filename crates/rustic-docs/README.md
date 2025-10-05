@@ -33,6 +33,23 @@ The project assumes infrastructure-as-code from day one:
   routes, theme overrides, or telemetry sinks. Teams can fork the crate and keep
   the automation scaffolding intact.
 
+## Rust-first content pipeline
+
+- **Theme module**: `rustic_docs::theme` exposes `DocsThemeShell`, `DocsSurface`
+  and `ThemeToggleControl` which wrap `rustic-ui-system` tokens so downstream
+  applications can compose Material primitives without re-implementing the
+  provider wiring.
+- **Content inventory**: build-time code generation populates
+  `rustic_docs::content::docs_inventory()` and
+  `rustic_docs::content::markdown_documents()`. The Leptos/Yew components under
+  `rustic_docs::content::leptos_components` and
+  `rustic_docs::content::yew_components` project that metadata using RusticUI
+  cards, app bars, and Markdown rendering via `pulldown_cmark`.
+- **Automation tasks**: `cargo xtask docs-assets` replaces the Node scripts used
+  by the legacy site. The command can regenerate the service worker banner and
+  emit a screenshot manifest that CI tooling can consume without reaching for
+  `pnpm`.
+
 ## Running locally
 
 ```bash

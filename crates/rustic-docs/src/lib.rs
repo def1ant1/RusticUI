@@ -10,16 +10,23 @@ and docstrings surface architectural decisions so enterprise adopters can
 understand where to extend or integrate observability without reverse
 engineering ad-hoc examples."]
 
+pub mod content;
+pub mod theme;
+
+use content::{
+    docs_inventory,
+    leptos_components::InventoryBoard,
+    markdown::{markdown_documents, MarkdownArticle},
+    InventoryCategory,
+};
 use leptos::{on_cleanup, provide_context, view, IntoView};
 use leptos_config::LeptosOptions;
 #[cfg(feature = "ssr")]
 use leptos_meta::MetaContext;
 use leptos_router::{Route, Router, RouterIntegrationContext, Routes, ServerIntegration, A};
 use rustic_ui_design_tokens::BundleSummary;
-#[cfg(all(feature = "csr", target_arch = "wasm32"))]
-use rustic_ui_system::theme_provider::use_material_color_scheme;
-use rustic_ui_system::theme_provider::{material_theme, use_theme, CssBaseline, ThemeProvider};
 use serde::{Deserialize, Serialize};
+use theme::{DocsAppBar, DocsSurface, DocsThemeShell, ThemeToggleControl};
 use thiserror::Error;
 use tracing::instrument;
 
@@ -28,8 +35,10 @@ use tracing::instrument;
 pub const HOME_ROUTE: &str = "/";
 /// Path backing the automation extension notes.
 pub const AUTOMATION_ROUTE: &str = "/automation";
+/// Inventory dashboard documenting the migration plan for legacy docs.
+pub const INVENTORY_ROUTE: &str = "/inventory";
 /// Aggregate list of the supported routes. This feeds both documentation tooling and targeted assertions.
-pub const ROUTE_PATHS: [&str; 2] = [HOME_ROUTE, AUTOMATION_ROUTE];
+pub const ROUTE_PATHS: [&str; 3] = [HOME_ROUTE, AUTOMATION_ROUTE, INVENTORY_ROUTE];
 
 /// Configuration surface that documents which levers the automation
 /// platform toggles per deployment environment.
@@ -74,10 +83,15 @@ impl Default for DocsSiteConfig {
 /// systems use this surface to prove that design-token pipelines continue
 /// to match the documentation application contract.
 pub fn static_manifest_contract() -> serde_json::Value {
+    let inventory = docs_inventory().len();
+    let markdown = markdown_documents().len();
     serde_json::json!({
         "bundle_summary_type": std::any::type_name::<BundleSummary>(),
         "supported_channels": ["csr", "ssr", "static"],
-        "notes": "Manifests emitted by automation must contain palette and typography payloads to keep ThemeProvider hydration deterministic.",
+        "theme_surfaces": ["DocsThemeShell", "DocsSurface", "ThemeToggleControl"],
+        "inventory_entries": inventory,
+        "markdown_documents": markdown,
+        "notes": "Manifests emitted by automation must contain palette and typography payloads to keep DocsThemeShell hydration deterministic.",
     })
 }
 
@@ -89,7 +103,6 @@ pub fn static_manifest_contract() -> serde_json::Value {
 /// component doubles as a reference implementation.
 #[leptos::component]
 pub fn App() -> impl IntoView {
-    let theme = material_theme();
     let config = DocsSiteConfig::default();
 
     // Expose telemetry configuration so child components (or future
@@ -99,12 +112,6 @@ pub fn App() -> impl IntoView {
     provide_context(config.clone());
     #[cfg(not(target_arch = "wasm32"))]
     if leptos::use_context::<RouterIntegrationContext>().is_none() {
-        // Capture the integration in the outer scope so we can drop it during
-        // Leptos' cleanup phase rather than when thread-local runtime storage is
-        // already torn down. Without this explicit cleanup the router's
-        // internally managed signals can attempt to touch TLS slots after
-        // disposal which manifests as the "cannot access TLS" panic that the
-        // original tests surfaced.
         let integration = RouterIntegrationContext::new(ServerIntegration {
             path: "http://localhost/".to_string(),
         });
@@ -116,82 +123,134 @@ pub fn App() -> impl IntoView {
     }
 
     view! {
-        <ThemeProvider theme=theme.clone()>
-            <CssBaseline />
+        <DocsThemeShell>
             <Router fallback=|| view! { <NotFoundPage/> } >
                 <Routes>
                     <Route path=HOME_ROUTE view=HomePage />
                     <Route path=AUTOMATION_ROUTE view=AutomationFirstBlueprint />
+                    <Route path=INVENTORY_ROUTE view=InventoryLanding />
                 </Routes>
             </Router>
-        </ThemeProvider>
+        </DocsThemeShell>
     }
 }
 
 /// Landing page describing how the documentation shell is structured.
 #[leptos::component]
 fn HomePage() -> impl IntoView {
-    let theme = leptos::expect_context::<DocsSiteConfig>();
+    let config = leptos::expect_context::<DocsSiteConfig>();
+    let featured_route = markdown_documents()
+        .iter()
+        .find(|doc| {
+            doc.source_path
+                .ends_with("architecture/selection-controls.md")
+        })
+        .or_else(|| markdown_documents().first())
+        .map(|doc| doc.route_hint)
+        .unwrap_or("/architecture/selection-controls");
+
     view! {
-        <section class="docs-hero">
-            <h1>"Rustic Docs"</h1>
-            <p>
-                "A Leptos powered, automation-first documentation surface.
-                Telemetry is streamed to "
-                {theme.telemetry_endpoint.clone()}
-                "."
-            </p>
-            <nav>
-                <A href=AUTOMATION_ROUTE class="docs-link">"Automation playbook"</A>
-            </nav>
+        <section style="display: grid; gap: 1.5rem;">
+            <DocsAppBar
+                title="Rustic Docs"
+                subtitle="Automation-first knowledge base orchestrated with Leptos"
+            />
+            <DocsSurface
+                title="Automation-first documentation"
+                description="Centralised theme, routing and telemetry hooks"
+            >
+                <p style="margin: 0;">
+                    {format!(
+                        "The portal streams structured telemetry to {endpoint} and mirrors the production automation topology.",
+                        endpoint = config.telemetry_endpoint
+                    )}
+                </p>
+                <nav style="display: flex; gap: 1rem; margin-top: 0.75rem;">
+                    <A href=AUTOMATION_ROUTE>{"Automation playbook"}</A>
+                    <A href=INVENTORY_ROUTE>{"Inventory dashboard"}</A>
+                </nav>
+                <ThemeToggleControl />
+            </DocsSurface>
+            <DocsSurface
+                title="Architecture deep dive"
+                description="Markdown rendered with `pulldown_cmark`"
+            >
+                <MarkdownArticle route_hint=featured_route.to_string() />
+            </DocsSurface>
+            <DocsSurface
+                title="Migration snapshot"
+                description="Live data extracted from docs/ during the build"
+            >
+                <InventoryBoard />
+            </DocsSurface>
         </section>
     }
 }
 
-/// Secondary route outlining extension points.
+/// Secondary route outlining automation extension points.
 #[leptos::component]
 fn AutomationFirstBlueprint() -> impl IntoView {
-    #[cfg(all(feature = "csr", target_arch = "wasm32"))]
-    let handle = use_material_color_scheme();
-    #[cfg(all(feature = "csr", target_arch = "wasm32"))]
-    let toggle_action = {
-        let handle = handle.clone();
-        move |_| handle.toggle()
-    };
-    #[cfg(not(all(feature = "csr", target_arch = "wasm32")))]
-    let toggle_action = move |_| {};
-    let theme = use_theme();
-    let active_palette = theme.palette.initial_color_scheme.as_str().to_string();
+    let inventory_total = docs_inventory().len();
+    let markdown_total = markdown_documents().len();
 
     view! {
-        <article class="docs-automation">
-            <header>
-                <h2>"Automation-first delivery"</h2>
-                <p>
-                    "RusticUI components inherit the "
-                    {active_palette}
-                    " color scheme."
-                </p>
-            </header>
-            <section>
-                <h3>"Enterprise hooks"</h3>
-                <ul>
-                    <li>"Server render via Axum or Actix with the same router tree."</li>
-                    <li>"Static export job emits JSON manifests alongside HTML snapshots."</li>
-                    <li>"Observability toggles are injected from DocsSiteConfig at hydration time."</li>
+        <section style="display: grid; gap: 1.5rem;">
+            <DocsSurface
+                title="Automation-first delivery"
+                description="Deployment guidance for platform engineers"
+            >
+                <ul style="margin: 0; padding-left: 1.5rem;">
+                    <li>{"Server render via Axum with the same router tree."}</li>
+                    <li>{"Static export job emits JSON manifests alongside HTML snapshots."}</li>
+                    <li>{"Telemetry toggles flow from DocsSiteConfig into the Leptos context."}</li>
                 </ul>
-            </section>
-            <footer>
-                <button on:click=toggle_action>"Toggle color scheme"</button>
-            </footer>
-        </article>
+                <ThemeToggleControl />
+            </DocsSurface>
+            <DocsSurface
+                title="Corpus generated by build.rs"
+                description="Inventory and Markdown summaries"
+            >
+                <p style="margin: 0;">{format!("Inventory entries tracked: {inventory_total}")}</p>
+                <p style="margin: 0;">{format!("Markdown documents embedded: {markdown_total}")}</p>
+            </DocsSurface>
+        </section>
+    }
+}
+
+/// Route rendering the full inventory board so stakeholders can audit migration progress.
+#[leptos::component]
+fn InventoryLanding() -> impl IntoView {
+    let total = docs_inventory().len();
+    let components = docs_inventory()
+        .iter()
+        .filter(|entry| entry.category == InventoryCategory::Component)
+        .count();
+
+    view! {
+        <section style="display: grid; gap: 1.5rem;">
+            <DocsSurface
+                title="Legacy inventory"
+                description=format!("Planning {components} component demos across {total} total assets")
+            >
+                <InventoryBoard />
+            </DocsSurface>
+        </section>
     }
 }
 
 /// Simple not found page to ensure the router fallback path is covered in tests.
 #[leptos::component]
 fn NotFoundPage() -> impl IntoView {
-    view! { <p class="docs-404">"We could not find that page."</p> }
+    view! {
+        <section style="display: grid; gap: 1.5rem;">
+            <DocsSurface
+                title="Not found"
+                description="We could not locate the requested page"
+            >
+                <p style="margin: 0;">{"Return to the home page or open the inventory to browse available routes."}</p>
+            </DocsSurface>
+        </section>
+    }
 }
 
 /// Build an Axum router capable of serving the Leptos application with SSR.
@@ -265,10 +324,9 @@ pub fn render_static_snapshot() -> String {
     let markup = leptos::ssr::render_to_string(|| {
         provide_context(DocsSiteConfig::default());
         view! {
-            <ThemeProvider theme=material_theme()>
-                <CssBaseline />
+            <DocsThemeShell>
                 <AutomationFirstBlueprint />
-            </ThemeProvider>
+            </DocsThemeShell>
         }
     });
     format!("<!DOCTYPE html><html lang=\"en\"><body>{markup}</body></html>")
@@ -283,7 +341,7 @@ mod tests {
     fn routing_renders_expected_sections() {
         let mut paths: Vec<_> = ROUTE_PATHS.iter().copied().collect();
         paths.sort();
-        let mut expected = vec![HOME_ROUTE, AUTOMATION_ROUTE];
+        let mut expected = vec![HOME_ROUTE, AUTOMATION_ROUTE, INVENTORY_ROUTE];
         expected.sort();
         assert_eq!(paths, expected);
     }
@@ -291,23 +349,31 @@ mod tests {
     #[test]
     fn theming_context_propagates() {
         let markup = leptos::ssr::render_to_string(|| {
-            view! { <ThemeProvider theme=material_theme()> <TestThemeConsumer /> </ThemeProvider> }
+            view! { <DocsThemeShell> <ThemeToggleControl /> </DocsThemeShell> }
         });
-        assert!(markup.contains("light"));
+        assert!(markup.contains("Theme diagnostics"));
     }
 
-    #[leptos::component]
-    fn TestThemeConsumer() -> impl IntoView {
-        let theme = use_theme();
-        let scheme = theme.palette.initial_color_scheme.as_str().to_string();
-        view! { <span class="theme-marker">{scheme}</span> }
+    #[test]
+    fn markdown_documents_render() {
+        let doc = markdown_documents().first().expect("embedded markdown");
+        let html = content::render_markdown_to_html(doc);
+        assert!(html.contains("<p"));
+    }
+
+    #[test]
+    fn inventory_routes_are_localised() {
+        for entry in docs_inventory() {
+            assert!(entry.route_hint.starts_with('/'));
+            assert!(entry.locales.iter().any(|locale| locale.locale == "en"));
+        }
     }
 
     #[cfg(feature = "ssr")]
     #[test]
     fn static_snapshot_contains_toggle() {
         let snapshot = render_static_snapshot();
-        assert!(snapshot.contains("Toggle color scheme"));
+        assert!(snapshot.contains("Toggle to"));
         assert!(
             snapshot.contains("data-hk"),
             "Leptos hydration markers missing"
