@@ -31,6 +31,11 @@ Before starting large efforts, open a GitHub discussion or issue so the maintain
 > legacy references to `pnpm-lock.yaml` in older documentation. All active automation now flows through `cargo xtask`, and the
 > docs site manages its own dependencies locally within `docs/` when needed.
 
+> **Guardrail:** Run `cargo xtask verify-toolchain` whenever you touch repository plumbing or CI configuration. The command
+> verifies that the archived Node manifests stay quarantined under `archives/tooling/node-workspace/` and fails fast if a
+> `package.json`, `pnpm-workspace.yaml`, `lerna.json`, `nx.json`, or `webpackBaseConfig.js` reappears at the workspace root.
+> Keeping this guard green ensures CI only depends on the Rust toolchain and mdBook.【F:archives/tooling/node-workspace/README.md†L1-L11】【F:crates/xtask/src/main.rs†L1-L120】【F:crates/xtask/src/main.rs†L240-L330】
+
 All repetitive chores are encapsulated inside the `Makefile` or `cargo xtask`. Prefer these entry points over ad-hoc scripts.
 
 ### Archived JavaScript workspace
@@ -170,7 +175,7 @@ Use the automation shipped with each example to avoid manual setup:
 - Update the component's story/demo to reflect new props or behaviors.
 - Document breaking changes in `CHANGELOG.md` under a new dated section.
 - Verify accessibility via `cargo xtask accessibility-audit`.
-- Exercise the full selection-control matrix with `pnpm selection:verify` whenever you touch telemetry, SSR rendering, or Joy Select adapters. The command mirrors CI by running Rust + web tests, linting, and docs builds in one pass.【F:package.json†L8-L14】【F:crates/xtask/src/main.rs†L41-L70】
+- Exercise the full selection-control matrix with `cargo xtask selection-controls --skip-web` whenever you touch telemetry, SSR rendering, or Joy Select adapters. The flag keeps the default run Rust-only; consult [`docs/testing/selection-controls.md`](docs/testing/selection-controls.md) for guidance on reenabling the archived Playwright suites when auditing legacy behaviour.【F:crates/xtask/src/main.rs†L1-L120】【F:docs/testing/selection-controls.md†L1-L120】
 
 ## Release cadence and backlog
 

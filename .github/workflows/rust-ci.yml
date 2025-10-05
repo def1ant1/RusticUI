@@ -190,31 +190,27 @@ jobs:
     name: Selection Controls Matrix
     runs-on: ubuntu-latest
     steps:
-      # Checkout the repository to access both Rust and TypeScript suites
+      # Checkout the repository to access the Rust test suites
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      # Install the Node.js toolchain used by the Joy test harness
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-      # Install pnpm to orchestrate workspace scripts
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      # Material UI packages rely on a full install so Storybook/Next builds succeed
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
       # Provision the Rust toolchain and linting components consumed by cargo xtask
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           components: rustfmt, clippy
-      # Ensure mdBook is available for the Rust-first documentation build invoked by selection:verify
+      # Ensure mdBook is available for the Rust-first documentation build invoked by cargo xtask
       - name: Install mdBook
         run: cargo install mdbook --locked
-      # Execute linting, Rust + web selection control tests, and documentation builds in one pass
-      - name: Run selection control regression matrix
-        run: pnpm selection:verify
+      # Enforce the Rust-only toolchain expectations before running expensive work
+      - name: Verify Rust-first toolchain guardrails
+        run: cargo xtask verify-toolchain
+      - name: Enforce formatting
+        run: cargo xtask fmt --check
+      - name: Enforce linting
+        run: cargo xtask clippy
+      - name: Run Rust selection control suites
+        run: cargo xtask selection-controls --skip-web
+      - name: Build documentation book
+        run: cargo xtask build-docs
 
   select-menu-examples:
     name: Select Menu Example Smoke Tests

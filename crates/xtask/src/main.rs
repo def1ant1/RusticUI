@@ -56,6 +56,8 @@ enum Commands {
     Clippy,
     /// Audit third-party crates for advisories, bans, and license issues.
     Deny,
+    /// Ensure the workspace remains Rust-first by keeping Node manifests quarantined.
+    VerifyToolchain,
     /// Execute the default test suites for all crates.
     ///
     /// Pass `--examples` to also compile every Rust example (`examples/mui-*`,
@@ -170,6 +172,7 @@ fn main() -> Result<()> {
         Commands::Fmt { check } => fmt(check),
         Commands::Clippy => clippy(),
         Commands::Deny => deny(),
+        Commands::VerifyToolchain => verify_toolchain(),
         Commands::Test { examples } => test(examples),
         Commands::Examples(args) => examples(args),
         Commands::WasmTest => wasm_test(),
@@ -253,6 +256,96 @@ fn run(mut cmd: Command) -> Result<()> {
     if !status.success() {
         return Err(anyhow!("command {:?} failed with status {:?}", cmd, status));
     }
+    Ok(())
+}
+
+fn verify_toolchain() -> Result<()> {
+    // Centralise the guardrail that keeps the repository Rust-first. Historical Node
+    // manifests live under `archives/tooling/node-workspace/` so contributors and
+    // auditors can diff old automation without accidentally reviving it. This helper
+    // performs three checks:
+    //   1. Ensure the archive directory itself exists (accidental deletion would make
+    //      provenance investigations harder and signals a misconfigured checkout).
+    //   2. Confirm no guarded manifest (`package.json`, `pnpm-workspace.yaml`, etc.)
+    //      leaked back into the workspace root where CI or local scripts might pick
+    //      them up.
+    //   3. Verify the archived copies are present so developers always have a
+    //      historical reference when debugging old release pipelines.
+    // By failing fast here we avoid subtle drift where a stray pnpm command silently
+    // reinstalls dependencies and splits automation across toolchains again.
+    let workspace = workspace_root();
+    let archive_root = workspace.join("archives/tooling/node-workspace");
+    if !archive_root.is_dir() {
+        return Err(anyhow!(
+            "archived Node workspace not found at {}",
+            archive_root.display()
+        ));
+    }
+
+    // Enumerate the manifests we care about. Keeping the list centralized makes it
+    // easy to extend as we remember additional Node-centric entry points that should
+    // remain quarantined.
+    let guard_files = [
+        "package.json",
+        "pnpm-workspace.yaml",
+        "lerna.json",
+        "nx.json",
+        "webpackBaseConfig.js",
+    ];
+
+    // Collect any stray manifests living at the workspace root. We purposely surface
+    // every offender at once so the error message is actionable for large commits.
+    let mut stray_manifests = Vec::new();
+    for name in &guard_files {
+        let candidate = workspace.join(name);
+        if candidate.exists() {
+            let relative = candidate
+                .strip_prefix(&workspace)
+                .unwrap_or(&candidate)
+                .to_path_buf();
+            stray_manifests.push(relative);
+        }
+    }
+
+    if !stray_manifests.is_empty() {
+        let details = stray_manifests
+            .iter()
+            .map(|path| format!("- {}", path.display()))
+            .collect::<Vec<_>>()
+            .join("\n");
+        return Err(anyhow!(
+            "detected Node manifest(s) outside the archive scope:\n{}\n\nMove them under archives/tooling/node-workspace/ or delete them outright to keep the Rust-first toolchain reproducible.",
+            details
+        ));
+    }
+
+    // Double-check the archived copies exist. Losing these would not break CI, but it
+    // would remove the historical breadcrumbs regulators rely on, so we surface the
+    // problem as an actionable failure.
+    let mut missing_archives = Vec::new();
+    for name in &guard_files {
+        let archived = archive_root.join(name);
+        if !archived.exists() {
+            missing_archives.push(archived);
+        }
+    }
+
+    if !missing_archives.is_empty() {
+        let details = missing_archives
+            .iter()
+            .map(|path| format!("- {}", path.display()))
+            .collect::<Vec<_>>()
+            .join("\n");
+        return Err(anyhow!(
+            "archived Node manifest(s) are missing:\n{}\n\nRestore the historical copies from version control so investigators retain provenance.",
+            details
+        ));
+    }
+
+    println!(
+        "[xtask][verify-toolchain] confirmed Rust-first guardrails; guarded manifests remain archived"
+    );
+
     Ok(())
 }
 

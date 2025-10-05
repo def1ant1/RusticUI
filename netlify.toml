@@ -3,7 +3,14 @@
   publish = "docs/export/"
 
   # Build command.
-  command = "pnpm selection:verify"
+  #
+  # Netlify previously shelled through the pnpm workspace to compose linting,
+  # docs generation, and selection control smoke tests. The Rust-first
+  # transition centralises that orchestration inside `cargo xtask` so CI only
+  # depends on the Rust toolchain plus mdBook. The `build-docs` task already
+  # wraps API doc generation and the mdBook export, eliminating the brittle
+  # Node indirection while keeping deploy artifacts identical.
+  command = "cargo xtask build-docs"
 
 [build.environment]
   NODE_VERSION = "22.18"

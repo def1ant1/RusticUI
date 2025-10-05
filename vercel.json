@@ -5,5 +5,5 @@
   },
   "public": true,
   "trailingSlash": true,
-  "buildCommand": "pnpm selection:verify"
+  "buildCommand": "cargo xtask build-docs"
 }

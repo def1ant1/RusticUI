@@ -74,6 +74,25 @@ dependency as `"catalog:@mui/material"` or inspect the mapping emitted by `pnpm 
 `archives/mui-packages/mui-material`. Scripts that previously globbed through `archives/mui-packages/**` should
 consume the catalog so they automatically follow any future archive relocations.
 
+### Rust-only workflow guardrails
+
+The historical JavaScript workspace manifests (`package.json`, `pnpm-workspace.yaml`, `lerna.json`, `nx.json`, and
+`webpackBaseConfig.js`) now live under [`archives/tooling/node-workspace/`](archives/tooling/node-workspace) as
+read-only artifacts. CI and local workflows enforce a Rust-first toolchain by routing every automated routine through
+`cargo xtask`:
+
+```bash
+cargo xtask verify-toolchain   # fails fast if someone resurrects a Node workspace at the repository root
+cargo xtask fmt --check        # format guardrails
+cargo xtask clippy             # lint guardrails
+cargo xtask build-docs         # Rust + mdBook documentation pipeline
+```
+
+Run `cargo xtask verify-toolchain` before committing to ensure no new Node manifests escaped the archive scope. The
+command walks the workspace root, confirms the archived copies are intact, and fails the build if a fresh
+`package.json` (or related manifest) appears outside the archive directory. This guard keeps CI reproducible and
+prevents accidental reintroduction of pnpm-based automation.【F:archives/tooling/node-workspace/README.md†L1-L11】【F:crates/xtask/src/main.rs†L1-L120】【F:crates/xtask/src/main.rs†L240-L330】
+
 Editors and language servers lean on the root `tsconfig.json` paths to follow those archives. If completion stops
 working for `@mui/*` imports, reload your IDE so it re-parses the updated configuration or run
 `pnpm exec tsc --showConfig` to confirm the archived aliases resolve. The canonical implementation lives in the
