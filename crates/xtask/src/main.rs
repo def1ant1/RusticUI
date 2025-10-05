@@ -22,7 +22,11 @@ use rustic_ui_system::{
     theme::{ColorScheme, JoyTheme, Theme},
     theme_provider,
 };
+use serde::Serialize;
 use serde_json::{json, Value};
+use std::collections::BTreeSet;
+use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -125,6 +129,13 @@ enum Commands {
     AccessibilityNightly,
     /// Build the Rust-first documentation site and supporting API docs.
     BuildDocs,
+    /// Assemble the deploy-ready documentation payload.
+    #[command(
+        name = "deploy-docs",
+        about = "Stage API docs, mdBook output, and wasm bundles for hosting.",
+        long_about = "Stage API docs, mdBook output, and wasm bundles for hosting so Netlify/Vercel deploy jobs never shell out to pnpm. The task runs the mdBook + cargo doc pipeline, compiles the curated wasm example groups, and copies the artifacts into `target/deploy/docs` (override via RUSTIC_UI_DEPLOY_OUTPUT). Provide `--dry-run` to validate the orchestration without mutating the deploy directory. Configure RUSTIC_UI_DEPLOY_PROFILE to select a custom Cargo profile and RUSTIC_UI_DEPLOY_GROUPS to narrow the wasm bundles shipped alongside the docs."
+    )]
+    DeployDocs(DeployDocsArgs),
     /// Regenerate RusticUI serialized theme templates and CSS baselines.
     GenerateTheme {
         /// Optional path to a JSON or TOML fixture that overrides
@@ -185,6 +196,7 @@ fn main() -> Result<()> {
         Commands::AccessibilityAudit => accessibility_audit(),
         Commands::AccessibilityNightly => accessibility_nightly(),
         Commands::BuildDocs => build_docs(),
+        Commands::DeployDocs(args) => deploy_docs(args),
         Commands::GenerateTheme {
             overrides,
             format,
@@ -212,6 +224,14 @@ struct SelectionControlsArgs {
     /// Skip web/TypeScript suites (useful when Node is unavailable).
     #[arg(long)]
     skip_web: bool,
+}
+
+/// Configuration flags for the deploy pipeline orchestration.
+#[derive(Args, Debug, Clone, Default)]
+struct DeployDocsArgs {
+    /// Validate the deploy pipeline without mutating the staging directory.
+    #[arg(long)]
+    dry_run: bool,
 }
 
 /// Output encodings supported by the theme generator.
@@ -497,7 +517,7 @@ struct ExamplesArgs {
 }
 
 /// Supported example collections.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, ValueEnum)]
 enum ExampleGroup {
     /// Layout demos that validate multi-surface grid and box flows.
     Layout,
@@ -580,6 +600,16 @@ fn discover_example_crates(examples_root: &Path) -> Result<Vec<ExampleCrate>> {
     Ok(crates)
 }
 
+fn example_group_crates(workspace: &Path, group: ExampleGroup) -> Result<Vec<ExampleCrate>> {
+    match group {
+        ExampleGroup::Layout => layout_examples(workspace),
+        ExampleGroup::Utilities => utilities_examples(workspace),
+        ExampleGroup::Navigation => navigation_examples(workspace),
+        ExampleGroup::Forms => forms_examples(workspace),
+        ExampleGroup::SelectionControls => selection_controls_examples(workspace),
+    }
+}
+
 fn examples(args: ExamplesArgs) -> Result<()> {
     let workspace = workspace_root();
     let build_opts = BuildOptions {
@@ -599,13 +629,7 @@ fn examples(args: ExamplesArgs) -> Result<()> {
         }
     );
 
-    let crates = match args.group {
-        ExampleGroup::Layout => layout_examples(&workspace)?,
-        ExampleGroup::Utilities => utilities_examples(&workspace)?,
-        ExampleGroup::Navigation => navigation_examples(&workspace)?,
-        ExampleGroup::Forms => forms_examples(&workspace)?,
-        ExampleGroup::SelectionControls => selection_controls_examples(&workspace)?,
-    };
+    let crates = example_group_crates(&workspace, args.group)?;
 
     if crates.is_empty() {
         println!(
@@ -1146,6 +1170,355 @@ fn build_docs() -> Result<()> {
     let mut cmd = Command::new("mdbook");
     cmd.arg("build").arg(&book_dir);
     run(cmd)
+}
+
+fn deploy_docs(args: DeployDocsArgs) -> Result<()> {
+    let workspace = workspace_root();
+    let output_override = env::var_os("RUSTIC_UI_DEPLOY_OUTPUT").map(PathBuf::from);
+    let deploy_root = output_override
+        .clone()
+        .unwrap_or_else(|| workspace.join("target/deploy/docs"));
+
+    let mut build_opts = BuildOptions::default();
+    match env::var("RUSTIC_UI_DEPLOY_PROFILE") {
+        Ok(profile) => {
+            println!(
+                "[xtask][deploy-docs] using custom Cargo profile `{}` for wasm bundling",
+                profile
+            );
+            build_opts.profile = Some(profile);
+        }
+        Err(env::VarError::NotPresent) => {
+            build_opts.release = true;
+        }
+        Err(err) => {
+            return Err(anyhow!("failed to read RUSTIC_UI_DEPLOY_PROFILE: {}", err));
+        }
+    }
+
+    let groups = resolve_deploy_groups()?;
+    let deploy_label = relative_display(&workspace, &deploy_root);
+    if args.dry_run {
+        println!(
+            "[xtask][deploy-docs] dry-run enabled; staging directory ({}) will remain untouched",
+            deploy_label
+        );
+    } else {
+        if deploy_root.exists() {
+            println!(
+                "[xtask][deploy-docs] clearing existing deploy directory at {}",
+                deploy_label
+            );
+            fs::remove_dir_all(&deploy_root).with_context(|| {
+                format!(
+                    "failed to remove prior deploy directory at {}",
+                    deploy_root.display()
+                )
+            })?;
+        }
+        fs::create_dir_all(&deploy_root).with_context(|| {
+            format!(
+                "failed to create deploy directory at {}",
+                deploy_root.display()
+            )
+        })?;
+    }
+
+    println!("[xtask][deploy-docs] building API docs and mdBook payload");
+    build_docs()?;
+
+    let book_output = workspace.join("docs/rust-book/book");
+    if !book_output.exists() {
+        return Err(anyhow!(
+            "mdBook output missing at {} after build_docs()",
+            book_output.display()
+        ));
+    }
+
+    if args.dry_run {
+        println!(
+            "[xtask][deploy-docs] dry-run: would copy mdBook artifacts from {} to {}",
+            relative_display(&workspace, &book_output),
+            deploy_label
+        );
+    } else {
+        copy_dir_contents(&book_output, &deploy_root).with_context(|| {
+            format!(
+                "failed to copy mdBook output from {} to {}",
+                book_output.display(),
+                deploy_root.display()
+            )
+        })?;
+    }
+
+    let api_docs = workspace.join("target/doc");
+    if api_docs.exists() {
+        let api_dest = deploy_root.join("api");
+        if args.dry_run {
+            println!(
+                "[xtask][deploy-docs] dry-run: would mirror API docs from {} to {}",
+                relative_display(&workspace, &api_docs),
+                relative_display(&workspace, &api_dest)
+            );
+        } else {
+            copy_dir_contents(&api_docs, &api_dest).with_context(|| {
+                format!(
+                    "failed to copy API docs from {} to {}",
+                    api_docs.display(),
+                    api_dest.display()
+                )
+            })?;
+        }
+    } else {
+        println!(
+            "[xtask][deploy-docs] warning: cargo doc output not found at {}; skipping API mirror",
+            api_docs.display()
+        );
+    }
+
+    let wasm_profile_dir = workspace
+        .join("target/wasm32-unknown-unknown")
+        .join(deploy_profile_dir(&build_opts));
+    let wasm_dest = deploy_root.join("wasm");
+    if !args.dry_run {
+        fs::create_dir_all(&wasm_dest).with_context(|| {
+            format!(
+                "failed to create wasm destination directory at {}",
+                wasm_dest.display()
+            )
+        })?;
+    }
+
+    let mut wasm_entries = Vec::new();
+    for group in &groups {
+        println!(
+            "[xtask][deploy-docs] compiling `{}` example group for host + wasm targets",
+            group.as_str()
+        );
+        let group_args = ExamplesArgs {
+            group: *group,
+            release: build_opts.profile.is_none() && build_opts.release,
+            profile: build_opts.profile.clone(),
+        };
+        examples(group_args)?;
+
+        let crates = example_group_crates(&workspace, *group)?;
+        for example in crates {
+            let artifacts = locate_wasm_artifacts(&wasm_profile_dir, &example)?;
+            let mut recorded = Vec::new();
+            for artifact in artifacts {
+                if args.dry_run {
+                    println!(
+                        "[xtask][deploy-docs] dry-run: would copy wasm artifact {}",
+                        relative_display(&workspace, &artifact)
+                    );
+                } else {
+                    let destination = wasm_dest.join(artifact.file_name().ok_or_else(|| {
+                        anyhow!("wasm artifact {} is missing a filename", artifact.display())
+                    })?);
+                    if let Some(parent) = destination.parent() {
+                        fs::create_dir_all(parent).with_context(|| {
+                            format!(
+                                "failed to create wasm parent directory at {}",
+                                parent.display()
+                            )
+                        })?;
+                    }
+                    fs::copy(&artifact, &destination).with_context(|| {
+                        format!(
+                            "failed to copy wasm artifact {} to {}",
+                            artifact.display(),
+                            destination.display()
+                        )
+                    })?;
+                    println!(
+                        "[xtask][deploy-docs] staged wasm artifact {}",
+                        relative_display(&workspace, &destination)
+                    );
+                }
+                recorded.push(relative_display(&workspace, &artifact));
+            }
+            wasm_entries.push(DeployWasmEntry {
+                example: example.name,
+                files: recorded,
+            });
+        }
+    }
+
+    let summary = DeploySummary {
+        output_dir: deploy_label,
+        profile: deploy_profile_dir(&build_opts),
+        dry_run: args.dry_run,
+        wasm_examples: wasm_entries,
+    };
+
+    if args.dry_run {
+        println!(
+            "[xtask][deploy-docs] dry-run summary: {}",
+            serde_json::to_string_pretty(&summary)?
+        );
+    } else {
+        let summary_path = deploy_root.join("deploy-summary.json");
+        fs::write(&summary_path, serde_json::to_string_pretty(&summary)?).with_context(|| {
+            format!(
+                "failed to write deploy summary at {}",
+                summary_path.display()
+            )
+        })?;
+        println!(
+            "[xtask][deploy-docs] wrote deploy summary to {}",
+            relative_display(&workspace, &summary_path)
+        );
+    }
+
+    println!(
+        "[xtask][deploy-docs] completed documentation deploy pipeline for {} group(s)",
+        groups.len()
+    );
+
+    Ok(())
+}
+
+fn deploy_profile_dir(options: &BuildOptions) -> String {
+    if let Some(profile) = &options.profile {
+        profile.clone()
+    } else if options.release {
+        "release".to_string()
+    } else {
+        "debug".to_string()
+    }
+}
+
+fn resolve_deploy_groups() -> Result<Vec<ExampleGroup>> {
+    match env::var("RUSTIC_UI_DEPLOY_GROUPS") {
+        Ok(value) => {
+            let mut selected = BTreeSet::new();
+            for token in value.split(',') {
+                let trimmed = token.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+
+                let group = ExampleGroup::from_str(trimmed, true).map_err(|_| {
+                    let valid = ExampleGroup::value_variants()
+                        .iter()
+                        .filter_map(|variant| variant.to_possible_value())
+                        .map(|value| value.get_name().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    anyhow!(
+                        "invalid ExampleGroup `{}` supplied via RUSTIC_UI_DEPLOY_GROUPS. Valid values: {}",
+                        trimmed,
+                        valid
+                    )
+                })?;
+
+                selected.insert(group);
+            }
+
+            if selected.is_empty() {
+                Ok(default_deploy_groups())
+            } else {
+                Ok(selected.into_iter().collect())
+            }
+        }
+        Err(env::VarError::NotPresent) => Ok(default_deploy_groups()),
+        Err(err) => Err(anyhow!("failed to read RUSTIC_UI_DEPLOY_GROUPS: {}", err)),
+    }
+}
+
+fn default_deploy_groups() -> Vec<ExampleGroup> {
+    vec![
+        ExampleGroup::Layout,
+        ExampleGroup::Utilities,
+        ExampleGroup::Navigation,
+        ExampleGroup::Forms,
+        ExampleGroup::SelectionControls,
+    ]
+}
+
+fn copy_dir_contents(source: &Path, destination: &Path) -> Result<()> {
+    for entry in WalkDir::new(source) {
+        let entry = entry?;
+        let path = entry.path();
+        let relative = match path.strip_prefix(source) {
+            Ok(rel) => rel,
+            Err(_) => continue,
+        };
+
+        if relative.as_os_str().is_empty() {
+            continue;
+        }
+
+        let target = destination.join(relative);
+        if entry.file_type().is_dir() {
+            fs::create_dir_all(&target)?;
+        } else {
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(path, &target)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn locate_wasm_artifacts(target_root: &Path, example: &ExampleCrate) -> Result<Vec<PathBuf>> {
+    if !target_root.exists() {
+        return Err(anyhow!(
+            "wasm target directory {} does not exist",
+            target_root.display()
+        ));
+    }
+
+    let crate_stem = example.name.replace('-', "_");
+    let mut artifacts: BTreeSet<PathBuf> = BTreeSet::new();
+    let direct = target_root.join(format!("{}.wasm", crate_stem));
+    if direct.exists() {
+        artifacts.insert(direct);
+    }
+
+    let deps_dir = target_root.join("deps");
+    if deps_dir.exists() {
+        for entry in fs::read_dir(&deps_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension() != Some(OsStr::new("wasm")) {
+                continue;
+            }
+
+            if let Some(stem) = path.file_stem().and_then(|stem| stem.to_str()) {
+                if stem.starts_with(&crate_stem) {
+                    artifacts.insert(path);
+                }
+            }
+        }
+    }
+
+    if artifacts.is_empty() {
+        return Err(anyhow!(
+            "unable to locate wasm artifact for example `{}` under {}",
+            example.name,
+            target_root.display()
+        ));
+    }
+
+    Ok(artifacts.into_iter().collect())
+}
+
+#[derive(Serialize)]
+struct DeploySummary {
+    output_dir: String,
+    profile: String,
+    dry_run: bool,
+    wasm_examples: Vec<DeployWasmEntry>,
+}
+
+#[derive(Serialize)]
+struct DeployWasmEntry {
+    example: String,
+    files: Vec<String>,
 }
 
 fn coverage() -> Result<()> {
