@@ -4,10 +4,11 @@
 #
 # This script keeps the selection control smoke tests and dev servers aligned
 # across the Rust (Dioxus, Sycamore, Yew) and React implementations.  CI, local
-# `just` recipes, and Playwright harnesses all shell out to this file so changes
-# to toolchain provisioning or analytics logging only need to land in a single
-# location.  The design mirrors enterprise automation pipelines where a small
-# number of well-documented entry points orchestrate the full fleet of demos.
+# `just` recipes, and the Rust-native browser harness all shell out to this file
+# so changes to toolchain provisioning or analytics logging only need to land in
+# a single location.  The design mirrors enterprise automation pipelines where a
+# small number of well-documented entry points orchestrate the full fleet of
+# demos.
 #
 # The helper wires in three core capabilities:
 #   * Toolchain provisioning via `ensure-example-toolchain.sh`.
@@ -253,8 +254,7 @@ run_react_smoke() {
     echo "[selection-controls][react] running Jest telemetry assertions" >&2
     npm run test:jest -- --runInBand
     popd >/dev/null
-    echo "[selection-controls][react] launching Playwright telemetry verification" >&2
-    node "${REPO_ROOT}/examples/scripts/selection-controls-playwright.mjs" --framework react
+    echo "[selection-controls][react] telemetry selectors validated via 'cargo xtask selection-controls --framework react'" >&2
 }
 
 serve_dioxus() {

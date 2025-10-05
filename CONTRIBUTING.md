@@ -196,7 +196,7 @@ Use the automation shipped with each example to avoid manual setup:
 - Update the component's story/demo to reflect new props or behaviors.
 - Document breaking changes in `CHANGELOG.md` under a new dated section.
 - Verify accessibility via `cargo xtask accessibility-audit`.
-- Exercise the full selection-control matrix with `cargo xtask selection-controls --skip-web` whenever you touch telemetry, SSR rendering, or Joy Select adapters. The flag keeps the default run Rust-only; consult [`docs/testing/selection-controls.md`](docs/testing/selection-controls.md) for guidance on reenabling the archived Playwright suites when auditing legacy behaviour.【F:crates/xtask/src/main.rs†L1-L120】【F:docs/testing/selection-controls.md†L1-L120】
+- Exercise the full selection-control matrix with `cargo xtask selection-controls --skip-web` whenever you touch telemetry, SSR rendering, or Joy Select adapters. Drop the flag to launch the Rust-native headless Chrome harness; [`docs/testing/selection-controls.md`](docs/testing/selection-controls.md) outlines the CI profile and the optional dry-run environment variables used by integration tests.【F:crates/xtask/src/main.rs†L1-L120】【F:crates/xtask/src/selection_controls_web.rs†L1-L420】【F:docs/testing/selection-controls.md†L1-L120】
 
 ## Release cadence and backlog
 

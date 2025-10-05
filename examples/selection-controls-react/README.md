@@ -17,7 +17,7 @@ Install the following tools before running commands:
 - [`wasm-bindgen-cli`](https://github.com/rustwasm/wasm-bindgen) (installed by `wasm-pack`)
 - Node.js 20+ and npm 9+
 - [`just`](https://github.com/casey/just) (optional but recommended for automation)
-- Chrome (for Playwright smoke tests)
+- Chrome (for the Rust-driven headless smoke tests)
 
 ## Project Layout
 
@@ -39,7 +39,7 @@ single command.
 ```sh
 just bootstrap       # Install npm dependencies and ensure wasm target is present
 just build           # Build Rust (host + wasm) and the React bundle
-just test            # Run Rust tests, wasm-bindgen tests, Jest unit tests, and Playwright smoke tests
+just test            # Run Rust tests, wasm-bindgen tests, Jest unit tests, and the Rust headless smoke tests
 just dev             # Launch wasm-pack in watch mode alongside the Vite dev server
 just automation-smoke # Invoke the shared selection-controls-smoke.sh harness for CI reuse
 just automation-serve # Start the central serve helper (override port via SELECTION_CONTROLS_REACT_PORT)
@@ -53,8 +53,8 @@ When `just` is unavailable you can rely on the npm scripts directly:
 npm install          # Install JS dependencies in `examples/selection-controls-react`
 npm run build:wasm   # Compile the Rust crate to WebAssembly
 npm run build:web    # Build the React bundle after wasm output exists
-npm run test         # Execute Rust, wasm, Jest, and Playwright smoke tests
-npm run test:e2e     # Programmatic Playwright harness via selection-controls-playwright.mjs
+npm run test         # Execute Rust, wasm, Jest, and the Rust-native smoke tests
+npm run test:e2e     # Delegates to `cargo xtask selection-controls --framework react`
 npm run dev          # Concurrent wasm-pack watcher + Vite dev server
 ```
 
@@ -65,9 +65,9 @@ The example provides multiple layers of assurance:
 - **Rust (host)** – Ensures telemetry ordering and invariants are deterministic.
 - **Rust (wasm)** – Uses `wasm-bindgen-test` for smoke testing under the browser runtime.
 - **React unit tests** – Validates hydration and telemetry rendering with Jest + Testing Library.
-- **Playwright** – Exercises the full stack in a headless Chromium session via
-  `examples/scripts/selection-controls-playwright.mjs`, ensuring automation hooks
-  fire as expected.
+- **Rust headless harness** – Exercises the full stack in a headless Chromium
+  session via `cargo xtask selection-controls`, ensuring automation hooks fire
+  as expected without a Node dependency.
 
 Each layer feeds the same telemetry delegate, guaranteeing parity across environments.
 
@@ -84,10 +84,10 @@ The npm scripts are designed for CI servers:
 
 - `npm run build:web` – Generates both wasm artifacts and the web bundle suitable for publishing.
 - `npm run test:wasm` – Executes wasm-bindgen tests headlessly in Chrome.
-- `npm run test:web` – Chains Jest and Playwright tests after wasm compilation.
-- `npm run test:e2e` – Delegates to `examples/scripts/selection-controls-playwright.mjs`
-  so CI, local developers, and `cargo xtask selection-controls` all share the same
-  orchestration logic.
+- `npm run test:web` – Chains Jest and the Rust-native automation harness after
+  wasm compilation.
+- `npm run test:e2e` – Delegates to `cargo xtask selection-controls` so CI and
+  local developers share the same orchestration logic.
 
 Combine the scripts in pipelines as needed; the `Justfile` shows a canonical sequence.
 
@@ -95,7 +95,8 @@ Combine the scripts in pipelines as needed; the `Justfile` shows a canonical seq
 
 - Ensure `wasm-pack` is on your `PATH`. The automation scripts fail fast with descriptive errors if
   it is missing.
-- If Playwright cannot launch a browser, install dependencies with `npx playwright install`.
+- If Chrome is missing locally, set `RUSTICUI_SELECTION_CONTROLS_CHROME` to the
+  desired binary path so the harness can launch headless sessions.
 - Clear stale wasm output via `npm run clean` when switching between debug and release builds.
 
 Happy hacking! The source code is intentionally annotated so new teammates can understand the

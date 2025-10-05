@@ -23,12 +23,12 @@ This sequence mirrors CI without shelling through pnpm:
 
 1. `cargo xtask fmt --check` enforces Rust formatting across the workspace.
 2. `cargo xtask clippy` denies warnings so lint regressions surface immediately.
-3. `cargo xtask selection-controls --skip-web` exercises the Material headless suites and the example smoke harness via Rust binaries only. Re-enable the archived Playwright runs by dropping `--skip-web` when you intentionally audit the legacy Joy adapters under Node.【F:crates/xtask/src/main.rs†L1-L120】
+3. `cargo xtask selection-controls --skip-web` exercises the Material headless suites and the example smoke harness while skipping the new Chromium automation layer. Drop `--skip-web` to execute the Rust-driven browser harness that replaced the historical Node pipeline.【F:crates/xtask/src/main.rs†L1-L120】【F:crates/xtask/src/selection_controls_web.rs†L1-L420】
 4. `cargo xtask build-docs` rebuilds the mdBook export that powers Netlify/Vercel previews.
 
 The historical pnpm aggregator lives in [`archives/tooling/node-workspace/`](../../archives/tooling/node-workspace/README.md) for reference. Keep it archived—`cargo xtask verify-toolchain` fails builds if a replacement manifest escapes the quarantine.【F:archives/tooling/node-workspace/README.md†L1-L11】【F:crates/xtask/src/main.rs†L1-L120】【F:crates/xtask/src/main.rs†L240-L330】
 
-Need to audit the legacy Joy Playwright smoke tests? Run the same command without `--skip-web` after bootstrapping the archived Node harness in an isolated environment:
+Need to audit the DOM automation end-to-end? Run the same command without `--skip-web` to execute the headless Chrome harness entirely in Rust:
 
 ```bash
 cargo xtask selection-controls

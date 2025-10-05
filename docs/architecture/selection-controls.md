@@ -154,8 +154,9 @@ adapter-specific glue code:
 ## Automation + CI guardrails
 
 - **`cargo xtask selection-controls`** – Executes the Rust integration tests,
-  invokes the central smoke script across every framework, and triggers the
-  Playwright runner so both Rust and JavaScript adapters stay in lockstep.【F:crates/xtask/src/main.rs†L163-L2381】
+  invokes the central smoke script across every framework, and then runs the
+  Rust-native headless Chrome harness so both Rust and JavaScript adapters stay
+  in lockstep without a Node dependency.【F:crates/xtask/src/main.rs†L163-L2381】【F:crates/xtask/src/selection_controls_web.rs†L1-L420】
 - **`examples/scripts/selection-controls-smoke.sh`** – Annotated harness that
   provisions toolchains, prints the canonical automation IDs, and forwards to
   framework-specific commands. Keep its notes aligned with adapter comments so
