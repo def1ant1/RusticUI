@@ -4,10 +4,9 @@
   "private": true,
   "scripts": {
     "//": "Rust-first automation now lives in cargo xtask. See CONTRIBUTING.md for the supported commands.",
+    "// docs": "Documentation pipelines now run via cargo xtask docs-build, cargo xtask docs-test, and cargo xtask docs-package. Keep this archive immutable and lean on those commands instead of wiring new npm scripts.",
     "lint": "cargo xtask fmt --check && cargo xtask clippy",
     "test": "cargo xtask test",
-    "docs:build": "cargo xtask docs-package",
-    "selection:ci": "cargo xtask selection-controls",
-    "selection:verify": "pnpm lint && pnpm run selection:ci && pnpm --filter docs run build && cargo xtask docs-package"
+    "selection:ci": "cargo xtask selection-controls"
   }
 }

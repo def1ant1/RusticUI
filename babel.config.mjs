@@ -51,7 +51,8 @@ export default function getBabelConfig(api) {
   const defaultAlias = {
     // Route Babel's module resolver through the archived packages so Jest and tooling reuse the
     // frozen JavaScript sources instead of the Rust-first crates. The Rust implementations live in
-    // `crates/rustic-ui-*` and ship typed shims via `cargo xtask docs-package` before publishing.
+    // `crates/rustic-ui-*` and surface typed shims once `cargo xtask docs-build`, `cargo xtask docs-test`,
+    // and `cargo xtask docs-package` finish hardening the release prior to publishing.
     '@mui/material': resolveArchivedMuiAlias('@mui/material'),
     '@mui/docs': resolveArchivedMuiAlias('@mui/docs'),
     '@mui/icons-material': resolveArchivedMuiAlias('@mui/icons-material', {
