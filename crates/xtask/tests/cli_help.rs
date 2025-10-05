@@ -142,6 +142,27 @@ fn examples_help_highlights_layout_group() -> Result<()> {
 }
 
 #[test]
+fn deploy_docs_help_mentions_env_overrides() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("deploy-docs")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Stage API docs"))
+        .stdout(predicate::str::contains("RUSTIC_UI_DEPLOY_OUTPUT"))
+        .stdout(predicate::str::contains("--dry-run"));
+
+    Ok(())
+}
+
+#[test]
 fn accessibility_audit_help_mentions_config_manifest() -> Result<()> {
     let workspace = workspace_root();
     let mut cmd = Command::new("cargo");

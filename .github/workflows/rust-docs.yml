@@ -23,20 +23,16 @@ jobs:
         with:
           toolchain: stable
           profile: minimal
+      - name: Install wasm32 target
+        run: rustup target add wasm32-unknown-unknown
       - uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: '0.4.36'
-      - name: Build API docs
-        run: cargo xtask doc
-      - name: Build mdBook guide
-        run: |
-          mdbook build docs/rust-book
-          mkdir -p public/api
-          cp -r target/doc/* public/api/
-          cp -r docs/rust-book/book/* public/
+      - name: Build deployable documentation payload
+        run: cargo xtask deploy-docs
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: target/deploy/docs
   deploy:
     if: github.ref == 'refs/heads/main'
     needs: docs

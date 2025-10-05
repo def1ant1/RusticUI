@@ -38,6 +38,27 @@ Before starting large efforts, open a GitHub discussion or issue so the maintain
 
 All repetitive chores are encapsulated inside the `Makefile` or `cargo xtask`. Prefer these entry points over ad-hoc scripts.
 
+### Documentation hosting pipeline
+
+The documentation site, API reference, and wasm demos ship through `cargo xtask deploy-docs`. The command orchestrates the
+entire deploy flow—running `cargo doc`, invoking `mdbook`, compiling the curated example groups for `wasm32-unknown-unknown`,
+and copying every artifact into `target/deploy/docs` alongside a machine-readable `deploy-summary.json` manifest. Hosting
+integrations (Netlify, Vercel, GitHub Pages, internal CDNs) can point at the staged directory without invoking pnpm or custom
+shell scripts.
+
+Key flags and environment variables:
+
+- `cargo xtask deploy-docs --dry-run` – Executes the full pipeline without mutating `target/deploy/docs`. CI runs this mode on
+  pull requests to guarantee the deploy contract stays healthy even when we do not publish artifacts.
+- `RUSTIC_UI_DEPLOY_OUTPUT` – Override the staging directory when mirroring the docs into bespoke artifacts buckets.
+- `RUSTIC_UI_DEPLOY_PROFILE` – Pick a Cargo profile for wasm builds. By default the task uses `--release` to ensure deterministic
+  performance characteristics.
+- `RUSTIC_UI_DEPLOY_GROUPS` – Comma-separated list of example groups (`layout`, `utilities`, `navigation`, `forms`,
+  `selection-controls`) to limit which wasm bundles are published.
+
+The root `Makefile` exposes the same workflow through `make deploy-docs` for organisations that centralise automation with make.
+Invoke it locally before modifying Netlify/Vercel configuration so reviewers can see the staged output.
+
 ### Archived JavaScript workspace
 
 Legacy Material UI sources now live under `archives/mui-packages/`. Each folder is a symlink back to
