@@ -1,0 +1,56 @@
+[package]
+name = "rustic-docs"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+description = "Documentation-first Leptos showcase wiring RusticUI theming across CSR/SSR/static builds."
+authors = ["RusticUI Automation <automation@apotheon.ai>"]
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "rustic-docs"
+path = "src/main.rs"
+
+[[bin]]
+name = "rustic-docs-server"
+path = "src/server.rs"
+required-features = ["ssr"]
+
+[features]
+default = ["csr", "ssr"]
+csr = ["leptos/csr", "leptos_router/csr"]
+hydrate = ["leptos/hydrate", "leptos_router/hydrate"]
+ssr = [
+  "leptos/ssr",
+  "leptos_router/ssr",
+  "dep:axum",
+  "dep:leptos_axum",
+  "dep:tokio",
+  "dep:tracing-subscriber",
+]
+static = ["ssr"]
+
+[dependencies]
+leptos.workspace = true
+leptos_router.workspace = true
+leptos_config = { version = "=0.6.12" }
+rustic-ui-system = { path = "../rustic-ui-system", features = ["leptos"] }
+rustic-ui-design-tokens = { path = "../rustic-ui-design-tokens" }
+axum = { version = "0.7", optional = true, features = ["macros", "tokio"] }
+leptos_axum = { version = "=0.6.12", optional = true }
+leptos_meta = { version = "=0.6.12", default-features = false }
+tokio = { workspace = true, optional = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"], optional = true }
+serde.workspace = true
+serde_json.workspace = true
+thiserror = "1.0"
+
+[dev-dependencies]
+leptos = { workspace = true, features = ["ssr"] }
+leptos_router = { workspace = true, features = ["ssr"] }
+
+[package.metadata.docs]
+readme = "README.md"
