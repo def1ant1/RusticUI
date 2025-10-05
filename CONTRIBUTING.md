@@ -40,24 +40,23 @@ All repetitive chores are encapsulated inside the `Makefile` or `cargo xtask`. P
 
 ### Documentation hosting pipeline
 
-The documentation site, API reference, and wasm demos ship through `cargo xtask deploy-docs`. The command orchestrates the
-entire deploy flow—running `cargo doc`, invoking `mdbook`, compiling the curated example groups for `wasm32-unknown-unknown`,
-and copying every artifact into `target/deploy/docs` alongside a machine-readable `deploy-summary.json` manifest. Hosting
-integrations (Netlify, Vercel, GitHub Pages, internal CDNs) can point at the staged directory without invoking pnpm or custom
-shell scripts.
+The documentation site, API reference, and wasm demos ship through the new docs subcommands exposed by `cargo xtask`. The
+pipeline splits into explicit `docs-build`, `docs-test`, and `docs-package` phases so contributors and CI can validate each
+stage independently before staging artifacts in `target/deploy/docs`. Hosting integrations (Netlify, Vercel, GitHub Pages,
+internal CDNs) point at that directory without invoking pnpm or bespoke shell scripts.
 
 Key flags and environment variables:
 
-- `cargo xtask deploy-docs --dry-run` – Executes the full pipeline without mutating `target/deploy/docs`. CI runs this mode on
-  pull requests to guarantee the deploy contract stays healthy even when we do not publish artifacts.
-- `RUSTIC_UI_DEPLOY_OUTPUT` – Override the staging directory when mirroring the docs into bespoke artifacts buckets.
-- `RUSTIC_UI_DEPLOY_PROFILE` – Pick a Cargo profile for wasm builds. By default the task uses `--release` to ensure deterministic
-  performance characteristics.
-- `RUSTIC_UI_DEPLOY_GROUPS` – Comma-separated list of example groups (`layout`, `utilities`, `navigation`, `forms`,
-  `selection-controls`) to limit which wasm bundles are published.
+- `cargo xtask docs-build` – Compiles the docs server binary and wasm bundle in parallel, reusing the shared `CARGO_TARGET_DIR`.
+- `cargo xtask docs-test` – Runs the wasm smoke tests in headless Chromium via Playwright. Ensure `npx playwright install --with-deps chromium` and `wasm-pack` are available locally.
+- `cargo xtask docs-package --dry-run` – Executes the release packaging flow without mutating the canonical export directory. Useful in CI pull requests and local spot checks.
+- `RUSTIC_DOCS_EXPORT_DIR` – Override the default staging directory (`target/deploy/docs`).
+- `RUSTIC_UI_DEPLOY_PROFILE` / `RUSTIC_UI_DEPLOY_GROUPS` – Remain available when invoking the legacy `cargo xtask deploy-docs`
+  wrapper for teams that have not yet migrated bespoke automation.
 
-The root `Makefile` exposes the same workflow through `make deploy-docs` for organisations that centralise automation with make.
-Invoke it locally before modifying Netlify/Vercel configuration so reviewers can see the staged output.
+The root `Makefile` exposes matching entry points via `make docs-build`, `make docs-test`, and `make docs-package` (alongside the
+backward-compatible `make deploy-docs`). Invoke them locally before modifying Netlify/Vercel configuration so reviewers can
+inspect the staged output.
 
 ### Archived JavaScript workspace
 

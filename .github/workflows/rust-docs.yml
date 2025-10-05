@@ -23,13 +23,24 @@ jobs:
         with:
           toolchain: stable
           profile: minimal
-      - name: Install wasm32 target
-        run: rustup target add wasm32-unknown-unknown
+          target: wasm32-unknown-unknown
+      - name: Install wasm-bindgen CLI
+        run: cargo install wasm-bindgen-cli --locked
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: '0.4.36'
-      - name: Build deployable documentation payload
-        run: cargo xtask deploy-docs
+      - name: Provision Playwright Chromium runtime
+        run: npx playwright install --with-deps chromium
+      - name: Build Rustic docs host + wasm bundle
+        run: cargo xtask docs-build
+      - name: Run Rustic docs wasm smoke tests
+        run: cargo xtask docs-test
+      - name: Validate docs packaging pipeline (dry-run)
+        run: cargo xtask docs-package --dry-run
+      - name: Assemble deploy-ready docs artifacts
+        run: cargo xtask docs-package
       - uses: actions/upload-pages-artifact@v3
         with:
           path: target/deploy/docs

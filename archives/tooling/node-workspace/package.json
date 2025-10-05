@@ -6,8 +6,8 @@
     "//": "Rust-first automation now lives in cargo xtask. See CONTRIBUTING.md for the supported commands.",
     "lint": "cargo xtask fmt --check && cargo xtask clippy",
     "test": "cargo xtask test",
-    "docs:build": "cargo xtask build-docs",
+    "docs:build": "cargo xtask docs-package",
     "selection:ci": "cargo xtask selection-controls",
-    "selection:verify": "pnpm lint && pnpm run selection:ci && pnpm --filter docs run build && cargo xtask build-docs"
+    "selection:verify": "pnpm lint && pnpm run selection:ci && pnpm --filter docs run build && cargo xtask docs-package"
   }
 }

@@ -4,12 +4,12 @@
 
   # Build command.
   #
-  # Netlify now calls the Rust-native deployment pipeline which stitches the
+  # Netlify now shells through the Rust-native packaging pipeline which stitches the
   # cargo doc output, mdBook site, and release wasm bundles into
-  # `target/deploy/docs`. The `deploy-docs` task executes every prerequisite
+  # `target/deploy/docs`. The `docs-package` task executes every prerequisite
   # command (including wasm compilation) so the hosting environment only needs
-  # the Rust toolchain plus mdBook.
-  command = "cargo xtask deploy-docs"
+  # the Rust toolchain plus mdBook and Playwright's Chromium runtime.
+  command = "cargo xtask docs-package"
 
 [[plugins]]
   package = "./packages/netlify-plugin-cache-docs"

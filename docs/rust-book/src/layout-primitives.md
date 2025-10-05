@@ -78,7 +78,7 @@ Run the standard workspace automation after migrating components:
 - `INSTA_UPDATE=always cargo test -p rustic-ui-headless --test layout_primitives`
   and `INSTA_UPDATE=always cargo test -p rustic-ui-material --test layout_renderers`
   – refresh responsive snapshots and confirm no regressions.
-- `cargo xtask build-docs` – rebuilds the Rust book and ensures the new guidance
+- `cargo xtask docs-package` – rebuilds the Rust book and ensures the new guidance
   ships with the documentation site.【F:crates/xtask/src/main.rs†L780-L832】
 
 Following the sequence above keeps server-rendered markup, hydration output, and

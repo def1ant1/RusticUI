@@ -142,6 +142,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: wasm32-unknown-unknown
       # Refresh icon bindings from upstream Material icons
       - run: cargo xtask icon-update
       # Rebuild Material parity snapshots to keep docs in sync
@@ -162,7 +163,11 @@ jobs:
       - name: Ensure Joy parity report committed
         run: git diff --exit-code docs/joy-component-parity.md
       # Ensure the Rust-first documentation stack builds cleanly
-      - run: cargo xtask build-docs
+      - name: Install wasm-bindgen CLI
+        run: cargo install wasm-bindgen-cli --locked
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run: cargo xtask docs-build
       # Assemble distributable icon bundles for compatibility consumers
       - run: cargo xtask icons-bundle --compat
       # Assemble distributable theme bundles for compatibility consumers
@@ -189,6 +194,9 @@ jobs:
   selection-controls:
     name: Selection Controls Matrix
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        browser: [chromium]
     steps:
       # Checkout the repository to access the Rust test suites
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -200,6 +208,12 @@ jobs:
       # Ensure mdBook is available for the Rust-first documentation build invoked by cargo xtask
       - name: Install mdBook
         run: cargo install mdbook --locked
+      - name: Install wasm-bindgen CLI
+        run: cargo install wasm-bindgen-cli --locked
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Install Playwright dependencies (${{ matrix.browser }})
+        run: npx playwright install --with-deps ${{ matrix.browser }}
       # Enforce the Rust-only toolchain expectations before running expensive work
       - name: Verify Rust-first toolchain guardrails
         run: cargo xtask verify-toolchain
@@ -209,8 +223,12 @@ jobs:
         run: cargo xtask clippy
       - name: Run Rust selection control suites
         run: cargo xtask selection-controls --skip-web
-      - name: Build documentation book
-        run: cargo xtask build-docs
+      - name: Build docs host + wasm bundle
+        run: cargo xtask docs-build
+      - name: Run docs wasm smoke tests (${{ matrix.browser }})
+        run: cargo xtask docs-test
+      - name: Validate docs packaging flow
+        run: cargo xtask docs-package --dry-run
 
   select-menu-examples:
     name: Select Menu Example Smoke Tests
