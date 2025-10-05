@@ -16,7 +16,7 @@ function resolveArchivedMuiAlias(alias, subPath = 'src') {
   if (!fs.existsSync(candidate)) {
     throw new Error(
       `Unable to resolve archived alias for ${alias}. Expected ${candidate} to exist.\n` +
-        'Run `cargo xtask docs-package` to regenerate the Rust-owned shims if the archive moved.',
+        'Run `cargo xtask docs-build`, `cargo xtask docs-test`, and `cargo xtask docs-package` to refresh the Rust-owned shims if the archive moved.',
     );
   }
 
@@ -173,7 +173,8 @@ module.exports = function setKarmaConfig(config) {
                     {
                       alias: {
                         // all packages in this monorepo. The canonical implementations are Rust crates
-                        // (`crates/rustic-ui-*`) that surface typed shims via `cargo xtask docs-package`. Karma
+                        // (`crates/rustic-ui-*`) that surface typed shims after `cargo xtask docs-build`, `cargo xtask docs-test`,
+                        // and `cargo xtask docs-package` harden the supply chain. Karma
                         // continues to transpile the archived JavaScript snapshots for regression parity.
                         '@mui/material': resolveArchivedMuiAlias('@mui/material'),
                         '@mui/docs': resolveArchivedMuiAlias('@mui/docs'),
