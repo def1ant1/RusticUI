@@ -43,6 +43,7 @@ members = [
     "crates/rustic-ui-icons-material",
     "crates/rustic-ui-design-tokens",
     "crates/rustic-ui-utils",
+    "crates/rustic-docs",
     "crates/xtask",
     "tools/material-parity",
     "tools/joy-parity",
@@ -102,8 +103,8 @@ license = "MIT OR Apache-2.0"
 # Crates may mark them as optional within their own manifests to keep
 # compile times low and enable only what they need.
 wasm-bindgen = "0.2"
-leptos = { version = "0.6", default-features = false, features = ["csr", "ssr"] }
-leptos_router = { version = "0.6", default-features = false, features = ["csr", "ssr"] }
+leptos = { version = "=0.6.12", default-features = false, features = ["csr", "ssr"] }
+leptos_router = { version = "=0.6.12", default-features = false, features = ["csr", "ssr"] }
 yew = { version = "0.21", features = ["csr", "ssr"], default-features = false }
 dioxus = { version = "0.4", default-features = false }
 dioxus-web = { version = "0.4", default-features = false }
