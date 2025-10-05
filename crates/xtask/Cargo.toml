@@ -21,6 +21,8 @@ pulldown-cmark = { version = "0.9", default-features = false, features = ["simd"
 swc_common = { version = "14.0.4" }
 swc_ecma_ast = { version = "15.0.0", features = ["serde"] }
 swc_ecma_parser = { version = "24.0.1", features = ["typescript"] }
+headless_chrome = { version = "1.0.18" }
+ureq = { version = "2.9", features = ["json"] }
 
 [dev-dependencies]
 assert_cmd = "2"

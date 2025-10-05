@@ -8,6 +8,7 @@
 use anyhow::Result;
 use assert_cmd::Command;
 use predicates::prelude::*;
+use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tempfile::tempdir;
@@ -141,6 +142,72 @@ fn selection_controls_manifest_gaps_fail_loudly() -> Result<()> {
             "selection control example `selection-controls-leptos` manifest missing",
         ));
     }
+
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct HarnessEvent {
+    framework: String,
+    selectors: Vec<HarnessSelector>,
+    status: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct HarnessSelector {
+    key: String,
+    #[serde(rename = "automation_id")]
+    automation_id: String,
+}
+
+#[test]
+fn selection_controls_rust_harness_covers_full_matrix() -> Result<()> {
+    let workspace = workspace_root();
+    let audit_dir = tempdir()?;
+    let audit_path = audit_dir.path().join("audit.jsonl");
+
+    let mut cmd = Command::cargo_bin("xtask")?;
+    cmd.current_dir(&workspace)
+        .arg("selection-controls")
+        .arg("--skip-rust")
+        .env("RUSTICUI_SELECTION_CONTROLS_SKIP_SERVER", "1")
+        .env("RUSTICUI_SELECTION_CONTROLS_SKIP_BROWSER", "1")
+        .env("RUSTICUI_SELECTION_CONTROLS_AUDIT_LOG", &audit_path);
+
+    cmd.assert().success();
+
+    let log = fs::read_to_string(&audit_path)?;
+    let mut frameworks = Vec::new();
+    for line in log.lines() {
+        let event: HarnessEvent = serde_json::from_str(line)?;
+        frameworks.push(event.framework.clone());
+        assert_eq!(
+            event.status, "skip-server",
+            "dry runs should short-circuit before launching Chrome"
+        );
+
+        // Every selector should carry a fully qualified automation identifier so downstream
+        // analytics and telemetry probes can attach without guessing prefixes.
+        for selector in event.selectors {
+            assert!(
+                selector
+                    .automation_id
+                    .starts_with("automation.selection-controls."),
+                "unexpected automation identifier: {}",
+                selector.automation_id
+            );
+            assert!(!selector.key.is_empty());
+        }
+    }
+
+    frameworks.sort();
+    let expected = vec![
+        "dioxus".to_string(),
+        "react".to_string(),
+        "sycamore".to_string(),
+        "yew".to_string(),
+    ];
+    assert_eq!(frameworks, expected);
 
     Ok(())
 }

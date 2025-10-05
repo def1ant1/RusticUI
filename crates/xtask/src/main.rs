@@ -32,6 +32,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use walkdir::WalkDir;
 
+mod selection_controls_web;
+use selection_controls_web::SelectionControlsHarness;
+
 /// Entry point for the `cargo xtask` command.
 #[derive(Parser)]
 #[command(
@@ -221,9 +224,12 @@ struct SelectionControlsArgs {
     /// Skip Rust-based suites (useful when only running web smoke tests).
     #[arg(long)]
     skip_rust: bool,
-    /// Skip web/TypeScript suites (useful when Node is unavailable).
+    /// Skip the headless browser harness (useful when Chromium is unavailable).
     #[arg(long)]
     skip_web: bool,
+    /// Limit execution to a specific framework (dioxus, sycamore, yew, react).
+    #[arg(long)]
+    framework: Option<String>,
 }
 
 /// Configuration flags for the deploy pipeline orchestration.
@@ -2827,7 +2833,7 @@ fn selection_controls(args: SelectionControlsArgs) -> Result<()> {
         let mut smoke = Command::new(&smoke_script);
         smoke
             .current_dir(&workspace)
-            .arg("all")
+            .arg(args.framework.as_deref().unwrap_or("all"))
             .arg("--mode")
             .arg("smoke");
         run(smoke)?;
@@ -2836,12 +2842,9 @@ fn selection_controls(args: SelectionControlsArgs) -> Result<()> {
     if args.skip_web {
         println!("[xtask][selection-controls] skipping web smoke tests by request");
     } else {
-        let mut node = Command::new("node");
-        node.current_dir(&workspace)
-            .arg(workspace.join("examples/scripts/selection-controls-playwright.mjs"))
-            .arg("--framework")
-            .arg("all");
-        run(node)?;
+        println!("[xtask][selection-controls] launching Rust-native browser automation harness");
+        let harness = SelectionControlsHarness::new(workspace.clone());
+        harness.run(args.framework.as_deref())?;
     }
 
     Ok(())
