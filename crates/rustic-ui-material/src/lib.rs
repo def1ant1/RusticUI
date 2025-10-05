@@ -68,6 +68,8 @@ pub mod popover;
 pub mod popper;
 pub mod portal;
 pub mod radio;
+#[cfg(feature = "feedback")]
+pub mod rating;
 mod render_helpers;
 pub mod select;
 pub mod selection_control;

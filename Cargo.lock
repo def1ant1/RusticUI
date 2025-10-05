@@ -1439,6 +1439,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "feedback-rating-shared"
+version = "0.1.0"
+dependencies = [
+ "rustic-ui-headless",
+ "rustic-ui-material",
+]
+
+[[package]]
 name = "feedback-tooltips"
 version = "0.1.0"
 dependencies = [

@@ -1,0 +1,9 @@
+[package]
+name = "feedback-rating-shared"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+rustic-ui-headless = { path = "../../crates/rustic-ui-headless", features = ["feedback"] }
+rustic-ui-material = { path = "../../crates/rustic-ui-material", features = ["feedback"] }
