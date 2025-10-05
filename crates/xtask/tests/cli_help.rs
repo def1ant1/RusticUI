@@ -142,6 +142,68 @@ fn examples_help_highlights_layout_group() -> Result<()> {
 }
 
 #[test]
+fn docs_build_help_mentions_cache_hint() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("docs-build")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("target/rustic-docs-wasm"))
+        .stdout(predicate::str::contains("CARGO_TARGET_DIR"));
+
+    Ok(())
+}
+
+#[test]
+fn docs_test_help_mentions_playwright() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("docs-test")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("wasm-pack"))
+        .stdout(predicate::str::contains("Playwright"))
+        .stdout(predicate::str::contains("docs-test.log"));
+
+    Ok(())
+}
+
+#[test]
+fn docs_package_help_mentions_export_dir() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("docs-package")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("deploy-ready Rustic docs"))
+        .stdout(predicate::str::contains("RUSTIC_DOCS_EXPORT_DIR"))
+        .stdout(predicate::str::contains("hashes"));
+
+    Ok(())
+}
+
+#[test]
 fn deploy_docs_help_mentions_env_overrides() -> Result<()> {
     let workspace = workspace_root();
     let mut cmd = Command::new("cargo");

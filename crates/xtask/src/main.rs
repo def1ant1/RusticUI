@@ -28,9 +28,12 @@ use std::collections::BTreeSet;
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
+use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tokio::runtime::Builder;
 use walkdir::WalkDir;
+use xtask_docs::{docs_build, docs_package, docs_test};
 
 mod docs_assets;
 mod selection_controls_web;
@@ -111,6 +114,27 @@ enum Commands {
     },
     /// Replace the legacy Node docs scripts with Rust-first automation.
     DocsAssets(DocsAssetsArgs),
+    /// Build the Rustic docs binaries and wasm bundle without packaging.
+    #[command(
+        name = "docs-build",
+        about = "Build the Rustic docs host binary and wasm bundle in parallel.",
+        long_about = "Build the Rustic docs host binary and wasm bundle in parallel while reusing CARGO_TARGET_DIR so local and CI caches stay hot. The helper also runs wasm-bindgen to stage artifacts under target/rustic-docs-wasm, eliminating the need for contributors to remember the exact CLI flags."
+    )]
+    DocsBuild,
+    /// Run the Rustic docs wasm smoke tests in headless Chrome.
+    #[command(
+        name = "docs-test",
+        about = "Execute wasm-pack smoke tests for the Rustic docs bundle.",
+        long_about = "Execute wasm-pack smoke tests for the Rustic docs bundle. Ensure Playwright's Chromium runtime is installed (e.g. via `npx playwright install --with-deps chromium`) before invoking this command locally or in CI. Logs are captured in target/logs/docs-test.log to streamline debugging when headless Chrome fails to start."
+    )]
+    DocsTest,
+    /// Produce a deployable docs payload with SSR + wasm artifacts.
+    #[command(
+        name = "docs-package",
+        about = "Assemble deploy-ready Rustic docs assets.",
+        long_about = "Assemble deploy-ready Rustic docs assets by exporting the SSR snapshot, wasm-bindgen output, and server binary into target/deploy/docs (override via RUSTIC_DOCS_EXPORT_DIR). A JSON manifest describing file hashes is generated so CD pipelines can validate integrity before publishing."
+    )]
+    DocsPackage,
     /// Generate an `lcov.info` report using grcov.
     Coverage,
     /// Execute Criterion benchmarks. Succeeds even if none exist.
@@ -198,6 +222,9 @@ fn main() -> Result<()> {
         Commands::RefreshIcons => refresh_icons(),
         Commands::IconsBundle { compat, out_dir } => icons_bundle(out_dir, compat),
         Commands::DocsAssets(args) => docs_assets(args),
+        Commands::DocsBuild => run_async_task("docs::build", docs_build()),
+        Commands::DocsTest => run_async_task("docs::test", docs_test()),
+        Commands::DocsPackage => run_async_task("docs::package", docs_package()),
         Commands::Coverage => coverage(),
         Commands::Bench => bench(),
         Commands::UpdateComponents => update_components(),
@@ -220,6 +247,28 @@ fn main() -> Result<()> {
         Commands::MaterialParity => material_parity(),
         Commands::JoyParity => joy_parity(),
         Commands::SelectionControls(args) => selection_controls(args),
+    }
+}
+
+fn run_async_task<F>(label: &str, fut: F) -> Result<()>
+where
+    F: Future<Output = Result<()>>,
+{
+    eprintln!("[{label}] starting");
+    let runtime = Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .context("failed to initialize Tokio runtime for docs automation")?;
+    let result = runtime.block_on(fut);
+    match result {
+        Ok(()) => {
+            eprintln!("[{label}] completed");
+            Ok(())
+        }
+        Err(err) => {
+            eprintln!("[{label}] failed: {err:?}");
+            Err(err)
+        }
     }
 }
 

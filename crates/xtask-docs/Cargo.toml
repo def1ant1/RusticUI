@@ -1,0 +1,17 @@
+[package]
+name = "xtask-docs"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+camino.workspace = true
+cargo_metadata.workspace = true
+tokio = { workspace = true, features = ["process", "fs", "io-util", "signal"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+sha2.workspace = true
+hex.workspace = true
+rustic-docs = { path = "../rustic-docs", features = ["ssr"] }
