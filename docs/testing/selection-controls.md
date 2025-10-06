@@ -2,6 +2,12 @@
 
 Enterprise selection controls span both the Rust crates (responsible for SSR and telemetry wiring) and the Joy TypeScript adapters. The test additions in this change set close coverage gaps so that telemetry identifiers, automation IDs, and SSR output remain deterministic across frameworks.
 
+After running the matrix, aggregate the multi-language coverage dashboard via
+`cargo xtask coverage-report` to ensure the Rust, TypeScript, accessibility, and
+visual regression suites all completed. The [coverage overview](coverage-overview.md)
+highlights the thresholds enforced by CI so selection-control maintainers can
+spot missing Playwright snapshots or Vitest skips before release approvals.【F:docs/testing/coverage-overview.md†L1-L72】
+
 ## Test coverage overview
 
 - **Rust SSR + telemetry contract** – `descriptor_merges_telemetry_and_remains_deterministic` validates that the Material descriptor keeps telemetry IDs stable, emits deterministic SSR, and cooperates with the shared `instrument_render` telemetry hooks.【F:crates/rustic-ui-material/tests/selection_control.rs†L1-L129】

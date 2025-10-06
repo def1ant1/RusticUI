@@ -142,6 +142,7 @@ insta = { version = "1.39", features = ["json"], default-features = false }
 camino = "1.1"
 cargo_metadata = "0.18"
 hex = "0.4"
+quick-xml = "0.31"
 
 [profile.dev]
 # Development builds prioritize compile time over runtime performance.

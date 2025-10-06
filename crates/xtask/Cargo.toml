@@ -13,6 +13,7 @@ toml.workspace = true
 rustic-ui-system = { path = "../rustic-ui-system", version = "0.1.0" }
 rustic-ui-design-tokens = { path = "../rustic-ui-design-tokens", version = "0.1.0" }
 walkdir.workspace = true
+quick-xml.workspace = true
 serde = { workspace = true }
 chrono = { workspace = true }
 once_cell = { workspace = true }

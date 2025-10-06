@@ -5,6 +5,12 @@ for every supported framework. This playbook documents the prerequisites,
 commands, and caching strategies required to exercise the verification harness
 before submitting changes.
 
+Pair these steps with the [cross-suite coverage dashboard](coverage-overview.md)
+when preparing release branches. The dashboard captures whether the Rust,
+TypeScript, accessibility, and visual regression suites ran, so quick-start
+owners can confirm their scaffolds remain inside the enterprise guardrails
+before sign-off.【F:docs/testing/coverage-overview.md†L1-L72】
+
 ## Prerequisites
 
 1. Install the latest stable Rust toolchain and add the `wasm32-unknown-unknown`

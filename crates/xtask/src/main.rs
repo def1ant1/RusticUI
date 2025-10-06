@@ -37,10 +37,12 @@ use tokio::runtime::Builder;
 use walkdir::WalkDir;
 use xtask_docs::{docs_build, docs_package, docs_test, DocsPackageOutcome};
 
+mod coverage_report;
 mod dev;
 mod docs_assets;
 mod new_component;
 mod selection_controls_web;
+use coverage_report::{coverage_report, CoverageReportArgs};
 use dev::{dev, DevArgs};
 use docs_assets::{docs_assets, DocsAssetsArgs};
 use new_component::{new_component, NewComponentArgs};
@@ -136,6 +138,8 @@ enum Commands {
     DocsTest,
     /// Generate an `lcov.info` report using grcov.
     Coverage,
+    /// Aggregate multi-language coverage results and publish dashboards.
+    CoverageReport(CoverageReportArgs),
     /// Execute Criterion benchmarks. Succeeds even if none exist.
     Bench,
     /// Regenerate the Rust-native component metadata manifest from TypeScript declarations.
@@ -263,6 +267,7 @@ fn main() -> Result<()> {
         }
         Commands::DocsPackage(args) => docs_package_wrapper(args),
         Commands::Coverage => coverage(),
+        Commands::CoverageReport(args) => coverage_report(args),
         Commands::Bench => bench(),
         Commands::UpdateComponents => update_components(),
         Commands::AccessibilityAudit => accessibility_audit(),
@@ -2731,7 +2736,7 @@ mod component_metadata {
     }
 }
 
-mod accessibility {
+pub(crate) mod accessibility {
     use anyhow::{anyhow, Context, Result};
     use pulldown_cmark::{Event, Options, Parser, Tag};
     use serde::Deserialize;

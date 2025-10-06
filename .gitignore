@@ -29,6 +29,8 @@
 /test/bundling/fixtures/gatsby/.cache
 /test/bundling/fixtures/gatsby/public
 /test/regressions/screenshots
+/test-results/coverage/
+/target/coverage-test/
 /tmp
 .next
 # created by netlify dev (to perform local debug)

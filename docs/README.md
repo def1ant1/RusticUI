@@ -29,6 +29,14 @@ Prefer `cargo xtask dev` when you need both the Next.js docs and the Leptos exam
 launches both servers, wires shared logging to `target/logs/dev.log`, and reuses `target/dev` as the Cargo cache so hot-reload
 iterations stay fast across restarts.
 
+## Coverage and reliability dashboards
+
+- [Cross-suite coverage dashboard](testing/coverage-overview.md) – documents how to
+  generate the aggregated coverage report, thresholds for each suite, and how the
+  `cargo xtask coverage-report` command stitches Rust grcov data together with the
+  Vitest/Playwright pipelines. Pair it with the quick-start verification guide to
+  keep docs demos and automation blueprints healthy across releases.【F:docs/testing/coverage-overview.md†L1-L72】
+
 ## How can I add a new demo to the documentation?
 
 1. Open a discussion in the [RusticUI RFC board](https://github.com/apotheon-ai/rusticui/discussions/categories/rfcs) describing the
