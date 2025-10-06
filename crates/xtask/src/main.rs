@@ -29,8 +29,10 @@ use std::env;
 use std::ffi::OsStr;
 use std::fs;
 use std::future::Future;
+use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::runtime::Builder;
 use walkdir::WalkDir;
 use xtask_docs::{docs_build, docs_package, docs_test, DocsPackageOutcome};
@@ -208,6 +210,16 @@ enum Commands {
     JoyParity,
     /// Run the Rust and TypeScript selection control regression suites.
     SelectionControls(SelectionControlsArgs),
+    /// Execute every quick-start bootstrap script to guarantee docs remain accurate.
+    #[command(
+        about = "Run each quick-start bootstrap command and optional follow-up checks.",
+        long_about = "Run each quick-start bootstrap command referenced in the docs to ensure our published quick-start guide remains accurate. Logs land in target/logs/quick-start.log so CI triage and contributors can inspect bootstrap output without re-running the harness. Pass --skip-checks to only verify that the shell scripts execute (useful when npm or cargo compilers are intentionally unavailable)."
+    )]
+    QuickStart {
+        /// Skip post-bootstrap verification such as `cargo check` and `npm run test`.
+        #[arg(long)]
+        skip_checks: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -229,6 +241,7 @@ fn main() -> Result<()> {
             Ok(())
         }
         Commands::DocsTest => {
+            quick_start(false)?;
             run_async_task("docs::test", docs_test())?;
             Ok(())
         }
@@ -255,6 +268,7 @@ fn main() -> Result<()> {
         Commands::MaterialParity => material_parity(),
         Commands::JoyParity => joy_parity(),
         Commands::SelectionControls(args) => selection_controls(args),
+        Commands::QuickStart { skip_checks } => quick_start(skip_checks),
     }
 }
 
@@ -3048,3 +3062,355 @@ fn selection_controls(args: SelectionControlsArgs) -> Result<()> {
 
     Ok(())
 }
+
+/// Execute every quick-start bootstrap command so docs remain authoritative.
+///
+/// The harness mirrors the quick-start guide verbatim: each scaffold is
+/// generated in a clean workspace, optional verification commands are executed,
+/// and a comprehensive transcript is written to `target/logs/quick-start.log`.
+/// This keeps CI reproducible and gives contributors a one-line command to
+/// audit the guide before shipping copy updates.
+fn quick_start(skip_checks: bool) -> Result<()> {
+    let mut harness = QuickStartHarness::new(skip_checks)?;
+    harness.run()
+}
+
+/// Stateful driver that coordinates the quick-start bootstrap orchestration.
+///
+/// Capturing the workspace, log writer, and feature toggles in a struct keeps
+/// the individual steps small and allows us to reuse the logic both from the
+/// dedicated subcommand and when `cargo xtask docs-test` runs in CI.
+struct QuickStartHarness {
+    workspace: PathBuf,
+    log_path: PathBuf,
+    log: BufWriter<fs::File>,
+    skip_checks: bool,
+    cargo_target_dir: PathBuf,
+}
+
+impl QuickStartHarness {
+    fn new(skip_checks: bool) -> Result<Self> {
+        let workspace = workspace_root();
+        let logs_dir = workspace.join("target/logs");
+        fs::create_dir_all(&logs_dir)
+            .with_context(|| format!("failed to create log directory {}", logs_dir.display()))?;
+        let log_path = logs_dir.join("quick-start.log");
+        let file = fs::File::create(&log_path)
+            .with_context(|| format!("failed to create log file {}", log_path.display()))?;
+        let mut log = BufWriter::new(file);
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        writeln!(
+            log,
+            "# RusticUI quick-start automation\nstarted_at_unix={timestamp}\nskip_checks={skip_checks}\n"
+        )?;
+        let cargo_target_dir = workspace.join("target/quick-start/targets");
+        fs::create_dir_all(&cargo_target_dir).with_context(|| {
+            format!(
+                "failed to prepare Cargo target directory {}",
+                cargo_target_dir.display()
+            )
+        })?;
+        Ok(Self {
+            workspace,
+            log_path,
+            log,
+            skip_checks,
+            cargo_target_dir,
+        })
+    }
+
+    fn run(&mut self) -> Result<()> {
+        writeln!(
+            self.log,
+            "# Each section mirrors the docs quick-start table. Commands execute sequentially\n"
+        )?;
+        writeln!(self.log, "\n## prerequisites\n")?;
+        self.ensure_wasm_target()?;
+
+        for spec in QUICK_START_SPECS {
+            self.run_scaffold(spec)?;
+        }
+
+        self.log.flush()?;
+        println!(
+            "[xtask][quick-start] completed. Inspect {} for detailed output",
+            self.relative_log_path()
+        );
+        Ok(())
+    }
+
+    fn ensure_wasm_target(&mut self) -> Result<()> {
+        println!("[xtask][quick-start] ensuring wasm32-unknown-unknown target is installed");
+        let mut cmd = Command::new("rustup");
+        cmd.arg("target").arg("add").arg("wasm32-unknown-unknown");
+        let display = format!("{:?}", &cmd);
+        writeln!(self.log, "command={display}")?;
+        match cmd.output() {
+            Ok(output) => {
+                writeln!(self.log, "status={}", output.status)?;
+                if !output.stdout.is_empty() {
+                    writeln!(
+                        self.log,
+                        "stdout=\n{}",
+                        String::from_utf8_lossy(&output.stdout)
+                    )?;
+                }
+                if !output.stderr.is_empty() {
+                    writeln!(
+                        self.log,
+                        "stderr=\n{}",
+                        String::from_utf8_lossy(&output.stderr)
+                    )?;
+                }
+                if !output.status.success() {
+                    writeln!(
+                        self.log,
+                        "warning=rustup target add exited with {} but proceeding",
+                        output.status
+                    )?;
+                }
+            }
+            Err(error) => {
+                writeln!(
+                    self.log,
+                    "warning=failed to execute rustup target provisioning: {error}"
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    fn run_scaffold(&mut self, spec: &QuickStartSpec) -> Result<()> {
+        println!("[xtask][quick-start] provisioning {}", spec.name);
+        writeln!(self.log, "\n## {}\nsummary={}\n", spec.name, spec.summary)?;
+
+        let bootstrap = spec.bootstrap.spawn(&self.workspace);
+        self.execute(&format!("{} bootstrap", spec.name), bootstrap)?;
+
+        if !self.skip_checks {
+            for check in spec.checks {
+                self.run_check(spec, check)?;
+            }
+        } else if !spec.checks.is_empty() {
+            writeln!(
+                self.log,
+                "skipped_checks={}",
+                spec.checks
+                    .iter()
+                    .map(|check| check.label())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )?;
+        }
+
+        Ok(())
+    }
+
+    fn run_check(&mut self, spec: &QuickStartSpec, check: &QuickStartCheck) -> Result<()> {
+        match check {
+            QuickStartCheck::Cargo { manifest, target } => {
+                let mut cmd = Command::new("cargo");
+                cmd.current_dir(&self.workspace)
+                    .arg("check")
+                    .arg("--manifest-path")
+                    .arg(self.workspace.join(manifest))
+                    .arg("--quiet")
+                    .env("CARGO_TARGET_DIR", &self.cargo_target_dir);
+                if let Some(target) = target {
+                    cmd.arg("--target").arg(target);
+                }
+                self.execute(&format!("{} cargo check ({manifest})", spec.name), cmd)
+            }
+            QuickStartCheck::Npm {
+                directory,
+                script,
+                args,
+            } => {
+                let mut cmd = Command::new("npm");
+                cmd.current_dir(self.workspace.join(directory))
+                    .arg("run")
+                    .arg(script)
+                    .env("CI", "true")
+                    .env("NPM_CONFIG_FUND", "false")
+                    .env("NPM_CONFIG_AUDIT", "false");
+                if let Some((first, rest)) = args.split_first() {
+                    // npm forwards everything after `--` to the underlying script. Some
+                    // quick-start specs already include the separator to document the
+                    // exact command copy-pasted in the guide. To avoid invoking
+                    // `npm run <script> -- -- ...` we only prepend our own separator
+                    // when the manifest has not supplied one.
+                    if *first != "--" {
+                        cmd.arg("--");
+                    }
+                    cmd.arg(first);
+                    for arg in rest.iter().copied() {
+                        cmd.arg(arg);
+                    }
+                }
+                self.execute(&format!("{} npm {script}", spec.name), cmd)
+            }
+        }
+    }
+
+    fn execute(&mut self, label: &str, mut command: Command) -> Result<()> {
+        let display = format!("{:?}", &command);
+        writeln!(self.log, "command={display}")?;
+        let output = command.output().map_err(|error| {
+            if error.kind() == io::ErrorKind::NotFound {
+                anyhow!(
+                    "failed to spawn command for `{label}` because {display} is missing from PATH"
+                )
+            } else {
+                anyhow!("failed to execute {display}: {error}")
+            }
+        })?;
+        writeln!(self.log, "status={}", output.status)?;
+        if !output.stdout.is_empty() {
+            writeln!(
+                self.log,
+                "stdout=\n{}",
+                String::from_utf8_lossy(&output.stdout)
+            )?;
+        }
+        if !output.stderr.is_empty() {
+            writeln!(
+                self.log,
+                "stderr=\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            )?;
+        }
+        if !output.status.success() {
+            self.log.flush()?;
+            return Err(anyhow!(
+                "quick-start step `{label}` failed. Inspect {} for details",
+                self.relative_log_path()
+            ));
+        }
+        Ok(())
+    }
+
+    fn relative_log_path(&self) -> String {
+        self.log_path
+            .strip_prefix(&self.workspace)
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|_| self.log_path.display().to_string())
+    }
+}
+
+struct QuickStartSpec {
+    name: &'static str,
+    bootstrap: QuickStartCommand,
+    checks: &'static [QuickStartCheck],
+    summary: &'static str,
+}
+
+enum QuickStartCommand {
+    Script {
+        path: &'static str,
+    },
+    Just {
+        directory: &'static str,
+        recipe: &'static str,
+    },
+}
+
+impl QuickStartCommand {
+    fn spawn(&self, workspace: &Path) -> Command {
+        match self {
+            QuickStartCommand::Script { path } => {
+                let mut cmd = Command::new(workspace.join(path));
+                cmd.current_dir(workspace);
+                cmd
+            }
+            QuickStartCommand::Just { directory, recipe } => {
+                let mut cmd = Command::new("just");
+                cmd.current_dir(workspace.join(directory)).arg(recipe);
+                cmd
+            }
+        }
+    }
+}
+
+enum QuickStartCheck {
+    Cargo {
+        manifest: &'static str,
+        target: Option<&'static str>,
+    },
+    Npm {
+        directory: &'static str,
+        script: &'static str,
+        args: &'static [&'static str],
+    },
+}
+
+impl QuickStartCheck {
+    fn label(&self) -> &'static str {
+        match self {
+            QuickStartCheck::Cargo { .. } => "cargo",
+            QuickStartCheck::Npm { .. } => "npm",
+        }
+    }
+}
+
+/// Static manifest describing each scaffold we expect the docs to advertise.
+///
+/// The goal is to make it trivial to enrol new frameworks: append an entry with
+/// the shell command, optional verification steps, and a short summary that is
+/// echoed into the log. CI immediately starts exercising new entries once they
+/// appear in this table.
+const QUICK_START_SPECS: &[QuickStartSpec] = &[
+    QuickStartSpec {
+        name: "yew-navigation-tabs",
+        bootstrap: QuickStartCommand::Script {
+            path: "examples/navigation-tabs-yew/scripts/bootstrap.sh",
+        },
+        checks: &[QuickStartCheck::Cargo {
+            manifest: "target/navigation-tabs-yew-demo/Cargo.toml",
+            target: None,
+        }],
+        summary: "Mirrors the Yew quick-start instructions to seed the navigation tabs demo.",
+    },
+    QuickStartSpec {
+        name: "leptos-navigation-tabs",
+        bootstrap: QuickStartCommand::Script {
+            path: "examples/navigation-tabs-leptos/scripts/bootstrap.sh",
+        },
+        checks: &[QuickStartCheck::Cargo {
+            manifest: "target/navigation-tabs-leptos-demo/Cargo.toml",
+            target: None,
+        }],
+        summary: "Bootstraps the Leptos navigation tabs template and verifies it compiles.",
+    },
+    QuickStartSpec {
+        name: "dioxus-navigation-drawer",
+        bootstrap: QuickStartCommand::Script {
+            path: "examples/navigation-drawer-dioxus/scripts/bootstrap.sh",
+        },
+        checks: &[],
+        summary: "Emits the Dioxus drawer blueprint README so developers inherit automation notes.",
+    },
+    QuickStartSpec {
+        name: "sycamore-navigation-drawer",
+        bootstrap: QuickStartCommand::Script {
+            path: "examples/navigation-drawer-sycamore/scripts/bootstrap.sh",
+        },
+        checks: &[],
+        summary: "Generates the Sycamore drawer blueprint README for parity coverage.",
+    },
+    QuickStartSpec {
+        name: "react-selection-controls",
+        bootstrap: QuickStartCommand::Just {
+            directory: "examples/selection-controls-react",
+            recipe: "bootstrap",
+        },
+        checks: &[QuickStartCheck::Npm {
+            directory: "examples/selection-controls-react",
+            script: "test",
+            args: &["--", "--runInBand", "--watch=false"],
+        }],
+        summary: "Runs the React quick-start `just bootstrap` recipe and executes the headless test suite to confirm tooling wiring.",
+    },
+];
