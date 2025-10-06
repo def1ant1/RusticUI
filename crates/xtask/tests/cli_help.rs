@@ -142,6 +142,46 @@ fn examples_help_highlights_layout_group() -> Result<()> {
 }
 
 #[test]
+fn new_component_help_mentions_templates() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("new-component")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Rust + TypeScript scaffolding"))
+        .stdout(predicate::str::contains("automation identifier contract"));
+
+    Ok(())
+}
+
+#[test]
+fn dev_help_describes_hot_reload() -> Result<()> {
+    let workspace = workspace_root();
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(&workspace)
+        .arg("run")
+        .arg("-p")
+        .arg("xtask")
+        .arg("--")
+        .arg("dev")
+        .arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Next.js docs site"))
+        .stdout(predicate::str::contains("target/logs/dev.log"));
+
+    Ok(())
+}
+
+#[test]
 fn docs_build_help_mentions_cache_hint() -> Result<()> {
     let workspace = workspace_root();
     let mut cmd = Command::new("cargo");

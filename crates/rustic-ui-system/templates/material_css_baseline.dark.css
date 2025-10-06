@@ -2,13 +2,13 @@
    Enterprise operators: adjust the `data-rustic_ui_color_scheme` attribute on the document element to flip between modes without rebuilding CSS. */
 html {
     box-sizing: border-box;
-    font-family: Roboto, Helvetica, Arial, sans-serif;
-    font-size: 16px;
+    font-family: Corporate Sans, Arial, sans-serif;
+    font-size: 18px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     color-scheme: dark;
-    background-color: #121212;
-    color: #ffffff;
+    background-color: #020617;
+    color: #e2e8f0;
 }
 
 *, *::before, *::after {
@@ -19,26 +19,26 @@ html {
     color-scheme: dark;
     /* Joy automation hook: the custom properties below stay in sync with `cargo xtask generate-theme --joy`. */
     --joy-radius: 4px;
-    --joy-focus-outline: 2px solid #90caf9;
-    --joy-focus-shadow: 0 0 0 2px #90caf9;
+    --joy-focus-outline: 2px solid #ffd700;
+    --joy-focus-shadow: 0 0 0 2px #ffd700;
 }
 
 body {
     margin: 0;
     min-height: 100vh;
-    font-family: Roboto, Helvetica, Arial, sans-serif;
-    font-size: 14px;
+    font-family: Corporate Sans, Arial, sans-serif;
+    font-size: 16px;
     line-height: 1.5;
-    background-color: #121212;
-    color: #ffffff;
+    background-color: #020617;
+    color: #e2e8f0;
 }
 
 strong, b {
-    font-weight: 700;
+    font-weight: 910;
 }
 
 code, pre {
-    font-family: Roboto Mono, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-family: Corporate Mono, Menlo, monospace;
 }
 
 /* Data attribute selectors keep automated deployments deterministic by allowing infrastructure to force a mode before JS boots. */
@@ -54,8 +54,8 @@ code, pre {
 
 [data-rustic_ui_color_scheme='dark'] html,
 [data-rustic_ui_color_scheme='dark'] body {
-    background-color: #121212;
-    color: #ffffff;
+    background-color: #020617;
+    color: #e2e8f0;
 }
 
 [data-rustic_ui_color_scheme='dark'] :root {
@@ -69,8 +69,8 @@ code, pre {
     }
 
     html, body {
-        background-color: #121212;
-        color: #ffffff;
+        background-color: #020617;
+        color: #e2e8f0;
     }
 }
 

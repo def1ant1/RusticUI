@@ -13,7 +13,7 @@
 - [ ] Catalog headless state machine complexity (collapsible region, focus trap) and draft formal state diagrams.
 - [ ] Audit type-safety patterns to identify candidates for typestate or compile-time builders.
 - [ ] Assemble current testing coverage report (snapshot, unit, integration, accessibility, visual).
-- [ ] Inventory automation gaps in `cargo xtask` suite (scaffolding, dev servers, a11y audits).
+- [x] Inventory automation gaps in `cargo xtask` suite (scaffolding, dev servers, a11y audits).
 
 ### Deliverables
 - Centralized documentation index linking to architecture, testing, and migration guides.
@@ -26,9 +26,9 @@
    - Embed a visual gallery powered by a live playground (hosted Storybook or Sandpack-driven docs page).
 
 2. **Scaffolding & Automation**
-   - Extend `cargo xtask` with `new-component` generator supporting material/headless templates.
-   - Ship `cargo xtask dev` for hot-reloading example gallery.
-   - Publish Devcontainer + Codespaces configs for consistent onboarding.
+   - [x] Extend `cargo xtask` with `new-component` generator supporting material/headless templates (Rust + TypeScript + docs stubs).
+   - [x] Ship `cargo xtask dev` for hot-reloading example gallery and docs site with shared logs.
+   - [ ] Publish Devcontainer + Codespaces configs for consistent onboarding.
 
 3. **Documentation Quality**
    - Introduce component decision guides (e.g., `Box` vs `Container` vs `Grid`).

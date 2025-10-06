@@ -25,6 +25,10 @@ If you do not have pnpm installed, select your OS and follow the instructions on
 
 Package managers other than pnpm (like npm or Yarn) are not supported and will not work.
 
+Prefer `cargo xtask dev` when you need both the Next.js docs and the Leptos example gallery running together. The harness
+launches both servers, wires shared logging to `target/logs/dev.log`, and reuses `target/dev` as the Cargo cache so hot-reload
+iterations stay fast across restarts.
+
 ## How can I add a new demo to the documentation?
 
 1. Open a discussion in the [RusticUI RFC board](https://github.com/apotheon-ai/rusticui/discussions/categories/rfcs) describing the

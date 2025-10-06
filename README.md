@@ -242,10 +242,14 @@ binary:
 cargo xtask icon-update           # pull the latest Rustic icon sets
 cargo xtask update-components     # emit the Rust-native component metadata manifest
 cargo xtask accessibility-audit   # lint Markdown docs for accessibility regressions
+cargo xtask new-component Button  # scaffold Material/headless modules, docs, and telemetry notes
+cargo xtask dev --dry-run         # preview the consolidated docs + gallery hot-reload harness
 cargo xtask docs-build            # build the docs host binary + wasm bundle
 cargo xtask docs-test             # run the Playwright/Chromium wasm smoke tests
 cargo xtask docs-package          # assemble deploy-ready SSR + wasm assets
 ```
+
+Use `cargo xtask new-component` whenever you introduce a new surface. The dry-run flag prints the generated Rust modules, TypeScript adapters, docs stubs, and ignored tests so teams can agree on automation identifiers before committing files. When it's time to iterate on documentation or gallery content, `cargo xtask dev` launches the Next.js docs site and Leptos example gallery together, recording output in `target/logs/dev.log` for easy sharing.
 
 Each task emits verbose logs and returns a non-zero exit code on failure so it can be safely wired into CI pipelines. Provision the following shared dependencies once per runner to keep the docs workflow reproducible:
 
