@@ -62,6 +62,27 @@ The root `Makefile` exposes matching entry points via `make docs-build`, `make d
 backward-compatible `make deploy-docs`). Invoke them locally before modifying Netlify/Vercel configuration so reviewers can
 inspect the staged output.
 
+### Quick-start scaffolds and verification
+
+RusticUI maintains automation-first quick-start blueprints across Yew, Leptos, Dioxus, Sycamore, and React so every framework
+shares the same telemetry, SSR snapshots, and automation selectors. The gallery in
+[`docs/src/pages/getting-started/quick-start.md`](docs/src/pages/getting-started/quick-start.md) maps each scaffold to its
+bootstrap script and follow-up smoke tests, keeping enterprise rollouts reproducible without bespoke glue code.【F:docs/src/pages/getting-started/quick-start.md†L1-L136】
+
+- Run `cargo xtask quick-start` before sending pull requests that touch the gallery, example bootstraps, or docs references. The
+  orchestration shells through every documented scaffold, executes the framework-specific checks, and writes transcripts to
+  `target/logs/quick-start.log` so reviewers can audit results without rerunning the suite.【F:crates/xtask/src/main.rs†L206-L233】【F:crates/xtask/src/main.rs†L3078-L3296】
+- Pass `--skip-checks` only when the target environment lacks optional toolchains (for example, when Playwright browsers or
+  npm-based headless harnesses are unavailable). Even then, note the limitation in the pull request summary so CI reruns the full
+  verification path.【F:crates/xtask/src/main.rs†L206-L233】
+- Cache heavy dependencies to minimise bootstrap time: export `PLAYWRIGHT_BROWSERS_PATH=0` (or a shared CI directory) so docs
+  specs reuse installed Chromium builds, share `CARGO_TARGET_DIR` across jobs to avoid recompiling scaffolds, and persist
+  `TRUNK_HOME`, `DX_CACHE_DIR`, or `DIOXUS_CONFIG_DIR` when working with Trunk/dx-powered examples.【F:CONTRIBUTING.md†L54-L87】【F:docs/src/pages/getting-started/quick-start.md†L9-L88】
+
+Document the command output in your changelog or pull request template when it influences review (for example, when refreshing a
+StackBlitz snapshot or updating automation IDs). Contributors are expected to keep the quick-start verification log alongside
+other CI evidence (fmt, clippy, deny, tests) so consumers inherit a proven automation baseline.
+
 ### Archived JavaScript workspace
 
 Legacy Material UI sources now live under `archives/mui-packages/`. Each folder is a symlink back to

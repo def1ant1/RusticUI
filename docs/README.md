@@ -36,6 +36,11 @@ Package managers other than pnpm (like npm or Yarn) are not supported and will n
    follow-up verification steps.
 3. Commit the generated files and update the appropriate page inside `docs/src/pages`.
 
+When editing those demos or the quick-start gallery, consult the
+[quick-start automation verification guide](testing/quick-start.md) and run `cargo xtask quick-start` so the docs site, StackBlitz
+snapshots, and Rust bootstraps stay aligned without manual interventions. The playbook also captures caching strategies for
+Playwright, Trunk, and dx so contributors avoid re-downloading browsers or recompiling scaffolds on every iteration.【F:docs/testing/quick-start.md†L1-L96】【F:crates/xtask/src/main.rs†L206-L233】
+
 ## How do I help to improve the translations?
 
 RusticUI translations are managed through the Apotheon.ai Crowdin workspace: <https://crowdin.com/project/rusticui-docs>.

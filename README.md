@@ -45,6 +45,11 @@ Run the Yew starter to confirm the crates integrate with framework tooling:
 cargo run --manifest-path examples/mui-yew/Cargo.toml --features csr
 ```
 
+Before submitting changes, follow the [quick-start automation verification playbook](docs/testing/quick-start.md) and run
+`cargo xtask quick-start` to exercise every scaffold documented in the getting-started guide. The harness keeps StackBlitz
+exports, docs CTAs, and Rust blueprints aligned while caching Playwright, Trunk, and dx assets to minimise repetitive setup for
+enterprise teams.【F:docs/testing/quick-start.md†L1-L96】【F:crates/xtask/src/main.rs†L206-L233】
+
 ## Legacy MUI compatibility shims
 
 The crates now ship under the `rustic_ui_*` namespace. To keep migrations predictable each crate exposes a
