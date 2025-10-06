@@ -37,9 +37,13 @@ use tokio::runtime::Builder;
 use walkdir::WalkDir;
 use xtask_docs::{docs_build, docs_package, docs_test, DocsPackageOutcome};
 
+mod dev;
 mod docs_assets;
+mod new_component;
 mod selection_controls_web;
+use dev::{dev, DevArgs};
 use docs_assets::{docs_assets, DocsAssetsArgs};
+use new_component::{new_component, NewComponentArgs};
 use selection_controls_web::SelectionControlsHarness;
 
 /// Entry point for the `cargo xtask` command.
@@ -153,6 +157,18 @@ enum Commands {
         long_about = "Execute the extended nightly accessibility coverage suite across every docs section. This variant mirrors the standard audit but widens the default target list so enterprise CI jobs can run a comprehensive scan without custom Playwright harnesses."
     )]
     AccessibilityNightly,
+    /// Generate Rust + TypeScript scaffolding for a new RusticUI component.
+    #[command(
+        about = "Generate Material/headless scaffolding for a new RusticUI component.",
+        long_about = "Generate Rust + TypeScript scaffolding for a new RusticUI component. The helper emits headless and Material skeletons, placeholder tests, and docs stubs that all share the same automation identifier contract. Use --dry-run to preview the files before writing them to disk, or --material-only/--headless-only to focus on a specific surface."
+    )]
+    NewComponent(NewComponentArgs),
+    /// Launch the consolidated docs + example gallery hot-reload harness.
+    #[command(
+        about = "Start the docs site and example gallery hot-reload harness.",
+        long_about = "Launch the Next.js docs site and the Leptos-powered example gallery under a single orchestrator. The harness mirrors CI logging, writes a consolidated target/logs/dev.log transcript, and reuses target/dev as the Cargo cache so both services warm the same build artifacts. Pass --dry-run to inspect the planned commands or --skip-* flags to focus on a single surface."
+    )]
+    Dev(DevArgs),
     #[command(
         about = "Build the Rust-first documentation site and supporting API docs.",
         long_about = "Build the Rust-first documentation site and supporting API docs. The wrapper first executes the async docs::build helper so SSR + wasm assets are hydrated using the workspace's shared CARGO_TARGET_DIR cache before delegating to mdBook when docs/rust-book exists. The orchestration surfaces explicit log markers for CI triage and bubbles helper errors unchanged so flaky wasm builds remain debuggable."
@@ -251,6 +267,8 @@ fn main() -> Result<()> {
         Commands::UpdateComponents => update_components(),
         Commands::AccessibilityAudit => accessibility_audit(),
         Commands::AccessibilityNightly => accessibility_nightly(),
+        Commands::NewComponent(args) => new_component(args),
+        Commands::Dev(args) => dev(args),
         Commands::BuildDocs => build_docs(),
         Commands::DeployDocs(args) => deploy_docs(args),
         Commands::GenerateTheme {
@@ -345,7 +363,7 @@ impl ThemeFormat {
 /// Commands like `cargo run -p rustic-ui-icons` expect relative paths that are rooted
 /// at the repository top-level. Computing it once keeps subsequent helpers
 /// compact and avoids repeating the ancestor traversal logic.
-fn workspace_root() -> PathBuf {
+pub(crate) fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(2)
@@ -359,7 +377,7 @@ fn workspace_root() -> PathBuf {
 /// propagates failures and surfaces the exact command line that
 /// was executed. This dramatically simplifies troubleshooting in
 /// large CI systems where logs are often the only feedback.
-fn run(mut cmd: Command) -> Result<()> {
+pub(crate) fn run(mut cmd: Command) -> Result<()> {
     // Print the command for transparency before execution.
     println!("[xtask] running: {:?}", cmd);
     let status = cmd.status()?;

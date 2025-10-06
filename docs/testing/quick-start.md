@@ -38,6 +38,15 @@ before submitting changes.
    `trunk test`), and writes transcripts to
    `target/logs/quick-start.log`.【F:crates/xtask/src/main.rs†L206-L233】【F:crates/xtask/src/main.rs†L3078-L3296】
 
+## Scaffold new components during onboarding
+
+- Use `cargo xtask new-component <Name>` with `--dry-run` to preview the generated Rust modules, TypeScript telemetry helpers,
+  docs stubs, and placeholder tests. The command prints every file path so teams can agree on automation identifiers before
+  landing code. Drop the dry-run flag once the plan looks correct and fill in the TODO markers emitted by the templates.
+- When iterating on docs or gallery content, launch `cargo xtask dev`. The harness boots the Next.js docs site and Leptos
+  example gallery together, writing live output to `target/logs/dev.log` so reviewers can inspect hot-reload sessions alongside
+  code changes.
+
 2. Inspect `target/logs/quick-start.log` after the run completes. Each scaffold
    prints a bounded header, the exact commands executed, and a success/failure
    trailer so reviewers can audit changes without rehydrating the environment.

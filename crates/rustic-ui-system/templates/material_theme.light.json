@@ -9,16 +9,16 @@
   },
   "palette": {
     "light": {
-      "primary": "#1976d2",
+      "primary": "#0057b7",
       "secondary": "#dc004e",
       "neutral": "#64748b",
       "danger": "#d32f2f",
       "success": "#2e7d32",
       "warning": "#ed6c02",
       "info": "#0288d1",
-      "background_default": "#fafafa",
+      "background_default": "#f4f6fb",
       "background_paper": "#ffffff",
-      "text_primary": "#1f2933",
+      "text_primary": "#0f172a",
       "text_secondary": "#52606d"
     },
     "dark": {
@@ -37,14 +37,14 @@
     "initial_color_scheme": "light"
   },
   "typography": {
-    "font_family": "Roboto, Helvetica, Arial, sans-serif",
-    "font_family_monospace": "Roboto Mono, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-    "font_size": 14.0,
-    "html_font_size": 16.0,
+    "font_family": "Corporate Sans, Arial, sans-serif",
+    "font_family_monospace": "Corporate Mono, Menlo, monospace",
+    "font_size": 16.0,
+    "html_font_size": 18.0,
     "font_weight_light": 300,
     "font_weight_regular": 400,
     "font_weight_medium": 500,
-    "font_weight_bold": 700,
+    "font_weight_bold": 910,
     "h1": 3.75,
     "h2": 3.0,
     "h3": 2.25,
