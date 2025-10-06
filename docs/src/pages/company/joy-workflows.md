@@ -3,7 +3,10 @@
 The RusticUI workspace ships a shared Joy workflow machine that keeps SSR,
 hydration, and analytics semantics in sync across every supported framework. The
 `joy-workflows-core` crate centralises the business logic while the adapter
-crates (Yew, Leptos, Dioxus, Sycamore) focus purely on rendering.
+crates (Yew, Leptos, Dioxus, Sycamore) focus purely on rendering. New teammates
+can follow the [five-minute RusticUI quick start](../getting-started/quick-start.md)
+to scaffold a Joy-ready workspace before diving into the workflows outlined
+below.【F:docs/src/pages/getting-started/quick-start.md†L1-L105】
 
 ## Reference demos
 
