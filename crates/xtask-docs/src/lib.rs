@@ -15,6 +15,12 @@ Playwright's Chromium bundle. Ensure `wasm-pack` is installed and `npx
 playwright install --with-deps chromium` (or an equivalent offline mirror) has
 been executed on the host running these tasks. Without the Playwright binaries
 the test harness will fail before the compiled WASM bundle is even exercised.
+
+The command also runs the docs `quick-start-gallery` Playwright spec using
+`pnpm --dir docs exec -- playwright test`. Provide a running docs host (for
+example via `pnpm --dir docs dev`) and set `PLAYWRIGHT_TEST_BASE_URL` to the
+corresponding URL so the iframe-based Sandpack preview can hydrate before the
+assertions execute.
 "#]
 
 use anyhow::{anyhow, Context, Result};
@@ -39,14 +45,19 @@ pub async fn docs_build() -> Result<()> {
     build_artifacts(&ctx, BuildProfile::Debug).await.map(|_| ())
 }
 
-/// Execute the docs WebAssembly smoke tests using `wasm-pack`.
+/// Execute the docs smoke tests.
 ///
-/// Failures are captured and recorded in `target/logs/docs-test.log` with the
-/// invoked command line so CI operators can diagnose why Chrome/Playwright
-/// exited with a specific status.
+/// The workflow now covers two surfaces: the legacy wasm-pack smoke test that
+/// validates the Leptos bundle and a Playwright scenario that asserts the docs
+/// quick-start gallery renders the shared CTA with the correct automation
+/// hooks. Failures are captured and recorded in `target/logs/docs-test.log` and
+/// `target/logs/docs-playwright.log` respectively with the invoked command line
+/// so CI operators can diagnose why Chrome/Playwright exited with a specific
+/// status.
 pub async fn docs_test() -> Result<()> {
     let ctx = WorkspaceContext::detect()?;
-    run_wasm_tests(&ctx).await
+    run_wasm_tests(&ctx).await?;
+    run_playwright_quick_start_smoke(&ctx).await
 }
 
 /// Produce a deploy-ready documentation payload containing SSR + WASM assets.
@@ -327,6 +338,67 @@ async fn run_wasm_tests(ctx: &WorkspaceContext) -> Result<()> {
 
     Err(anyhow!(
         "wasm-pack smoke tests failed. Inspect {:?} for the detailed log.",
+        log_path
+    ))
+}
+
+async fn run_playwright_quick_start_smoke(ctx: &WorkspaceContext) -> Result<()> {
+    let mut display = CommandDisplay::new("pnpm");
+    display.push("--dir");
+    display.push("docs");
+    display.push("exec");
+    display.push("--");
+    display.push("playwright");
+    display.push("test");
+    display.push("--config");
+    display.push("test/e2e-website/playwright.config.ts");
+    display.push("test/e2e-website/quick-start-gallery.spec.ts");
+
+    let mut cmd = Command::new("pnpm");
+    cmd.current_dir(&ctx.workspace_root)
+        .arg("--dir")
+        .arg("docs")
+        .arg("exec")
+        .arg("--")
+        .arg("playwright")
+        .arg("test")
+        .arg("--config")
+        .arg("test/e2e-website/playwright.config.ts")
+        .arg("test/e2e-website/quick-start-gallery.spec.ts")
+        .env("CARGO_TARGET_DIR", &ctx.target_dir);
+
+    let output = cmd
+        .output()
+        .await
+        .with_context(|| format!("failed to execute {}", display.render()))?;
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let logs_dir = ctx.target_dir.join("logs");
+    fs::create_dir_all(&logs_dir)
+        .await
+        .context("failed to create target/logs for Playwright output")?;
+    let log_path = logs_dir.join("docs-playwright.log");
+    let mut log = String::new();
+    writeln!(&mut log, "command: {}", display.render())?;
+    writeln!(&mut log, "status: {}", output.status)?;
+    writeln!(
+        &mut log,
+        "\nstdout:\n{}",
+        String::from_utf8_lossy(&output.stdout)
+    )?;
+    writeln!(
+        &mut log,
+        "\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    )?;
+    fs::write(&log_path, log)
+        .await
+        .with_context(|| format!("failed to persist Playwright output to {log_path}"))?;
+
+    Err(anyhow!(
+        "Playwright docs smoke tests failed. Inspect {:?} for the detailed log.",
         log_path
     ))
 }
