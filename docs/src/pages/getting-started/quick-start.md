@@ -15,6 +15,10 @@ you can stand up a reference experience in minutes.【F:docs/src/pages/examples/
 - Ensure Node.js 20+ is available for the React automation harness.
 - Run `cargo xtask fmt`, `cargo xtask clippy`, and `cargo xtask test` before
   committing so your quick-start scaffold aligns with workspace CI.【F:docs/src/pages/examples/index.md†L12-L23】【F:crates/xtask/src/main.rs†L59-L133】
+- Validate the guide end-to-end with `cargo xtask quick-start`. The harness
+  shells through every bootstrap command below, captures transcripts in
+  `target/logs/quick-start.log`, and reuses the same workflow that
+  `cargo xtask docs-test` executes in CI.【F:crates/xtask/src/main.rs†L150-L233】【F:crates/xtask/src/main.rs†L2100-L2222】
 
 ## Yew
 
