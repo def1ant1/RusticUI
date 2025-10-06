@@ -15,11 +15,13 @@
     "typescript:transpile": "echo 'Use `pnpm docs:typescript:formatted'` instead && exit 1",
     "typescript:transpile:dev": "echo 'Use `pnpm docs:typescript'` instead && exit 1",
     "link-check": "tsx ./scripts/reportBrokenLinks.js",
-    "screenshot-manifest": "cargo xtask docs-assets --mode screenshots"
+    "screenshot-manifest": "cargo xtask docs-assets --mode screenshots",
+    "sandbox:quick-start": "node --loader ts-node/esm ./scripts/quickStartButtonSandbox.ts"
   },
   "dependencies": {
     "@babel/core": "^7.28.4",
     "@babel/runtime": "^7.28.4",
+    "@codesandbox/sandpack-react": "^2.14.2",
     "@docsearch/react": "^3.9.0",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
@@ -135,6 +137,7 @@
     "marked": "^16.2.0",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.13",
+    "ts-node": "^10.9.2",
     "yargs": "^18.0.0"
   }
 }
