@@ -22,6 +22,10 @@ proptest.workspace = true
 insta.workspace = true
 serde_json.workspace = true
 
+[[test]]
+name = "collapsible_region_state"
+path = "tests/collapsible_region_state.rs"
+
 [features]
 default = ["forms", "feedback", "progress"]
 compat-mui = []
