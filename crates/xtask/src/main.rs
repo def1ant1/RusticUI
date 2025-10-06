@@ -3236,9 +3236,17 @@ impl QuickStartHarness {
                     .env("CI", "true")
                     .env("NPM_CONFIG_FUND", "false")
                     .env("NPM_CONFIG_AUDIT", "false");
-                if !args.is_empty() {
-                    cmd.arg("--");
-                    for arg in *args {
+                if let Some((first, rest)) = args.split_first() {
+                    // npm forwards everything after `--` to the underlying script. Some
+                    // quick-start specs already include the separator to document the
+                    // exact command copy-pasted in the guide. To avoid invoking
+                    // `npm run <script> -- -- ...` we only prepend our own separator
+                    // when the manifest has not supplied one.
+                    if *first != "--" {
+                        cmd.arg("--");
+                    }
+                    cmd.arg(first);
+                    for arg in rest.iter().copied() {
                         cmd.arg(arg);
                     }
                 }
