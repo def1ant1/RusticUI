@@ -15,6 +15,10 @@
 //! and Joy stay aligned.  Newly added infrastructure primitives –
 //! [`click_away`], [`collapsible_region`], and [`focus_trap`] – codify
 //! concurrency-safe focus orchestration for overlays and disclosure widgets.
+//! The companion architecture note at
+//! [`docs/architecture/headless-state-machines.md`](../../docs/architecture/headless-state-machines.md)
+//! diagrams the controlled/uncontrolled flows, transition-token lifecycle, and
+//! automation markers reused by framework adapters and analytics sinks.
 //! Experimental loop instrumentation lives in [`unstable_trap_focus`] behind an
 //! `unstable` feature gate so enterprise teams can evaluate telemetry-heavy
 //! behaviours before they harden into the stable focus APIs.

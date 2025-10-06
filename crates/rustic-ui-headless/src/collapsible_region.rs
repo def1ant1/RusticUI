@@ -12,7 +12,11 @@
 //! Accessibility hooks mirror the [`aria::disclosure`] pattern so assistive
 //! technology knows which region is controlled by which trigger.  The attribute
 //! builders emit automation-first `data-rustic-*` markers to keep analytics and
-//! QA pipelines centralized instead of wiring per-component selectors.
+//! QA pipelines centralized instead of wiring per-component selectors.  See the
+//! architecture guide at
+//! [`docs/architecture/headless-state-machines.md`](../../docs/architecture/headless-state-machines.md#collapsible-region-state-machine)
+//! for the controlled/uncontrolled transition diagrams, token lifecycle notes,
+//! and cross-environment automation checklists referenced by CI.
 
 use std::collections::BTreeSet;
 

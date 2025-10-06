@@ -46,3 +46,5 @@ jobs:
         run: cargo xtask examples --group layout --release
       - name: Build Rust-first docs
         run: cargo xtask build-docs
+      - name: Verify mdBook diagrams render
+        run: cargo xtask docs-build
