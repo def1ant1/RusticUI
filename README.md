@@ -226,7 +226,7 @@ make build        # compile every crate
 make test         # run workspace tests
 make doc          # generate API docs
 make docs-build   # build the docs host binary + wasm bundle
-make docs-test    # exercise the wasm smoke tests backing the docs site
+make docs-test    # exercise the Playwright-driven wasm smoke tests
 make docs-package # stage deploy-ready docs artifacts under target/deploy/docs
 ```
 
@@ -238,11 +238,17 @@ cargo xtask icon-update           # pull the latest Rustic icon sets
 cargo xtask update-components     # emit the Rust-native component metadata manifest
 cargo xtask accessibility-audit   # lint Markdown docs for accessibility regressions
 cargo xtask docs-build            # build the docs host binary + wasm bundle
-cargo xtask docs-test             # run the wasm smoke tests powering the docs site
+cargo xtask docs-test             # run the Playwright/Chromium wasm smoke tests
 cargo xtask docs-package          # assemble deploy-ready SSR + wasm assets
 ```
 
-Each task emits verbose logs and returns a non-zero exit code on failure so it can be safely wired into CI pipelines.
+Each task emits verbose logs and returns a non-zero exit code on failure so it can be safely wired into CI pipelines. Provision the following shared dependencies once per runner to keep the docs workflow reproducible:
+
+- [`mdBook`](https://rust-lang.github.io/mdBook/) (`cargo install mdbook`) for the Rust-first guide under `docs/rust-book/`.
+- [`wasm-bindgen-cli`](https://rustwasm.github.io/wasm-bindgen/reference/cli.html) (`cargo install wasm-bindgen-cli`) which powers the wasm smoke tests and `wasm-bindgen-test` runners.
+- [Playwright](https://playwright.dev/docs/intro) with Chromium support (`npx playwright install --with-deps chromium`) so `cargo xtask docs-test` can launch headless browsers without bespoke scripts.
+
+> **Automation tip:** cache the Playwright browser install (`PLAYWRIGHT_BROWSERS_PATH=0`) and share Cargo's `target/` directory across CI jobs to avoid rebuilding the SSR binary and wasm bundle on every run.
 
 `cargo xtask update-components` parses the upstream TypeScript declarations without invoking pnpm. The generated manifest now
 records the RusticUI crate identifiers under a `packages` array while preserving the historical npm names under
@@ -258,17 +264,17 @@ dry runs without editing the repository.
 The documentation site ships through a single Rust entrypoint:
 
 ```bash
-cargo xtask docs-package          # stage mdBook, API docs, and wasm bundles into target/deploy/docs
+cargo xtask docs-build             # compile the SSR server + wasm bundle for local preview
+cargo xtask docs-test              # execute the Playwright/Chromium wasm harness against the fresh bundle
+cargo xtask docs-package           # stage mdBook, API docs, and wasm bundles into target/deploy/docs
 cargo xtask docs-package --dry-run # execute the same pipeline without touching the deploy directory
 ```
 
-The command performs the following steps:
+The split commands let CI fan out work (build → test → package) while keeping local flows ergonomic:
 
-1. Runs `cargo doc --workspace --all-features` so API documentation stays in sync with the published crates.
-2. Invokes `mdbook build docs/rust-book` to render the Rust-first guide.
-3. Compiles the curated example groups for both the host and `wasm32-unknown-unknown` targets, copying the resulting `.wasm`
-   bundles into `target/deploy/docs/wasm`.
-4. Emits `target/deploy/docs/deploy-summary.json` describing every staged artifact so hosting pipelines can audit the payload.
+1. `cargo xtask docs-build` compiles the SSR binary, Leptos static renderer, and wasm bundle in one pass so subsequent steps reuse the cached artifacts.
+2. `cargo xtask docs-test` boots the wasm harness inside headless Chromium via Playwright, replaying the docs site's integration tests without pnpm.
+3. `cargo xtask docs-package` runs `cargo doc --workspace --all-features`, invokes `mdbook build docs/rust-book`, compiles the curated example groups for both the host and `wasm32-unknown-unknown` targets, copies the resulting `.wasm` bundles into `target/deploy/docs/wasm`, and emits `target/deploy/docs/deploy-summary.json` for downstream auditing.
 
 Tune the behaviour via environment variables when integrating with bespoke CI/CD stacks:
 

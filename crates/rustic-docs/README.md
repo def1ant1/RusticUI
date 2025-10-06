@@ -50,6 +50,42 @@ The project assumes infrastructure-as-code from day one:
   emit a screenshot manifest that CI tooling can consume without reaching for
   `pnpm`.
 
+## Xtask orchestration
+
+`cargo xtask` wraps the crate so CI and local workflows can drive each
+deployment phase independently:
+
+- `cargo xtask docs-build` calls into `xtask_docs::docs_build`, compiling the
+  `rustic-docs-server` binary with the `ssr` feature, the browser-focused
+  `rustic-docs` wasm target, and the supporting `wasm-bindgen` glue code in
+  parallel. The helper respects `CARGO_TARGET_DIR`, so share that directory
+  across jobs to avoid duplicate compilation.
+- `cargo xtask docs-test` executes the Playwright-powered wasm harness. The
+  command shells through `wasm-pack test --headless --chrome`, which expects the
+  Chromium bundle installed via `npx playwright install --with-deps chromium`.
+  Set `PLAYWRIGHT_BROWSERS_PATH` when caching browsers in CI runners.
+- `cargo xtask docs-package` invokes `xtask_docs::docs_package`, exporting SSR
+  snapshots via `render_static_snapshot`, copying wasm bundles, and mirroring
+  mdBook output into `RUSTIC_DOCS_EXPORT_DIR` (defaults to
+  `target/deploy/docs`). Pass `--dry-run` to rehearse the pipeline without
+  mutating the staging directory.
+
+### Troubleshooting build + test orchestration
+
+- **Stale wasm bundles** – Delete `target/rustic-docs-wasm` (or the custom
+  directory under `CARGO_TARGET_DIR`) if the wasm artifacts fail to refresh
+  after switching Rust toolchains. The `docs-build` helper will rehydrate the
+  directory on the next run.
+- **Playwright launch errors** – Ensure Chromium is installed in the location
+  advertised by `PLAYWRIGHT_BROWSERS_PATH`. When running inside containers,
+  propagate `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1` if the base image
+  already bundles the necessary system libraries.
+- **Concurrent build contention** – When multiple CI jobs share a single
+  network-mounted cache, the parallel host/wasm build may exhaust the default
+  file-descriptor limit. Set `CARGO_BUILD_JOBS=4` (or lower) and re-run
+  `cargo xtask docs-build` to reduce peak concurrency without disabling the
+  shared cache.
+
 ## Running locally
 
 ```bash

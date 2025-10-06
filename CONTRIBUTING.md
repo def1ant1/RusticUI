@@ -40,19 +40,23 @@ All repetitive chores are encapsulated inside the `Makefile` or `cargo xtask`. P
 
 ### Documentation hosting pipeline
 
-The documentation site, API reference, and wasm demos ship through the new docs subcommands exposed by `cargo xtask`. The
+The documentation site, API reference, and wasm demos ship through the docs subcommands exposed by `cargo xtask`. The
 pipeline splits into explicit `docs-build`, `docs-test`, and `docs-package` phases so contributors and CI can validate each
 stage independently before staging artifacts in `target/deploy/docs`. Hosting integrations (Netlify, Vercel, GitHub Pages,
-internal CDNs) point at that directory without invoking pnpm or bespoke shell scripts.
+internal CDNs) point at that directory without invoking pnpm or bespoke shell scripts. All orchestration code lives in
+[`crates/xtask-docs`](crates/xtask-docs/README.md), with the Leptos/SSR implementation residing in [`crates/rustic-docs`](crates/rustic-docs/README.md) for deeper context.
 
-Key flags and environment variables:
+Key commands and required tooling:
 
-- `cargo xtask docs-build` – Compiles the docs server binary and wasm bundle in parallel, reusing the shared `CARGO_TARGET_DIR`.
-- `cargo xtask docs-test` – Runs the wasm smoke tests in headless Chromium via Playwright. Ensure `npx playwright install --with-deps chromium` and `wasm-pack` are available locally.
-- `cargo xtask docs-package --dry-run` – Executes the release packaging flow without mutating the canonical export directory. Useful in CI pull requests and local spot checks.
-- `RUSTIC_DOCS_EXPORT_DIR` – Override the default staging directory (`target/deploy/docs`).
-- `RUSTIC_UI_DEPLOY_PROFILE` / `RUSTIC_UI_DEPLOY_GROUPS` – Remain available when invoking the legacy `cargo xtask deploy-docs`
-  wrapper for teams that have not yet migrated bespoke automation.
+- `cargo xtask docs-build` – Compiles the docs server binary and wasm bundle in parallel, reusing the shared `CARGO_TARGET_DIR` cache. Install [`mdBook`](https://rust-lang.github.io/mdBook/) and [`wasm-bindgen-cli`](https://rustwasm.github.io/wasm-bindgen/reference/cli.html) via Cargo so the helper can render the Rust book and run `wasm-bindgen` without fallback scripts.
+- `cargo xtask docs-test` – Runs the wasm smoke tests in headless Chromium via Playwright. Ensure `npx playwright install --with-deps chromium` and [`wasm-pack`](https://rustwasm.github.io/wasm-pack/) are available locally. Cache the browsers by exporting `PLAYWRIGHT_BROWSERS_PATH=0` (the repository default) or pointing the variable at a shared directory in CI to avoid repeated downloads.
+- `cargo xtask docs-package --dry-run` – Executes the release packaging flow without mutating the canonical export directory. Useful in CI pull requests and local spot checks. Drop `--dry-run` once the staged payload looks correct to mirror production deploys.
+
+Environment overrides:
+
+- `RUSTIC_DOCS_EXPORT_DIR` – Override the default staging directory (`target/deploy/docs`) when CI needs a dedicated artifact volume.
+- `RUSTIC_DOCS_TRACING_ENDPOINT` – Surface SSR/CSR telemetry destinations to the `rustic-docs` binaries without recompiling.
+- `RUSTIC_UI_DEPLOY_PROFILE` / `RUSTIC_UI_DEPLOY_GROUPS` – Remain available when invoking the legacy `cargo xtask deploy-docs` wrapper for teams that have not yet migrated bespoke automation.
 
 The root `Makefile` exposes matching entry points via `make docs-build`, `make docs-test`, and `make docs-package` (alongside the
 backward-compatible `make deploy-docs`). Invoke them locally before modifying Netlify/Vercel configuration so reviewers can
