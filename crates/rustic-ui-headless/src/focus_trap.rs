@@ -12,7 +12,10 @@
 //! [`FocusTrapState::loop_focus`] returns `true` the helpers wrap navigation so
 //! keyboard users never escape the trap.  The attribute builders expose the
 //! sentinel nodes required by DOM-based adapters and emit analytics hooks for
-//! centralized instrumentation.
+//! centralized instrumentation.  The architecture companion note at
+//! [`docs/architecture/headless-state-machines.md`](../../docs/architecture/headless-state-machines.md#focus-trap-state-machine)
+//! documents loop behaviour, sentinel analytics propagation, and the automation
+//! harnesses that enforce parity across adapters.
 
 use crate::interaction::ControlKey;
 

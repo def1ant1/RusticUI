@@ -55,6 +55,10 @@ scale before the compatibility layer is removed.
 - **Headless rationale and observability** – See
   [`crates/rustic-ui-headless/README.md`](../crates/rustic-ui-headless/README.md#architectural-rationale-for-the-new-utility-suite)
   for architectural notes, troubleshooting guidance, and observability hooks.
+- **State machine lifecycles** –
+  [`architecture/headless-state-machines.md`](./architecture/headless-state-machines.md)
+  visualises the controlled/uncontrolled transitions, token orchestration, and
+  focus-loop analytics markers behind `collapsible_region` and `focus_trap`.
 - **Material adapter deep dives** –
   [`crates/rustic-ui-material/README.md`](../crates/rustic-ui-material/README.md#architectural-rationale-for-the-new-renderers-and-adapters)
   now records how each framework adapter consumes the utilities and how to wire
