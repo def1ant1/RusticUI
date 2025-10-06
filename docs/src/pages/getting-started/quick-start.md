@@ -19,6 +19,8 @@ you can stand up a reference experience in minutes.【F:docs/src/pages/examples/
   shells through every bootstrap command below, captures transcripts in
   `target/logs/quick-start.log`, and reuses the same workflow that
   `cargo xtask docs-test` executes in CI.【F:crates/xtask/src/main.rs†L150-L233】【F:crates/xtask/src/main.rs†L2100-L2222】
+- Review the [quick-start automation verification guide](../../testing/quick-start.md) for detailed prerequisites, caching tips,
+  and log interpretation guidance before modifying any scaffold or gallery CTA.【F:docs/testing/quick-start.md†L1-L96】
 
 ## Yew
 

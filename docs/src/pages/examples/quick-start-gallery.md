@@ -16,8 +16,12 @@ playground and published bundles depend on the same packages.【F:docs/src/compo
   changes so the checked-in data stays deterministic for reviews and follow-on automation.【F:docs/scripts/quickStartButtonSandbox.ts†L1-L43】【F:docs/data/examples/quick-start-button-sandbox.json†L1-L179】
 - The snapshot lives at `docs/data/examples/quick-start-button-sandbox.json`, making it trivial to
   audit edits and feed other tooling that wants to mirror the same sandbox files.【F:docs/data/examples/quick-start-button-sandbox.json†L1-L179】
+- Pair the docs snapshot check with the repository-wide [`cargo xtask quick-start`](../../../docs/testing/quick-start.md) harness
+  so every framework scaffold in the getting-started guide stays in sync with the gallery CTA and automation IDs.【F:docs/testing/quick-start.md†L1-L74】
 
 ## Next steps
 
 - Review the broader [example gallery](./index.md) to see how the quick-start CTA links into the
   multi-framework scaffolds and automation suites.【F:docs/src/pages/examples/index.md†L1-L211】
+- Follow the [quick-start automation verification playbook](../../../docs/testing/quick-start.md) for prerequisites, caching
+  strategies, and log interpretation tips before updating scaffolds or CTA copy.【F:docs/testing/quick-start.md†L1-L96】

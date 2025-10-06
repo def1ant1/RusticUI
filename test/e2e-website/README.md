@@ -12,6 +12,7 @@
 
 - `quick-start-gallery.spec.ts` drives the `/examples/quick-start-gallery` page, waits for the Sandpack iframe to hydrate, and asserts that the rendered call-to-action exposes `data-rustic-app-action="app-quick-start-primary"`, `data-rustic-analytics="docs.quick-start.button"`, and the visible label text from `QuickStartButtonGenerator.ts`.
 - The scenario ensures docs, StackBlitz, and Rust quick-start flows continue sharing the same analytics hooks; failures surface under `target/logs/docs-playwright.log` when invoked via `cargo xtask docs-test`.
+- Contributors updating the gallery or its scaffolds should run `cargo xtask quick-start` and follow the [quick-start automation verification guide](../../docs/testing/quick-start.md) so Playwright caches, StackBlitz snapshots, and docs CTA copy stay aligned across environments.【F:docs/testing/quick-start.md†L1-L96】【F:crates/xtask/src/main.rs†L206-L233】
 
 ## CI
 
