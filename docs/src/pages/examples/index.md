@@ -27,6 +27,14 @@ shipping changes.
    `cargo xtask docs-package --dry-run` to refresh the docs site for review
    without mutating the canonical export directory.【F:crates/xtask/src/main.rs†L150-L200】
 
+## Quick-start CTA playground
+
+Explore the [quick-start button gallery](./quick-start-gallery.md) to preview the
+Material CTA that anchors every scaffold. The page pipes the shared generator
+directly into Sandpack, StackBlitz, and a JSON snapshot so docs, automation, and
+multi-framework adapters all share the same source of truth.【F:docs/src/components/examples/QuickStartButtonGenerator.ts†L1-L187】【F:docs/scripts/quickStartButtonSandbox.ts†L1-L43】【F:docs/data/examples/quick-start-button-sandbox.json†L1-L179】
+
+
 ## Marketing microsite suite (`examples/mui-*`)
 
 The Material marketing blueprints compose `mui-shared` layout primitives with
