@@ -8,6 +8,9 @@ This document outlines the automation used in our Rust workspace CI and how to r
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/) for WebAssembly tests
 - Latest Chrome or Chromium for headless browser execution (Firefox is optional for local debugging)
 - [`wasm-bindgen-test`](https://rustwasm.github.io/docs/wasm-bindgen/reference/wasm-bindgen-test/introduction.html) (already listed as a dev-dependency in the crates, add it when authoring new suites)
+- [`mdBook`](https://rust-lang.github.io/mdBook/) for the Rust-first guide rendered during docs packaging
+- [`wasm-bindgen-cli`](https://rustwasm.github.io/wasm-bindgen/reference/cli.html) for bundling the docs wasm artifacts
+- [Playwright](https://playwright.dev/docs/intro) with Chromium support so docs wasm tests can execute without pnpm
 - [grcov](https://github.com/mozilla/grcov) for coverage reports
 
 Install prerequisites:
@@ -16,6 +19,9 @@ rustup component add rustfmt clippy llvm-tools-preview
 rustup target add wasm32-unknown-unknown
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 cargo install wasm-bindgen-cli # provides wasm-bindgen-test runners if you extend the suites
+cargo install mdbook
+npm install -g pnpm@9 # optional: required only when touching archived tooling manifests
+npx playwright install --with-deps chromium
 cargo install grcov
 ```
 
@@ -135,6 +141,20 @@ CI relies on this command to build and run WebAssembly tests for both `rustic-ui
 ```
 
 The `--no-default-features` flag mirrors CI by ensuring optional adapters declare their dependencies explicitly. When a run fails because Chrome cannot be located, set `CHROME` or `CHROMIUM` to the browser executable path. Browser console output is captured automatically, so rerun with `-- --nocapture` to view detailed logs.
+
+### Documentation pipeline
+
+CI builds, tests, and stages the documentation site using dedicated `cargo xtask` subcommands. Run the same flow locally to verify mdBook content, the Leptos SSR binary, and Playwright-driven wasm smoke tests:
+
+```bash
+cargo xtask docs-build
+cargo xtask docs-test
+cargo xtask docs-package --dry-run
+```
+
+- `docs-build` compiles the SSR binary, static renderer, and wasm bundle in parallel, reusing `CARGO_TARGET_DIR` caches.
+- `docs-test` launches Playwright's Chromium bundle against the freshly built wasm assets. Install the browsers once via `npx playwright install --with-deps chromium` or point `PLAYWRIGHT_BROWSERS_PATH` at a cached directory.
+- `docs-package --dry-run` validates the static export manifest without mutating the canonical staging directory. Drop the flag when you need to refresh production artifacts in `RUSTIC_DOCS_EXPORT_DIR`.
 
 ### Overlay automation suites
 The click-away detector and focus-trap state machines now back every modal, drawer and menu overlay. To keep telemetry hooks and accessibility metadata aligned across frameworks, CI exercises a dedicated set of suites:

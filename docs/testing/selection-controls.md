@@ -27,8 +27,8 @@ This sequence mirrors CI without shelling through pnpm:
 2. `cargo xtask clippy` denies warnings so lint regressions surface immediately.
 3. `cargo xtask selection-controls --skip-web` exercises the Material headless suites and the example smoke harness while skipping the new Chromium automation layer. Drop `--skip-web` to execute the Rust-driven browser harness that replaced the historical Node pipeline.【F:crates/xtask/src/main.rs†L1-L120】【F:crates/xtask/src/selection_controls_web.rs†L1-L420】
 4. `cargo xtask docs-build` rebuilds the docs server binary plus wasm bundle so downstream packaging has fresh artifacts.
-5. `cargo xtask docs-test` drives the Playwright-powered wasm smoke tests in headless Chromium.
-6. `cargo xtask docs-package --dry-run` validates the release packaging contract without mutating the canonical export directory.
+5. `cargo xtask docs-test` drives the Playwright-powered wasm smoke tests in headless Chromium. Install the browser bundle once via `npx playwright install --with-deps chromium` (or point `PLAYWRIGHT_BROWSERS_PATH` at a cached directory) so the harness can launch reliably.
+6. `cargo xtask docs-package --dry-run` validates the release packaging contract without mutating the canonical export directory, exercising the static export pipeline wired through `RUSTIC_DOCS_EXPORT_DIR`.
 
 The historical pnpm aggregator lives in [`archives/tooling/node-workspace/`](../../archives/tooling/node-workspace/README.md) for reference. Keep it archived—`cargo xtask verify-toolchain` fails builds if a replacement manifest escapes the quarantine.【F:archives/tooling/node-workspace/README.md†L1-L11】【F:crates/xtask/src/main.rs†L1-L120】【F:crates/xtask/src/main.rs†L240-L330】
 

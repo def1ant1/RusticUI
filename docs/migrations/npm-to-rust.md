@@ -224,9 +224,18 @@ jobs:
         run: cargo xtask icons-bundle --compat
       - name: Accessibility smoke test
         run: cargo xtask accessibility-audit
-      - name: Build docs
-        run: cargo xtask docs-package
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Build docs artifacts
+        run: cargo xtask docs-build
+      - name: Run docs wasm smoke tests
+        run: cargo xtask docs-test
+      - name: Stage docs (dry-run)
+        run: cargo xtask docs-package --dry-run
 ```
+
+Splitting the workflow keeps cache hits high: `docs-build` reuses the shared `CARGO_TARGET_DIR`, `docs-test` exercises the Playwright-powered wasm harness against the freshly compiled bundle, and `docs-package --dry-run` validates the static export manifest without mutating the canonical `RUSTIC_DOCS_EXPORT_DIR` directory used by production deploys.
+
 
 ## 7. Audit the Rust supply chain
 
