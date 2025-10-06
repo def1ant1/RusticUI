@@ -1,0 +1,3 @@
+<testsuites name="vitest tests" tests="20" failures="0" errors="0" skipped="0" time="5.0">
+  <testsuite name="suite" tests="20" failures="0" errors="0" skipped="0" time="5.0" />
+</testsuites>

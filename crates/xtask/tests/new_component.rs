@@ -99,11 +99,9 @@ fn conflicting_skip_flags_error() -> Result<()> {
         .arg("--headless-only")
         .arg("--dry-run");
 
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains(
-            "cannot be used with one or more of the other specified arguments",
-        ));
+    cmd.assert().failure().stderr(predicate::str::contains(
+        "cannot be used with one or more of the other specified arguments",
+    ));
 
     Ok(())
 }
