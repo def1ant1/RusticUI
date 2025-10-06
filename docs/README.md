@@ -6,6 +6,15 @@ introduces dedicated coverage for the automation utilities (click-away
 listeners, focus traps, telemetry streams) plus the Material renderers and
 examples that exercise them end-to-end.
 
+## Strategic improvement program
+
+We are incrementally delivering the enterprise hardening efforts outlined in
+[`improvement-plan.md`](./improvement-plan.md). Start there for a phased roadmap
+spanning discovery work, developer experience enhancements, reliability
+initiatives, ecosystem investments, and long-term evolution tracks. Each phase
+is designed to minimize manual toil through automation-first tooling, thorough
+documentation, and scalable architectural guardrails.
+
 To start the docs site in development mode, from the project root, run:
 
 ```bash
