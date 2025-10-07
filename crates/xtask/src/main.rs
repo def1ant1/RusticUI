@@ -95,7 +95,7 @@ enum Commands {
     /// Compile curated Rust example collections for native and WebAssembly targets.
     #[command(
         about = "Compile curated Rust example collections for native and WebAssembly targets.",
-        long_about = "Compile curated Rust example collections for native and WebAssembly targets without relying on ad-hoc shell scripts. Each group is centrally defined so new demos can be enrolled in CI by appending a manifest entry instead of wiring fresh workflows.\n\nLayout demos currently validated: examples/layout-box-leptos, examples/layout-grid-yew. Update the `layout_examples` helper when shipping new layouts so CI picks them up automatically.\n\nForm control demos validated: examples/forms-input-base-yew, examples/forms-input-base-leptos, examples/forms-input-base-dioxus, examples/forms-input-base-sycamore. Update `forms_examples` when adding new frameworks so SSR snapshots stay wired into CI.\n\nSelection control demos validated: examples/selection-controls-dioxus, examples/selection-controls-leptos, examples/selection-controls-react, examples/selection-controls-sycamore, examples/selection-controls-yew. Update `selection_controls_examples` whenever new renderers or telemetry adapters land so CI exercises every manifest."
+        long_about = "Compile curated Rust example collections for native and WebAssembly targets without relying on ad-hoc shell scripts. Each group is centrally defined so new demos can be enrolled in CI by appending a manifest entry instead of wiring fresh workflows.\n\nLayout demos currently validated: examples/layout-box-leptos, examples/layout-grid-yew. Update the `layout_examples` helper when shipping new layouts so CI picks them up automatically.\n\nForm control demos validated: examples/forms-input-base-yew, examples/forms-input-base-leptos, examples/forms-input-base-dioxus, examples/forms-input-base-sycamore. Update `forms_examples` when adding new frameworks so SSR snapshots stay wired into CI.\n\nSelection control demos validated: examples/selection-controls-dioxus, examples/selection-controls-leptos, examples/selection-controls-react, examples/selection-controls-sycamore, examples/selection-controls-yew. Update `selection_controls_examples` whenever new renderers or telemetry adapters land so CI exercises every manifest.\n\nHydration harnesses validated: forms-input-base-{yew, leptos, dioxus, sycamore} and selection-controls-{yew, dioxus, sycamore}. The hydration group compiles host + wasm targets **and** executes the documented SSR bootstrap binaries so regression guides stay reproducible."
     )]
     Examples(ExamplesArgs),
     /// Run WebAssembly tests via `wasm-pack` for selected crates.
@@ -648,6 +648,8 @@ enum ExampleGroup {
     Forms,
     /// Selection control demos that synchronize checkbox and radio telemetry.
     SelectionControls,
+    /// SSR bootstrap harnesses that verify hydration generators across frameworks.
+    Hydration,
 }
 
 impl ExampleGroup {
@@ -658,8 +660,21 @@ impl ExampleGroup {
             ExampleGroup::Navigation => "navigation",
             ExampleGroup::Forms => "forms",
             ExampleGroup::SelectionControls => "selection-controls",
+            ExampleGroup::Hydration => "hydration",
         }
     }
+}
+
+#[derive(Debug, Clone)]
+struct HydrationEntry {
+    example: ExampleCrate,
+    runner: HydrationRunner,
+}
+
+#[derive(Copy, Clone, Debug)]
+enum HydrationRunner {
+    Bootstrap(&'static str),
+    Binary(&'static str),
 }
 
 /// Build configuration flags shared across native and wasm invocations.
@@ -748,50 +763,99 @@ fn examples(args: ExamplesArgs) -> Result<()> {
         }
     );
 
-    let crates = example_group_crates(&workspace, args.group)?;
+    if args.group == ExampleGroup::Hydration {
+        let specs = hydration_specs(&workspace)?;
 
-    if crates.is_empty() {
-        println!(
-            "[xtask][examples] no example manifests registered for the `{}` group",
-            args.group.as_str()
-        );
-        return Ok(());
-    }
+        if specs.is_empty() {
+            println!(
+                "[xtask][examples] no hydration manifests registered; update hydration_specs() to enroll new demos"
+            );
+            return Ok(());
+        }
 
-    for example in crates {
-        println!(
-            "[xtask][examples] building `{}` for native host target",
-            example.name
-        );
-        run_example_command(
-            &example,
-            "build",
-            None,
-            Some(&build_opts),
-            &[],
-            "native cargo build",
-        )?;
-        println!(
-            "[xtask][examples] `{}` compiled successfully for the native host",
-            example.name
-        );
+        for entry in &specs {
+            println!(
+                "[xtask][examples] building `{}` for native host target",
+                entry.example.name
+            );
+            run_example_command(
+                &entry.example,
+                "build",
+                None,
+                Some(&build_opts),
+                &[],
+                "native cargo build",
+            )?;
+            println!(
+                "[xtask][examples] `{}` compiled successfully for the native host",
+                entry.example.name
+            );
 
-        println!(
-            "[xtask][examples] building `{}` for wasm32-unknown-unknown",
-            example.name
-        );
-        run_example_command(
-            &example,
-            "build",
-            Some("wasm32-unknown-unknown"),
-            Some(&build_opts),
-            &[],
-            "wasm cargo build",
-        )?;
-        println!(
-            "[xtask][examples] `{}` compiled successfully for wasm32-unknown-unknown",
-            example.name
-        );
+            println!(
+                "[xtask][examples] building `{}` for wasm32-unknown-unknown",
+                entry.example.name
+            );
+            run_example_command(
+                &entry.example,
+                "build",
+                Some("wasm32-unknown-unknown"),
+                Some(&build_opts),
+                &[],
+                "wasm cargo build",
+            )?;
+            println!(
+                "[xtask][examples] `{}` compiled successfully for wasm32-unknown-unknown",
+                entry.example.name
+            );
+
+            run_hydration_generator(entry, &build_opts)?;
+        }
+    } else {
+        let crates = example_group_crates(&workspace, args.group)?;
+
+        if crates.is_empty() {
+            println!(
+                "[xtask][examples] no example manifests registered for the `{}` group",
+                args.group.as_str()
+            );
+            return Ok(());
+        }
+
+        for example in crates {
+            println!(
+                "[xtask][examples] building `{}` for native host target",
+                example.name
+            );
+            run_example_command(
+                &example,
+                "build",
+                None,
+                Some(&build_opts),
+                &[],
+                "native cargo build",
+            )?;
+            println!(
+                "[xtask][examples] `{}` compiled successfully for the native host",
+                example.name
+            );
+
+            println!(
+                "[xtask][examples] building `{}` for wasm32-unknown-unknown",
+                example.name
+            );
+            run_example_command(
+                &example,
+                "build",
+                Some("wasm32-unknown-unknown"),
+                Some(&build_opts),
+                &[],
+                "wasm cargo build",
+            )?;
+            println!(
+                "[xtask][examples] `{}` compiled successfully for wasm32-unknown-unknown",
+                example.name
+            );
+        }
     }
 
     println!(
@@ -954,6 +1018,68 @@ fn forms_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
     Ok(crates)
 }
 
+fn hydration_specs(workspace: &Path) -> Result<Vec<HydrationEntry>> {
+    const HYDRATION_MANIFESTS: &[(&str, &str, HydrationRunner)] = &[
+        (
+            "forms-input-base-dioxus",
+            "examples/forms-input-base-dioxus/Cargo.toml",
+            HydrationRunner::Bootstrap("bootstrap"),
+        ),
+        (
+            "forms-input-base-leptos",
+            "examples/forms-input-base-leptos/Cargo.toml",
+            HydrationRunner::Bootstrap("bootstrap"),
+        ),
+        (
+            "forms-input-base-sycamore",
+            "examples/forms-input-base-sycamore/Cargo.toml",
+            HydrationRunner::Bootstrap("bootstrap"),
+        ),
+        (
+            "forms-input-base-yew",
+            "examples/forms-input-base-yew/Cargo.toml",
+            HydrationRunner::Bootstrap("bootstrap"),
+        ),
+        (
+            "selection-controls-dioxus",
+            "examples/selection-controls-dioxus/Cargo.toml",
+            HydrationRunner::Binary("selection-controls"),
+        ),
+        (
+            "selection-controls-sycamore",
+            "examples/selection-controls-sycamore/Cargo.toml",
+            HydrationRunner::Binary("selection-controls"),
+        ),
+        (
+            "selection-controls-yew",
+            "examples/selection-controls-yew/Cargo.toml",
+            HydrationRunner::Binary("selection-controls-yew"),
+        ),
+    ];
+
+    let mut specs = Vec::with_capacity(HYDRATION_MANIFESTS.len());
+    for (name, manifest, runner) in HYDRATION_MANIFESTS {
+        let manifest_path = workspace.join(manifest);
+        if !manifest_path.exists() {
+            return Err(anyhow!(
+                "hydration example `{}` manifest missing at {}",
+                name,
+                manifest_path.display()
+            ));
+        }
+
+        specs.push(HydrationEntry {
+            example: ExampleCrate {
+                name: (*name).to_string(),
+                manifest: manifest_path,
+            },
+            runner: *runner,
+        });
+    }
+
+    Ok(specs)
+}
+
 fn selection_controls_examples(workspace: &Path) -> Result<Vec<ExampleCrate>> {
     // Keep the selection control telemetry demos synchronized across renderers.
     // Centralizing the manifests ensures CI and local contributors compile every
@@ -1034,6 +1160,46 @@ fn run_example_command(
             example.manifest.display(),
         )
     })
+}
+
+fn run_hydration_generator(entry: &HydrationEntry, build_opts: &BuildOptions) -> Result<()> {
+    let bin = match entry.runner {
+        HydrationRunner::Bootstrap(bin) => {
+            println!(
+                "[xtask][examples] executing `{}` bootstrap binary `{}` to refresh SSR assets",
+                entry.example.name, bin
+            );
+            bin
+        }
+        HydrationRunner::Binary(bin) => {
+            println!(
+                "[xtask][examples] running `{}` binary `{}` to emit SSR diagnostics",
+                entry.example.name, bin
+            );
+            bin
+        }
+    };
+
+    let mut cmd = Command::new("cargo");
+    cmd.arg("run");
+    build_opts.apply_to(&mut cmd);
+    cmd.arg("--bin").arg(bin);
+    cmd.arg("--manifest-path").arg(&entry.example.manifest);
+
+    run(cmd).with_context(|| {
+        format!(
+            "hydration generator failed for example `{}` at {}",
+            entry.example.name,
+            entry.example.manifest.display()
+        )
+    })?;
+
+    println!(
+        "[xtask][examples] hydration generator for `{}` completed successfully",
+        entry.example.name
+    );
+
+    Ok(())
 }
 
 fn wasm_test() -> Result<()> {
