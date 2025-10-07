@@ -11,7 +11,7 @@
 ## Phase 0 – Discovery & Foundations (Current Step)
 
 - [ ] Catalog headless state machine complexity (collapsible region, focus trap) and draft formal state diagrams.
-- [ ] Audit type-safety patterns to identify candidates for typestate or compile-time builders.
+- [x] Audit type-safety patterns to identify candidates for typestate or compile-time builders. See [`architecture/type-safety-audit.md`](./architecture/type-safety-audit.md) for the current hotspot inventory and proposed follow-up issues.
 - [ ] Assemble current testing coverage report (snapshot, unit, integration, accessibility, visual).
 - [x] Inventory automation gaps in `cargo xtask` suite (scaffolding, dev servers, a11y audits).
 

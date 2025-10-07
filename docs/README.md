@@ -15,6 +15,10 @@ initiatives, ecosystem investments, and long-term evolution tracks. Each phase
 is designed to minimize manual toil through automation-first tooling, thorough
 documentation, and scalable architectural guardrails.
 
+**Latest discovery deliverable:** the new [type-safety audit](architecture/type-safety-audit.md) documents runtime validation
+hotspots inside the headless and Material crates, complete with proposed follow-up issues, migration guidance, and
+compatibility notes so teams can plan typestate/compile-time builder upgrades without disrupting current adapters.
+
 To start the docs site in development mode, from the project root, run:
 
 ```bash
