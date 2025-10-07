@@ -13,6 +13,12 @@ before sign-off.【F:docs/testing/coverage-overview.md†L1-L72】
 
 ## Prerequisites
 
+> **Managed option:** Opening the repository in the RusticUI devcontainer or a
+> GitHub Codespace provisions everything in this list automatically—Rust,
+> Node 20 + pnpm, Playwright Chromium bundles, and the xtask verification
+> guards. Review `.devcontainer/devcontainer.json` for the cache layout and
+> post-create automation sequence before mirroring custom environments.【F:.devcontainer/devcontainer.json†L1-L52】【F:.devcontainer/scripts/post-create.sh†L1-L38】
+
 1. Install the latest stable Rust toolchain and add the `wasm32-unknown-unknown`
    target: `rustup target add wasm32-unknown-unknown`.
 2. Install framework launchers used by the scaffolds you plan to touch:
@@ -52,6 +58,9 @@ before sign-off.【F:docs/testing/coverage-overview.md†L1-L72】
 - When iterating on docs or gallery content, launch `cargo xtask dev`. The harness boots the Next.js docs site and Leptos
   example gallery together, writing live output to `target/logs/dev.log` so reviewers can inspect hot-reload sessions alongside
   code changes.
+- Codespaces automatically starts the harness after attach. Re-run `cargo xtask
+  dev --dry-run` from the `RusticUI · dry-run dev harness` task palette entry if
+  you need to capture a transcript without long-running processes.【F:.devcontainer/codespaces.json†L5-L34】
 
 2. Inspect `target/logs/quick-start.log` after the run completes. Each scaffold
    prints a bounded header, the exact commands executed, and a success/failure

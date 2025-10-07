@@ -1,0 +1,74 @@
+{
+  // RusticUI devcontainer tuned for cargo xtask workflows and docs/gallery hot reload.
+  "name": "RusticUI automation workspace",
+  "build": {
+    // Keep the build context scoped to the devcontainer folder so Docker only
+    // invalidates layers when tooling metadata changes.
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  // Features install Node.js 20 and pnpm so `cargo xtask dev` can drive the Next.js docs.
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/pnpm:1": {
+      "version": "8"
+    }
+  },
+  // Ensure the workspace user matches the Dockerfile chown commands.
+  "remoteUser": "vscode",
+  "runArgs": [
+    "--init"
+  ],
+  // Persist heavy caches between container restarts to keep automation snappy.
+  "mounts": [
+    "source=rusticui-cargo,target=/workspaces/.cargo-target,type=volume",
+    "source=rusticui-playwright,target=/workspaces/.cache/ms-playwright,type=volume",
+    "source=rusticui-pnpm,target=/workspaces/.pnpm-store,type=volume"
+  ],
+  // Environment defaults align with CONTRIBUTING.md guidance so local, CI, and
+  // Codespaces flows share the same directory conventions without extra exports.
+  "containerEnv": {
+    "CARGO_TARGET_DIR": "/workspaces/.cargo-target",
+    "PLAYWRIGHT_BROWSERS_PATH": "/workspaces/.cache/ms-playwright",
+    "PNPM_HOME": "/usr/local/share/pnpm",
+    "RUST_LOG": "info",
+    // Disable pnpm lockfile generation because the root workspace intentionally
+    // relies on cargo/xtask automation and quarantines historical Node manifests.
+    "PNPM_DISABLE_LOCKFILE": "true"
+  },
+  // Pre-create the docs + gallery tooling so contributors can iterate immediately.
+  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+  // Forward ports used by the docs (Next.js) and gallery (Leptos) dev servers.
+  "forwardPorts": [3000, 3100],
+  "portsAttributes": {
+    "3000": {
+      "label": "Rustic gallery (Leptos SSR)",
+      "onAutoForward": "openBrowser"
+    },
+    "3100": {
+      "label": "Docs (Next.js)",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  // Provide quick access to the automation handbook directly inside VS Code.
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.watcherExclude": {
+          "**/target/**": true,
+          "**/.pnpm-store/**": true,
+          "**/.cache/ms-playwright/**": true
+        }
+      },
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates",
+        "vadimcn.vscode-lldb"
+      ]
+    }
+  }
+}

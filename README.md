@@ -226,6 +226,25 @@ acknowledgements, and panic reporting) regardless of renderer.
 
 Automation is consolidated in the root `Makefile` and `cargo xtask` binary so teams can wire CI once and scale confidently.
 
+### Managed development environment
+
+Open the repository inside the published devcontainer (local VS Code) or GitHub
+Codespaces instance to inherit a fully provisioned toolchain. The container
+image installs the stable Rust toolchain, wasm target, mdBook, wasm-pack,
+Playwright prerequisites, and pnpm + Node 20. It also mounts shared caches for
+Cargo, Playwright, and pnpm to keep hot reload cycles fast across sessions, then
+executes `.devcontainer/scripts/post-create.sh` to install docs dependencies,
+run `cargo xtask verify-toolchain`, and dry-run `cargo xtask dev` before you
+start coding.【F:.devcontainer/Dockerfile†L1-L73】【F:.devcontainer/devcontainer.json†L1-L52】【F:.devcontainer/scripts/post-create.sh†L1-L38】
+
+When the Codespace attaches, the workspace automatically starts `cargo xtask
+dev` so the Leptos gallery (port 3000) and Next.js docs (port 3100) hot reload
+immediately. Task palette entries labelled "RusticUI" let you re-run the
+verification commands or replay a dry-run of the harness without leaving the
+editor.【F:.devcontainer/codespaces.json†L1-L34】 Attach the resulting logs to pull
+requests whenever you touch automation or docs to prove the managed environment
+remains green.
+
 ```bash
 make build        # compile every crate
 make test         # run workspace tests
