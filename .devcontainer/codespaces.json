@@ -1,0 +1,33 @@
+{
+  // Codespaces-specific hooks that complement devcontainer.json. GitHub ignores
+  // this file when developers open the workspace locally, but it lets us align
+  // the default tasks palette with the cargo xtask automation routines.
+  "postAttachCommand": {
+    // Launch the unified docs + gallery harness as soon as the Codespace starts
+    // so reviewers land directly in a hot-reload loop. Developers can stop the
+    // task if they prefer to run the processes manually.
+    "cargo xtask dev": "cargo xtask dev"
+  },
+  "portsAttributes": {
+    "3000": {
+      "label": "Rustic gallery (Leptos SSR)",
+      "onAutoForward": "openBrowser"
+    },
+    "3100": {
+      "label": "Docs (Next.js)",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  // Expose a task shortcut that replays the bootstrap validation without
+  // rebuilding the container.
+  "tasks": {
+    "verify-toolchain": {
+      "command": "cargo xtask verify-toolchain",
+      "label": "RusticUI · verify toolchain"
+    },
+    "dev-dry-run": {
+      "command": "cargo xtask dev --dry-run",
+      "label": "RusticUI · dry-run dev harness"
+    }
+  }
+}

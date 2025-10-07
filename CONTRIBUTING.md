@@ -22,6 +22,32 @@ Before starting large efforts, open a GitHub discussion or issue so the maintain
 
 ## Development setup
 
+### Managed devcontainer and Codespaces workflow
+
+The `.devcontainer` configuration bootstraps a ready-to-ship environment with
+Rust, Node 20, pnpm, Playwright dependencies, and the `cargo xtask` CLI suite
+preinstalled. Opening the repository in GitHub Codespaces or a local VS Code
+Dev Container automatically:
+
+- Mounts persistent caches for Cargo, Playwright, and pnpm so rebuilds reuse the
+  same directories across sessions (`/workspaces/.cargo-target`,
+  `/workspaces/.cache/ms-playwright`, `/workspaces/.pnpm-store`).【F:.devcontainer/devcontainer.json†L24-L44】【F:.devcontainer/Dockerfile†L15-L60】
+- Runs `.devcontainer/scripts/post-create.sh` to install docs dependencies,
+  provision Chromium via Playwright, and execute both `cargo xtask
+  verify-toolchain` and `cargo xtask dev --dry-run` for a smoke check.【F:.devcontainer/devcontainer.json†L46-L49】【F:.devcontainer/scripts/post-create.sh†L1-L38】
+- Launches the unified docs + gallery harness (`cargo xtask dev`) after attach
+  so you land in a live hot-reload loop with ports 3000 (Leptos gallery) and
+  3100 (Next.js docs) forwarded automatically.【F:.devcontainer/codespaces.json†L5-L23】
+
+You can rerun the validation routines at any time from the integrated tasks
+palette—`RusticUI · verify toolchain` invokes `cargo xtask verify-toolchain`
+while `RusticUI · dry-run dev harness` replays the combined docs/gallery
+bootstrap without starting long-running processes.【F:.devcontainer/codespaces.json†L24-L34】 Capture the output in pull request
+summaries to demonstrate parity with the managed environment when iterating on
+tooling or docs.
+
+### Manual setup (fallback)
+
 1. Install the latest stable Rust toolchain and ensure `wasm32-unknown-unknown` is available via `rustup target add`.
 2. Install supporting CLI tools with Cargo: `cargo install mdbook grcov wasm-pack cargo-deny` (the automation will leverage
    them when present).

@@ -28,7 +28,7 @@
 2. **Scaffolding & Automation**
    - [x] Extend `cargo xtask` with `new-component` generator supporting material/headless templates (Rust + TypeScript + docs stubs).
    - [x] Ship `cargo xtask dev` for hot-reloading example gallery and docs site with shared logs.
-   - [ ] Publish Devcontainer + Codespaces configs for consistent onboarding.
+   - [x] Publish Devcontainer + Codespaces configs for consistent onboarding (see `.devcontainer/`).【F:.devcontainer/devcontainer.json†L1-L52】【F:.devcontainer/codespaces.json†L1-L34】
 
 3. **Documentation Quality**
    - Introduce component decision guides (e.g., `Box` vs `Container` vs `Grid`).

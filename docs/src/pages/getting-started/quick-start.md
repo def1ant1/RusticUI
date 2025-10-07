@@ -8,6 +8,10 @@ you can stand up a reference experience in minutes.【F:docs/src/pages/examples/
 
 ## Global prerequisites
 
+- Prefer the managed devcontainer or GitHub Codespace when onboarding. The
+  configuration wires shared caches, installs docs dependencies, and runs both
+  `cargo xtask verify-toolchain` and a dry-run of `cargo xtask dev` so you land
+  in a verified hot-reload loop on first attach.【F:.devcontainer/devcontainer.json†L1-L52】【F:.devcontainer/scripts/post-create.sh†L1-L38】【F:.devcontainer/codespaces.json†L5-L34】
 - Install the Rust toolchain (stable) and add the `wasm32-unknown-unknown`
   target: `rustup target add wasm32-unknown-unknown`.
 - Install [Trunk](https://trunkrs.dev/), [Dioxus CLI](https://dioxuslabs.com),
