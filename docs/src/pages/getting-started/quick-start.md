@@ -19,6 +19,14 @@ you can stand up a reference experience in minutes.【F:docs/src/pages/examples/
   shells through every bootstrap command below, captures transcripts in
   `target/logs/quick-start.log`, and reuses the same workflow that
   `cargo xtask docs-test` executes in CI.【F:crates/xtask/src/main.rs†L150-L233】【F:crates/xtask/src/main.rs†L2100-L2222】
+- Use `cargo xtask new-component --dry-run <Name>` to preview the full Rust,
+  TypeScript, Storybook, and documentation scaffolds RusticUI generates for new
+  surfaces before committing to an implementation. The generator details live in
+  [the xtask catalog](../../tooling/xtask.md).【F:crates/xtask/src/main.rs†L134-L205】【F:crates/xtask/src/new_component.rs†L1-L228】【F:docs/tooling/xtask.md†L1-L44】
+- When iterating on docs or gallery behaviour, `cargo xtask dev` launches both
+  hot-reload servers and records a combined transcript in
+  `target/logs/dev.log` so the quick-start scripts mirror production parity.
+  Review usage notes in the [xtask catalog](../../tooling/xtask.md).【F:crates/xtask/src/main.rs†L134-L205】【F:crates/xtask/src/dev.rs†L1-L226】【F:docs/tooling/xtask.md†L46-L74】
 - Review the [quick-start automation verification guide](../../testing/quick-start.md) for detailed prerequisites, caching tips,
   and log interpretation guidance before modifying any scaffold or gallery CTA.【F:docs/testing/quick-start.md†L1-L96】
 

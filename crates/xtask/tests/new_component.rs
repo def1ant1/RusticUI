@@ -42,6 +42,12 @@ fn dry_run_lists_every_output_path() -> Result<()> {
             "packages/mui-material/src/DataDashboard/RusticAdapter.tsx",
         ))
         .stdout(predicate::str::contains(
+            "packages/mui-material/src/DataDashboard/RusticAdapter.stories.tsx",
+        ))
+        .stdout(predicate::str::contains(
+            "packages/mui-material/src/DataDashboard/RusticAdapter.spec.tsx",
+        ))
+        .stdout(predicate::str::contains(
             "docs/src/pages/system/components/data-dashboard.mdx",
         ));
 
@@ -69,6 +75,12 @@ fn material_only_omits_headless_outputs() -> Result<()> {
         ))
         .stdout(predicate::str::contains(
             "packages/mui-material/src/HeadlessFree/RusticAdapter.tsx",
+        ))
+        .stdout(predicate::str::contains(
+            "packages/mui-material/src/HeadlessFree/RusticAdapter.stories.tsx",
+        ))
+        .stdout(predicate::str::contains(
+            "packages/mui-material/src/HeadlessFree/RusticAdapter.spec.tsx",
         ))
         .stdout(predicate::str::contains(
             "docs/src/pages/system/components/headless-free.mdx",
