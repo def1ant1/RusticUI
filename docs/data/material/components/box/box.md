@@ -18,8 +18,10 @@ githubSource: archives/mui-packages/mui-material/src/Box
 Read the [Component decision guides](/docs/architecture/component-decision-guides/)
 for a side-by-side comparison of `Box`, `Container`, `Grid`, `Stack`, and
 `Hidden`, plus the regression tests and automation commands to run before
-shipping layout changes. The cross-adapter coverage dashboard lives in
-[Adapter parity](/docs/architecture/adapter-parity/).
+shipping layout changes. When you touch layout tokens or automation IDs, run
+`cargo xtask parity-report` locally and let CI enforce
+`cargo xtask parity-report --check` so the [Adapter parity](/docs/architecture/adapter-parity/)
+dashboard always matches the available adapters.
 :::
 
 ## Introduction
