@@ -139,10 +139,20 @@ enum SuiteStatus {
     Skipped,
 }
 
+#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum SuiteCategory {
+    Unit,
+    Integration,
+    Accessibility,
+    Visual,
+}
+
 #[derive(Debug, Serialize)]
 struct SuiteReport {
     name: String,
     kind: String,
+    category: SuiteCategory,
     status: SuiteStatus,
     #[serde(flatten)]
     metrics: SuiteMetrics,
@@ -181,12 +191,24 @@ enum SuiteMetrics {
     },
 }
 
+impl SuiteCategory {
+    fn label(&self) -> &'static str {
+        match self {
+            SuiteCategory::Unit => "Unit",
+            SuiteCategory::Integration => "Integration",
+            SuiteCategory::Accessibility => "Accessibility",
+            SuiteCategory::Visual => "Visual Snapshot",
+        }
+    }
+}
+
 fn collect_rust_coverage(source: &CoverageDataSource) -> Result<SuiteReport> {
     let path = source.resolve(Path::new("lcov.info"));
     if !path.exists() {
         return Ok(SuiteReport {
             name: "Rust workspace".into(),
             kind: "rust".into(),
+            category: SuiteCategory::Integration,
             status: SuiteStatus::Skipped,
             metrics: SuiteMetrics::Coverage {
                 line_rate: None,
@@ -240,6 +262,7 @@ fn collect_rust_coverage(source: &CoverageDataSource) -> Result<SuiteReport> {
     Ok(SuiteReport {
         name: "Rust workspace".into(),
         kind: "rust".into(),
+        category: SuiteCategory::Integration,
         status,
         metrics: SuiteMetrics::Coverage {
             line_rate: Some(line_rate),
@@ -258,6 +281,7 @@ fn collect_typescript_coverage(source: &CoverageDataSource) -> Result<SuiteRepor
         return Ok(SuiteReport {
             name: "TypeScript automation".into(),
             kind: "typescript".into(),
+            category: SuiteCategory::Unit,
             status: SuiteStatus::Skipped,
             metrics: SuiteMetrics::PassRate {
                 pass_rate: 0.0,
@@ -286,6 +310,7 @@ fn collect_typescript_coverage(source: &CoverageDataSource) -> Result<SuiteRepor
         return Ok(SuiteReport {
             name: "TypeScript automation".into(),
             kind: "typescript".into(),
+            category: SuiteCategory::Unit,
             status: SuiteStatus::Skipped,
             metrics: SuiteMetrics::PassRate {
                 pass_rate: 0.0,
@@ -312,6 +337,7 @@ fn collect_typescript_coverage(source: &CoverageDataSource) -> Result<SuiteRepor
     Ok(SuiteReport {
         name: "TypeScript automation".into(),
         kind: "typescript".into(),
+        category: SuiteCategory::Unit,
         status,
         metrics: SuiteMetrics::PassRate {
             pass_rate,
@@ -337,6 +363,7 @@ fn collect_accessibility_signal(source: &CoverageDataSource) -> Result<SuiteRepo
                 return Ok(SuiteReport {
                     name: "Accessibility audits".into(),
                     kind: "accessibility".into(),
+                    category: SuiteCategory::Accessibility,
                     status: SuiteStatus::Skipped,
                     metrics: SuiteMetrics::Accessibility {
                         files_scanned: 0,
@@ -365,6 +392,7 @@ fn collect_accessibility_signal(source: &CoverageDataSource) -> Result<SuiteRepo
             Ok(SuiteReport {
                 name: "Accessibility audits".into(),
                 kind: "accessibility".into(),
+                category: SuiteCategory::Accessibility,
                 status,
                 metrics: SuiteMetrics::Accessibility {
                     files_scanned: summary.files_scanned,
@@ -398,6 +426,7 @@ fn collect_accessibility_signal(source: &CoverageDataSource) -> Result<SuiteRepo
             Ok(SuiteReport {
                 name: "Accessibility audits".into(),
                 kind: "accessibility".into(),
+                category: SuiteCategory::Accessibility,
                 status,
                 metrics: SuiteMetrics::Accessibility {
                     files_scanned: summary.files_scanned,
@@ -417,6 +446,7 @@ fn collect_visual_regressions(source: &CoverageDataSource) -> Result<SuiteReport
         return Ok(SuiteReport {
             name: "Visual regression snapshots".into(),
             kind: "visual_regression".into(),
+            category: SuiteCategory::Visual,
             status: SuiteStatus::Skipped,
             metrics: SuiteMetrics::VisualRegression {
                 snapshots: 0,
@@ -456,6 +486,7 @@ fn collect_visual_regressions(source: &CoverageDataSource) -> Result<SuiteReport
     Ok(SuiteReport {
         name: "Visual regression snapshots".into(),
         kind: "visual_regression".into(),
+        category: SuiteCategory::Visual,
         status,
         metrics: SuiteMetrics::VisualRegression {
             snapshots: summary.snapshots,
@@ -492,7 +523,7 @@ fn write_markdown(path: &Path, report: &CoverageReport, workspace: &Path) -> Res
 
     writeln!(
         file,
-        "| Suite | Status | Key metrics | Thresholds | Notes |\n| --- | --- | --- | --- | --- |"
+        "| Suite | Track | Discipline | Key metrics | Thresholds | Notes |\n| --- | --- | --- | --- | --- | --- |"
     )?;
 
     for suite in &report.suites {
@@ -506,8 +537,14 @@ fn write_markdown(path: &Path, report: &CoverageReport, workspace: &Path) -> Res
         let notes = suite.details.join("<br />");
         writeln!(
             file,
-            "| {} {} | {} | {} | {} | {} |",
-            status_emoji, suite.name, suite.kind, metrics, thresholds, notes
+            "| {} {} | {} | {} | {} | {} | {} |",
+            status_emoji,
+            suite.name,
+            suite.kind,
+            suite.category.label(),
+            metrics,
+            thresholds,
+            notes
         )?;
     }
 

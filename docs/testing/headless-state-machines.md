@@ -28,3 +28,11 @@ Each property is annotated with extensive commentary so teams rolling out new
 automation or analytics pipelines can extend the suite without reverse-
 engineering business rules.  CI runs the tests via `cargo xtask test --examples`
 to keep coverage aligned with the workspace’s release-readiness checklist.
+
+After validating the headless properties, run
+`cargo xtask coverage-report` to roll their results into the aggregated
+dashboard alongside the TypeScript snapshots and axe-core sweeps. The
+[cross-suite coverage dashboard](coverage-overview.md) section explains how the
+disciplines map to Rust unit/integration, Playwright snapshots, and the
+Markdown accessibility audits so the state-machine maintainers can confirm all
+pipelines stayed green.【F:docs/testing/coverage-overview.md†L1-L72】
