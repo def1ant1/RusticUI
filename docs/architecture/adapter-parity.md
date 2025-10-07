@@ -1,8 +1,8 @@
 # Adapter Parity
 
-_Last updated 2025-10-07T03:12:01Z via `cargo xtask parity-report`._
+_Last updated 2025-10-07T16:01:32Z via `cargo xtask parity-report`._
 
-The tables below enumerate which framework adapters ship for each component. Material adapters are discovered by scanning the adapter modules under `crates/rustic-ui-material/src`, and the Joy rows come from the Yew-first modules declared in `crates/rustic-ui-joy/src/lib.rs`. Parity is validated by the cross-adapter regression suites such as [`button_adapters.rs`](../../crates/rustic-ui-material/tests/button_adapters.rs) and [`joy_yew.rs`](../../crates/rustic-ui-material/tests/joy_yew.rs). Run `cargo xtask parity-report` after adding or removing adapters so CI can confirm this dashboard stays in sync.
+The tables below enumerate which framework adapters ship for each component. Material adapters are discovered by scanning the adapter modules under `crates/rustic-ui-material/src`, and the Joy rows come from the Yew-first modules declared in `crates/rustic-ui-joy/src/lib.rs`. Parity is validated by the cross-adapter regression suites such as [`button_adapters.rs`](../../crates/rustic-ui-material/tests/button_adapters.rs) and [`joy_yew.rs`](../../crates/rustic-ui-material/tests/joy_yew.rs). Run `cargo xtask parity-report` after adding or removing adapters, and `cargo xtask parity-report --check` in CI, so this dashboard stays in sync.
 
 ## Material adapters
 

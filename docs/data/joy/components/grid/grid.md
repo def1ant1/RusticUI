@@ -11,6 +11,15 @@ githubLabel: 'component: Grid'
 
 {{"component": "@mui/docs/ComponentLinkHeader"}}
 
+:::info Architecture reference
+Pair this API reference with the [Component decision guides](/docs/architecture/component-decision-guides/)
+for guidance on when to reach for `Grid` versus `Stack` or `Hidden`. The
+[Adapter parity dashboard](/docs/architecture/adapter-parity/) lists which
+framework adapters currently ship SSR/hydration support for the grid renderer.
+Regenerate it with `cargo xtask parity-report` and lean on
+`cargo xtask parity-report --check` in CI whenever you add or remove adapters.
+:::
+
 ## Introduction
 
 The Grid component, based on a 12-column grid layout, creates visual consistency between layouts while allowing flexibility across a wide variety of designs.

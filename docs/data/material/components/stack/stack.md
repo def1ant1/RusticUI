@@ -20,6 +20,15 @@ Stack is ideal for one-dimensional layouts, while Grid is preferable when you ne
 
 {{"component": "@mui/docs/ComponentLinkHeader"}}
 
+:::info Architecture reference
+Coordinate `Stack` usage with the [Component decision guides](/docs/architecture/component-decision-guides/)
+to validate when to prefer one-dimensional stacks over `Grid`, `Box`, or `Hidden`.
+Run `cargo xtask parity-report` locally and depend on
+`cargo xtask parity-report --check` in CI so the
+[Adapter parity dashboard](/docs/architecture/adapter-parity/) always mirrors
+the adapters published for each framework.
+:::
+
 ## Basics
 
 ```jsx
