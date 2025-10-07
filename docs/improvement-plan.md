@@ -13,7 +13,7 @@
 - [ ] Catalog headless state machine complexity (collapsible region, focus trap) and draft formal state diagrams.
 - [x] Audit type-safety patterns to identify candidates for typestate or compile-time builders. See [`architecture/type-safety-audit.md`](./architecture/type-safety-audit.md) for the current hotspot inventory and proposed follow-up issues.
 - [ ] Assemble current testing coverage report (snapshot, unit, integration, accessibility, visual).
-- [x] Inventory automation gaps in `cargo xtask` suite (scaffolding, dev servers, a11y audits).
+- [x] Inventory automation gaps in `cargo xtask` suite (scaffolding, dev servers, a11y audits). Documented in [`docs/tooling/xtask-automation-audit.md`](./tooling/xtask-automation-audit.md).
 
 ### Deliverables
 - Centralized documentation index linking to architecture, testing, and migration guides.
