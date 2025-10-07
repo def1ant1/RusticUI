@@ -1,0 +1,173 @@
+{
+  "generated_at": "2025-10-07T04:28:36.117327731+00:00",
+  "generated_at_unix": 1759811316,
+  "target_dir": "target/bundle-report",
+  "scenarios": [
+    {
+      "id": "headless-default",
+      "crate_name": "rustic-ui-headless",
+      "display_name": "Headless (default)",
+      "description": "Full optional surface mirroring the published crate defaults.",
+      "default_features": true,
+      "features": [
+        "forms",
+        "feedback",
+        "progress"
+      ],
+      "feature_label": "default features",
+      "command_summary": "cargo build -p rustic-ui-headless --release",
+      "is_baseline": false,
+      "size_bytes": 2872838,
+      "size_kib": 2805.505859375,
+      "artifact": "target/bundle-report/release/deps/librustic_ui_headless-bd7b6b1d76841d8d.rlib",
+      "delta_bytes": 0,
+      "delta_kib": 0.0,
+      "delta_percent": 0.0
+    },
+    {
+      "id": "headless-feedback",
+      "crate_name": "rustic-ui-headless",
+      "display_name": "Headless (forms + feedback)",
+      "description": "Adds snackbar, rating and feedback primitives.",
+      "default_features": false,
+      "features": [
+        "forms",
+        "feedback"
+      ],
+      "feature_label": "forms, feedback",
+      "command_summary": "cargo build -p rustic-ui-headless --release --no-default-features --features forms,feedback",
+      "is_baseline": false,
+      "size_bytes": 2872838,
+      "size_kib": 2805.505859375,
+      "artifact": "target/bundle-report/release/deps/librustic_ui_headless-bd7b6b1d76841d8d.rlib",
+      "delta_bytes": 0,
+      "delta_kib": 0.0,
+      "delta_percent": 0.0
+    },
+    {
+      "id": "headless-progress",
+      "crate_name": "rustic-ui-headless",
+      "display_name": "Headless (forms + progress)",
+      "description": "Includes determinate and indeterminate progress indicators.",
+      "default_features": false,
+      "features": [
+        "forms",
+        "progress"
+      ],
+      "feature_label": "forms, progress",
+      "command_summary": "cargo build -p rustic-ui-headless --release --no-default-features --features forms,progress",
+      "is_baseline": false,
+      "size_bytes": 2872838,
+      "size_kib": 2805.505859375,
+      "artifact": "target/bundle-report/release/deps/librustic_ui_headless-bd7b6b1d76841d8d.rlib",
+      "delta_bytes": 0,
+      "delta_kib": 0.0,
+      "delta_percent": 0.0
+    },
+    {
+      "id": "headless-forms",
+      "crate_name": "rustic-ui-headless",
+      "display_name": "Headless (forms core)",
+      "description": "Baseline surface with form controls enabled. Modules like select/text-field require this feature to compile.",
+      "default_features": false,
+      "features": [
+        "forms"
+      ],
+      "feature_label": "forms",
+      "command_summary": "cargo build -p rustic-ui-headless --release --no-default-features --features forms",
+      "is_baseline": true,
+      "size_bytes": 2872838,
+      "size_kib": 2805.505859375,
+      "artifact": "target/bundle-report/release/deps/librustic_ui_headless-bd7b6b1d76841d8d.rlib",
+      "delta_bytes": 0,
+      "delta_kib": 0.0,
+      "delta_percent": 0.0
+    },
+    {
+      "id": "material-default",
+      "crate_name": "rustic-ui-material",
+      "display_name": "Material (default)",
+      "description": "Full optional surface mirroring the published crate defaults.",
+      "default_features": true,
+      "features": [
+        "forms",
+        "feedback",
+        "progress"
+      ],
+      "feature_label": "default features",
+      "command_summary": "cargo build -p rustic-ui-material --release",
+      "is_baseline": false,
+      "size_bytes": 4557528,
+      "size_kib": 4450.7109375,
+      "artifact": "target/bundle-report/release/deps/librustic_ui_material-253dcceb9c7236eb.rlib",
+      "delta_bytes": 0,
+      "delta_kib": 0.0,
+      "delta_percent": 0.0
+    },
+    {
+      "id": "material-feedback",
+      "crate_name": "rustic-ui-material",
+      "display_name": "Material (forms + feedback)",
+      "description": "Activates alert, backdrop and snackbar renderers.",
+      "default_features": false,
+      "features": [
+        "forms",
+        "feedback"
+      ],
+      "feature_label": "forms, feedback",
+      "command_summary": "cargo build -p rustic-ui-material --release --no-default-features --features forms,feedback",
+      "is_baseline": false,
+      "size_bytes": 4557528,
+      "size_kib": 4450.7109375,
+      "artifact": "target/bundle-report/release/deps/librustic_ui_material-253dcceb9c7236eb.rlib",
+      "delta_bytes": 0,
+      "delta_kib": 0.0,
+      "delta_percent": 0.0
+    },
+    {
+      "id": "material-progress",
+      "crate_name": "rustic-ui-material",
+      "display_name": "Material (forms + progress)",
+      "description": "Adds linear/circular progress components and skeleton loaders.",
+      "default_features": false,
+      "features": [
+        "forms",
+        "progress"
+      ],
+      "feature_label": "forms, progress",
+      "command_summary": "cargo build -p rustic-ui-material --release --no-default-features --features forms,progress",
+      "is_baseline": false,
+      "size_bytes": 4557528,
+      "size_kib": 4450.7109375,
+      "artifact": "target/bundle-report/release/deps/librustic_ui_material-253dcceb9c7236eb.rlib",
+      "delta_bytes": 0,
+      "delta_kib": 0.0,
+      "delta_percent": 0.0
+    },
+    {
+      "id": "material-forms",
+      "crate_name": "rustic-ui-material",
+      "display_name": "Material (forms core)",
+      "description": "Baseline Material renderers require form controls; this matches the smallest supported feature matrix.",
+      "default_features": false,
+      "features": [
+        "forms"
+      ],
+      "feature_label": "forms",
+      "command_summary": "cargo build -p rustic-ui-material --release --no-default-features --features forms",
+      "is_baseline": true,
+      "size_bytes": 4557528,
+      "size_kib": 4450.7109375,
+      "artifact": "target/bundle-report/release/deps/librustic_ui_material-253dcceb9c7236eb.rlib",
+      "delta_bytes": 0,
+      "delta_kib": 0.0,
+      "delta_percent": 0.0
+    }
+  ],
+  "notes": [
+    "Sizes capture release-mode .rlib artifacts compiled on the CI host triple.",
+    "Run `cargo xtask bundle-report` to refresh the data before shipping feature-flag changes.",
+    "The generated Markdown feeds docs/performance/bundle-costs.md so engineering docs stay in sync with telemetry.",
+    "Baseline measurements enable the `forms` feature because headless/material crates reference shared form utilities even wh\nen other flags are disabled."
+  ]
+}

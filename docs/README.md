@@ -40,6 +40,10 @@ iterations stay fast across restarts.
   `cargo xtask coverage-report` command stitches Rust grcov data together with the
   Vitest/Playwright pipelines. Pair it with the quick-start verification guide to
   keep docs demos and automation blueprints healthy across releases.【F:docs/testing/coverage-overview.md†L1-L72】
+- [Bundle-size feature matrix](performance/bundle-costs.md) – generated via `cargo
+  xtask bundle-report`. The page quantifies the cost of enabling Material and
+  headless feature flags so release managers can reason about size regressions
+  alongside coverage deltas.【F:docs/testing/coverage-overview.md†L41-L48】
 
 ## How can I add a new demo to the documentation?
 

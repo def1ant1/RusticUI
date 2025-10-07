@@ -31,6 +31,15 @@ pipelines fed the report. The Markdown variant is intended to be attached to CI
 artifacts or the release readiness wiki so the broader team can review the same
 information without pulling the repo.
 
+## Bundle-size telemetry
+
+Pair the coverage dashboard with the automated bundle-size report to understand
+the cost of toggling optional features. `cargo xtask bundle-report` compiles the
+Material and headless crates across their feature matrices, records the release
+`*.rlib` sizes, and emits both JSON and Markdown summaries. The Markdown export
+is committed to `docs/performance/bundle-costs.md` so the performance playbook
+always reflects the latest measurements.
+
 ## Pipeline expectations
 
 | Suite | Track | Discipline | How to generate source data | Threshold | Failure mode |

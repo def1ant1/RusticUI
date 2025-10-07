@@ -38,12 +38,14 @@ use walkdir::WalkDir;
 use xtask_docs::{docs_build, docs_package, docs_test, DocsPackageOutcome};
 
 mod adapter_parity;
+mod bundle_report;
 mod coverage_report;
 mod dev;
 mod docs_assets;
 mod new_component;
 mod selection_controls_web;
 use adapter_parity::adapter_parity_report;
+use bundle_report::{bundle_report, BundleReportArgs};
 use coverage_report::{coverage_report, CoverageReportArgs};
 use dev::{dev, DevArgs};
 use docs_assets::{docs_assets, DocsAssetsArgs};
@@ -144,6 +146,8 @@ enum Commands {
     CoverageReport(CoverageReportArgs),
     /// Execute Criterion benchmarks. Succeeds even if none exist.
     Bench,
+    /// Compile representative crates under multiple feature flags and capture bundle metrics.
+    BundleReport(BundleReportArgs),
     /// Regenerate the Rust-native component metadata manifest from TypeScript declarations.
     #[command(
         about = "Regenerate the Rust-native component metadata manifest from TypeScript declarations.",
@@ -274,6 +278,7 @@ fn main() -> Result<()> {
         Commands::Coverage => coverage(),
         Commands::CoverageReport(args) => coverage_report(args),
         Commands::Bench => bench(),
+        Commands::BundleReport(args) => bundle_report(args),
         Commands::UpdateComponents => update_components(),
         Commands::AccessibilityAudit => accessibility_audit(),
         Commands::AccessibilityNightly => accessibility_nightly(),
@@ -741,6 +746,9 @@ fn example_group_crates(workspace: &Path, group: ExampleGroup) -> Result<Vec<Exa
         ExampleGroup::Navigation => navigation_examples(workspace),
         ExampleGroup::Forms => forms_examples(workspace),
         ExampleGroup::SelectionControls => selection_controls_examples(workspace),
+        ExampleGroup::Hydration => Err(anyhow!(
+            "hydration group uses dedicated pipeline; use hydration_specs()"
+        )),
     }
 }
 

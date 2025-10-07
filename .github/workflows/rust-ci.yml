@@ -125,11 +125,22 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       # Run any defined Criterion benches; tolerate absence gracefully
       - run: cargo xtask bench
+      # Record release artifact sizes across feature matrices
+      - run: cargo xtask bundle-report
       # Upload benchmark reports for inspection and future comparison
       - uses: actions/upload-artifact@v4
         with:
           name: rust-benchmarks
           path: target/criterion
+          if-no-files-found: ignore
+      # Publish bundle-size telemetry alongside the benchmark output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-report
+          path: |
+            test-results/bundle-size
+            docs/performance/bundle-costs.md
+            docs/performance/bundle-costs.json
           if-no-files-found: ignore
 
   automation:
