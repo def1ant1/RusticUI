@@ -749,6 +749,8 @@ fn default_notes() -> Vec<String> {
         "Accessibility sweeps reuse `cargo xtask accessibility-audit` to guarantee markdown hygiene.".into(),
         "Playwright visual regressions must export test-results/visual-regressions.json (see docs/testing/coverage-overview.md)."
             .into(),
+        "Bundle-size deltas come from `cargo xtask bundle-report`; see docs/performance/bundle-costs.md for the rendered table."
+            .into(),
     ]
 }
 

@@ -21,6 +21,7 @@ maintenance = { status = "experimental" }
 proptest.workspace = true
 insta.workspace = true
 serde_json.workspace = true
+criterion.workspace = true
 
 [[test]]
 name = "collapsible_region_state"
@@ -33,3 +34,7 @@ forms = []
 feedback = []
 progress = []
 unstable = []
+
+[[bench]]
+name = "transition"
+harness = false

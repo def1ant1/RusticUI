@@ -128,6 +128,9 @@ js-sys = "0.3"
 web-sys = { version = "0.3", features = ["Window", "HtmlElement", "Event", "EventTarget"] }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock", "serde"] }
 time = { version = "0.3", default-features = false, features = ["formatting", "macros"] }
+# Criterion underpins our micro-benchmark harnesses. Centralising the version
+# ensures every crate executes the same statistical routines.
+criterion = "0.5"
 # Lightweight tooling dependencies used by maintenance utilities like the
 # icon updater. These are optional in downstream crates but centralised here
 # so versions stay consistent across the workspace.
