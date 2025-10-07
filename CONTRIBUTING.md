@@ -18,6 +18,15 @@ RusticUI thrives on a wide range of contributions:
 - **Automation** – Enhance the `cargo xtask` CLI, CI workflows, and observability pipelines.
 - **Community** – Review pull requests, triage issues, or mentor newcomers in the [discussion board](https://github.com/apotheon-ai/rusticui/discussions).
 
+### Join the 2025 contributor experience program
+
+- Fill out the Typeform survey at [`https://form.typeform.com/to/rusticui-cx-2025`](https://form.typeform.com/to/rusticui-cx-2025). Responses sync into the shared insights warehouse and the [`projects/apotheon-ai/rusticui/6`](https://github.com/orgs/apotheon-ai/projects/6) board each night via the `contributor-experience-intake` workflow.
+- Prefer GitHub-native tooling? Submit feedback through the [Contributor Experience 2025 Discussion form](https://github.com/apotheon-ai/rusticui/discussions/new?category=contributor-experience-2025); automation mirrors the Typeform schema so no manual triage is required.
+- Governance cadence:
+  - **Weekly triage (Mondays 16:00 UTC)** – Maintainers review new responses and promote high-signal insights into `cx-survey` issues.
+  - **Monthly deep dive (First Thursday)** – Roadmap leads analyze trend dashboards and adjust swimlanes on the project board.
+  - **Quarterly retrospective** – Publish a public summary alongside the release retrospective, ensuring enterprise adopters see actionable outcomes.
+
 Before starting large efforts, open a GitHub discussion or issue so the maintainers can align on goals and avoid duplicated work.
 
 ## Development setup
