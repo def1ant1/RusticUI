@@ -76,6 +76,13 @@ scale before the compatibility layer is removed.
   [`architecture/headless-state-machines.md`](./architecture/headless-state-machines.md)
   visualises the controlled/uncontrolled transitions, token orchestration, and
   focus-loop analytics markers behind `collapsible_region` and `focus_trap`.
+  The diagrams call out every `data-rustic-*` automation hook and
+  `data-rustic-analytics-id` bridge so enterprise telemetry can assert SSR and
+  hydration parity without bespoke selectors.
+- **Diagram guardrail** – `cargo xtask docs-build` now walks every
+  `mermaid`-fenced block under `docs/` and validates it using a Rust-side parser
+  before the docs host builds. The validator covers the state, sequence, and
+  graph grammars used in the architecture note so broken diagrams fail CI.
 - **Material adapter deep dives** –
   [`crates/rustic-ui-material/README.md`](../crates/rustic-ui-material/README.md#architectural-rationale-for-the-new-renderers-and-adapters)
   now records how each framework adapter consumes the utilities and how to wire

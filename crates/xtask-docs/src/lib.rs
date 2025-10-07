@@ -34,6 +34,7 @@ use std::fmt::Write as _;
 use std::process::Stdio;
 use tokio::fs;
 use tokio::process::Command;
+use walkdir::WalkDir;
 
 /// Build the RusticUI docs host binary and its WASM bundle.
 ///
@@ -42,6 +43,7 @@ use tokio::process::Command;
 /// `tokio::try_join!`.
 pub async fn docs_build() -> Result<()> {
     let ctx = WorkspaceContext::detect()?;
+    validate_mermaid_diagrams(&ctx).await?;
     build_artifacts(&ctx, BuildProfile::Debug).await.map(|_| ())
 }
 
@@ -136,6 +138,13 @@ struct DocsBuildArtifacts {
     server_binary: Utf8PathBuf,
 }
 
+#[derive(Clone, Debug)]
+struct MermaidFailure {
+    path: Utf8PathBuf,
+    line: usize,
+    message: String,
+}
+
 async fn build_artifacts(
     ctx: &WorkspaceContext,
     profile: BuildProfile,
@@ -159,6 +168,99 @@ async fn build_artifacts(
         wasm_bg: wasm_artifacts.wasm,
         server_binary,
     })
+}
+
+async fn validate_mermaid_diagrams(ctx: &WorkspaceContext) -> Result<()> {
+    let docs_root = ctx.workspace_root.join("docs");
+    let mut failures = Vec::new();
+
+    for entry in WalkDir::new(&docs_root) {
+        let entry = entry.context("failed to walk docs directory")?;
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        if entry.path().extension().and_then(|ext| ext.to_str()) != Some("md") {
+            continue;
+        }
+
+        let path = Utf8PathBuf::from_path_buf(entry.into_path())
+            .map_err(|_| anyhow!("encountered non UTF-8 path while scanning docs"))?;
+        let contents = fs::read_to_string(&path)
+            .await
+            .with_context(|| format!("failed to read {path}"))?;
+
+        let mut lines = contents.lines().enumerate();
+        while let Some((start_idx, line)) = lines.next() {
+            if !line.trim_start().starts_with("```mermaid") {
+                continue;
+            }
+
+            let mut body = Vec::new();
+            let mut closed = false;
+            while let Some((_, candidate)) = lines.next() {
+                if candidate.trim_start().starts_with("```") {
+                    closed = true;
+                    break;
+                }
+                body.push(candidate);
+            }
+
+            if !closed {
+                failures.push(MermaidFailure {
+                    path: path.clone(),
+                    line: start_idx + 1,
+                    message: "Mermaid fence was not terminated with ```".to_owned(),
+                });
+                break;
+            }
+
+            let code = body.join("\n");
+            let trimmed = code.trim();
+            if trimmed.is_empty() {
+                failures.push(MermaidFailure {
+                    path: path.clone(),
+                    line: start_idx + 2,
+                    message: "Mermaid diagram body was empty".to_owned(),
+                });
+                continue;
+            }
+
+            if let Err(message) = lint_mermaid_block(trimmed) {
+                failures.push(MermaidFailure {
+                    path: path.clone(),
+                    line: start_idx + 2,
+                    message,
+                });
+            }
+        }
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let logs_dir = ctx.target_dir.join("logs");
+    fs::create_dir_all(&logs_dir)
+        .await
+        .context("failed to create target/logs for mermaid lint output")?;
+    let log_path = logs_dir.join("docs-mermaid-lint.log");
+    let mut log = String::new();
+    writeln!(&mut log, "detected {} Mermaid issues", failures.len())?;
+    for failure in &failures {
+        writeln!(
+            &mut log,
+            "{}:{} - {}",
+            failure.path, failure.line, failure.message
+        )?;
+    }
+    fs::write(&log_path, log)
+        .await
+        .with_context(|| format!("failed to persist mermaid lint output to {log_path}"))?;
+
+    Err(anyhow!(
+        "Mermaid diagram validation failed. Inspect {:?} for the detailed log.",
+        log_path
+    ))
 }
 
 async fn build_host(ctx: &WorkspaceContext, profile: BuildProfile) -> Result<()> {
@@ -540,6 +642,190 @@ async fn manifest_entry(
         path: relative,
         sha256,
     })
+}
+
+fn lint_mermaid_block(code: &str) -> Result<(), String> {
+    let lines: Vec<&str> = code.lines().collect();
+    let first_idx = lines
+        .iter()
+        .position(|line| !line.trim().is_empty())
+        .ok_or_else(|| "Mermaid diagram has no content".to_owned())?;
+    let header = lines[first_idx].trim();
+
+    if header.starts_with("stateDiagram") {
+        return lint_state_diagram(&lines[first_idx..]);
+    }
+    if header.starts_with("sequenceDiagram") {
+        return lint_sequence_diagram(&lines[first_idx..]);
+    }
+    if header.starts_with("graph ") {
+        return lint_graph_diagram(&lines[first_idx..]);
+    }
+
+    Err(format!("unsupported Mermaid root '{header}'"))
+}
+
+fn lint_state_diagram(lines: &[&str]) -> Result<(), String> {
+    let mut block_depth = 0usize;
+    let mut saw_transition = false;
+
+    for line in lines.iter().skip(1) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("%%") {
+            continue;
+        }
+        if trimmed.starts_with("direction ") {
+            continue;
+        }
+        if trimmed.starts_with("state ") {
+            if trimmed.ends_with('{') {
+                block_depth += 1;
+            } else if trimmed.contains('{') {
+                return Err(format!("state declaration must end with '{{': {trimmed}"));
+            }
+            continue;
+        }
+        if trimmed == "}" {
+            if block_depth == 0 {
+                return Err("state diagram closed more blocks than opened".into());
+            }
+            block_depth -= 1;
+            continue;
+        }
+        if trimmed.contains("-->") {
+            saw_transition = true;
+            continue;
+        }
+
+        return Err(format!("unrecognized state diagram expression '{trimmed}'"));
+    }
+
+    if block_depth != 0 {
+        return Err("state diagram ended with unclosed state blocks".into());
+    }
+    if !saw_transition {
+        return Err("state diagram did not declare any transitions".into());
+    }
+
+    Ok(())
+}
+
+fn lint_sequence_diagram(lines: &[&str]) -> Result<(), String> {
+    let mut block_stack: Vec<&'static str> = Vec::new();
+    let mut saw_message = false;
+
+    for line in lines.iter().skip(1) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("%%") {
+            continue;
+        }
+        if trimmed.eq_ignore_ascii_case("autonumber") {
+            continue;
+        }
+        if let Some(rest) = trimmed.strip_prefix("participant ") {
+            if rest.trim().is_empty() {
+                return Err("participant declaration is missing an identifier".into());
+            }
+            continue;
+        }
+        if trimmed.starts_with("opt ") {
+            block_stack.push("opt");
+            continue;
+        }
+        if trimmed == "end" {
+            block_stack
+                .pop()
+                .ok_or_else(|| "`end` without a matching block opener".to_owned())?;
+            continue;
+        }
+
+        if let Some((source, target)) = split_sequence_arrow(trimmed) {
+            if source.trim().is_empty() {
+                return Err("message source may not be empty".into());
+            }
+            if target.trim().is_empty() {
+                return Err("message target may not be empty".into());
+            }
+            saw_message = true;
+            continue;
+        }
+
+        return Err(format!(
+            "unrecognized sequence diagram expression '{trimmed}'"
+        ));
+    }
+
+    if !block_stack.is_empty() {
+        return Err("sequence diagram ended with unterminated block".into());
+    }
+    if !saw_message {
+        return Err("sequence diagram did not declare any messages".into());
+    }
+
+    Ok(())
+}
+
+fn split_sequence_arrow(input: &str) -> Option<(&str, &str)> {
+    const ARROWS: [&str; 4] = ["-->>", "->>", "-->", "->"];
+    for arrow in ARROWS {
+        if let Some(idx) = input.find(arrow) {
+            let (left, right) = input.split_at(idx);
+            let target = &right[arrow.len()..];
+            let target = target.split_once(':').map_or(target, |(head, _)| head);
+            return Some((left, target));
+        }
+    }
+    None
+}
+
+fn lint_graph_diagram(lines: &[&str]) -> Result<(), String> {
+    let mut saw_edge = false;
+
+    for line in lines.iter().skip(1) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("%%") {
+            continue;
+        }
+        if trimmed.starts_with("classDef ") {
+            continue;
+        }
+
+        if let Some(idx) = trimmed.rfind("-->") {
+            let before = &trimmed[..idx];
+            let target = trimmed[idx + 3..].trim();
+            if target.is_empty() {
+                return Err("graph edge is missing a target node".into());
+            }
+            let source = before
+                .split_once("--")
+                .map(|(left, _)| left.trim())
+                .unwrap_or_else(|| before.trim());
+            if source.is_empty() {
+                return Err("graph edge is missing a source node".into());
+            }
+            saw_edge = true;
+            continue;
+        }
+
+        if let Some(idx) = trimmed.find('[') {
+            if trimmed.ends_with(']') && !trimmed[..idx].trim().is_empty() {
+                continue;
+            }
+        }
+        if let Some(idx) = trimmed.find('(') {
+            if trimmed.ends_with(')') && !trimmed[..idx].trim().is_empty() {
+                continue;
+            }
+        }
+
+        return Err(format!("unrecognized graph expression '{trimmed}'"));
+    }
+
+    if !saw_edge {
+        return Err("graph diagram did not declare any edges".into());
+    }
+
+    Ok(())
 }
 
 struct CommandDisplay {

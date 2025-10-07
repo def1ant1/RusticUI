@@ -16,7 +16,9 @@
 //! architecture guide at
 //! [`docs/architecture/headless-state-machines.md`](../../docs/architecture/headless-state-machines.md#collapsible-region-state-machine)
 //! for the controlled/uncontrolled transition diagrams, token lifecycle notes,
-//! and cross-environment automation checklists referenced by CI.
+//! automation hooks (`data-rustic-collapsible`,
+//! `data-rustic-analytics-id`), and cross-environment telemetry checklists
+//! referenced by CI.
 
 use std::collections::BTreeSet;
 
