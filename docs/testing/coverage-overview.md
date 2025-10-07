@@ -1,19 +1,20 @@
 # Cross-suite coverage dashboard
 
-The RusticUI workspace now exports a single coverage dashboard that merges the
-Rust `cargo xtask coverage` output, the TypeScript Vitest/Playwright runs, the
-Markdown accessibility sweeps, and Playwright-driven visual regression metrics.
-The goal is to give maintainers a single artifact that answers **which suites
-ran**, **what thresholds they satisfied**, and **where to dig when regressions
-appear**.
+The RusticUI workspace now exports a single coverage dashboard that merges every
+Rust and TypeScript testing surface: unit tests, integration checks, axe-core
+accessibility sweeps, and Playwright visual snapshot reviews. Instead of
+triaging multiple artifacts, `cargo xtask coverage-report` consolidates the
+underlying telemetry into deterministic JSON and Markdown so release managers
+can answer **which suites ran**, **whether they met the release thresholds**, and
+**where to triage regressions** without shuffling between CI jobs.
 
 ## Running the aggregator
 
 ```bash
 # Run your normal language-specific suites first.
-cargo xtask coverage
-pnpm --dir docs test --reporter=junit   # or your project-wide TS runner
-pnpm test:regressions:run               # Playwright visual snapshots
+cargo xtask coverage                          # grcov line/branch metrics
+pnpm --dir docs test --reporter=junit         # Vitest + Playwright unit/integration snapshots
+pnpm test:regressions:run                    # Visual snapshot diffs (Playwright)
 
 # Then aggregate everything into JSON + Markdown dashboards.
 cargo xtask coverage-report
@@ -32,12 +33,12 @@ information without pulling the repo.
 
 ## Pipeline expectations
 
-| Suite | How to generate source data | Threshold | Failure mode |
-| :---- | :--------------------------- | :-------- | :----------- |
-| **Rust workspace** | `cargo xtask coverage` (writes `lcov.info` via grcov) | Line ≥ 75%, Branch ≥ 60% | Missing `lcov.info` marks the suite as skipped; low coverage fails the command. |
-| **TypeScript automation** | Any runner that exports `test-results/junit.xml` (Vitest, Karma, Playwright, etc.) | Pass rate ≥ 97.5% (computed from `tests`, `failures`, `errors`, `skipped`) | A missing or all-skipped JUnit summary fails the report. |
-| **Accessibility audits** | `cargo xtask accessibility-audit` (invoked automatically when aggregating) | Zero Markdown issues | Findings are surfaced inline with the file path and break the build. |
-| **Visual regressions** | Ensure Playwright saves `test-results/visual-regressions.json` with snapshot counts | Zero diff images | Missing JSON or non-zero diffs fail the aggregator. |
+| Suite | Track | Discipline | How to generate source data | Threshold | Failure mode |
+| :---- | :---- | :--------- | :--------------------------- | :-------- | :----------- |
+| **Rust workspace** | Rust | Integration | `cargo xtask coverage` (writes `lcov.info` via grcov across unit + integration suites) | Line ≥ 75%, Branch ≥ 60% | Missing `lcov.info` marks the suite as skipped; low coverage fails the command. |
+| **TypeScript automation** | TypeScript | Unit | Any runner that exports `test-results/junit.xml` (Vitest, Karma, Playwright component/unit suites). Snapshot expectations are counted alongside classic specs so the pass-rate mirrors combined unit + snapshot health. | Pass rate ≥ 97.5% (computed from `tests`, `failures`, `errors`, `skipped`) | A missing or all-skipped JUnit summary fails the report. |
+| **Accessibility audits** | Cross-stack | Accessibility | `cargo xtask accessibility-audit` (invoked automatically when aggregating). The command pipes markdown snippets through the axe-core bridge baked into our wasm test harnesses to guarantee headings and alternative text survive content edits. | Zero Markdown issues | Findings are surfaced inline with the file path and break the build. |
+| **Visual regressions** | TypeScript | Visual snapshot | Ensure Playwright saves `test-results/visual-regressions.json` with snapshot counts. The summary includes updated/diff/skipped counts so screenshot drift is immediately visible. | Zero diff images | Missing JSON or non-zero diffs fail the aggregator. |
 
 > **Tip:** Enterprise teams often run TypeScript tests in multiple packages. As
 long as the combined CI pipeline writes a consolidated `test-results/junit.xml`
@@ -47,15 +48,18 @@ coverage-report`.
 
 ## Interpreting the dashboard
 
-- ✅ Status indicates the threshold was met or exceeded.
+- ✅ Status indicates the threshold was met or exceeded for that discipline.
 - ⚠️ Signals that the aggregator could not find the source data (treated as a
-  failure in CI to prevent silent skips).
+  failure in CI to prevent silent skips). Review the `Artifacts` section to spot
+  missing files or mismatched paths.
 - ❌ Denotes a real regression. The Markdown file expands each failing suite
   with bullet points pointing to the underlying artifact (for example the
-  Playwright diff summary or the Markdown file missing alt text).
+  Playwright diff summary, axe-core violation list, or the Markdown file missing
+  alt text).
 
-Every suite lists the artifacts it relied on, so you can jump directly to the
-raw `lcov.info`, `junit.xml`, or visual regression report when investigating.
+Every suite lists the artifacts it relied on and records the discipline it
+represents. Use that combination to jump directly to the raw `lcov.info`,
+`junit.xml`, axe-core summary, or visual regression report when investigating.
 
 ## Automating in CI
 
