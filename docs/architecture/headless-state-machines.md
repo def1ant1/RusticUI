@@ -152,9 +152,10 @@ graph TD
 
 To prevent diagram or doc bit rot:
 
-- **`cargo xtask docs-build`** runs mdBook with Mermaid verification enabled.
-  Failing this command blocks CI, ensuring syntax errors in the diagrams never
-  merge.
+- **`cargo xtask docs-build`** now parses every ` ```mermaid ` block under
+  `docs/` before compiling the Rust + WASM bundles. The Rust validator covers
+  the state, sequence, and graph grammars we publish in this note so syntax
+  regressions fail fast without depending on headless browser tooling.
 - **`cargo test -p rustic-ui-headless --test focus_trap_state`** keeps focus-loop
   invariants covered, complementing the visual diagrams with executable
   regression tests.
