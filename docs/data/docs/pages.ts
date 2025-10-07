@@ -30,6 +30,17 @@ const pages: readonly MuiPage[] = [
       },
     ],
   },
+  {
+    pathname: '/docs/architecture',
+    title: 'Architecture playbooks',
+    children: [
+      { pathname: '/docs/architecture/component-decision-guides', title: 'Component decision guides' },
+      { pathname: '/docs/architecture/adapter-parity', title: 'Adapter parity' },
+      { pathname: '/docs/architecture/headless-state-machines', title: 'Headless state machines' },
+      { pathname: '/docs/architecture/selection-controls', title: 'Selection controls telemetry' },
+      { pathname: '/docs/architecture/type-safety-audit', title: 'Type-safety audit' },
+    ],
+  },
   { pathname: 'https://mui.com/versions/' },
   {
     pathname: 'https://mui.com/store/',

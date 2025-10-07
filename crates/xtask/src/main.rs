@@ -37,11 +37,13 @@ use tokio::runtime::Builder;
 use walkdir::WalkDir;
 use xtask_docs::{docs_build, docs_package, docs_test, DocsPackageOutcome};
 
+mod adapter_parity;
 mod coverage_report;
 mod dev;
 mod docs_assets;
 mod new_component;
 mod selection_controls_web;
+use adapter_parity::adapter_parity_report;
 use coverage_report::{coverage_report, CoverageReportArgs};
 use dev::{dev, DevArgs};
 use docs_assets::{docs_assets, DocsAssetsArgs};
@@ -228,6 +230,9 @@ enum Commands {
     /// Recompute the RusticUI Joy inventory to highlight missing Rust bindings.
     #[command(name = "joy-inventory", alias = "joy-parity")]
     JoyParity,
+    /// Regenerate the cross-adapter parity dashboard consumed by docs and CI.
+    #[command(name = "parity-report")]
+    ParityReport,
     /// Run the Rust and TypeScript selection control regression suites.
     SelectionControls(SelectionControlsArgs),
     /// Execute every quick-start bootstrap script to guarantee docs remain accurate.
@@ -290,6 +295,7 @@ fn main() -> Result<()> {
         } => themes_bundle(overrides, format, joy, compat, out_dir),
         Commands::MaterialParity => material_parity(),
         Commands::JoyParity => joy_parity(),
+        Commands::ParityReport => adapter_parity_report(None),
         Commands::SelectionControls(args) => selection_controls(args),
         Commands::QuickStart { skip_checks } => quick_start(skip_checks),
     }

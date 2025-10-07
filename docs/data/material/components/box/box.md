@@ -14,6 +14,14 @@ githubSource: archives/mui-packages/mui-material/src/Box
 
 {{"component": "@mui/docs/ComponentLinkHeader", "design": false}}
 
+:::info Architecture reference
+Read the [Component decision guides](/docs/architecture/component-decision-guides/)
+for a side-by-side comparison of `Box`, `Container`, `Grid`, `Stack`, and
+`Hidden`, plus the regression tests and automation commands to run before
+shipping layout changes. The cross-adapter coverage dashboard lives in
+[Adapter parity](/docs/architecture/adapter-parity/).
+:::
+
 ## Introduction
 
 The Box component is a generic container for grouping other components.
