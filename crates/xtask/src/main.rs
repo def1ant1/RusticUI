@@ -236,7 +236,14 @@ enum Commands {
     JoyParity,
     /// Regenerate the cross-adapter parity dashboard consumed by docs and CI.
     #[command(name = "parity-report")]
-    ParityReport,
+    ParityReport {
+        /// Fail if `docs/architecture/adapter-parity.md` would change.
+        #[arg(long)]
+        check: bool,
+        /// Override the default output path (used by release tooling).
+        #[arg(long)]
+        output: Option<PathBuf>,
+    },
     /// Run the Rust and TypeScript selection control regression suites.
     SelectionControls(SelectionControlsArgs),
     /// Execute every quick-start bootstrap script to guarantee docs remain accurate.
@@ -300,7 +307,7 @@ fn main() -> Result<()> {
         } => themes_bundle(overrides, format, joy, compat, out_dir),
         Commands::MaterialParity => material_parity(),
         Commands::JoyParity => joy_parity(),
-        Commands::ParityReport => adapter_parity_report(None),
+        Commands::ParityReport { check, output } => adapter_parity_report(output, check),
         Commands::SelectionControls(args) => selection_controls(args),
         Commands::QuickStart { skip_checks } => quick_start(skip_checks),
     }

@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use chrono::{SecondsFormat, Utc};
 use regex::Regex;
 use walkdir::WalkDir;
@@ -23,35 +23,41 @@ struct ComponentCoverage {
     frameworks: BTreeSet<String>,
 }
 
-pub fn adapter_parity_report(output: Option<PathBuf>) -> Result<()> {
+pub fn adapter_parity_report(output: Option<PathBuf>, check: bool) -> Result<()> {
     let workspace = workspace_root();
     let material_components = collect_material_components(&workspace)?;
     let joy_components = collect_joy_components(&workspace)?;
 
-    let timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
-    let mut doc = String::new();
-    doc.push_str("# Adapter Parity\n\n");
-    doc.push_str(&format!(
-        "_Last updated {timestamp} via `cargo xtask parity-report`._\n\n"
-    ));
-    doc.push_str("The tables below enumerate which framework adapters ship for each component. ");
-    doc.push_str("Material adapters are discovered by scanning the adapter modules under `crates/rustic-ui-material/src`, and the Joy rows come from the Yew-first modules declared in `crates/rustic-ui-joy/src/lib.rs`. ");
-    doc.push_str("Parity is validated by the cross-adapter regression suites such as [`button_adapters.rs`](../../crates/rustic-ui-material/tests/button_adapters.rs) and [`joy_yew.rs`](../../crates/rustic-ui-material/tests/joy_yew.rs). Run `cargo xtask parity-report` after adding or removing adapters so CI can confirm this dashboard stays in sync.\n\n");
-
-    doc.push_str("## Material adapters\n\n");
-    doc.push_str(&coverage_summary(&material_components));
-    doc.push_str("\n\n");
-    doc.push_str(&render_table(&material_components));
-    doc.push_str("\n\n");
-
-    doc.push_str("## Joy adapters\n\n");
-    doc.push_str(&coverage_summary(&joy_components));
-    doc.push_str("\n\n");
-    doc.push_str(&render_table(&joy_components));
-    doc.push_str("\n");
-
     let output_path =
         output.unwrap_or_else(|| workspace.join("docs/architecture/adapter-parity.md"));
+
+    let current_timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+    let existing = if check {
+        Some(fs::read_to_string(&output_path).unwrap_or_default())
+    } else {
+        None
+    };
+    let timestamp = existing
+        .as_ref()
+        .and_then(|doc| extract_timestamp(doc))
+        .unwrap_or(current_timestamp);
+    let doc = build_report(timestamp, &material_components, &joy_components);
+
+    if check {
+        // The `--check` flag is wired into CI so contributors cannot forget to
+        // refresh the parity dashboard after adding or removing adapters. We
+        // read the current file (if any) and compare it to the freshly
+        // generated payload without mutating the workspace. A mismatch produces
+        // a targeted error message that points developers at the automated
+        // regeneration command rather than leaving them to guess why CI failed.
+        if existing.unwrap_or_default() != doc {
+            bail!(
+                "adapter parity dashboard is stale; run `cargo xtask parity-report` and commit the refreshed docs"
+            );
+        }
+        return Ok(());
+    }
+
     fs::write(&output_path, doc).with_context(|| {
         format!(
             "failed to write adapter parity report to {}",
@@ -60,6 +66,41 @@ pub fn adapter_parity_report(output: Option<PathBuf>) -> Result<()> {
     })?;
 
     Ok(())
+}
+
+fn build_report(
+    timestamp: String,
+    material_components: &[ComponentCoverage],
+    joy_components: &[ComponentCoverage],
+) -> String {
+    let mut doc = String::new();
+    doc.push_str("# Adapter Parity\n\n");
+    doc.push_str(&format!(
+        "_Last updated {timestamp} via `cargo xtask parity-report`._\n\n"
+    ));
+    doc.push_str("The tables below enumerate which framework adapters ship for each component. ");
+    doc.push_str("Material adapters are discovered by scanning the adapter modules under `crates/rustic-ui-material/src`, and the Joy rows come from the Yew-first modules declared in `crates/rustic-ui-joy/src/lib.rs`. ");
+    doc.push_str("Parity is validated by the cross-adapter regression suites such as [`button_adapters.rs`](../../crates/rustic-ui-material/tests/button_adapters.rs) and [`joy_yew.rs`](../../crates/rustic-ui-material/tests/joy_yew.rs). Run `cargo xtask parity-report` after adding or removing adapters, and `cargo xtask parity-report --check` in CI, so this dashboard stays in sync.\n\n");
+
+    doc.push_str("## Material adapters\n\n");
+    doc.push_str(&coverage_summary(material_components));
+    doc.push_str("\n\n");
+    doc.push_str(&render_table(material_components));
+    doc.push_str("\n\n");
+
+    doc.push_str("## Joy adapters\n\n");
+    doc.push_str(&coverage_summary(joy_components));
+    doc.push_str("\n\n");
+    doc.push_str(&render_table(joy_components));
+    doc.push_str("\n");
+
+    doc
+}
+
+fn extract_timestamp(doc: &str) -> Option<String> {
+    let regex = Regex::new(r"^_Last updated ([^ ]+) via `cargo xtask parity-report`\._$").ok()?;
+    doc.lines()
+        .find_map(|line| regex.captures(line).map(|caps| caps[1].to_string()))
 }
 
 fn collect_material_components(workspace: &Path) -> Result<Vec<ComponentCoverage>> {
