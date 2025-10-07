@@ -13,6 +13,16 @@ githubLabel: 'component: Box'
 
 {{"component": "@mui/docs/ComponentLinkHeader", "design": false}}
 
+:::info Architecture reference
+Read the [Component decision guides](/docs/architecture/component-decision-guides/)
+for a side-by-side comparison of `Box`, `Container`, `Grid`, `Stack`, and
+`Hidden`, plus the regression tests and automation commands to run before
+shipping layout changes. When you touch layout tokens or automation IDs, run
+`cargo xtask parity-report` locally and let CI enforce
+`cargo xtask parity-report --check` so the [Adapter parity](/docs/architecture/adapter-parity/)
+dashboard always matches the available adapters.
+:::
+
 ## Introduction
 
 The Box component is a generic container for grouping other components.

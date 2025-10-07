@@ -44,7 +44,9 @@ assert!(render.inline_style().contains("--rustic_ui_box_padding"));
 :::info Automation
 Run `cargo test -p rustic-ui-material --test layout_renderers -- material_box`
 to confirm the SSR snapshot stays aligned with the adapter wrappers whenever you
-change padding tokens or automation identifiers.
+change padding tokens or automation identifiers. Pair the snapshot refresh with
+`cargo xtask parity-report --check` so CI blocks merges when the adapter
+dashboard drifts from the regenerated renderer output.
 :::
 
 ## Container
@@ -75,8 +77,8 @@ assert!(render.inline_style().contains("--rustic_ui_container_padding_inline"));
 :::tip Automation
 `cargo test -p rustic-ui-material --test layout_renderers -- material_container`
 keeps the container snapshot (including `data-breakpoint-*` hooks) synchronized
-across adapters. Pair it with `cargo xtask parity-report` before landing changes
-so the docs parity dashboard refreshes automatically.
+across adapters. Pair it with `cargo xtask parity-report --check` before landing
+changes so the docs parity dashboard and CI guardrail stay in lockstep.
 :::
 
 ## Grid
@@ -147,8 +149,9 @@ rendering the tree.
 :::info Automation
 Hidden participates in the same layout renderer tests. Run
 `cargo test -p rustic-ui-material --test layout_renderers -- material_hidden`
-when changing breakpoint logic, followed by `cargo xtask parity-report` to
-refresh the docs tables and CI parity checks.
+when changing breakpoint logic, followed by `cargo xtask parity-report`
+locally and `cargo xtask parity-report --check` in CI to refresh the docs
+tables and parity checks automatically.
 :::
 
 ## Keep the docs in sync
@@ -158,8 +161,9 @@ updating any of them:
 
 1. Refresh the markdown via `cargo xtask parity-report` so
    [`adapter-parity.md`](./adapter-parity.md) reflects the latest adapter
-   coverage.
+   coverage, then run `cargo xtask parity-report --check` to confirm no drift
+   remains.
 2. Run the targeted `layout_renderers` tests listed above to ensure SSR snapshots
    and automation hooks stay deterministic.
 3. Commit both the source changes and regenerated docs so CI parity guards stay
-green.
+   green.

@@ -48,6 +48,9 @@ jobs:
         run: cargo xtask build-docs
       - name: Verify mdBook diagrams render
         run: cargo xtask docs-build
+      - name: Ensure adapter parity dashboard is current (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo xtask parity-report --check
       - name: Install grcov (Linux only)
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y grcov
