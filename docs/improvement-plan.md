@@ -17,7 +17,7 @@
 
 ### Deliverables
 - Centralized documentation index linking to architecture, testing, and migration guides.
-- Contributor experience survey capturing current pain points.
+- Contributor experience survey capturing current pain points with automated aggregation (see [docs/community/contributor-experience-2025.md](./community/contributor-experience-2025.md)).
 
 ## Phase 1 – Developer Experience Enhancements
 
@@ -67,6 +67,13 @@
 1. Validate scope with maintainers and align on sequencing.
 2. Begin Phase 0 tasks: diagramming state machines and inventorying automation gaps.
 3. Prepare RFCs for xtask tooling upgrades and testing modernization.
+4. Promote the live Typeform (`https://form.typeform.com/to/rusticui-cx-2025`) across docs, Discussions, and release notes; capture responses nightly via the `contributor-experience-intake` workflow.
+
+### Contributor Experience Survey Operations
+
+- **Ingestion pipeline** – Nightly GitHub Actions job reads the Typeform API and GitHub Discussion form submissions, merging responses into the normalized schema under `docs/data/contributor-experience-2025/` while deduplicating on `response_id`.
+- **Aggregation** – Snapshot metrics (NPS, automation demand, onboarding blockers) roll into a shared Google Sheet and quarterly CSV exports staged in `archives/research/2025Q*/`. Dashboards publish to `projects/apotheon-ai/rusticui/6` for asynchronous review.
+- **Governance cadence** – Weekly triage + monthly deep dive + quarterly retrospective meetings align remediation tasks with the roadmap. Action items auto-create GitHub issues tagged `cx-survey` for traceability.
 
 ---
 

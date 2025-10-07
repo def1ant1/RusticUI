@@ -45,6 +45,16 @@ Run the Yew starter to confirm the crates integrate with framework tooling:
 cargo run --manifest-path examples/mui-yew/Cargo.toml --features csr
 ```
 
+## Contributor experience research (2025)
+
+Help us prioritize automation upgrades and onboarding polish by completing the 2025 contributor experience survey at
+[`https://form.typeform.com/to/rusticui-cx-2025`](https://form.typeform.com/to/rusticui-cx-2025). The Typeform syncs nightly
+with the [`projects/apotheon-ai/rusticui/6`](https://github.com/orgs/apotheon-ai/projects/6) board so responses instantly
+populate the governance dashboards and auto-create `cx-survey` issues when blockers trend upward. If you prefer to stay in
+GitHub, use the [Discussion form](https://github.com/apotheon-ai/rusticui/discussions/new?category=contributor-experience-2025)
+which mirrors the same schema and feeds the shared warehouse. Weekly triage (Mondays 16:00 UTC) and monthly deep dives (first
+Thursday) review the backlog, while quarterly retrospectives translate insights into roadmap updates.
+
 Before submitting changes, follow the [quick-start automation verification playbook](docs/testing/quick-start.md) and run
 `cargo xtask quick-start` to exercise every scaffold documented in the getting-started guide. The harness keeps StackBlitz
 exports, docs CTAs, and Rust blueprints aligned while caching Playwright, Trunk, and dx assets to minimise repetitive setup for
