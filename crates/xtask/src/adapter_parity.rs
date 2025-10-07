@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -107,14 +108,14 @@ fn collect_material_components(workspace: &Path) -> Result<Vec<ComponentCoverage
     let src_dir = workspace.join("crates/rustic-ui-material/src");
     let mut components = Vec::new();
     let skip = [
-        "lib.rs",
-        "macros.rs",
-        "render_helpers.rs",
-        "style_helpers.rs",
-        "telemetry.rs",
+        "lib",
+        "macros",
+        "render_helpers",
+        "style_helpers",
+        "telemetry",
     ];
 
-    for entry in WalkDir::new(&src_dir).max_depth(1) {
+    for entry in WalkDir::new(&src_dir).max_depth(2) {
         let entry = entry?;
         if !entry.file_type().is_file() {
             continue;
@@ -123,12 +124,47 @@ fn collect_material_components(workspace: &Path) -> Result<Vec<ComponentCoverage
         if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
             continue;
         }
-        let file_name = match path.file_name().and_then(|name| name.to_str()) {
-            Some(name) => name,
+        let parent = match path.parent() {
+            Some(parent) => parent,
             None => continue,
         };
-        if skip.contains(&file_name) {
+        let is_root_file = parent == src_dir;
+        let is_mod_rs = path
+            .file_name()
+            .and_then(OsStr::to_str)
+            .map(|name| name == "mod.rs")
+            .unwrap_or(false);
+
+        if !is_root_file && !is_mod_rs {
+            // Skip helper submodules (`box/layout.rs`) so we only count the
+            // primary component entry points. Those helpers are accounted for
+            // indirectly via the `mod.rs` dispatcher.
             continue;
+        }
+
+        let component_key = if is_root_file {
+            match path.file_stem().and_then(|stem| stem.to_str()) {
+                Some(stem) => stem.to_owned(),
+                None => continue,
+            }
+        } else {
+            match parent.file_name().and_then(|segment| segment.to_str()) {
+                Some(segment) => segment.to_owned(),
+                None => continue,
+            }
+        };
+
+        if skip.iter().any(|item| *item == component_key.as_str()) {
+            continue;
+        }
+
+        // Only accept `mod.rs` files that sit directly under the src directory so
+        // nested implementation modules like `accordion/details.rs` do not show up
+        // as standalone components.
+        if is_mod_rs {
+            if parent.parent().map(|p| p != src_dir).unwrap_or(true) {
+                continue;
+            }
         }
 
         let content = fs::read_to_string(&path).with_context(|| {
@@ -149,11 +185,7 @@ fn collect_material_components(workspace: &Path) -> Result<Vec<ComponentCoverage
             continue;
         }
 
-        let name = path
-            .file_stem()
-            .and_then(|stem| stem.to_str())
-            .map(to_title_case)
-            .unwrap_or_else(|| "Unknown".to_string());
+        let name = to_title_case(&component_key);
         components.push(ComponentCoverage { name, frameworks });
     }
 
@@ -244,4 +276,123 @@ fn to_title_case(value: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::Result;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    #[test]
+    fn extract_timestamp_from_marker_line() {
+        let doc = "_Last updated 2024-12-01T03:45:00Z via `cargo xtask parity-report`._";
+        assert_eq!(
+            extract_timestamp(doc).as_deref(),
+            Some("2024-12-01T03:45:00Z")
+        );
+    }
+
+    #[test]
+    fn coverage_summary_reports_empty_state() {
+        assert_eq!(coverage_summary(&[]), "_No adapters discovered._");
+    }
+
+    #[test]
+    fn build_report_preserves_existing_timestamp_and_data() {
+        let mut frameworks = BTreeSet::new();
+        frameworks.insert("react".to_string());
+        let timestamp = "2024-05-05T10:00:00Z".to_string();
+        let doc = build_report(
+            timestamp.clone(),
+            &[ComponentCoverage {
+                name: "Box".into(),
+                frameworks: frameworks.clone(),
+            }],
+            &[],
+        );
+        assert!(doc.contains(&format!(
+            "_Last updated {timestamp} via `cargo xtask parity-report`._"
+        )));
+        assert!(doc.contains("| Box | ✅ |"));
+    }
+
+    #[test]
+    fn collect_material_components_handles_files_and_mod_rs() -> Result<()> {
+        let tmp = TempDir::new()?;
+        let workspace = tmp.path();
+        let material_src = workspace.join("crates/rustic-ui-material/src");
+        fs::create_dir_all(&material_src)?;
+
+        // Direct file component.
+        fs::write(
+            material_src.join("box.rs"),
+            "#[cfg(feature = \"react\")] pub mod react;\npub mod yew;",
+        )?;
+
+        // Directory with mod.rs dispatcher and helper module (should be ignored).
+        let nested = material_src.join("app_bar");
+        fs::create_dir_all(&nested)?;
+        fs::write(
+            nested.join("mod.rs"),
+            "#[cfg(feature = \"dioxus\")] pub mod dioxus;",
+        )?;
+        fs::File::create(nested.join("react.rs"))?; // helper file ignored by scanner.
+
+        let components = collect_material_components(workspace)?;
+        assert_eq!(components.len(), 2);
+
+        let app_bar = components
+            .iter()
+            .find(|component| component.name == "App Bar")
+            .expect("App Bar component should be discovered");
+        assert!(app_bar.frameworks.contains("dioxus"));
+        assert_eq!(app_bar.frameworks.len(), 1);
+
+        let boxed = components
+            .iter()
+            .find(|component| component.name == "Box")
+            .expect("Box component should be discovered");
+        assert!(boxed.frameworks.contains("react"));
+        assert!(boxed.frameworks.contains("yew"));
+        assert_eq!(boxed.frameworks.len(), 2);
+
+        Ok(())
+    }
+
+    #[test]
+    fn collect_joy_components_only_enrolls_yew_modules() -> Result<()> {
+        let tmp = TempDir::new()?;
+        let workspace = tmp.path();
+        let joy_src = workspace.join("crates/rustic-ui-joy/src");
+        fs::create_dir_all(&joy_src)?;
+        let mut lib = fs::File::create(joy_src.join("lib.rs"))?;
+        writeln!(
+            lib,
+            r#"
+#[cfg(feature = "yew")]
+pub mod accordion;
+
+#[cfg(feature = "yew")]
+pub mod button;
+
+pub mod internal_only;
+"#
+        )?;
+
+        let components = collect_joy_components(workspace)?;
+        assert_eq!(components.len(), 2);
+        assert!(components.iter().all(|component| {
+            component.frameworks.len() == 1 && component.frameworks.contains("yew")
+        }));
+        assert!(components
+            .iter()
+            .any(|component| component.name == "Accordion"));
+        assert!(components
+            .iter()
+            .any(|component| component.name == "Button"));
+
+        Ok(())
+    }
 }
