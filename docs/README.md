@@ -83,6 +83,15 @@ scale before the compatibility layer is removed.
   The diagrams call out every `data-rustic-*` automation hook and
   `data-rustic-analytics-id` bridge so enterprise telemetry can assert SSR and
   hydration parity without bespoke selectors.
+- **Layout decision tree** –
+  [`architecture/component-decision-guides.md`](./architecture/component-decision-guides.md)
+  compares `Box`, `Container`, `Grid`, `Stack`, and `Hidden`, includes
+  automation callouts, and links the regression tests you should run before
+  touching layout tokens.
+- **Adapter coverage dashboard** –
+  [`architecture/adapter-parity.md`](./architecture/adapter-parity.md)
+  is generated via `cargo xtask parity-report` and lists which frameworks ship
+  adapters for every Material and Joy component.
 - **Diagram guardrail** – `cargo xtask docs-build` now walks every
   `mermaid`-fenced block under `docs/` and validates it using a Rust-side parser
   before the docs host builds. The validator covers the state, sequence, and

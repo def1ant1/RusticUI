@@ -16,6 +16,13 @@ The columns can be configured with multiple breakpoints to specify the column sp
 
 {{"component": "@mui/docs/ComponentLinkHeader", "design": false}}
 
+:::info Architecture reference
+Pair this API reference with the [Component decision guides](/docs/architecture/component-decision-guides/)
+for guidance on when to reach for `Grid` versus `Stack` or `Hidden`. The
+[Adapter parity dashboard](/docs/architecture/adapter-parity/) lists which
+framework adapters currently ship SSR/hydration support for the grid renderer.
+:::
+
 ## How it works
 
 The grid system is implemented with the `Grid` component:

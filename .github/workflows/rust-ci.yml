@@ -151,6 +151,11 @@ jobs:
       # Capture the Joy UI component inventory so regressions surface quickly in diffs
       - name: Generate Joy component parity report
         run: cargo xtask joy-inventory
+      # Refresh the cross-adapter parity dashboard used by docs navigation
+      - name: Generate adapter parity report
+        run: cargo xtask parity-report
+      - name: Ensure adapter parity report committed
+        run: git diff --exit-code docs/architecture/adapter-parity.md
       # Persist the generated markdown so subsequent jobs (and workflow runs) can diff it cheaply
       - name: Cache Joy parity report
         uses: actions/cache@v4

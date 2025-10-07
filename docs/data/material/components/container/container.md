@@ -14,6 +14,13 @@ While containers can be nested, most layouts do not require a nested container.
 
 {{"component": "@mui/docs/ComponentLinkHeader", "design": false}}
 
+:::tip Architecture reference
+See the [Component decision guides](/docs/architecture/component-decision-guides/)
+for when to choose `Container` over `Box`, `Grid`, or `Stack`, and consult the
+[Adapter parity dashboard](/docs/architecture/adapter-parity/) before enabling a
+new framework so you understand current coverage.
+:::
+
 ## Fluid
 
 A fluid container width is bounded by the `maxWidth` prop value.
