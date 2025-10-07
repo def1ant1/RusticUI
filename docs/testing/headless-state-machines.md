@@ -12,17 +12,21 @@ controlled/uncontrolled diagrams outlined in
 - **Uncontrolled transitions stay deterministic.**
   `tests/collapsible_region_state.rs` models user-driven expand/collapse/toggle
   flows as a pure boolean latch to guarantee that snapshots, hydration cycles,
-  and analytics hooks see the same ordering documented in the diagrams.
+  and analytics hooks see the same ordering documented in the
+  [controlled/uncontrolled diagram](../architecture/headless-state-machines.md#collapsible-region-state-machine).
 - **Controlled consumers must call `sync`.** The controlled-mode property keeps
   `CollapsibleRegionState` frozen until a `sync` arrives, validating that React
   and Leptos integrations can safely render without racing asynchronous
-  callbacks.
+  callbacks. This corresponds to the
+  [adapter handshake in the same diagram](../architecture/headless-state-machines.md#collapsible-region-state-machine).
 - **Transition token serialization is stable.** A shadow `BTreeSet` asserts that
   tokens never duplicate and that `is_transitioning()` mirrors the architectural
-  expectation that animations complete in a deterministic order.
+  expectation that animations complete in a deterministic order, matching the
+  [token lifecycle walkthrough](../architecture/headless-state-machines.md#token-lifecycle-orchestration).
 - **Focus returns remain intact.** The focus-return property walks through
   repeated collapses/expands to guarantee keyboard users always land on the last
-  configured trigger.
+  configured trigger, mirroring the
+  [automation checklist guidance](../architecture/headless-state-machines.md#automation-checklist).
 
 Each property is annotated with extensive commentary so teams rolling out new
 automation or analytics pipelines can extend the suite without reverse-

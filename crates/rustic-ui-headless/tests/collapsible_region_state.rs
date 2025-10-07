@@ -2,10 +2,14 @@
 //!
 //! Each property in this suite is heavily annotated so new contributors can
 //! trace the expectations back to the architectural state diagrams and the
-//! enterprise-grade focus orchestration guarantees the component promises.  The
-//! goal is to document *why* each invariant matters for large scale surfaces so
-//! future refactors have guard rails baked into CI instead of relying on tribal
-//! knowledge.
+//! enterprise-grade focus orchestration guarantees the component promises.
+//! Cross-check the expectations with the diagrams in
+//! [`docs/architecture/headless-state-machines.md#collapsible-region-state-machine`](../../../docs/architecture/headless-state-machines.md#collapsible-region-state-machine)
+//! and the token lifecycle walkthrough under
+//! [`#token-lifecycle-orchestration`](../../../docs/architecture/headless-state-machines.md#token-lifecycle-orchestration).
+//! The goal is to document *why* each invariant matters for large scale
+//! surfaces so future refactors have guard rails baked into CI instead of
+//! relying on tribal knowledge.
 
 use std::collections::BTreeSet;
 
