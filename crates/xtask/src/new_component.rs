@@ -127,6 +127,22 @@ fn build_template_specs(
             ),
             description: "React/TypeScript adapter telemetry helper",
         });
+        entries.push(TemplateEntry {
+            template: "typescript_adapter_story.tsx.tpl",
+            output: format!(
+                "packages/mui-material/src/{}/RusticAdapter.stories.tsx",
+                ctx.component_pascal
+            ),
+            description: "Storybook harness placeholder",
+        });
+        entries.push(TemplateEntry {
+            template: "typescript_adapter_spec.tsx.tpl",
+            output: format!(
+                "packages/mui-material/src/{}/RusticAdapter.spec.tsx",
+                ctx.component_pascal
+            ),
+            description: "TypeScript telemetry adapter test placeholder",
+        });
     }
 
     if matches!(audience, TemplateAudience::All | TemplateAudience::Headless) {
