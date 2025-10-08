@@ -3,8 +3,8 @@
 // code so unit tests can exercise the exact same execution path that CI relies
 // on.
 
+use anyhow::Result;
 use clap::Parser;
-use rustic_ui_error::RusticUiResult;
 use rustic_ui_icons_material::icon_update::{
     run_update, HttpFetcher, UpdateOptions, UpdateOutcome, UpdateReuseReason, DEFAULT_ZIP_URL,
 };
@@ -26,7 +26,7 @@ struct Cli {
     force_refresh: bool,
 }
 
-fn main() -> RusticUiResult<()> {
+fn main() -> Result<()> {
     let cli = Cli::parse();
     let mut options = UpdateOptions::default();
     options.source_url = cli.source_url.clone();

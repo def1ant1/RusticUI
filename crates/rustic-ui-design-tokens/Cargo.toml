@@ -6,7 +6,7 @@ license.workspace = true
 description = "Shared helpers for packaging RusticUI design token bundles."
 
 [dependencies]
-rustic-ui-error = { workspace = true, features = ["serde_json", "walkdir", "zip"] }
+anyhow.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 sha2.workspace = true

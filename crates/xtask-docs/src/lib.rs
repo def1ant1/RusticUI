@@ -23,10 +23,10 @@ corresponding URL so the iframe-based Sandpack preview can hydrate before the
 assertions execute.
 "#]
 
+use anyhow::{anyhow, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_metadata::MetadataCommand;
 use hex::ToHex;
-use rustic_ui_error::{ResultContextExt, RusticUiError, RusticUiResult};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::env;
@@ -41,17 +41,7 @@ use walkdir::WalkDir;
 /// The helper reuses `CARGO_TARGET_DIR` when provided to ensure CI caches are
 /// respected and executes the host+wasm compilation in parallel via
 /// `tokio::try_join!`.
-///
-/// # Examples
-///
-/// ```no_run
-/// # tokio::runtime::Runtime::new().unwrap().block_on(async {
-/// # use xtask_docs::docs_build;
-/// docs_build().await?;
-/// # Ok::<(), rustic_ui_error::RusticUiError>(())
-/// # }).unwrap();
-/// ```
-pub async fn docs_build() -> RusticUiResult<()> {
+pub async fn docs_build() -> Result<()> {
     let ctx = WorkspaceContext::detect()?;
     validate_mermaid_diagrams(&ctx).await?;
     build_artifacts(&ctx, BuildProfile::Debug).await.map(|_| ())
@@ -66,17 +56,7 @@ pub async fn docs_build() -> RusticUiResult<()> {
 /// `target/logs/docs-playwright.log` respectively with the invoked command line
 /// so CI operators can diagnose why Chrome/Playwright exited with a specific
 /// status.
-///
-/// # Examples
-///
-/// ```no_run
-/// # tokio::runtime::Runtime::new().unwrap().block_on(async {
-/// # use xtask_docs::docs_test;
-/// docs_test().await?;
-/// # Ok::<(), rustic_ui_error::RusticUiError>(())
-/// # }).unwrap();
-/// ```
-pub async fn docs_test() -> RusticUiResult<()> {
+pub async fn docs_test() -> Result<()> {
     let ctx = WorkspaceContext::detect()?;
     run_wasm_tests(&ctx).await?;
     run_playwright_quick_start_smoke(&ctx).await
@@ -93,18 +73,7 @@ pub struct DocsPackageOutcome {
     pub manifest_path: Utf8PathBuf,
 }
 
-///
-/// # Examples
-///
-/// ```no_run
-/// # tokio::runtime::Runtime::new().unwrap().block_on(async {
-/// # use xtask_docs::docs_package;
-/// let outcome = docs_package().await?;
-/// println!("exported docs to {}", outcome.export_dir);
-/// # Ok::<(), rustic_ui_error::RusticUiError>(())
-/// # }).unwrap();
-/// ```
-pub async fn docs_package() -> RusticUiResult<DocsPackageOutcome> {
+pub async fn docs_package() -> Result<DocsPackageOutcome> {
     let ctx = WorkspaceContext::detect()?;
     let artifacts = build_artifacts(&ctx, BuildProfile::Release).await?;
     package_release(&ctx, &artifacts).await
@@ -118,14 +87,14 @@ struct WorkspaceContext {
 }
 
 impl WorkspaceContext {
-    fn detect() -> RusticUiResult<Self> {
+    fn detect() -> Result<Self> {
         let metadata = MetadataCommand::new()
             .no_deps()
             .exec()
             .context("failed to query workspace metadata")?;
         let workspace_root =
             Utf8PathBuf::from_path_buf(metadata.workspace_root.into_std_path_buf())
-                .map_err(|_| RusticUiError::message("workspace path was not valid UTF-8"))?;
+                .map_err(|_| anyhow!("workspace path was not valid UTF-8"))?;
         let rustic_docs_crate = workspace_root.join("crates").join("rustic-docs");
         let target_dir = env::var("CARGO_TARGET_DIR")
             .map(Utf8PathBuf::from)
@@ -179,7 +148,7 @@ struct MermaidFailure {
 async fn build_artifacts(
     ctx: &WorkspaceContext,
     profile: BuildProfile,
-) -> RusticUiResult<DocsBuildArtifacts> {
+) -> Result<DocsBuildArtifacts> {
     let host_build = build_host(ctx, profile);
     let wasm_build = build_wasm(ctx, profile);
 
@@ -201,7 +170,7 @@ async fn build_artifacts(
     })
 }
 
-async fn validate_mermaid_diagrams(ctx: &WorkspaceContext) -> RusticUiResult<()> {
+async fn validate_mermaid_diagrams(ctx: &WorkspaceContext) -> Result<()> {
     let docs_root = ctx.workspace_root.join("docs");
     let mut failures = Vec::new();
 
@@ -214,9 +183,8 @@ async fn validate_mermaid_diagrams(ctx: &WorkspaceContext) -> RusticUiResult<()>
             continue;
         }
 
-        let path = Utf8PathBuf::from_path_buf(entry.into_path()).map_err(|_| {
-            RusticUiError::message("encountered non UTF-8 path while scanning docs")
-        })?;
+        let path = Utf8PathBuf::from_path_buf(entry.into_path())
+            .map_err(|_| anyhow!("encountered non UTF-8 path while scanning docs"))?;
         let contents = fs::read_to_string(&path)
             .await
             .with_context(|| format!("failed to read {path}"))?;
@@ -289,13 +257,13 @@ async fn validate_mermaid_diagrams(ctx: &WorkspaceContext) -> RusticUiResult<()>
         .await
         .with_context(|| format!("failed to persist mermaid lint output to {log_path}"))?;
 
-    Err(RusticUiError::message(format!(
+    Err(anyhow!(
         "Mermaid diagram validation failed. Inspect {:?} for the detailed log.",
         log_path
-    )))
+    ))
 }
 
-async fn build_host(ctx: &WorkspaceContext, profile: BuildProfile) -> RusticUiResult<()> {
+async fn build_host(ctx: &WorkspaceContext, profile: BuildProfile) -> Result<()> {
     let mut display = CommandDisplay::new("cargo");
     display.push("build");
     display.push("-p");
@@ -323,14 +291,14 @@ async fn build_host(ctx: &WorkspaceContext, profile: BuildProfile) -> RusticUiRe
         .await
         .with_context(|| format!("failed to execute {}", display.render()))?;
     if !status.success() {
-        return Err(RusticUiError::message(format!(
+        return Err(anyhow!(
             "cargo build for rustic-docs-server failed with status {status}"
-        )));
+        ));
     }
     Ok(())
 }
 
-async fn build_wasm(ctx: &WorkspaceContext, profile: BuildProfile) -> RusticUiResult<()> {
+async fn build_wasm(ctx: &WorkspaceContext, profile: BuildProfile) -> Result<()> {
     let mut display = CommandDisplay::new("cargo");
     display.push("build");
     display.push("-p");
@@ -364,9 +332,7 @@ async fn build_wasm(ctx: &WorkspaceContext, profile: BuildProfile) -> RusticUiRe
         .await
         .with_context(|| format!("failed to execute {}", display.render()))?;
     if !status.success() {
-        return Err(RusticUiError::message(
-            "cargo build for rustic-docs wasm bundle failed",
-        ));
+        return Err(anyhow!("cargo build for rustic-docs wasm bundle failed"));
     }
     Ok(())
 }
@@ -379,7 +345,7 @@ struct WasmBindgenArtifacts {
 async fn run_wasm_bindgen(
     ctx: &WorkspaceContext,
     profile: BuildProfile,
-) -> RusticUiResult<WasmBindgenArtifacts> {
+) -> Result<WasmBindgenArtifacts> {
     let input_wasm = ctx
         .target_dir
         .join("wasm32-unknown-unknown")
@@ -414,9 +380,7 @@ async fn run_wasm_bindgen(
         .await
         .with_context(|| format!("failed to execute {}", display.render()))?;
     if !status.success() {
-        return Err(RusticUiError::message(
-            "wasm-bindgen returned non-zero exit status",
-        ));
+        return Err(anyhow!("wasm-bindgen returned non-zero exit status"));
     }
 
     let js = output_dir.join("rustic_docs.js");
@@ -424,7 +388,7 @@ async fn run_wasm_bindgen(
     Ok(WasmBindgenArtifacts { js, wasm })
 }
 
-async fn run_wasm_tests(ctx: &WorkspaceContext) -> RusticUiResult<()> {
+async fn run_wasm_tests(ctx: &WorkspaceContext) -> Result<()> {
     let mut display = CommandDisplay::new("wasm-pack");
     display.push("test");
     display.push("--headless");
@@ -474,13 +438,13 @@ async fn run_wasm_tests(ctx: &WorkspaceContext) -> RusticUiResult<()> {
         .await
         .with_context(|| format!("failed to persist wasm-pack output to {log_path}"))?;
 
-    Err(RusticUiError::message(format!(
+    Err(anyhow!(
         "wasm-pack smoke tests failed. Inspect {:?} for the detailed log.",
         log_path
-    )))
+    ))
 }
 
-async fn run_playwright_quick_start_smoke(ctx: &WorkspaceContext) -> RusticUiResult<()> {
+async fn run_playwright_quick_start_smoke(ctx: &WorkspaceContext) -> Result<()> {
     let mut display = CommandDisplay::new("pnpm");
     display.push("--dir");
     display.push("docs");
@@ -535,16 +499,16 @@ async fn run_playwright_quick_start_smoke(ctx: &WorkspaceContext) -> RusticUiRes
         .await
         .with_context(|| format!("failed to persist Playwright output to {log_path}"))?;
 
-    Err(RusticUiError::message(format!(
+    Err(anyhow!(
         "Playwright docs smoke tests failed. Inspect {:?} for the detailed log.",
         log_path
-    )))
+    ))
 }
 
 async fn package_release(
     ctx: &WorkspaceContext,
     artifacts: &DocsBuildArtifacts,
-) -> RusticUiResult<DocsPackageOutcome> {
+) -> Result<DocsPackageOutcome> {
     let export_dir = env::var("RUSTIC_DOCS_EXPORT_DIR")
         .map(Utf8PathBuf::from)
         .unwrap_or_else(|_| ctx.target_dir.join("deploy").join("docs"));
@@ -560,13 +524,13 @@ async fn package_release(
         artifacts
             .wasm_js
             .file_name()
-            .ok_or_else(|| RusticUiError::message("missing wasm-bindgen js artifact name"))?,
+            .ok_or_else(|| anyhow!("missing wasm-bindgen js artifact name"))?,
     );
     let wasm_bg_dest = wasm_out.join(
         artifacts
             .wasm_bg
             .file_name()
-            .ok_or_else(|| RusticUiError::message("missing wasm-bindgen wasm artifact name"))?,
+            .ok_or_else(|| anyhow!("missing wasm-bindgen wasm artifact name"))?,
     );
 
     fs::copy(&artifacts.wasm_js, &wasm_js_dest)
@@ -647,7 +611,7 @@ impl BuildManifest {
         server: &Utf8Path,
         snapshot: &Utf8Path,
         contract: &Utf8Path,
-    ) -> RusticUiResult<Self> {
+    ) -> Result<Self> {
         Ok(Self {
             wasm_js: manifest_entry(ctx, export_dir, wasm_js).await?,
             wasm_bg: manifest_entry(ctx, export_dir, wasm_bg).await?,
@@ -662,7 +626,7 @@ async fn manifest_entry(
     ctx: &WorkspaceContext,
     export_dir: &Utf8Path,
     path: &Utf8Path,
-) -> RusticUiResult<BuildManifestEntry> {
+) -> Result<BuildManifestEntry> {
     let bytes = fs::read(path)
         .await
         .with_context(|| format!("failed to read {path} for hashing"))?;
