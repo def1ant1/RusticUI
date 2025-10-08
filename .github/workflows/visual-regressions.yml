@@ -1,0 +1,103 @@
+name: Adapter visual regressions
+
+on:
+  pull_request:
+    branches: ['**']
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+env:
+  PLAYWRIGHT_VERSION: 1.55.0
+  PNPM_STORE_PATH: ~/.pnpm-store
+  PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
+
+jobs:
+  adapters:
+    name: Playwright + Chromatic adapters
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@60edb5dd5c3e3f3b66a9fa74c1b6511ac9186f4a # v4.0.2
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@7088e561eb65bb68695d245aa206f005ef30921d # v4.1.0
+        with:
+          version: 9
+
+      - name: Restore pnpm store cache
+        uses: actions/cache@6920645dc474b45f2b9566f516fa0e97f0e68727 # v4.0.2
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install adapter harness dependencies
+        run: pnpm --dir test/regressions/adapters install --frozen-lockfile
+
+      - name: Restore Playwright browsers cache
+        uses: actions/cache@6920645dc474b45f2b9566f516fa0e97f0e68727 # v4.0.2
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
+      - name: Install Playwright browsers
+        run: pnpm --dir test/regressions/adapters exec playwright install --with-deps chromium@${{ env.PLAYWRIGHT_VERSION }}
+
+      - name: Cache adapter Storybook builds
+        uses: actions/cache@6920645dc474b45f2b9566f516fa0e97f0e68727 # v4.0.2
+        with:
+          path: |
+            examples/**/storybook-static
+          key: adapter-storybooks-${{ runner.os }}-${{ hashFiles('examples/**/package.json', 'examples/**/pnpm-lock.yaml', 'examples/**/package-lock.json', 'Cargo.lock') }}
+          restore-keys: |
+            adapter-storybooks-${{ runner.os }}-
+
+      - name: Build adapter Storybooks (if scripts exist)
+        run: pnpm --dir test/regressions/adapters build-storybooks
+
+      - name: Run adapter Playwright suite
+        run: pnpm --dir test/regressions/adapters playwright
+
+      - name: Publish adapters to Chromatic
+        if: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          CHROMATIC_BRANCH: ${{ github.ref_name }}
+          CHROMATIC_SHA: ${{ github.sha }}
+        run: pnpm --dir test/regressions/adapters chromatic
+
+      - name: Upload adapter visual artifacts
+        uses: actions/upload-artifact@c7d193f32ed8f055485b154920b3958e430b5dd2 # v4.4.3
+        with:
+          name: adapter-visual-regressions
+          path: |
+            test-results/visual-regressions/adapters
+            test-results/visual-regressions-adapters.json
+          if-no-files-found: warn
+
+      - name: Summarise coverage output
+        if: ${{ always() }}
+        run: |
+          if [ -f test-results/visual-regressions-adapters.json ]; then
+            jq '.' test-results/visual-regressions-adapters.json
+          else
+            echo 'Adapter visual regression summary not generated.'
+          fi

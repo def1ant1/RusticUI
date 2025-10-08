@@ -1,0 +1,14 @@
+{
+  "name": "@rusticui/adapter-visual-regressions",
+  "private": true,
+  "scripts": {
+    "playwright": "playwright test --config ./playwright.config.ts",
+    "build-storybooks": "tsx ./build-storybooks.ts",
+    "chromatic": "tsx ./chromatic.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0",
+    "chromatic": "11.12.4",
+    "tsx": "4.19.2"
+  }
+}
