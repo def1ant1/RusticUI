@@ -82,7 +82,7 @@ cargo xtask accessibility-audit
 ```
 
 - The audit enforces descriptive alt text, validates heading structure, and fails CI on regression.
-- Nightly jobs can call `cargo xtask accessibility-nightly` to expand the crawl across the full docs tree without custom Playwright scripts.
+- Nightly jobs can call `cargo xtask accessibility-nightly` to run the Playwright + axe harness against the rendered docs/examples shell. The command launches `pnpm --dir test run accessibility`, captures JSON + HTML reports in `test-results/accessibility`, and still executes the extended Markdown crawl for redundancy.
 - To exercise bespoke fixtures, set `RUSTIC_UI_A11Y_CONFIG` to a JSON manifest describing the Markdown files or directories to scan.
 
 If your project depended on other static payloads that lived in the npm packages (fonts, locale bundles, codemod templates), fetch them from `archives/mui-packages/`. For example, the Roboto font artifacts remain available under `archives/mui-packages/mui-material/public/static/fonts/`. Copy the required assets into your crate’s `build/` folder and commit them alongside the Rust sources.

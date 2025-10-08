@@ -1416,9 +1416,12 @@ fn accessibility_audit() -> Result<()> {
 }
 
 fn accessibility_nightly() -> Result<()> {
+    let workspace = workspace_root();
     println!(
         "[xtask] running nightly accessibility sweeps across the expanded documentation corpus"
     );
+    accessibility::run_browser_suite(&workspace)?;
+    println!("[xtask] completed Playwright axe-core sweeps; continuing with markdown linting");
     run_accessibility(accessibility::AuditMode::Nightly)
 }
 
@@ -2924,11 +2927,14 @@ mod component_metadata {
 }
 
 pub(crate) mod accessibility {
+    use super::relative_display;
     use anyhow::{anyhow, Context, Result};
     use pulldown_cmark::{Event, Options, Parser, Tag};
     use serde::Deserialize;
+    use std::env;
     use std::fs;
     use std::path::{Path, PathBuf};
+    use std::process::Command;
     use walkdir::WalkDir;
 
     #[derive(Debug, Clone, Copy)]
@@ -3013,6 +3019,53 @@ pub(crate) mod accessibility {
             files_scanned: files.len(),
             issues,
         })
+    }
+
+    pub fn run_browser_suite(workspace: &Path) -> Result<()> {
+        let runner = env
+            .var("RUSTIC_UI_ACCESSIBILITY_RUNNER")
+            .unwrap_or_else(|_| "pnpm".to_string());
+        let results_override = env::var("RUSTIC_UI_ACCESSIBILITY_RESULTS_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| workspace.join("test-results/accessibility"));
+
+        println!(
+            "[xtask][accessibility] launching Playwright harness via `{}`",
+            runner
+        );
+
+        let mut command = Command::new(&runner);
+        command
+            .current_dir(workspace)
+            .arg("--dir")
+            .arg("test")
+            .arg("run")
+            .arg("accessibility");
+
+        if env::var_os("RUSTIC_UI_ACCESSIBILITY_RESULTS_DIR").is_none() {
+            command.env(
+                "RUSTIC_UI_ACCESSIBILITY_RESULTS_DIR",
+                results_override.display().to_string(),
+            );
+        }
+
+        let status = command
+            .status()
+            .with_context(|| "failed to spawn Playwright accessibility harness".to_string())?;
+
+        if !status.success() {
+            return Err(anyhow!(
+                "Playwright accessibility harness exited with status {:?}",
+                status
+            ));
+        }
+
+        println!(
+            "[xtask][accessibility] Playwright reports available under {}",
+            relative_display(workspace, &results_override)
+        );
+
+        Ok(())
     }
 
     fn default_targets(workspace: &Path, mode: AuditMode) -> Vec<AccessibilityTarget> {

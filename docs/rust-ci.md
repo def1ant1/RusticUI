@@ -173,7 +173,7 @@ cargo test -p rustic-ui-material --test focus_trap_parity --features sycamore
 wasm-pack test --headless --chrome crates/rustic-ui-material -- --features yew --test wasm
 ```
 
-The parity suites emit Insta snapshots so changes to automation IDs or scoped classes require an intentional snapshot review. The wasm harness mounts the Yew adapters in a headless Chrome instance and performs an `axe-core` audit, eliminating manual accessibility smoke tests.
+The parity suites emit Insta snapshots so changes to automation IDs or scoped classes require an intentional snapshot review. Accessibility sweeps now execute through the dedicated Playwright + axe harness under `test/accessibility/`, which boots the docs + example gallery, runs WCAG 2.0/2.1 AA rules, and writes JSON/HTML reports into `test-results/accessibility`. The wasm harness still validates interactive adapters, but the browser-level audits moved into the shared Playwright suite to keep CI orchestration consistent across languages.
 
 ### Snapshot maintenance workflow
 When a Joy snapshot test fails, the panic message includes both the framework-specific markup and the React baseline. Use `-- --nocapture --exact` to focus on the failing test:

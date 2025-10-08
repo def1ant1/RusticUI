@@ -2,9 +2,11 @@
   "name": "@mui-internal/tests",
   "private": true,
   "scripts": {
-    "typescript": "tsc -p tsconfig.json"
+    "typescript": "tsc -p tsconfig.json",
+    "accessibility": "playwright test --config ./accessibility/playwright.config.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
     "@babel/runtime": "^7.28.2",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
