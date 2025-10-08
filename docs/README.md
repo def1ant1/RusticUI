@@ -96,6 +96,12 @@ scale before the compatibility layer is removed.
   [`architecture/adapter-parity.md`](./architecture/adapter-parity.md)
   is generated via `cargo xtask parity-report` and lists which frameworks ship
   adapters for every Material and Joy component.
+- **Bundle-size telemetry** –
+  [`performance/bundle-costs`](./performance/bundle-costs)
+  renders the automated feature-flag cost table emitted by
+  `cargo xtask bundle-report`, linking directly back to the coverage dashboard
+  so release managers can weigh verification breadth against binary growth in
+  a single review loop.
 - **Diagram guardrail** – `cargo xtask docs-build` now walks every
   `mermaid`-fenced block under `docs/` and validates it using a Rust-side parser
   before the docs host builds. The validator covers the state, sequence, and

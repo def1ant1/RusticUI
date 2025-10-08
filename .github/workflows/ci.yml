@@ -60,9 +60,21 @@ jobs:
       - name: Aggregate multi-suite coverage dashboard (Linux only)
         if: matrix.os == 'ubuntu-latest'
         run: cargo xtask coverage-report
+      - name: Compile bundle-size telemetry (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo xtask bundle-report
       - name: Upload coverage dashboard artifact (Linux only)
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@c7d193f32ed8f055485b154920b3958e430b5dd2 # v4.4.3
         with:
           name: coverage-dashboard
           path: test-results/coverage
+      - name: Upload bundle-size report (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@c7d193f32ed8f055485b154920b3958e430b5dd2 # v4.4.3
+        with:
+          name: bundle-size-report
+          path: |
+            test-results/bundle-size
+            docs/performance/bundle-costs.md
+            docs/performance/bundle-costs.json

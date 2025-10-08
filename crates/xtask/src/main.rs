@@ -3022,9 +3022,8 @@ pub(crate) mod accessibility {
     }
 
     pub fn run_browser_suite(workspace: &Path) -> Result<()> {
-        let runner = env
-            .var("RUSTIC_UI_ACCESSIBILITY_RUNNER")
-            .unwrap_or_else(|_| "pnpm".to_string());
+        let runner =
+            env::var("RUSTIC_UI_ACCESSIBILITY_RUNNER").unwrap_or_else(|_| "pnpm".to_string());
         let results_override = env::var("RUSTIC_UI_ACCESSIBILITY_RESULTS_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|_| workspace.join("test-results/accessibility"));

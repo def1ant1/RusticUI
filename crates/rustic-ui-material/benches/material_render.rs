@@ -10,7 +10,10 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 use rustic_ui_headless::button::ButtonState;
+use rustic_ui_headless::drawer::{DrawerAnchor, DrawerState, DrawerVariant};
+use rustic_ui_headless::ControlStrategy;
 use rustic_ui_material::button::{self, ButtonProps};
+use rustic_ui_material::drawer;
 use rustic_ui_material::Theme;
 
 /// Benchmarks the steady-state HTML renderer used by every Material adapter.
@@ -50,5 +53,69 @@ fn bench_button_render(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(material_renderers, bench_button_render);
+/// Benchmarks the drawer surface renderer which stitches together the headless
+/// accessibility attributes, theming metadata and HTML payload for modal/persistent
+/// drawers.
+///
+/// Two scenarios are covered:
+///
+/// * `modal_surface_open` mirrors a top-layer navigation drawer with focus
+///   trapping enabled. It exercises attribute assembly (`data-open`,
+///   `aria-modal`, automation ids) alongside the style conversion path that
+///   maps system spacing tokens into inline CSS.
+/// * `persistent_surface_closed` captures the steady-state footprint of a
+///   persistent drawer that remains part of the document flow. This ensures the
+///   renderer stays lean even when most automation flags are disabled.
+fn bench_drawer_surface_render(c: &mut Criterion) {
+    let mut group = c.benchmark_group("material/drawer/render_surface_html");
+    group.throughput(Throughput::Elements(1));
+
+    group.bench_function("modal_surface_open", |b| {
+        let state = DrawerState::new(
+            true,
+            ControlStrategy::Uncontrolled,
+            DrawerVariant::Modal,
+            DrawerAnchor::Start,
+        );
+        let attrs = state
+            .surface_attributes()
+            .id("primary-navigation")
+            .labelled_by("nav-title")
+            .described_by("nav-description");
+
+        b.iter(|| {
+            black_box(drawer::render_drawer_surface_html(
+                &state,
+                attrs.clone(),
+                "<nav role=\"navigation\">...</nav>",
+            ));
+        });
+    });
+
+    group.bench_function("persistent_surface_closed", |b| {
+        let state = DrawerState::new(
+            false,
+            ControlStrategy::Uncontrolled,
+            DrawerVariant::Persistent,
+            DrawerAnchor::End,
+        );
+        let attrs = state.surface_attributes();
+
+        b.iter(|| {
+            black_box(drawer::render_drawer_surface_html(
+                &state,
+                attrs.clone(),
+                "<aside>Reports</aside>",
+            ));
+        });
+    });
+
+    group.finish();
+}
+
+criterion_group!(
+    material_renderers,
+    bench_button_render,
+    bench_drawer_surface_render
+);
 criterion_main!(material_renderers);

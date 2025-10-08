@@ -38,7 +38,9 @@ the cost of toggling optional features. `cargo xtask bundle-report` compiles the
 Material and headless crates across their feature matrices, records the release
 `*.rlib` sizes, and emits both JSON and Markdown summaries. The Markdown export
 is committed to `docs/performance/bundle-costs.md` so the performance playbook
-always reflects the latest measurements.
+always reflects the latest measurements, and the interactive docs page at
+[`/performance/bundle-costs`](../performance/bundle-costs) renders the same data
+for product and QA stakeholders.
 
 ## Pipeline expectations
 
