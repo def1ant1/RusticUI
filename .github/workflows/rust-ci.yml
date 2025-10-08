@@ -189,6 +189,45 @@ jobs:
       # Assemble distributable theme bundles for compatibility consumers
       - run: cargo xtask themes-bundle --compat
 
+  accessibility:
+    name: Accessibility Audits
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Derive pnpm store path
+        id: pnpm-store
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.STORE_PATH }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('docs/package.json', 'test/package.json') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('test/package.json') }}
+          restore-keys: playwright-${{ runner.os }}-
+      - name: Install docs dependencies
+        run: pnpm --dir docs install --frozen-lockfile=false
+      - name: Install test dependencies
+        run: pnpm --dir test install --frozen-lockfile=false
+      - name: Install Playwright Chromium bundle
+        run: pnpm --dir test exec playwright install --with-deps chromium
+      - name: Run accessibility harness
+        run: pnpm --dir test run accessibility
+      - name: Upload accessibility reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-reports
+          path: test-results/accessibility
+          if-no-files-found: error
+
   publish-check:
     name: Publish Dry Run
     runs-on: ubuntu-latest
