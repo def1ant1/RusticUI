@@ -60,6 +60,7 @@ pub(crate) fn coverage_report(args: CoverageReportArgs) -> Result<()> {
     suites.push(collect_typescript_coverage(&data_source)?);
     suites.push(collect_accessibility_signal(&data_source)?);
     suites.push(collect_visual_regressions(&data_source)?);
+    suites.push(collect_adapter_visual_regressions(&data_source)?);
 
     let report = CoverageReport {
         generated_at: generated_at.to_rfc3339(),
@@ -500,6 +501,66 @@ fn collect_visual_regressions(source: &CoverageDataSource) -> Result<SuiteReport
     })
 }
 
+fn collect_adapter_visual_regressions(source: &CoverageDataSource) -> Result<SuiteReport> {
+    let path = source.resolve(Path::new("test-results").join("visual-regressions-adapters.json"));
+    if !path.exists() {
+        return Ok(SuiteReport {
+            name: "Adapter visual regression snapshots".into(),
+            kind: "visual_regression".into(),
+            category: SuiteCategory::Visual,
+            status: SuiteStatus::Skipped,
+            metrics: SuiteMetrics::VisualRegression {
+                snapshots: 0,
+                differences: 0,
+                updated: 0,
+                skipped: 0,
+                require_zero_differences: true,
+            },
+            details: vec![
+                "adapter visual regression summary missing; ensure adapter Storybook pipeline produced JSON output".into(),
+            ],
+            artifacts: vec![path.display().to_string()],
+        });
+    }
+
+    let raw = fs::read_to_string(&path).with_context(|| {
+        format!(
+            "failed to read adapter visual regression summary at {}",
+            path.display()
+        )
+    })?;
+    let summary: VisualSummary = serde_json::from_str(&raw)?;
+
+    if summary.snapshots == 0 {
+        bail!(
+            "adapter visual regression summary at {} recorded zero snapshots",
+            path.display()
+        );
+    }
+
+    let status = if summary.differences == 0 {
+        SuiteStatus::Passed
+    } else {
+        SuiteStatus::Failed
+    };
+
+    Ok(SuiteReport {
+        name: "Adapter visual regression snapshots".into(),
+        kind: "visual_regression".into(),
+        category: SuiteCategory::Visual,
+        status,
+        metrics: SuiteMetrics::VisualRegression {
+            snapshots: summary.snapshots,
+            differences: summary.differences,
+            updated: summary.updated,
+            skipped: summary.skipped,
+            require_zero_differences: true,
+        },
+        details: summary.notes,
+        artifacts: vec![path.display().to_string()],
+    })
+}
+
 fn write_json(path: &Path, report: &CoverageReport) -> Result<()> {
     let file = File::create(path)
         .with_context(|| format!("failed to open {} for JSON output", path.display()))?;
@@ -748,6 +809,8 @@ fn default_notes() -> Vec<String> {
         "TypeScript pass-rate derives from the Vitest/Karma junit.xml written to test-results/.".into(),
         "Accessibility sweeps reuse `cargo xtask accessibility-audit` to guarantee markdown hygiene.".into(),
         "Playwright visual regressions must export test-results/visual-regressions.json (see docs/testing/coverage-overview.md)."
+            .into(),
+        "Adapter Storybook snapshots must export test-results/visual-regressions-adapters.json (see docs/testing/visual-regressions.md)."
             .into(),
         "Bundle-size deltas come from `cargo xtask bundle-report`; see docs/performance/bundle-costs.md for the rendered table."
             .into(),
