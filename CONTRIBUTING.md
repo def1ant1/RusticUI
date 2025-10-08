@@ -73,6 +73,15 @@ tooling or docs.
 
 All repetitive chores are encapsulated inside the `Makefile` or `cargo xtask`. Prefer these entry points over ad-hoc scripts.
 
+### Unified error handling
+
+RusticUI crates share a common error vocabulary via the [`rustic-ui-error`](crates/rustic-ui-error) crate. Public APIs should
+return `RusticUiResult<T>` (an alias for `Result<T, rustic_ui_error::RusticUiError>`) rather than `anyhow::Result`. Leverage the
+provided [`ResultContextExt`](crates/rustic-ui-error/src/lib.rs) trait to attach context instead of `anyhow::Context` so callers
+retain structured error variants. When you introduce a new failure domain add a `#[cfg(feature = "...")]` variant to the shared
+enum, document the intended usage inline, and extend the unit tests to prove `source()` chains expose the underlying error. CI
+verifies these conversions remain lossless by exercising the helpers in `crates/rustic-ui-error` during `cargo test`.
+
 ### Documentation hosting pipeline
 
 The documentation site, API reference, and wasm demos ship through the docs subcommands exposed by `cargo xtask`. The
