@@ -6,7 +6,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-anyhow.workspace = true
+rustic-ui-error = { workspace = true, features = ["camino", "cargo_metadata", "serde_json", "tokio", "walkdir"] }
 camino.workspace = true
 cargo_metadata.workspace = true
 tokio = { workspace = true, features = ["process", "fs", "io-util", "signal"] }

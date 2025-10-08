@@ -42,6 +42,7 @@ members = [
     "crates/rustic-ui-icons", 
     "crates/rustic-ui-icons-material",
     "crates/rustic-ui-design-tokens",
+    "crates/rustic-ui-error",
     "crates/rustic-ui-utils",
     "crates/rustic-docs",
     "crates/xtask-docs",
@@ -146,6 +147,8 @@ camino = "1.1"
 cargo_metadata = "0.18"
 hex = "0.4"
 quick-xml = "0.31"
+thiserror = "1.0"
+rustic-ui-error = { path = "crates/rustic-ui-error" }
 
 [profile.dev]
 # Development builds prioritize compile time over runtime performance.

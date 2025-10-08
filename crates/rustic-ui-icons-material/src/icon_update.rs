@@ -7,7 +7,7 @@
 //! maintainable at scale, so every helper is carefully annotated with its
 //! responsibilities and invariants.
 
-use anyhow::{anyhow, Context, Result};
+use rustic_ui_error::{ResultContextExt, RusticUiError, RusticUiResult};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -102,7 +102,7 @@ struct CacheMetadata {
 }
 
 impl CacheMetadata {
-    fn load(path: &Path) -> Result<Self> {
+    fn load(path: &Path) -> RusticUiResult<Self> {
         if !path.exists() {
             return Ok(Self::default());
         }
@@ -114,7 +114,7 @@ impl CacheMetadata {
         Ok(meta)
     }
 
-    fn store(&self, path: &Path) -> Result<()> {
+    fn store(&self, path: &Path) -> RusticUiResult<()> {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).with_context(|| {
                 format!(
@@ -134,7 +134,7 @@ impl CacheMetadata {
 /// Abstraction over the HTTP client so tests can inject deterministic
 /// responses. The implementation used by the binary simply wraps `ureq`.
 pub trait Fetcher {
-    fn fetch(&self, url: &str, headers: &[(String, String)]) -> Result<FetchResponse>;
+    fn fetch(&self, url: &str, headers: &[(String, String)]) -> RusticUiResult<FetchResponse>;
 }
 
 /// Lightweight response wrapper returned by [`Fetcher::fetch`].
@@ -151,7 +151,7 @@ pub struct FetchResponse {
 pub struct HttpFetcher;
 
 impl Fetcher for HttpFetcher {
-    fn fetch(&self, url: &str, headers: &[(String, String)]) -> Result<FetchResponse> {
+    fn fetch(&self, url: &str, headers: &[(String, String)]) -> RusticUiResult<FetchResponse> {
         let mut request = ureq::get(url);
         for (name, value) in headers {
             request = request.set(name, value);
@@ -163,7 +163,7 @@ impl Fetcher for HttpFetcher {
     }
 }
 
-fn parse_response(response: Response, url: &str) -> Result<FetchResponse> {
+fn parse_response(response: Response, url: &str) -> RusticUiResult<FetchResponse> {
     let status = response.status();
     let etag = response.header("ETag").map(|value| value.to_string());
     let last_modified = response
@@ -180,9 +180,9 @@ fn parse_response(response: Response, url: &str) -> Result<FetchResponse> {
     }
 
     if !(200..300).contains(&status) {
-        return Err(anyhow!(
+        return Err(RusticUiError::message(format!(
             "unexpected status code {status} when downloading Material icons from {url}"
-        ));
+        )));
     }
 
     let mut bytes = Vec::new();
@@ -202,7 +202,22 @@ fn parse_response(response: Response, url: &str) -> Result<FetchResponse> {
 /// Entry point used by the binary and tests. Handles downloading, caching and
 /// manifest regeneration. The function is intentionally side-effect free until
 /// it knows the archive is newer than what is already on disk.
-pub fn run_update<F: Fetcher>(fetcher: &F, options: &UpdateOptions) -> Result<UpdateOutcome> {
+///
+/// # Examples
+///
+/// ```no_run
+/// use rustic_ui_icons_material::icon_update::{run_update, HttpFetcher, UpdateOptions};
+///
+/// # fn main() -> rustic_ui_error::RusticUiResult<()> {
+/// let outcome = run_update(&HttpFetcher::default(), &UpdateOptions::default())?;
+/// println!("refresh outcome: {:?}", outcome);
+/// # Ok(())
+/// # }
+/// ```
+pub fn run_update<F: Fetcher>(
+    fetcher: &F,
+    options: &UpdateOptions,
+) -> RusticUiResult<UpdateOutcome> {
     let cache_file = options.cache_dir.join(CACHE_FILE);
     let mut metadata = CacheMetadata::load(&cache_file)?;
 
@@ -260,7 +275,7 @@ fn compute_sha256(bytes: &[u8]) -> String {
     format!("{:x}", digest)
 }
 
-fn extract_icons(bytes: &[u8]) -> Result<BTreeMap<String, Vec<u8>>> {
+fn extract_icons(bytes: &[u8]) -> RusticUiResult<BTreeMap<String, Vec<u8>>> {
     let reader = Cursor::new(bytes);
     let mut archive =
         ZipArchive::new(reader).context("failed to parse icon archive as a ZIP file")?;
@@ -291,7 +306,7 @@ fn extract_icons(bytes: &[u8]) -> Result<BTreeMap<String, Vec<u8>>> {
     Ok(icons)
 }
 
-fn load_existing_icons(dir: &Path) -> Result<BTreeMap<String, Vec<u8>>> {
+fn load_existing_icons(dir: &Path) -> RusticUiResult<BTreeMap<String, Vec<u8>>> {
     let mut icons = BTreeMap::new();
     if !dir.exists() {
         return Ok(icons);
@@ -304,10 +319,9 @@ fn load_existing_icons(dir: &Path) -> Result<BTreeMap<String, Vec<u8>>> {
         if !entry.file_type()?.is_file() {
             continue;
         }
-        let name = entry
-            .file_name()
-            .into_string()
-            .map_err(|_| anyhow!("icon filename contained invalid UTF-8"))?;
+        let name = entry.file_name().into_string().map_err(|name| {
+            RusticUiError::message(format!("icon filename contained invalid UTF-8: {:?}", name))
+        })?;
         if !name.ends_with(".svg") {
             continue;
         }
@@ -319,7 +333,7 @@ fn load_existing_icons(dir: &Path) -> Result<BTreeMap<String, Vec<u8>>> {
     Ok(icons)
 }
 
-fn write_icons(dir: &Path, icons: &BTreeMap<String, Vec<u8>>) -> Result<()> {
+fn write_icons(dir: &Path, icons: &BTreeMap<String, Vec<u8>>) -> RusticUiResult<()> {
     if dir.exists() {
         fs::remove_dir_all(dir).with_context(|| {
             format!(
@@ -340,7 +354,7 @@ fn write_icons(dir: &Path, icons: &BTreeMap<String, Vec<u8>>) -> Result<()> {
     Ok(())
 }
 
-fn update_manifest_features(manifest_path: &Path, icons: &[String]) -> Result<()> {
+fn update_manifest_features(manifest_path: &Path, icons: &[String]) -> RusticUiResult<()> {
     const START: &str = "# BEGIN ICON FEATURES -- auto-generated, do not edit by hand.";
     const END: &str = "# END ICON FEATURES";
 
@@ -351,18 +365,24 @@ fn update_manifest_features(manifest_path: &Path, icons: &[String]) -> Result<()
         )
     })?;
 
-    let start = manifest
-        .find(START)
-        .ok_or_else(|| anyhow!("start marker not found in {}", manifest_path.display()))?;
-    let end = manifest
-        .find(END)
-        .ok_or_else(|| anyhow!("end marker not found in {}", manifest_path.display()))?;
+    let start = manifest.find(START).ok_or_else(|| {
+        RusticUiError::message(format!(
+            "start marker not found in {}",
+            manifest_path.display()
+        ))
+    })?;
+    let end = manifest.find(END).ok_or_else(|| {
+        RusticUiError::message(format!(
+            "end marker not found in {}",
+            manifest_path.display()
+        ))
+    })?;
 
     if start >= end {
-        return Err(anyhow!(
+        return Err(RusticUiError::message(format!(
             "icon feature markers are in an unexpected order within {}",
             manifest_path.display()
-        ));
+        )));
     }
 
     let mut block = String::new();
@@ -422,12 +442,12 @@ mod tests {
     }
 
     impl Fetcher for MockFetcher {
-        fn fetch(&self, _url: &str, headers: &[(String, String)]) -> Result<FetchResponse> {
+        fn fetch(&self, _url: &str, headers: &[(String, String)]) -> RusticUiResult<FetchResponse> {
             self.recorded_headers.borrow_mut().push(headers.to_vec());
             self.responses
                 .borrow_mut()
                 .pop()
-                .ok_or_else(|| anyhow!("mock fetcher exhausted"))
+                .ok_or_else(|| RusticUiError::message("mock fetcher exhausted"))
         }
     }
 

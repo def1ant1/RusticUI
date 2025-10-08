@@ -38,24 +38,24 @@ icon-10mp_24px = []
 # Internal feature used only for the maintenance CLI. `dep:` ensures the
 # optional network/ZIP dependencies stay isolated until explicitly requested.
 update-icons = [
-    "dep:anyhow",
     "dep:clap",
     "dep:serde",
     "dep:serde_json",
     "dep:sha2",
     "dep:ureq",
     "dep:zip",
+    "dep:rustic-ui-error",
 ]
 
 [dependencies]
 once_cell.workspace = true
-anyhow = { workspace = true, optional = true }
 clap = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 ureq = { workspace = true, optional = true }
 zip = { workspace = true, optional = true }
+rustic-ui-error = { workspace = true, optional = true, features = ["serde_json", "zip", "ureq"] }
 
 [build-dependencies]
 usvg.workspace = true

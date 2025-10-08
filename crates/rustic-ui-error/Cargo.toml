@@ -1,0 +1,26 @@
+[package]
+name = "rustic-ui-error"
+version = "0.1.0"
+edition = "2021"
+description = "Shared RusticUI error types and ergonomics helpers built on thiserror."
+license.workspace = true
+
+[features]
+default = []
+serde_json = ["dep:serde_json"]
+walkdir = ["dep:walkdir"]
+zip = ["dep:zip"]
+camino = ["dep:camino"]
+cargo_metadata = ["dep:cargo_metadata"]
+ureq = ["dep:ureq"]
+tokio = ["dep:tokio"]
+
+[dependencies]
+thiserror.workspace = true
+serde_json = { workspace = true, optional = true }
+walkdir = { workspace = true, optional = true }
+zip = { workspace = true, optional = true }
+camino = { workspace = true, optional = true }
+cargo_metadata = { workspace = true, optional = true }
+ureq = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["rt"] }

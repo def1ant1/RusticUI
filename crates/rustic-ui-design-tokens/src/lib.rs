@@ -17,9 +17,9 @@ trace which function to call when they need to reproduce a former npm bundle.
 They are heavily annotated because most consumers interact with them through
 automation in CI/CD environments."]
 
-use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use flate2::{write::GzEncoder, Compression};
+use rustic_ui_error::{ResultContextExt, RusticUiError, RusticUiResult};
 use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -68,7 +68,7 @@ impl BundleSummary {
     ///
     /// Legacy automation expects the archived assets to mirror the npm bundle layout. We copy the
     /// entire bundle directory (manifest, payload, and archives) so the contract remains intact.
-    pub fn sync_to<P: AsRef<Path>>(&self, destination_root: P) -> Result<PathBuf> {
+    pub fn sync_to<P: AsRef<Path>>(&self, destination_root: P) -> RusticUiResult<PathBuf> {
         let destination_root = destination_root.as_ref();
         fs::create_dir_all(destination_root).with_context(|| {
             format!(
@@ -96,7 +96,10 @@ impl ArtifactBundleBuilder {
     /// The constructor clears any previous payload so repeated runs (for example in CI) always emit a
     /// clean bundle. A `payload/` directory is created inside the bundle root where raw files are
     /// staged before manifests and archives are generated.
-    pub fn new<P: AsRef<Path>>(bundle_root: P, archive_stem: impl Into<String>) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(
+        bundle_root: P,
+        archive_stem: impl Into<String>,
+    ) -> RusticUiResult<Self> {
         let bundle_root = bundle_root.as_ref().to_path_buf();
         if bundle_root.exists() {
             fs::remove_dir_all(&bundle_root).with_context(|| {
@@ -132,7 +135,7 @@ impl ArtifactBundleBuilder {
         kind: K,
         media_type: M,
         metadata: Value,
-    ) -> Result<PathBuf> {
+    ) -> RusticUiResult<PathBuf> {
         let source = source.as_ref();
         let relative_path = relative_path.as_ref();
         let destination = self.payload_dir.join(relative_path);
@@ -179,7 +182,7 @@ impl ArtifactBundleBuilder {
         kind: &str,
         media_type: &str,
         metadata: F,
-    ) -> Result<()> {
+    ) -> RusticUiResult<()> {
         let source_dir = source_dir.as_ref();
         let relative_root = relative_root.as_ref();
         for entry in WalkDir::new(source_dir).into_iter().filter_map(|e| e.ok()) {
@@ -187,7 +190,7 @@ impl ArtifactBundleBuilder {
                 let relative_path = entry
                     .path()
                     .strip_prefix(source_dir)
-                    .map_err(|error| anyhow!(error))?;
+                    .map_err(RusticUiError::from)?;
                 let destination_relative = relative_root.join(relative_path);
                 let metadata_blob = metadata(entry.path());
                 self.ingest_file(
@@ -206,7 +209,7 @@ impl ArtifactBundleBuilder {
     ///
     /// The returned [`BundleSummary`] includes every emitted artifact so callers can surface
     /// machine-readable summaries to CI systems or copy the outputs elsewhere.
-    pub fn finalize(self, metadata: Value) -> Result<BundleSummary> {
+    pub fn finalize(self, metadata: Value) -> RusticUiResult<BundleSummary> {
         let manifest_path = self
             .root
             .join(format!("{}.manifest.json", self.archive_stem));
@@ -285,7 +288,7 @@ impl fmt::Display for ManifestEntry {
     }
 }
 
-fn write_zip(payload_dir: &Path, destination: &Path) -> Result<()> {
+fn write_zip(payload_dir: &Path, destination: &Path) -> RusticUiResult<()> {
     let file = fs::File::create(destination)
         .with_context(|| format!("failed to create ZIP archive at {}", destination.display()))?;
     let mut zip = zip::ZipWriter::new(file);
@@ -294,7 +297,7 @@ fn write_zip(payload_dir: &Path, destination: &Path) -> Result<()> {
         let path = entry.path();
         let relative = path
             .strip_prefix(payload_dir)
-            .map_err(|error| anyhow!(error))?;
+            .map_err(RusticUiError::from)?;
         if entry.file_type().is_dir() {
             if !relative.as_os_str().is_empty() {
                 zip.add_directory(unix_string(relative), options)?;
@@ -309,7 +312,7 @@ fn write_zip(payload_dir: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
-fn write_tar_gz(payload_dir: &Path, destination: &Path) -> Result<()> {
+fn write_tar_gz(payload_dir: &Path, destination: &Path) -> RusticUiResult<()> {
     let file = fs::File::create(destination).with_context(|| {
         format!(
             "failed to create TAR.GZ archive at {}",
@@ -330,10 +333,10 @@ fn unix_string(path: &Path) -> String {
         .join("/")
 }
 
-fn copy_directory(source: &Path, destination: &Path) -> Result<()> {
+fn copy_directory(source: &Path, destination: &Path) -> RusticUiResult<()> {
     for entry in WalkDir::new(source).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
-        let relative = path.strip_prefix(source).map_err(|error| anyhow!(error))?;
+        let relative = path.strip_prefix(source).map_err(RusticUiError::from)?;
         let dest_path = destination.join(relative);
         if entry.file_type().is_dir() {
             fs::create_dir_all(&dest_path)?;
@@ -353,7 +356,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn builder_writes_manifest_and_archives() -> Result<()> {
+    fn builder_writes_manifest_and_archives() -> RusticUiResult<()> {
         let temp = tempdir()?;
         let bundle_root = temp.path().join("bundle-test");
         let mut builder = ArtifactBundleBuilder::new(&bundle_root, "test")?;
