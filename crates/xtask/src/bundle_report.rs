@@ -318,8 +318,7 @@ fn default_notes() -> Vec<String> {
         "Sizes capture release-mode .rlib artifacts compiled on the CI host triple.".into(),
         "Run `cargo xtask bundle-report` to refresh the data before shipping feature-flag changes.".into(),
         "The generated Markdown feeds docs/performance/bundle-costs.md so engineering docs stay in sync with telemetry.".into(),
-        "Baseline measurements enable the `forms` feature because headless/material crates reference shared form utilities even wh
-en other flags are disabled.".into(),
+        "Baseline measurements enable the `forms` feature because headless/material crates reference shared form utilities even when other flags are disabled.".into(),
     ]
 }
 
@@ -469,4 +468,45 @@ fn scenarios() -> Vec<BundleScenario> {
             is_baseline: false,
         },
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn markdown_renders_expected_headers() {
+        let report = BundleReport {
+            generated_at: "2024-01-01T00:00:00Z".into(),
+            generated_at_unix: 42,
+            target_dir: "target/bundle-report".into(),
+            scenarios: vec![ScenarioMeasurement {
+                id: "baseline".into(),
+                crate_name: "rustic-ui-material".into(),
+                display_name: "Material (forms core)".into(),
+                description: "Baseline row for markdown smoke tests.".into(),
+                default_features: true,
+                features: vec!["forms".into()],
+                feature_label: "forms".into(),
+                command_summary: "cargo build".into(),
+                is_baseline: true,
+                size_bytes: 2048,
+                size_kib: 2.0,
+                artifact: "target/bundle-report/libmock.rlib".into(),
+                delta_bytes: Some(0),
+                delta_kib: Some(0.0),
+                delta_percent: Some(0.0),
+            }],
+            notes: default_notes(),
+        };
+
+        let markdown = render_markdown(&report);
+        assert!(
+            markdown.contains("| Scenario |"),
+            "table header missing\n{}",
+            markdown
+        );
+        assert!(markdown.contains("Material (forms core)"));
+        assert!(markdown.contains("## Methodology"));
+    }
 }
